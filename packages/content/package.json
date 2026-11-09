@@ -1,0 +1,16 @@
+{
+  "name": "@aoh/content",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Game data for Age of Heroes: terrain, maps and unit cards.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@aoh/rules": "workspace:*"
+  }
+}
