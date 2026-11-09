@@ -60,7 +60,7 @@ export function deploymentSpots(state: GameState, player: PlayerId, height: numb
   for (const h of ctx.board.startZone(zone)) {
     for (const s of ctx.board.surfaces(h)) {
       const step = { hex: h, elevation: s.elevation };
-      if (s.clearance >= height && !taken.has(stepKey(step))) spots.push(step);
+      if (s.clearance >= height && !taken.has(stepKey(step)) && !ctx.board.sceneryAt(h, s.elevation)) spots.push(step);
     }
   }
   return spots;
@@ -95,6 +95,7 @@ export function deployUnit(
     if (!zone.has(hexKey(p.hex))) fail("Figures must start in your start zone");
     const surface = ctx.board.surfaceAt(p.hex, p.elevation) ?? fail("There is no ground there");
     if (surface.clearance < height) fail("The figure does not fit there");
+    if (ctx.board.sceneryAt(p.hex, p.elevation)) fail("Scenery is in the way");
     const key = stepKey(p);
     if (taken.has(key) || used.has(key)) fail("That spot is already taken");
     used.add(key);

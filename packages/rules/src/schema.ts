@@ -36,12 +36,23 @@ export const startZoneSchema = z.object({
   hexes: z.array(hexSchema).min(1),
 });
 
+export const sceneryPlacementSchema = z.object({
+  id: z.string().min(1),
+  /** Scenery kind, e.g. "tree"; its size and look come from the scenery table. */
+  kind: z.string().min(1),
+  hex: hexSchema,
+  /** Elevation of the surface it stands on. */
+  elevation: z.number().int().min(1).max(MAX_LAYER + 1),
+});
+
 export const mapSchema = z.object({
   formatVersion: z.literal(1),
   id: z.string().min(1),
   name: z.string().min(1),
   description: z.string().default(""),
   pieces: z.array(placedPieceSchema).min(1),
+  /** Trees, walls and other objects standing on the terrain. */
+  scenery: z.array(sceneryPlacementSchema).default([]),
   startZones: z.array(startZoneSchema).max(MAX_PLAYERS),
   /**
    * Which start zone each player uses, by player count (e.g. "2": [0, 3] puts
@@ -52,6 +63,7 @@ export const mapSchema = z.object({
 });
 
 export type PlacedPiece = z.infer<typeof placedPieceSchema>;
+export type SceneryPlacement = z.infer<typeof sceneryPlacementSchema>;
 export type StartZone = z.infer<typeof startZoneSchema>;
 export type MapDefinition = z.infer<typeof mapSchema>;
 

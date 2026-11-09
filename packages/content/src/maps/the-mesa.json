@@ -1,0 +1,2995 @@
+{
+  "formatVersion": 1,
+  "id": "the-mesa",
+  "name": "The Mesa",
+  "description": "A rocky plateau rises five levels above the sand, with three stepped ramps and ruins on top. Lava fissures crack the ground around it. 2 to 6 players.",
+  "pieces": [
+    {
+      "id": "p1",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 0,
+        "r": 0
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p2",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 3,
+        "r": 0
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p3",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 6,
+        "r": 0
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p4",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 9,
+        "r": 0
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p5",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 12,
+        "r": 0
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p6",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 15,
+        "r": 0
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p7",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 18,
+        "r": 0
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p8",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 21,
+        "r": 0
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p9",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 0,
+        "r": 1
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p10",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 3,
+        "r": 1
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p11",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 6,
+        "r": 1
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p12",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 9,
+        "r": 1
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p13",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 12,
+        "r": 1
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p14",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 15,
+        "r": 1
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p15",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 18,
+        "r": 1
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p16",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 21,
+        "r": 1
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p17",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -1,
+        "r": 2
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p18",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 2,
+        "r": 2
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p19",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 5,
+        "r": 2
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p20",
+      "shape": "single",
+      "terrain": "sand",
+      "origin": {
+        "q": 8,
+        "r": 2
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p21",
+      "shape": "single",
+      "terrain": "lava",
+      "origin": {
+        "q": 9,
+        "r": 2
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p22",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 10,
+        "r": 2
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p23",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 13,
+        "r": 2
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p24",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 16,
+        "r": 2
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p25",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 19,
+        "r": 2
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p26",
+      "shape": "single",
+      "terrain": "sand",
+      "origin": {
+        "q": 22,
+        "r": 2
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p27",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -1,
+        "r": 3
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p28",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 2,
+        "r": 3
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p29",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": 5,
+        "r": 3
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p30",
+      "shape": "single",
+      "terrain": "lava",
+      "origin": {
+        "q": 7,
+        "r": 3
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p31",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 8,
+        "r": 3
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p32",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 11,
+        "r": 3
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p33",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 14,
+        "r": 3
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p34",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 17,
+        "r": 3
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p35",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 20,
+        "r": 3
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p36",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -2,
+        "r": 4
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p37",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 1,
+        "r": 4
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p38",
+      "shape": "single",
+      "terrain": "sand",
+      "origin": {
+        "q": 4,
+        "r": 4
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p39",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 4
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p40",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 8,
+        "r": 4
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p41",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 11,
+        "r": 4
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p42",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 14,
+        "r": 4
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p43",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 17,
+        "r": 4
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p44",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": 20,
+        "r": 4
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p45",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -2,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p46",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 1,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p47",
+      "shape": "single",
+      "terrain": "sand",
+      "origin": {
+        "q": 4,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p48",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p49",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 8,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p50",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 11,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p51",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 14,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p52",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 17,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p53",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": 20,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p54",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -3,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p55",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 0,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p56",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": 3,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p57",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p58",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 8,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p59",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": 11,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p60",
+      "shape": "single",
+      "terrain": "lava",
+      "origin": {
+        "q": 13,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p61",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 14,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p62",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 17,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p63",
+      "shape": "single",
+      "terrain": "sand",
+      "origin": {
+        "q": 20,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p64",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -3,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p65",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 0,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p66",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": 3,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p67",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p68",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 8,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p69",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 11,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p70",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 14,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p71",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 17,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p72",
+      "shape": "single",
+      "terrain": "sand",
+      "origin": {
+        "q": 20,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p73",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -4,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p74",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": -1,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p75",
+      "shape": "single",
+      "terrain": "lava",
+      "origin": {
+        "q": 1,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p76",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": 2,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p77",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p78",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p79",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 10,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p80",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 13,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p81",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 14,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p82",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 17,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p83",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -4,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p84",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -1,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p85",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": 2,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p86",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p87",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p88",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 10,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p89",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 13,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p90",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 16,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p91",
+      "shape": "single",
+      "terrain": "sand",
+      "origin": {
+        "q": 19,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p92",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -5,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p93",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -2,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p94",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 1,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p95",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p96",
+      "shape": "double",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p97",
+      "shape": "single",
+      "terrain": "sand",
+      "origin": {
+        "q": 9,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p98",
+      "shape": "single",
+      "terrain": "lava",
+      "origin": {
+        "q": 10,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p99",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 11,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p100",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 14,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p101",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": 17,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p102",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -5,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p103",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -2,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p104",
+      "shape": "single",
+      "terrain": "lava",
+      "origin": {
+        "q": 1,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p105",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": 2,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p106",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p107",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p108",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 8,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p109",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 11,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p110",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 14,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p111",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": 17,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p112",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -6,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p113",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -3,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p114",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 0,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p115",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 3,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p116",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 4,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p117",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 7,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p118",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 10,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p119",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 13,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p120",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": 16,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p121",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -6,
+        "r": 13
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p122",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -3,
+        "r": 13
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p123",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": 0,
+        "r": 13
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p124",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 2,
+        "r": 13
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p125",
+      "shape": "single",
+      "terrain": "lava",
+      "origin": {
+        "q": 3,
+        "r": 13
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p126",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 4,
+        "r": 13
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p127",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 7,
+        "r": 13
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p128",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 10,
+        "r": 13
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p129",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 13,
+        "r": 13
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p130",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": 16,
+        "r": 13
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p131",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -7,
+        "r": 14
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p132",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -4,
+        "r": 14
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p133",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -1,
+        "r": 14
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p134",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 2,
+        "r": 14
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p135",
+      "shape": "double",
+      "terrain": "sand",
+      "origin": {
+        "q": 5,
+        "r": 14
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p136",
+      "shape": "single",
+      "terrain": "lava",
+      "origin": {
+        "q": 7,
+        "r": 14
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p137",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 8,
+        "r": 14
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p138",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 11,
+        "r": 14
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p139",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 14,
+        "r": 14
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p140",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -7,
+        "r": 15
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p141",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -4,
+        "r": 15
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p142",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": -1,
+        "r": 15
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p143",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 2,
+        "r": 15
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p144",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 5,
+        "r": 15
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p145",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 8,
+        "r": 15
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p146",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 11,
+        "r": 15
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p147",
+      "shape": "line3",
+      "terrain": "sand",
+      "origin": {
+        "q": 14,
+        "r": 15
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p148",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 4
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p149",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p150",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 8,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p151",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p152",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 8,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p153",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p154",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 8,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p155",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p156",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p157",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 10,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p158",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 13,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p159",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p160",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p161",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p162",
+      "shape": "double",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p163",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p164",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p165",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 3,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p166",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 2,
+        "r": 13
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p167",
+      "shape": "double",
+      "terrain": "rock",
+      "origin": {
+        "q": 6,
+        "r": 4
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p168",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p169",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 8,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p170",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p171",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 8,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p172",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p173",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 8,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p174",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p175",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p176",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 10,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p177",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p178",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p179",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p180",
+      "shape": "double",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p181",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p182",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p183",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 3,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p184",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 2,
+        "r": 13
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p185",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 4
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p186",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 6,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p187",
+      "shape": "double",
+      "terrain": "rock",
+      "origin": {
+        "q": 9,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p188",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p189",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 8,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p190",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p191",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 8,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p192",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p193",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p194",
+      "shape": "double",
+      "terrain": "rock",
+      "origin": {
+        "q": 10,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p195",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p196",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p197",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p198",
+      "shape": "double",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p199",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p200",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p201",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 3,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p202",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p203",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 10,
+        "r": 5
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p204",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 6,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p205",
+      "shape": "double",
+      "terrain": "rock",
+      "origin": {
+        "q": 9,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p206",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p207",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 8,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p208",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p209",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p210",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 10,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p211",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p212",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p213",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p214",
+      "shape": "double",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p215",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 4,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p216",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 11
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p217",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 7,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 5
+    },
+    {
+      "id": "p218",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 6,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 5
+    },
+    {
+      "id": "p219",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 9,
+        "r": 7
+      },
+      "rotation": 0,
+      "layer": 5
+    },
+    {
+      "id": "p220",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 5
+    },
+    {
+      "id": "p221",
+      "shape": "double",
+      "terrain": "rock",
+      "origin": {
+        "q": 8,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 5
+    },
+    {
+      "id": "p222",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 5
+    },
+    {
+      "id": "p223",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 8,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 5
+    },
+    {
+      "id": "p224",
+      "shape": "line3",
+      "terrain": "rock",
+      "origin": {
+        "q": 5,
+        "r": 10
+      },
+      "rotation": 0,
+      "layer": 5
+    }
+  ],
+  "scenery": [
+    {
+      "id": "s1",
+      "kind": "wall",
+      "hex": {
+        "q": 7,
+        "r": 7
+      },
+      "elevation": 6
+    },
+    {
+      "id": "s2",
+      "kind": "wall",
+      "hex": {
+        "q": 9,
+        "r": 7
+      },
+      "elevation": 6
+    },
+    {
+      "id": "s3",
+      "kind": "wall",
+      "hex": {
+        "q": 6,
+        "r": 10
+      },
+      "elevation": 6
+    },
+    {
+      "id": "s4",
+      "kind": "boulder",
+      "hex": {
+        "q": 4,
+        "r": 3
+      },
+      "elevation": 1
+    },
+    {
+      "id": "s5",
+      "kind": "boulder",
+      "hex": {
+        "q": 17,
+        "r": 3
+      },
+      "elevation": 1
+    },
+    {
+      "id": "s6",
+      "kind": "boulder",
+      "hex": {
+        "q": 12,
+        "r": 12
+      },
+      "elevation": 1
+    },
+    {
+      "id": "s7",
+      "kind": "boulder",
+      "hex": {
+        "q": -1,
+        "r": 12
+      },
+      "elevation": 1
+    },
+    {
+      "id": "s8",
+      "kind": "boulder",
+      "hex": {
+        "q": 17,
+        "r": 1
+      },
+      "elevation": 1
+    },
+    {
+      "id": "s9",
+      "kind": "boulder",
+      "hex": {
+        "q": -1,
+        "r": 14
+      },
+      "elevation": 1
+    }
+  ],
+  "startZones": [
+    {
+      "seat": 0,
+      "hexes": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": 0,
+          "r": 1
+        },
+        {
+          "q": -1,
+          "r": 2
+        },
+        {
+          "q": -1,
+          "r": 3
+        },
+        {
+          "q": 1,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": 1
+        },
+        {
+          "q": 0,
+          "r": 2
+        },
+        {
+          "q": 0,
+          "r": 3
+        },
+        {
+          "q": 2,
+          "r": 0
+        },
+        {
+          "q": 2,
+          "r": 1
+        },
+        {
+          "q": 1,
+          "r": 2
+        },
+        {
+          "q": 1,
+          "r": 3
+        },
+        {
+          "q": 3,
+          "r": 0
+        },
+        {
+          "q": 3,
+          "r": 1
+        },
+        {
+          "q": 2,
+          "r": 2
+        },
+        {
+          "q": 2,
+          "r": 3
+        }
+      ]
+    },
+    {
+      "seat": 1,
+      "hexes": [
+        {
+          "q": 8,
+          "r": 0
+        },
+        {
+          "q": 8,
+          "r": 1
+        },
+        {
+          "q": 9,
+          "r": 0
+        },
+        {
+          "q": 9,
+          "r": 1
+        },
+        {
+          "q": 10,
+          "r": 0
+        },
+        {
+          "q": 10,
+          "r": 1
+        },
+        {
+          "q": 11,
+          "r": 0
+        },
+        {
+          "q": 11,
+          "r": 1
+        },
+        {
+          "q": 12,
+          "r": 0
+        },
+        {
+          "q": 12,
+          "r": 1
+        },
+        {
+          "q": 13,
+          "r": 0
+        },
+        {
+          "q": 13,
+          "r": 1
+        },
+        {
+          "q": 14,
+          "r": 0
+        },
+        {
+          "q": 14,
+          "r": 1
+        },
+        {
+          "q": 15,
+          "r": 0
+        },
+        {
+          "q": 15,
+          "r": 1
+        }
+      ]
+    },
+    {
+      "seat": 2,
+      "hexes": [
+        {
+          "q": 20,
+          "r": 0
+        },
+        {
+          "q": 20,
+          "r": 1
+        },
+        {
+          "q": 19,
+          "r": 2
+        },
+        {
+          "q": 19,
+          "r": 3
+        },
+        {
+          "q": 21,
+          "r": 0
+        },
+        {
+          "q": 21,
+          "r": 1
+        },
+        {
+          "q": 20,
+          "r": 2
+        },
+        {
+          "q": 20,
+          "r": 3
+        },
+        {
+          "q": 22,
+          "r": 0
+        },
+        {
+          "q": 22,
+          "r": 1
+        },
+        {
+          "q": 21,
+          "r": 2
+        },
+        {
+          "q": 21,
+          "r": 3
+        },
+        {
+          "q": 23,
+          "r": 0
+        },
+        {
+          "q": 23,
+          "r": 1
+        },
+        {
+          "q": 22,
+          "r": 2
+        },
+        {
+          "q": 22,
+          "r": 3
+        }
+      ]
+    },
+    {
+      "seat": 3,
+      "hexes": [
+        {
+          "q": 14,
+          "r": 12
+        },
+        {
+          "q": 14,
+          "r": 13
+        },
+        {
+          "q": 13,
+          "r": 14
+        },
+        {
+          "q": 13,
+          "r": 15
+        },
+        {
+          "q": 15,
+          "r": 12
+        },
+        {
+          "q": 15,
+          "r": 13
+        },
+        {
+          "q": 14,
+          "r": 14
+        },
+        {
+          "q": 14,
+          "r": 15
+        },
+        {
+          "q": 16,
+          "r": 12
+        },
+        {
+          "q": 16,
+          "r": 13
+        },
+        {
+          "q": 15,
+          "r": 14
+        },
+        {
+          "q": 15,
+          "r": 15
+        },
+        {
+          "q": 17,
+          "r": 12
+        },
+        {
+          "q": 17,
+          "r": 13
+        },
+        {
+          "q": 16,
+          "r": 14
+        },
+        {
+          "q": 16,
+          "r": 15
+        }
+      ]
+    },
+    {
+      "seat": 4,
+      "hexes": [
+        {
+          "q": 1,
+          "r": 14
+        },
+        {
+          "q": 1,
+          "r": 15
+        },
+        {
+          "q": 2,
+          "r": 14
+        },
+        {
+          "q": 2,
+          "r": 15
+        },
+        {
+          "q": 3,
+          "r": 14
+        },
+        {
+          "q": 3,
+          "r": 15
+        },
+        {
+          "q": 4,
+          "r": 14
+        },
+        {
+          "q": 4,
+          "r": 15
+        },
+        {
+          "q": 5,
+          "r": 14
+        },
+        {
+          "q": 5,
+          "r": 15
+        },
+        {
+          "q": 6,
+          "r": 14
+        },
+        {
+          "q": 6,
+          "r": 15
+        },
+        {
+          "q": 7,
+          "r": 14
+        },
+        {
+          "q": 7,
+          "r": 15
+        },
+        {
+          "q": 8,
+          "r": 14
+        },
+        {
+          "q": 8,
+          "r": 15
+        }
+      ]
+    },
+    {
+      "seat": 5,
+      "hexes": [
+        {
+          "q": -6,
+          "r": 12
+        },
+        {
+          "q": -6,
+          "r": 13
+        },
+        {
+          "q": -7,
+          "r": 14
+        },
+        {
+          "q": -7,
+          "r": 15
+        },
+        {
+          "q": -5,
+          "r": 12
+        },
+        {
+          "q": -5,
+          "r": 13
+        },
+        {
+          "q": -6,
+          "r": 14
+        },
+        {
+          "q": -6,
+          "r": 15
+        },
+        {
+          "q": -4,
+          "r": 12
+        },
+        {
+          "q": -4,
+          "r": 13
+        },
+        {
+          "q": -5,
+          "r": 14
+        },
+        {
+          "q": -5,
+          "r": 15
+        },
+        {
+          "q": -3,
+          "r": 12
+        },
+        {
+          "q": -3,
+          "r": 13
+        },
+        {
+          "q": -4,
+          "r": 14
+        },
+        {
+          "q": -4,
+          "r": 15
+        }
+      ]
+    }
+  ],
+  "layouts": {
+    "2": [
+      0,
+      3
+    ],
+    "3": [
+      0,
+      2,
+      4
+    ],
+    "4": [
+      0,
+      2,
+      3,
+      5
+    ],
+    "5": [
+      0,
+      1,
+      2,
+      3,
+      5
+    ]
+  }
+}

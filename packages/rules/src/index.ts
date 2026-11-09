@@ -8,6 +8,7 @@ export * from "./schema";
 export * from "./board";
 export * from "./world";
 export * from "./los";
+export * from "./editor";
 export * from "./game/types";
 export * from "./game/errors";
 export * from "./game/queries";

@@ -57,6 +57,7 @@ export function canStep(from: Step, to: Step, height: number, ctx: RulesContext,
   const dest = ctx.board.surfaceAt(to.hex, to.elevation);
   const here = ctx.board.surfaceAt(from.hex, from.elevation);
   if (!dest || !here) return false;
+  if (ctx.board.sceneryAt(to.hex, to.elevation)) return false;
   const rise = to.elevation - from.elevation;
   if (dest.clearance < Math.max(height, -rise)) return false;
   if (rise > 0 && here.clearance < rise) return false;
@@ -304,6 +305,7 @@ function slideTarget(state: GameState, mover: Mover, from: Step, at: Step, ctx: 
   const s = candidates[0];
   if (!s) return null;
   const step = { hex, elevation: s.elevation };
+  if (ctx.board.sceneryAt(hex, s.elevation)) return null;
   if (s.clearance < Math.max(mover.stats.height, at.elevation - s.elevation)) return null;
   const occupant = occ.get(stepKey(step));
   if (occupant && occupant.figure.id !== mover.figure.id) return null;

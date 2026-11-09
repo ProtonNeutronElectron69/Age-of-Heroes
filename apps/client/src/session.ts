@@ -1,4 +1,4 @@
-import { contextFor, getMap } from "@aoh/content";
+import { contextFor } from "@aoh/content";
 import {
   applyCommand,
   createGame,
@@ -7,6 +7,7 @@ import {
   type GameEvent,
   type GameSetup,
   type GameState,
+  type MapDefinition,
   type RulesContext,
 } from "@aoh/rules";
 import { useSyncExternalStore } from "react";
@@ -18,6 +19,8 @@ import { useSyncExternalStore } from "react";
  */
 export interface Session {
   readonly setup: GameSetup;
+  /** The map is stored with the game, so custom maps can be resumed even if edited later. */
+  readonly map: MapDefinition;
   readonly ctx: RulesContext;
   readonly state: GameState;
   readonly commands: readonly Command[];
@@ -28,7 +31,7 @@ export interface Session {
   readonly error: string | null;
 }
 
-const SAVE_KEY = "age-of-heroes:save:v1";
+const SAVE_KEY = "age-of-heroes:save:v2";
 
 let session: Session | null = null;
 const listeners = new Set<() => void>();
@@ -37,16 +40,13 @@ function emit(): void {
   for (const l of listeners) l();
 }
 
-function contextForSetup(setup: GameSetup): RulesContext {
-  const map = getMap(setup.mapId);
-  if (!map) throw new Error(`Unknown map ${setup.mapId}`);
-  return contextFor(map).ctx;
-}
-
 function save(): void {
   try {
     if (session) {
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ setup: session.setup, commands: session.commands }));
+      localStorage.setItem(
+        SAVE_KEY,
+        JSON.stringify({ setup: session.setup, map: session.map, commands: session.commands }),
+      );
     } else {
       localStorage.removeItem(SAVE_KEY);
     }
@@ -55,10 +55,10 @@ function save(): void {
   }
 }
 
-export function startGame(setup: GameSetup): void {
-  const ctx = contextForSetup(setup);
+export function startGame(setup: GameSetup, map: MapDefinition): void {
+  const ctx = contextFor(map).ctx;
   const { state, events } = createGame(setup, ctx);
-  session = { setup, ctx, state, commands: [], events, lastEvents: events, error: null };
+  session = { setup, map, ctx, state, commands: [], events, lastEvents: events, error: null };
   save();
   emit();
 }
@@ -97,11 +97,17 @@ export function endSession(): void {
   emit();
 }
 
+interface SavedGame {
+  setup: GameSetup;
+  map: MapDefinition;
+  commands: Command[];
+}
+
 /** A saved game from an earlier visit, if there is one. */
-export function savedGame(): { setup: GameSetup; commands: Command[] } | null {
+export function savedGame(): SavedGame | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    return raw ? (JSON.parse(raw) as { setup: GameSetup; commands: Command[] }) : null;
+    return raw ? (JSON.parse(raw) as SavedGame) : null;
   } catch {
     return null;
   }
@@ -111,9 +117,18 @@ export function resumeSavedGame(): boolean {
   const saved = savedGame();
   if (!saved) return false;
   try {
-    const ctx = contextForSetup(saved.setup);
+    const ctx = contextFor(saved.map).ctx;
     const { state, events } = replayGame(saved.setup, saved.commands, ctx);
-    session = { setup: saved.setup, ctx, state, commands: saved.commands, events, lastEvents: [], error: null };
+    session = {
+      setup: saved.setup,
+      map: saved.map,
+      ctx,
+      state,
+      commands: saved.commands,
+      events,
+      lastEvents: [],
+      error: null,
+    };
     emit();
     return true;
   } catch {

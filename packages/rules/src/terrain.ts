@@ -42,3 +42,40 @@ export function terrainTable(list: readonly TerrainRules[]): TerrainTable {
 export function moveCostOf(t: TerrainRules | undefined): number {
   return t?.moveCost ?? 1;
 }
+
+/**
+ * Scenery (trees, walls, boulders) stands on a hex. No figure can enter or
+ * stand on that spot, and it blocks line of sight in both rule sets.
+ */
+export interface SceneryRules {
+  readonly id: string;
+  readonly name: string;
+  /** Height in levels. */
+  readonly height: number;
+  /** Shape used for line of sight: a full hex prism (walls) or a cylinder (trees, boulders). */
+  readonly shape: "prism" | "cylinder";
+  /** Cylinder radius as a fraction of the hex size. */
+  readonly radius?: number;
+  /** Flat display colour until real art exists. */
+  readonly color: string;
+}
+
+export type SceneryTable = ReadonlyMap<string, SceneryRules>;
+
+export function sceneryTable(list: readonly SceneryRules[]): SceneryTable {
+  const map = new Map<string, SceneryRules>();
+  for (const s of list) {
+    if (map.has(s.id)) throw new Error(`Duplicate scenery id: ${s.id}`);
+    map.set(s.id, s);
+  }
+  return map;
+}
+
+/** Used when a map names scenery the table does not know. */
+export const DEFAULT_SCENERY: SceneryRules = {
+  id: "unknown",
+  name: "Unknown scenery",
+  height: 4,
+  shape: "prism",
+  color: "#777777",
+};

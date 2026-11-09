@@ -60,7 +60,7 @@ Right panel (stats):
 
 ### Terrain types
 
-Standard terrain has no special rules: **grass, sand, rock, snow, forest**. (Trees and other scenery are separate objects placed on top of terrain; they block line of sight and movement. Planned for Phase 2.)
+Standard terrain has no special rules: **grass, sand, rock, snow, forest**.
 
 Special terrain:
 
@@ -80,8 +80,23 @@ A figure that starts its turn in water or swamp can keep moving through it, payi
 
 All terrain effects apply in both the Basic and the Advanced game. **Assumption.**
 
+### Scenery
+
+Scenery stands on a single hex, on top of the terrain there:
+
+| Scenery | Height |
+|---|---|
+| **Tree** | 9 levels |
+| **Ruined wall** | 3 levels |
+| **Boulder** | 2 levels |
+
+- No figure can enter or stand on a hex where scenery stands (at that level).
+- Scenery blocks line of sight in both the Basic and the Advanced game, just like terrain. A short wall or boulder can be seen over by taller figures.
+- Scenery must stand on terrain and fit under anything above it.
+- How flying figures treat scenery will be decided with the Advanced abilities (Phase 4).
+
 ### Start zones
-Each map has up to 6 start zones. The map says which zones are used for each player count, so that, for example, two players start in opposite corners. Turn order still goes round the table in seat order. Players set up their figures only in their own zone.
+Each map has up to 6 start zones. The map says which zones are used for each player count, so that, for example, two players start in opposite corners. Turn order still goes round the table in seat order. Players set up their figures only in their own zone. A map can be played by any number of players it has a separate start zone for.
 
 ## 4. Setting up a game
 
@@ -156,7 +171,7 @@ Flying is an ability, so it only exists in the Advanced game. In the Basic game 
 ### Line of sight
 Every figure is shown as a token as tall as its Height. Each token has an **eye point** (the centre of its top) and a **hit band** (a coloured band around its upper part).
 - **Advanced:** the attacker needs a clear straight line from its eye point to some part of the target's hit band. Terrain and other figures (friend or enemy) block the line. The game checks this automatically; a figure's-eye camera shows the player what the figure sees.
-- **Basic:** the attacker needs a clear line from its eye point to any part of the target's token. Only terrain blocks; other figures do not. **Assumption.**
+- **Basic:** the attacker needs a clear line from its eye point to any part of the target's token. Only terrain and scenery block; other figures do not. **Assumption.**
 - The ground each figure stands on never blocks the line, so a figure at the edge of a cliff can see the figure at its foot. A bridge or overhang above either figure still can.
 
 ### Rolling
@@ -207,5 +222,5 @@ Each ability has a name and rules text on the card, and is implemented in code a
 
 These will be decided in the phase listed, with a sensible default proposed then:
 - Multi-hex figure movement and rotation (Phase 3).
-- Scenery pieces such as trees and walls (Phase 2).
+- Flying over scenery (Phase 4).
 - Faction-pure mode reward (Phase 4).
