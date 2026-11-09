@@ -489,6 +489,71 @@
       "layer": 5
     }
   ],
+  "scenery": [
+    {
+      "id": "s1",
+      "kind": "tree",
+      "hex": {
+        "q": 0,
+        "r": 12
+      },
+      "elevation": 2
+    },
+    {
+      "id": "s2",
+      "kind": "tree",
+      "hex": {
+        "q": -1,
+        "r": 12
+      },
+      "elevation": 2
+    },
+    {
+      "id": "s3",
+      "kind": "tree",
+      "hex": {
+        "q": 1,
+        "r": 11
+      },
+      "elevation": 2
+    },
+    {
+      "id": "s4",
+      "kind": "wall",
+      "hex": {
+        "q": 6,
+        "r": 5
+      },
+      "elevation": 1
+    },
+    {
+      "id": "s5",
+      "kind": "wall",
+      "hex": {
+        "q": 7,
+        "r": 5
+      },
+      "elevation": 1
+    },
+    {
+      "id": "s6",
+      "kind": "boulder",
+      "hex": {
+        "q": 10,
+        "r": 7
+      },
+      "elevation": 1
+    },
+    {
+      "id": "s7",
+      "kind": "boulder",
+      "hex": {
+        "q": 6,
+        "r": 8
+      },
+      "elevation": 1
+    }
+  ],
   "startZones": [
     {
       "seat": 0,

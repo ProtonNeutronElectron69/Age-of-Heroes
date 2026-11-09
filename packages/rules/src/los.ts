@@ -76,10 +76,18 @@ function clip(d0: number, dd: number, lo: number, hi: number, span: [number, num
   return span[0] <= span[1];
 }
 
-export function segmentHitsHexPrism(a: Vec3, b: Vec3, cx: number, cz: number, yMin: number, yMax: number): boolean {
+export function segmentHitsHexPrism(
+  a: Vec3,
+  b: Vec3,
+  cx: number,
+  cz: number,
+  yMin: number,
+  yMax: number,
+  inradius = INRADIUS,
+): boolean {
   const span: [number, number] = [0, 1];
   if (!clip(a.y, b.y - a.y, yMin + EPS, yMax - EPS, span)) return false;
-  const r = INRADIUS - EPS;
+  const r = inradius - EPS;
   for (const [nx, nz] of NORMALS) {
     const d0 = nx * (a.x - cx) + nz * (a.z - cz);
     const dd = nx * (b.x - a.x) + nz * (b.z - a.z);
@@ -138,6 +146,16 @@ function segmentBlocked(board: Board, from: Token, to: Token, eye: Vec3, target:
       if (segmentHitsHexPrism(eye, target, x, z, cell.layer * LEVEL_HEIGHT, (cell.layer + 1) * LEVEL_HEIGHT)) {
         return true;
       }
+    }
+    // Scenery counts as terrain: it blocks in both rule sets.
+    for (const { placement, rules } of board.sceneryIn(h)) {
+      const y0 = placement.elevation * LEVEL_HEIGHT;
+      const y1 = y0 + rules.height * LEVEL_HEIGHT;
+      const hit =
+        rules.shape === "prism"
+          ? segmentHitsHexPrism(eye, target, x, z, y0, y1)
+          : segmentHitsCylinder(eye, target, x, z, (rules.radius ?? 0.6) * HEX_SIZE, y0, y1);
+      if (hit) return true;
     }
   }
   if (opts.strict) {

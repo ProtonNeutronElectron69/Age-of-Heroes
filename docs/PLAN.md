@@ -50,7 +50,7 @@ docs/              this plan and the rules
 - [x] CI (typecheck, test, build) and GitHub Pages deployment
 - [x] Rules written up in `docs/RULES.md`
 
-### Phase 1: Basic game (milestone 1, this PR)
+### Phase 1: Basic game (milestone 1, done)
 - [x] 8 original starter units across 4 factions, with both card sides filled in
 - [x] Game setup screen: 2 to 6 players, names, army size, round limit, map
 - [x] Snake draft by card count, with unique cards exclusive and start zone room checked
@@ -66,12 +66,16 @@ docs/              this plan and the rules
 - [x] Game log, and games saved in the browser so a reload can continue them
 - [x] Tests: engine unit tests, random full-game simulations, and a browser test that plays a full game through the UI
 
-### Phase 2: Map editor
-- [ ] Place, rotate and stack all piece shapes in every terrain
-- [ ] Bridges and overhangs, with live validation
-- [ ] Scenery objects (trees, walls) that block line of sight and movement
-- [ ] Start zone painting for up to 6 seats
-- [ ] Save and load maps as files; library of premade maps
+### Phase 2: Map editor (this PR)
+- [x] Place, rotate and stack all seven piece shapes in all ten terrains; pieces land on whatever is under them
+- [x] Bridges and overhangs, with a manual level control and live validation (overlaps, floating pieces, scenery, zones, layouts)
+- [x] Scenery (trees, ruined walls, boulders) that blocks movement, deployment and line of sight
+- [x] Start zone painting for up to 6 zones, and which zones each player count uses
+- [x] Undo and redo
+- [x] Save maps in the browser ("My maps"), export and import map files, and play any map
+- [x] Library of four premade maps: Proving Grounds, Twin Fords, The Mesa and Glacier Pass
+- [x] Setup screen offers only the player counts a map supports
+- [x] Browser test that builds, exports, imports and plays a custom map
 
 ### Phase 3: Advanced rules core
 - [ ] Card backs and Advanced stats (Life, wounds)

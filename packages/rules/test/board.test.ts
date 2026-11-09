@@ -6,7 +6,7 @@ function map(
   startZones: MapDefinition["startZones"] = [],
   layouts: MapDefinition["layouts"] = {},
 ): MapDefinition {
-  return { formatVersion: 1, id: "t", name: "Test", description: "", pieces, startZones, layouts };
+  return { formatVersion: 1, id: "t", name: "Test", description: "", pieces, scenery: [], startZones, layouts };
 }
 
 function piece(id: string, shape: PlacedPiece["shape"], q: number, r: number, layer: number, terrain = "grass"): PlacedPiece {

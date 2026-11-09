@@ -89,6 +89,7 @@ export function fieldMap(): MapDefinition {
       { seat: 5, hexes: block([5, 6], [2, 3]) },
     ],
     layouts: {},
+    scenery: [],
   };
 }
 
@@ -124,6 +125,7 @@ export function rowMap(columns: [string, number][], extra: PlacedPiece[] = []): 
       { seat: 1, hexes: pad.slice(4) },
     ],
     layouts: {},
+    scenery: [],
   };
 }
 

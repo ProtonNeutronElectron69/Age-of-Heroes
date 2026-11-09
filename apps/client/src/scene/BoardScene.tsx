@@ -1,8 +1,20 @@
 import { Edges, OrbitControls } from "@react-three/drei";
 import type { ThreeEvent } from "@react-three/fiber";
-import { HEX_SIZE, LEVEL_HEIGHT, hexKey, hexToWorld, type Board, type Cell, type Step, type TerrainTable } from "@aoh/rules";
+import {
+  HEX_SIZE,
+  LEVEL_HEIGHT,
+  hexKey,
+  hexToWorld,
+  worldToHex,
+  type Board,
+  type Cell,
+  type Hex,
+  type ScenerySpot,
+  type Step,
+  type TerrainTable,
+} from "@aoh/rules";
 import { useMemo, type ReactNode } from "react";
-import { CylinderGeometry, MeshStandardMaterial } from "three";
+import { BufferGeometry, CylinderGeometry, Float32BufferAttribute, MeshStandardMaterial } from "three";
 import { HEX_GAP } from "./scale";
 
 export interface Marker {
@@ -11,14 +23,28 @@ export interface Marker {
   readonly opacity?: number;
 }
 
+export interface GroundHandlers {
+  /** Pointer over the empty table (or nothing) at this hex. */
+  onHover: (hex: Hex | null) => void;
+  onClick: (hex: Hex) => void;
+}
+
 interface Props {
   board: Board;
   terrain: TerrainTable;
+  /** World point the camera orbits; defaults to the board's centre. */
+  origin?: { x: number; z: number };
   markers?: readonly Marker[];
-  onSurfaceClick?: (step: Step) => void;
-  onSurfaceHover?: (step: Step | null) => void;
+  onSurfaceClick?: (step: Step, cell: Cell) => void;
+  onSurfaceHover?: (step: Step | null, cell: Cell | null) => void;
+  onSceneryClick?: (spot: ScenerySpot) => void;
+  /** Editor only: an invisible table top with a hex grid, for placing pieces on empty space. */
+  ground?: GroundHandlers;
   children?: ReactNode;
 }
+
+/** Pointer travel (pixels) beyond which a click is treated as a camera drag. */
+const DRAG_PIXELS = 5;
 
 /** The standing surface a click on a cell refers to: the top of the solid stack containing it. */
 function surfaceForCell(board: Board, cell: Cell): Step | null {
@@ -38,11 +64,96 @@ export function boardCenter(board: Board): { x: number; z: number; span: number 
     minZ = Math.min(minZ, z);
     maxZ = Math.max(maxZ, z);
   }
-  return { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, span: Math.max(maxX - minX, maxZ - minZ) };
+  if (!Number.isFinite(minX)) return { x: 0, z: 0, span: 30 };
+  return { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, span: Math.max(maxX - minX, maxZ - minZ, 12) };
 }
 
-export function BoardScene({ board, terrain, markers = [], onSurfaceClick, onSurfaceHover, children }: Props) {
+export function SceneryMesh({ spot, onClick }: { spot: ScenerySpot; onClick?: (spot: ScenerySpot) => void }) {
+  const { placement, rules } = spot;
+  const { x, z } = hexToWorld(placement.hex, HEX_SIZE);
+  const base = placement.elevation * LEVEL_HEIGHT;
+  const h = rules.height * LEVEL_HEIGHT;
+  const r = (rules.radius ?? 0.6) * HEX_SIZE;
+  const handlers = onClick
+    ? {
+        onClick: (e: ThreeEvent<MouseEvent>) => {
+          if (e.delta > DRAG_PIXELS) return;
+          e.stopPropagation();
+          onClick(spot);
+        },
+      }
+    : { raycast: () => null };
+  return (
+    <group position={[x, base, z]}>
+      {rules.id === "tree" ? (
+        <>
+          <mesh position={[0, h * 0.15, 0]} {...handlers}>
+            <cylinderGeometry args={[0.12, 0.16, h * 0.3, 8]} />
+            <meshStandardMaterial color="#6d4c2f" flatShading />
+          </mesh>
+          <mesh position={[0, h * 0.62, 0]} {...handlers}>
+            <coneGeometry args={[r, h * 0.76, 8]} />
+            <meshStandardMaterial color={rules.color} flatShading />
+          </mesh>
+        </>
+      ) : rules.shape === "prism" ? (
+        <mesh position={[0, h / 2, 0]} {...handlers}>
+          <cylinderGeometry args={[HEX_SIZE * 0.86, HEX_SIZE * 0.86, h, 6]} />
+          <meshStandardMaterial color={rules.color} flatShading />
+        </mesh>
+      ) : (
+        <mesh position={[0, h / 2, 0]} scale={[1, h / (2 * r), 1]} {...handlers}>
+          <dodecahedronGeometry args={[r, 0]} />
+          <meshStandardMaterial color={rules.color} flatShading />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+/** Hex outlines on the table around the map, so the editor shows where pieces can go. */
+function HexGrid({ center }: { center: { x: number; z: number } }) {
+  const geometry = useMemo(() => {
+    const positions: number[] = [];
+    const c = worldToHex(center.x, center.z, HEX_SIZE);
+    const corners = Array.from({ length: 6 }, (_, k) => {
+      const a = (Math.PI / 3) * k + Math.PI / 6;
+      return [Math.cos(a) * HEX_SIZE * 0.98, Math.sin(a) * HEX_SIZE * 0.98] as const;
+    });
+    for (let dr = -16; dr <= 16; dr++) {
+      for (let dq = -22 - Math.ceil(dr / 2); dq <= 22 - Math.floor(dr / 2); dq++) {
+        const { x, z } = hexToWorld({ q: c.q + dq, r: c.r + dr }, HEX_SIZE);
+        for (let k = 0; k < 6; k++) {
+          const [ax, az] = corners[k]!;
+          const [bx, bz] = corners[(k + 1) % 6]!;
+          positions.push(x + ax, 0.002, z + az, x + bx, 0.002, z + bz);
+        }
+      }
+    }
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(positions, 3));
+    return g;
+  }, [center.x, center.z]);
+  return (
+    <lineSegments geometry={geometry} raycast={() => null}>
+      <lineBasicMaterial color="#3a4658" transparent opacity={0.6} />
+    </lineSegments>
+  );
+}
+
+export function BoardScene({
+  board,
+  terrain,
+  origin,
+  markers = [],
+  onSurfaceClick,
+  onSurfaceHover,
+  onSceneryClick,
+  ground,
+  children,
+}: Props) {
   const cells = useMemo(() => board.cells(), [board]);
+  const scenery = useMemo(() => board.scenery(), [board]);
   const geometry = useMemo(
     () => new CylinderGeometry(HEX_SIZE * HEX_GAP, HEX_SIZE * HEX_GAP, LEVEL_HEIGHT, 6),
     [],
@@ -56,7 +167,8 @@ export function BoardScene({ board, terrain, markers = [], onSurfaceClick, onSur
     return m;
   }, [terrain]);
   const fallback = useMemo(() => new MeshStandardMaterial({ color: "#ff00ff" }), []);
-  const center = useMemo(() => boardCenter(board), [board]);
+  const fitted = useMemo(() => boardCenter(board), [board]);
+  const center = origin ?? fitted;
 
   return (
     <>
@@ -64,6 +176,28 @@ export function BoardScene({ board, terrain, markers = [], onSurfaceClick, onSur
       <hemisphereLight args={["#dfe9ff", "#3a3128", 0.9]} />
       <directionalLight position={[12, 24, 10]} intensity={1.6} />
       <group position={[-center.x, 0, -center.z]}>
+        {ground && (
+          <>
+            <HexGrid center={center} />
+            <mesh
+              rotation={[-Math.PI / 2, 0, 0]}
+              position={[center.x, 0, center.z]}
+              onPointerMove={(e: ThreeEvent<PointerEvent>) => {
+                e.stopPropagation();
+                ground.onHover(worldToHex(e.point.x + center.x, e.point.z + center.z, HEX_SIZE));
+              }}
+              onPointerOut={() => ground.onHover(null)}
+              onClick={(e: ThreeEvent<MouseEvent>) => {
+                if (e.delta > DRAG_PIXELS) return;
+                e.stopPropagation();
+                ground.onClick(worldToHex(e.point.x + center.x, e.point.z + center.z, HEX_SIZE));
+              }}
+            >
+              <planeGeometry args={[200, 200]} />
+              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+            </mesh>
+          </>
+        )}
         {cells.map((cell) => {
           const { x, z } = hexToWorld(cell.hex, HEX_SIZE);
           return (
@@ -73,20 +207,24 @@ export function BoardScene({ board, terrain, markers = [], onSurfaceClick, onSur
               material={materials.get(cell.terrain) ?? fallback}
               position={[x, cell.layer * LEVEL_HEIGHT + LEVEL_HEIGHT / 2, z]}
               onClick={(e: ThreeEvent<MouseEvent>) => {
+                if (e.delta > DRAG_PIXELS) return;
                 e.stopPropagation();
                 const s = surfaceForCell(board, cell);
-                if (s) onSurfaceClick?.(s);
+                if (s) onSurfaceClick?.(s, cell);
               }}
               onPointerOver={(e: ThreeEvent<PointerEvent>) => {
                 e.stopPropagation();
-                onSurfaceHover?.(surfaceForCell(board, cell));
+                onSurfaceHover?.(surfaceForCell(board, cell), cell);
               }}
-              onPointerOut={() => onSurfaceHover?.(null)}
+              onPointerOut={() => onSurfaceHover?.(null, null)}
             >
               <Edges threshold={20} color="#141414" />
             </mesh>
           );
         })}
+        {scenery.map((spot) => (
+          <SceneryMesh key={spot.placement.id} spot={spot} onClick={onSceneryClick} />
+        ))}
         {markers.map((m, i) => {
           const { x, z } = hexToWorld(m.step.hex, HEX_SIZE);
           return (
@@ -104,10 +242,10 @@ export function BoardScene({ board, terrain, markers = [], onSurfaceClick, onSur
       </group>
       <OrbitControls
         makeDefault
-        target={[-center.span * 0.1, 0, 0]}
+        target={origin ? [0, 0, 0] : [-fitted.span * 0.1, 0, 0]}
         maxPolarAngle={Math.PI / 2.15}
         minDistance={6}
-        maxDistance={center.span * 2}
+        maxDistance={Math.max(fitted.span * 2, 60)}
       />
     </>
   );

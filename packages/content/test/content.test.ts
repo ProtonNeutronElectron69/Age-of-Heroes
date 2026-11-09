@@ -1,6 +1,18 @@
-import { Board } from "@aoh/rules";
+import { hexDistance } from "@aoh/rules";
 import { describe, expect, it } from "vitest";
-import { CARDS, FACTIONS, MAPS, TERRAIN, TERRAIN_TABLE, cardCatalog, loadCard, loadMap } from "../src";
+import {
+  CARDS,
+  FACTIONS,
+  MAPS,
+  SCENERY_TABLE,
+  TERRAIN,
+  TERRAIN_TABLE,
+  buildBoard,
+  cardCatalog,
+  contextFor,
+  loadCard,
+  loadMap,
+} from "../src";
 
 describe("terrain", () => {
   it("has the five standard and five special types", () => {
@@ -36,10 +48,25 @@ describe("terrain", () => {
 });
 
 describe("maps", () => {
-  it("every bundled map builds without issues", () => {
+  it("has a library of four premade maps", () => {
+    expect(MAPS.map((m) => m.id)).toEqual(["proving-grounds", "twin-fords", "the-mesa", "glacier-pass"]);
+  });
+
+  it("every bundled map builds without issues and hosts at least 2 players", () => {
     for (const m of MAPS) {
-      const { issues } = Board.fromMap(m, TERRAIN_TABLE);
+      const { board, issues } = buildBoard(m);
       expect(issues, m.id).toEqual([]);
+      expect(board.playerCounts(), m.id).toContain(2);
+      for (const s of m.scenery) expect(SCENERY_TABLE.has(s.kind), `${m.id} ${s.kind}`).toBe(true);
+    }
+  });
+
+  it("spreads two players far apart on every map", () => {
+    for (const m of MAPS) {
+      const { board } = buildBoard(m);
+      const [a, b] = [board.startZone(board.zoneFor(0, 2)), board.startZone(board.zoneFor(1, 2))];
+      const gap = Math.min(...a.flatMap((h) => b.map((k) => hexDistance(h, k))));
+      expect(gap, m.id).toBeGreaterThanOrEqual(12);
     }
   });
 
@@ -53,7 +80,7 @@ describe("maps", () => {
 
   it("the proving grounds bridge has room underneath", () => {
     const m = MAPS.find((x) => x.id === "proving-grounds")!;
-    const { board } = Board.fromMap(m, TERRAIN_TABLE);
+    const { board } = buildBoard(m);
     const underBridge = board.hexes().filter((h) => board.surfaces(h).length > 1);
     expect(underBridge.length).toBeGreaterThan(0);
     for (const h of underBridge) expect(board.surfaces(h)[0]!.clearance).toBeGreaterThanOrEqual(3);
@@ -97,9 +124,14 @@ describe("cards", () => {
     expect(new Set(CARDS.map((c) => c.tokenLabel)).size).toBe(CARDS.length);
   });
 
-  it("fits a full 4-card army of the largest squads in every start zone", () => {
-    const m = MAPS.find((x) => x.id === "proving-grounds")!;
+  it("fits a full 4-card army of the largest squads in every start zone of every map", () => {
     const biggest = Math.max(...CARDS.map((c) => c.figureCount));
-    for (const z of m.startZones) expect(z.hexes.length).toBeGreaterThanOrEqual(4 * biggest);
+    for (const m of MAPS) {
+      const { ctx } = contextFor(m);
+      for (const z of m.startZones) {
+        const spots = z.hexes.filter((h) => !ctx.board.sceneryAt(h, ctx.board.topSurface(h)!.elevation));
+        expect(spots.length, `${m.id} seat ${z.seat}`).toBeGreaterThanOrEqual(4 * biggest);
+      }
+    }
   });
 });
