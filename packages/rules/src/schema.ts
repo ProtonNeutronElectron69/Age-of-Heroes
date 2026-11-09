@@ -43,6 +43,12 @@ export const mapSchema = z.object({
   description: z.string().default(""),
   pieces: z.array(placedPieceSchema).min(1),
   startZones: z.array(startZoneSchema).max(MAX_PLAYERS),
+  /**
+   * Which start zone each player uses, by player count (e.g. "2": [0, 3] puts
+   * two players in opposite corners). List zones clockwise so turn order goes
+   * round the table. Player counts not listed use zones 0, 1, 2...
+   */
+  layouts: z.record(z.string(), z.array(z.number().int().min(0).max(MAX_PLAYERS - 1))).default({}),
 });
 
 export type PlacedPiece = z.infer<typeof placedPieceSchema>;
@@ -70,6 +76,8 @@ export const unitCardSchema = z
   .object({
     id: z.string().min(1),
     name: z.string().min(1),
+    /** 1 to 3 characters shown on the figure's token. */
+    tokenLabel: z.string().min(1).max(3),
     faction: z.string().min(1),
     unitType: unitTypeSchema,
     /** 1 for heroes; the number of figures for squads. */

@@ -15,6 +15,7 @@ pnpm dev        # start the game at http://localhost:5173
 pnpm test       # run the rules and content tests
 pnpm typecheck  # type-check every package
 pnpm build      # production build in apps/client/dist
+pnpm e2e        # play a full game in headless Chromium (run pnpm build first)
 ```
 
 ## Project layout
@@ -22,6 +23,6 @@ pnpm build      # production build in apps/client/dist
 | Path | What it is |
 |---|---|
 | `packages/rules` | The rules engine: hex math, map model, dice, turn engine. Pure TypeScript with no graphics, so it can also run on a server. |
-| `packages/content` | Game data: terrain types, maps and unit cards, validated on load. |
+| `packages/content` | Game data: terrain types, maps and the starter units, validated on load. |
 | `apps/client` | The browser game, built with React and Three.js. |
 | `docs` | Rules and implementation plan. |

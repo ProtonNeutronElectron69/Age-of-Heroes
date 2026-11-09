@@ -1,4 +1,5 @@
 import { unitCardSchema, type UnitCard } from "@aoh/rules";
+import starter from "./cards/starter.json";
 
 /** Parse and validate a unit card. Throws with a readable message if the data is malformed. */
 export function loadCard(data: unknown): UnitCard {
@@ -20,7 +21,11 @@ export function cardCatalog(cards: readonly UnitCard[]): ReadonlyMap<string, Uni
 }
 
 /**
- * The real roster arrives in Phase 1 (Basic starter units) and Phase 4
- * (full Advanced roster). Until then the catalog is empty.
+ * The starter roster: eight original single-hex units across four factions.
+ * Abilities on the card backs take effect with the Advanced rules (Phase 4).
  */
-export const CARDS: readonly UnitCard[] = [];
+export const CARDS: readonly UnitCard[] = (starter as unknown[]).map(loadCard);
+
+export const CARD_CATALOG = cardCatalog(CARDS);
+
+export const FACTIONS: readonly string[] = [...new Set(CARDS.map((c) => c.faction))];

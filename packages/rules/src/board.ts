@@ -31,7 +31,8 @@ export type MapIssueCode =
   | "startZoneOffBoard"
   | "startZoneOverlap"
   | "duplicateSeat"
-  | "tooManyStartZones";
+  | "tooManyStartZones"
+  | "badLayout";
 
 export interface MapIssue {
   readonly severity: "error" | "warning";
@@ -97,6 +98,7 @@ export class Board {
 
     issues.push(...board.supportIssues());
     issues.push(...board.startZoneIssues());
+    issues.push(...board.layoutIssues());
     return { board, issues };
   }
 
@@ -194,6 +196,28 @@ export class Board {
       }
     }
     return issues;
+  }
+
+  private layoutIssues(): MapIssue[] {
+    const issues: MapIssue[] = [];
+    const seats = new Set(this.definition.startZones.map((z) => z.seat));
+    for (const [count, zones] of Object.entries(this.definition.layouts ?? {})) {
+      const ok =
+        zones.length === Number(count) && new Set(zones).size === zones.length && zones.every((z) => seats.has(z));
+      if (!ok) {
+        issues.push({
+          severity: "error",
+          code: "badLayout",
+          message: `The ${count}-player layout must list ${count} different start zones that exist`,
+        });
+      }
+    }
+    return issues;
+  }
+
+  /** The start zone (seat number) used by player `index` in a game of `players`. */
+  zoneFor(index: number, players: number): number {
+    return this.definition.layouts?.[String(players)]?.[index] ?? index;
   }
 
   get id(): string {

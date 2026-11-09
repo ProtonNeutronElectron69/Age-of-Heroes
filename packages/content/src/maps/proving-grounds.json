@@ -29,7 +29,7 @@
     {
       "id": "p3",
       "shape": "slab24",
-      "terrain": "snow",
+      "terrain": "grass",
       "origin": {
         "q": 12,
         "r": 0
@@ -40,10 +40,10 @@
     {
       "id": "p4",
       "shape": "slab24",
-      "terrain": "sand",
+      "terrain": "snow",
       "origin": {
-        "q": -2,
-        "r": 4
+        "q": 18,
+        "r": 0
       },
       "rotation": 0,
       "layer": 0
@@ -51,9 +51,9 @@
     {
       "id": "p5",
       "shape": "slab24",
-      "terrain": "grass",
+      "terrain": "sand",
       "origin": {
-        "q": 4,
+        "q": -2,
         "r": 4
       },
       "rotation": 0,
@@ -64,7 +64,7 @@
       "shape": "slab24",
       "terrain": "grass",
       "origin": {
-        "q": 10,
+        "q": 4,
         "r": 4
       },
       "rotation": 0,
@@ -75,6 +75,28 @@
       "shape": "slab24",
       "terrain": "grass",
       "origin": {
+        "q": 10,
+        "r": 4
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p8",
+      "shape": "slab24",
+      "terrain": "snow",
+      "origin": {
+        "q": 16,
+        "r": 4
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p9",
+      "shape": "slab24",
+      "terrain": "grass",
+      "origin": {
         "q": -4,
         "r": 8
       },
@@ -82,7 +104,7 @@
       "layer": 0
     },
     {
-      "id": "p8",
+      "id": "p10",
       "shape": "slab24",
       "terrain": "grass",
       "origin": {
@@ -93,9 +115,9 @@
       "layer": 0
     },
     {
-      "id": "p9",
+      "id": "p11",
       "shape": "slab24",
-      "terrain": "sand",
+      "terrain": "grass",
       "origin": {
         "q": 8,
         "r": 8
@@ -104,88 +126,66 @@
       "layer": 0
     },
     {
-      "id": "p10",
+      "id": "p12",
+      "shape": "slab24",
+      "terrain": "sand",
+      "origin": {
+        "q": 14,
+        "r": 8
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p13",
+      "shape": "slab24",
+      "terrain": "grass",
+      "origin": {
+        "q": -6,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p14",
+      "shape": "slab24",
+      "terrain": "grass",
+      "origin": {
+        "q": 0,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p15",
+      "shape": "slab24",
+      "terrain": "sand",
+      "origin": {
+        "q": 6,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p16",
+      "shape": "slab24",
+      "terrain": "sand",
+      "origin": {
+        "q": 12,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 0
+    },
+    {
+      "id": "p17",
       "shape": "flower7",
       "terrain": "rock",
       "origin": {
         "q": 3,
-        "r": 2
-      },
-      "rotation": 0,
-      "layer": 1
-    },
-    {
-      "id": "p11",
-      "shape": "triangle3",
-      "terrain": "rock",
-      "origin": {
-        "q": 3,
-        "r": 2
-      },
-      "rotation": 0,
-      "layer": 2
-    },
-    {
-      "id": "p12",
-      "shape": "single",
-      "terrain": "rock",
-      "origin": {
-        "q": 3,
-        "r": 2
-      },
-      "rotation": 0,
-      "layer": 3
-    },
-    {
-      "id": "p13",
-      "shape": "line3",
-      "terrain": "snow",
-      "origin": {
-        "q": 13,
-        "r": 1
-      },
-      "rotation": 0,
-      "layer": 1
-    },
-    {
-      "id": "p14",
-      "shape": "double",
-      "terrain": "snow",
-      "origin": {
-        "q": 14,
-        "r": 1
-      },
-      "rotation": 0,
-      "layer": 2
-    },
-    {
-      "id": "p15",
-      "shape": "line3",
-      "terrain": "ice",
-      "origin": {
-        "q": 11,
-        "r": 3
-      },
-      "rotation": 0,
-      "layer": 1
-    },
-    {
-      "id": "p16",
-      "shape": "rhombus4",
-      "terrain": "lava",
-      "origin": {
-        "q": 7,
-        "r": 3
-      },
-      "rotation": 0,
-      "layer": 1
-    },
-    {
-      "id": "p17",
-      "shape": "line3",
-      "terrain": "road",
-      "origin": {
-        "q": -3,
         "r": 6
       },
       "rotation": 0,
@@ -193,87 +193,87 @@
     },
     {
       "id": "p18",
-      "shape": "line3",
-      "terrain": "road",
-      "origin": {
-        "q": 0,
-        "r": 6
-      },
-      "rotation": 0,
-      "layer": 1
-    },
-    {
-      "id": "p19",
-      "shape": "line3",
-      "terrain": "road",
+      "shape": "triangle3",
+      "terrain": "rock",
       "origin": {
         "q": 3,
         "r": 6
       },
       "rotation": 0,
-      "layer": 1
+      "layer": 2
+    },
+    {
+      "id": "p19",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 3,
+        "r": 6
+      },
+      "rotation": 0,
+      "layer": 3
     },
     {
       "id": "p20",
       "shape": "line3",
-      "terrain": "road",
+      "terrain": "snow",
       "origin": {
-        "q": 6,
-        "r": 6
+        "q": 15,
+        "r": 3
       },
       "rotation": 0,
       "layer": 1
     },
     {
       "id": "p21",
-      "shape": "line3",
-      "terrain": "road",
+      "shape": "double",
+      "terrain": "snow",
       "origin": {
-        "q": 9,
-        "r": 6
+        "q": 16,
+        "r": 3
       },
       "rotation": 0,
-      "layer": 1
+      "layer": 2
     },
     {
       "id": "p22",
       "shape": "line3",
-      "terrain": "road",
+      "terrain": "ice",
       "origin": {
-        "q": 12,
-        "r": 6
+        "q": 13,
+        "r": 5
       },
       "rotation": 0,
       "layer": 1
     },
     {
       "id": "p23",
-      "shape": "flower7",
-      "terrain": "forest",
+      "shape": "rhombus4",
+      "terrain": "lava",
       "origin": {
-        "q": 0,
-        "r": 8
+        "q": 8,
+        "r": 7
       },
       "rotation": 0,
       "layer": 1
     },
     {
       "id": "p24",
-      "shape": "triangle3",
-      "terrain": "swamp",
+      "shape": "line3",
+      "terrain": "road",
       "origin": {
-        "q": -3,
-        "r": 10
+        "q": -4,
+        "r": 9
       },
       "rotation": 0,
       "layer": 1
     },
     {
       "id": "p25",
-      "shape": "flower7",
-      "terrain": "water",
+      "shape": "line3",
+      "terrain": "road",
       "origin": {
-        "q": 9,
+        "q": -1,
         "r": 9
       },
       "rotation": 0,
@@ -281,10 +281,10 @@
     },
     {
       "id": "p26",
-      "shape": "single",
-      "terrain": "rock",
+      "shape": "line3",
+      "terrain": "road",
       "origin": {
-        "q": 7,
+        "q": 2,
         "r": 9
       },
       "rotation": 0,
@@ -292,41 +292,30 @@
     },
     {
       "id": "p27",
-      "shape": "single",
-      "terrain": "rock",
+      "shape": "line3",
+      "terrain": "road",
       "origin": {
-        "q": 7,
+        "q": 5,
         "r": 9
       },
       "rotation": 0,
-      "layer": 2
+      "layer": 1
     },
     {
       "id": "p28",
-      "shape": "single",
-      "terrain": "rock",
+      "shape": "line3",
+      "terrain": "road",
       "origin": {
-        "q": 7,
+        "q": 8,
         "r": 9
       },
       "rotation": 0,
-      "layer": 3
+      "layer": 1
     },
     {
       "id": "p29",
-      "shape": "single",
-      "terrain": "rock",
-      "origin": {
-        "q": 7,
-        "r": 9
-      },
-      "rotation": 0,
-      "layer": 4
-    },
-    {
-      "id": "p30",
-      "shape": "single",
-      "terrain": "rock",
+      "shape": "line3",
+      "terrain": "road",
       "origin": {
         "q": 11,
         "r": 9
@@ -335,56 +324,166 @@
       "layer": 1
     },
     {
+      "id": "p30",
+      "shape": "line3",
+      "terrain": "road",
+      "origin": {
+        "q": 14,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
       "id": "p31",
+      "shape": "line3",
+      "terrain": "road",
+      "origin": {
+        "q": 17,
+        "r": 9
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p32",
+      "shape": "flower7",
+      "terrain": "forest",
+      "origin": {
+        "q": 0,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p33",
+      "shape": "triangle3",
+      "terrain": "swamp",
+      "origin": {
+        "q": 2,
+        "r": 13
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p34",
+      "shape": "flower7",
+      "terrain": "water",
+      "origin": {
+        "q": 11,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p35",
       "shape": "single",
       "terrain": "rock",
       "origin": {
-        "q": 11,
-        "r": 9
+        "q": 9,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p36",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 9,
+        "r": 12
       },
       "rotation": 0,
       "layer": 2
     },
     {
-      "id": "p32",
+      "id": "p37",
       "shape": "single",
       "terrain": "rock",
       "origin": {
-        "q": 11,
-        "r": 9
+        "q": 9,
+        "r": 12
       },
       "rotation": 0,
       "layer": 3
     },
     {
-      "id": "p33",
+      "id": "p38",
       "shape": "single",
       "terrain": "rock",
       "origin": {
-        "q": 11,
-        "r": 9
+        "q": 9,
+        "r": 12
       },
       "rotation": 0,
       "layer": 4
     },
     {
-      "id": "p34",
+      "id": "p39",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 13,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 1
+    },
+    {
+      "id": "p40",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 13,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 2
+    },
+    {
+      "id": "p41",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 13,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 3
+    },
+    {
+      "id": "p42",
+      "shape": "single",
+      "terrain": "rock",
+      "origin": {
+        "q": 13,
+        "r": 12
+      },
+      "rotation": 0,
+      "layer": 4
+    },
+    {
+      "id": "p43",
       "shape": "line3",
       "terrain": "road",
       "origin": {
-        "q": 7,
-        "r": 9
+        "q": 9,
+        "r": 12
       },
       "rotation": 0,
       "layer": 5
     },
     {
-      "id": "p35",
+      "id": "p44",
       "shape": "double",
       "terrain": "road",
       "origin": {
-        "q": 10,
-        "r": 9
+        "q": 12,
+        "r": 12
       },
       "rotation": 0,
       "layer": 5
@@ -395,28 +494,68 @@
       "seat": 0,
       "hexes": [
         {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": 0,
+          "r": 1
+        },
+        {
+          "q": -1,
+          "r": 2
+        },
+        {
           "q": -1,
           "r": 3
         },
         {
-          "q": -2,
-          "r": 4
+          "q": 1,
+          "r": 0
         },
         {
-          "q": -2,
-          "r": 5
+          "q": 1,
+          "r": 1
+        },
+        {
+          "q": 0,
+          "r": 2
         },
         {
           "q": 0,
           "r": 3
         },
         {
-          "q": -1,
-          "r": 4
+          "q": 2,
+          "r": 0
         },
         {
-          "q": -1,
-          "r": 5
+          "q": 2,
+          "r": 1
+        },
+        {
+          "q": 1,
+          "r": 2
+        },
+        {
+          "q": 1,
+          "r": 3
+        },
+        {
+          "q": 3,
+          "r": 0
+        },
+        {
+          "q": 3,
+          "r": 1
+        },
+        {
+          "q": 2,
+          "r": 2
+        },
+        {
+          "q": 2,
+          "r": 3
         }
       ]
     },
@@ -424,28 +563,68 @@
       "seat": 1,
       "hexes": [
         {
-          "q": 7,
+          "q": 10,
           "r": 0
         },
         {
-          "q": 7,
-          "r": 1
-        },
-        {
-          "q": 8,
-          "r": 0
-        },
-        {
-          "q": 8,
+          "q": 10,
           "r": 1
         },
         {
           "q": 9,
-          "r": 0
+          "r": 2
         },
         {
           "q": 9,
+          "r": 3
+        },
+        {
+          "q": 11,
+          "r": 0
+        },
+        {
+          "q": 11,
           "r": 1
+        },
+        {
+          "q": 10,
+          "r": 2
+        },
+        {
+          "q": 10,
+          "r": 3
+        },
+        {
+          "q": 12,
+          "r": 0
+        },
+        {
+          "q": 12,
+          "r": 1
+        },
+        {
+          "q": 11,
+          "r": 2
+        },
+        {
+          "q": 11,
+          "r": 3
+        },
+        {
+          "q": 13,
+          "r": 0
+        },
+        {
+          "q": 13,
+          "r": 1
+        },
+        {
+          "q": 12,
+          "r": 2
+        },
+        {
+          "q": 12,
+          "r": 3
         }
       ]
     },
@@ -453,28 +632,68 @@
       "seat": 2,
       "hexes": [
         {
-          "q": 15,
+          "q": 20,
+          "r": 0
+        },
+        {
+          "q": 20,
+          "r": 1
+        },
+        {
+          "q": 19,
+          "r": 2
+        },
+        {
+          "q": 19,
           "r": 3
         },
         {
-          "q": 14,
-          "r": 4
+          "q": 21,
+          "r": 0
         },
         {
-          "q": 14,
-          "r": 5
+          "q": 21,
+          "r": 1
         },
         {
-          "q": 16,
+          "q": 20,
+          "r": 2
+        },
+        {
+          "q": 20,
           "r": 3
         },
         {
-          "q": 15,
-          "r": 4
+          "q": 22,
+          "r": 0
         },
         {
-          "q": 15,
-          "r": 5
+          "q": 22,
+          "r": 1
+        },
+        {
+          "q": 21,
+          "r": 2
+        },
+        {
+          "q": 21,
+          "r": 3
+        },
+        {
+          "q": 23,
+          "r": 0
+        },
+        {
+          "q": 23,
+          "r": 1
+        },
+        {
+          "q": 22,
+          "r": 2
+        },
+        {
+          "q": 22,
+          "r": 3
         }
       ]
     },
@@ -482,28 +701,68 @@
       "seat": 3,
       "hexes": [
         {
-          "q": 12,
-          "r": 9
+          "q": 14,
+          "r": 12
         },
         {
-          "q": 11,
-          "r": 10
-        },
-        {
-          "q": 11,
-          "r": 11
+          "q": 14,
+          "r": 13
         },
         {
           "q": 13,
-          "r": 9
+          "r": 14
         },
         {
-          "q": 12,
-          "r": 10
+          "q": 13,
+          "r": 15
         },
         {
-          "q": 12,
-          "r": 11
+          "q": 15,
+          "r": 12
+        },
+        {
+          "q": 15,
+          "r": 13
+        },
+        {
+          "q": 14,
+          "r": 14
+        },
+        {
+          "q": 14,
+          "r": 15
+        },
+        {
+          "q": 16,
+          "r": 12
+        },
+        {
+          "q": 16,
+          "r": 13
+        },
+        {
+          "q": 15,
+          "r": 14
+        },
+        {
+          "q": 15,
+          "r": 15
+        },
+        {
+          "q": 17,
+          "r": 12
+        },
+        {
+          "q": 17,
+          "r": 13
+        },
+        {
+          "q": 16,
+          "r": 14
+        },
+        {
+          "q": 16,
+          "r": 15
         }
       ]
     },
@@ -511,28 +770,68 @@
       "seat": 4,
       "hexes": [
         {
-          "q": 2,
-          "r": 10
-        },
-        {
-          "q": 2,
-          "r": 11
-        },
-        {
-          "q": 3,
-          "r": 10
-        },
-        {
-          "q": 3,
-          "r": 11
+          "q": 4,
+          "r": 12
         },
         {
           "q": 4,
-          "r": 10
+          "r": 13
+        },
+        {
+          "q": 3,
+          "r": 14
+        },
+        {
+          "q": 3,
+          "r": 15
+        },
+        {
+          "q": 5,
+          "r": 12
+        },
+        {
+          "q": 5,
+          "r": 13
         },
         {
           "q": 4,
-          "r": 11
+          "r": 14
+        },
+        {
+          "q": 4,
+          "r": 15
+        },
+        {
+          "q": 6,
+          "r": 12
+        },
+        {
+          "q": 6,
+          "r": 13
+        },
+        {
+          "q": 5,
+          "r": 14
+        },
+        {
+          "q": 5,
+          "r": 15
+        },
+        {
+          "q": 7,
+          "r": 12
+        },
+        {
+          "q": 7,
+          "r": 13
+        },
+        {
+          "q": 6,
+          "r": 14
+        },
+        {
+          "q": 6,
+          "r": 15
         }
       ]
     },
@@ -540,30 +839,94 @@
       "seat": 5,
       "hexes": [
         {
+          "q": -6,
+          "r": 12
+        },
+        {
+          "q": -6,
+          "r": 13
+        },
+        {
+          "q": -7,
+          "r": 14
+        },
+        {
+          "q": -7,
+          "r": 15
+        },
+        {
+          "q": -5,
+          "r": 12
+        },
+        {
+          "q": -5,
+          "r": 13
+        },
+        {
+          "q": -6,
+          "r": 14
+        },
+        {
+          "q": -6,
+          "r": 15
+        },
+        {
           "q": -4,
-          "r": 9
+          "r": 12
+        },
+        {
+          "q": -4,
+          "r": 13
         },
         {
           "q": -5,
-          "r": 10
+          "r": 14
         },
         {
           "q": -5,
-          "r": 11
+          "r": 15
         },
         {
           "q": -3,
-          "r": 9
+          "r": 12
+        },
+        {
+          "q": -3,
+          "r": 13
         },
         {
           "q": -4,
-          "r": 10
+          "r": 14
         },
         {
           "q": -4,
-          "r": 11
+          "r": 15
         }
       ]
     }
-  ]
+  ],
+  "layouts": {
+    "2": [
+      0,
+      3
+    ],
+    "3": [
+      0,
+      2,
+      4
+    ],
+    "4": [
+      0,
+      2,
+      3,
+      5
+    ],
+    "5": [
+      0,
+      1,
+      2,
+      3,
+      5
+    ]
+  }
 }

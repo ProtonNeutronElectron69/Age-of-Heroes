@@ -69,7 +69,7 @@ Special terrain:
 | **Water** | Entering water from a hex that is not water or swamp ends the figure's movement. Each water hex costs 2 move. |
 | **Swamp** | Entering swamp from a hex that is not water or swamp ends the figure's movement. Each swamp hex costs 2 move. A figure that ends its turn on swamp rolls 1 attack die against itself with 0 defense dice, taking 1 wound per skull. |
 | **Lava** | Each time a figure enters a lava hex, roll a d20: on 1 to 12 the figure is destroyed *(tunable)*. |
-| **Ice** | Each time a figure enters an ice hex, roll a d20: on 1 to 5 it slips, slides 1 more hex in the direction it was moving, and its movement ends *(tunable)*. If that hex is blocked or off the battlefield it stays where it is. |
+| **Ice** | Each time a figure enters an ice hex, roll a d20: on 1 to 5 it slips, slides 1 more hex in the direction it was moving, and its movement ends *(tunable)*. It slides onto the highest surface in that hex that is not above it. If that hex is blocked, taken or off the battlefield it stays where it is. A slide never causes a second slip, but sliding into lava means a lava roll. If a slip leaves the figure on a hex it was only passing over (another figure is there), it goes back to the last free hex on its path. |
 | **Road** | A figure that starts its turn on road, moves only through road hexes and ends its turn on road gets +3 move that turn *(tunable)*. |
 
 Water and swamp form one "wet" group: moving from water into swamp (or the reverse) does not stop movement, but each hex still costs 2.
@@ -81,7 +81,7 @@ A figure that starts its turn in water or swamp can keep moving through it, payi
 All terrain effects apply in both the Basic and the Advanced game. **Assumption.**
 
 ### Start zones
-Each map has up to 6 start zones, one per seat. Players set up their figures only in their own zone.
+Each map has up to 6 start zones. The map says which zones are used for each player count, so that, for example, two players start in opposite corners. Turn order still goes round the table in seat order. Players set up their figures only in their own zone.
 
 ## 4. Setting up a game
 
@@ -89,7 +89,7 @@ Game options:
 - **Rule set**: Basic or Advanced.
 - **Players**: 2 to 6, each in a seat. Seat order is also the "to the left" order.
 - **Map**.
-- **Army size**: Basic: number of cards per player (default 4) **Assumption**. Advanced: points budget (default 500).
+- **Army size**: Basic: number of cards per player, 1 to 4 (default 3). Advanced: points budget (default 500).
 - **Faction-pure mode** (Advanced, optional): every unit in an army must share a faction. **Assumption:** the exact reward or requirement will be set in Phase 4.
 - **Round limit**: none, or a number of rounds.
 
@@ -98,9 +98,10 @@ Armies are drafted from a shared pool in a **snake draft**: the pick order rever
 - **Advanced**: each pick must fit within the player's remaining budget. A player who cannot afford anything, or chooses to stop, is out of the draft. The draft ends when everyone is out.
 - **Basic**: each player picks cards until they have the agreed number.
 - **Uniques**: a unique unit can be drafted by only one player. Common units can be drafted any number of times by anyone. **Assumption.**
+- **Room to deploy**: an army can never have more figures than its start zone has spots. The draft does not allow a card that would not fit, and a player with no room left skips their remaining picks.
 
 ### Deployment
-Players place their figures in their start zones, one unit at a time in draft order. **Assumption:** exact deployment order will be set in Phase 1.
+After the draft, units are deployed one at a time in the order they were drafted. (With preset armies, players take turns round the table, one unit each.) Each figure goes on a free spot in its owner's start zone where it fits.
 
 ## 5. Rounds
 
@@ -132,6 +133,7 @@ The revealed unit **activates**. Each of its figures may make one move and one a
 - Each hex moved costs 1 move, plus terrain costs (water and swamp cost 2).
 - **Climbing up** costs 1 extra move for every level climbed.
 - Moving down costs nothing extra.
+- A figure can only stand where the open space above the ground is at least its Height (this matters under bridges). Climbing needs that much headroom where the figure starts, and dropping down needs it where the figure lands.
 - A figure can move through hexes holding **friendly** figures but not **enemy** figures, and cannot end its move on an occupied hex.
 - **Advanced:** a figure cannot climb a single step taller than its Height. In the Basic game there is no step limit. **Assumption.**
 - Multi-hex figures move by their front hex; the rest of the footprint follows. Exact rules will be written in Phase 3.
@@ -155,6 +157,7 @@ Flying is an ability, so it only exists in the Advanced game. In the Basic game 
 Every figure is shown as a token as tall as its Height. Each token has an **eye point** (the centre of its top) and a **hit band** (a coloured band around its upper part).
 - **Advanced:** the attacker needs a clear straight line from its eye point to some part of the target's hit band. Terrain and other figures (friend or enemy) block the line. The game checks this automatically; a figure's-eye camera shows the player what the figure sees.
 - **Basic:** the attacker needs a clear line from its eye point to any part of the target's token. Only terrain blocks; other figures do not. **Assumption.**
+- The ground each figure stands on never blocks the line, so a figure at the edge of a cliff can see the figure at its foot. A bridge or overhang above either figure still can.
 
 ### Rolling
 1. The attacker rolls attack dice equal to its Attack, plus any bonuses.
@@ -206,4 +209,3 @@ These will be decided in the phase listed, with a sensible default proposed then
 - Multi-hex figure movement and rotation (Phase 3).
 - Scenery pieces such as trees and walls (Phase 2).
 - Faction-pure mode reward (Phase 4).
-- Deployment order (Phase 1).
