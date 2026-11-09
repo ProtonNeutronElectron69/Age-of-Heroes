@@ -104,13 +104,13 @@ Game options:
 - **Rule set**: Basic or Advanced.
 - **Players**: 2 to 6, each in a seat. Seat order is also the "to the left" order.
 - **Map**.
-- **Army size**: number of cards per player, 1 to 4 (default 3), in both rule sets for now. The Advanced points budget (default 500) arrives in Phase 4.
-- **Faction-pure mode** (Advanced, optional): every unit in an army must share a faction. **Assumption:** the exact reward or requirement will be set in Phase 4.
+- **Army size**: Basic: number of cards per player, 1 to 4 (default 3). Advanced: a points budget of 300, 400, 500 or 600 points (default 400).
+- **Faction-pure mode** (Advanced, optional): every unit in an army must share the faction of that player's first pick. There is no extra reward; it is a theme restriction. **Assumption.**
 - **Round limit**: none, or a number of rounds.
 
 ### Drafting
 Armies are drafted from a shared pool in a **snake draft**: the pick order reverses each round of picks (seat 1, 2, 3, 3, 2, 1, 1, 2, 3 and so on). The first picker is decided by a d20 roll.
-- **Advanced** (from Phase 4): each pick must fit within the player's remaining budget. A player who cannot afford anything, or chooses to stop, is out of the draft. The draft ends when everyone is out. Until then the Advanced game drafts by card count like the Basic game.
+- **Advanced**: each pick must fit within the player's remaining points. A player may press "Done drafting" to stop; a player who cannot afford anything that fits is skipped. The draft ends when nobody can or will pick.
 - **Basic**: each player picks cards until they have the agreed number.
 - **Uniques**: a unique unit can be drafted by only one player. Common units can be drafted any number of times by anyone. **Assumption.**
 - **Room to deploy**: an army can never need more hexes than its start zone has (a multi-hex figure needs one hex per footprint hex). The draft does not allow a card that would not fit, and a player with no room left skips their remaining picks.
@@ -165,12 +165,11 @@ Some figures cover 2 or more hexes (2x1, 3x1 or 2x2 footprints). **Assumption** 
 - **Deploying:** all of its hexes must be in the start zone. It can face any direction.
 
 ### Flying (Advanced ability)
-- While moving, a flying figure ignores terrain. It does not stop in water or swamp, does not roll for lava or ice it passes over, and pays no extra move to climb.
-- Terrain affects a flying figure only if it **ends** its move on that hex.
-- Flyers ignore the Height limit when climbing and **never take falling damage**.
-- Flyers can pass over any figure, friend or enemy. They still take passing strikes when they leave an engaged enemy. **Assumption.**
-
-Flying is an ability, so it only exists in the Advanced game. In the Basic game every unit walks. **Assumption.**
+- A flying figure's move is counted in hexes **straight to where it lands**. Terrain, height, scenery and figures on the way do not matter, and climbing costs nothing.
+- It can land on any free spot within its Move where it fits, at any height (not on scenery or another figure).
+- Terrain affects it only where it lands: lava rolls as usual and swamp hurts at the end of its turn. It never slips on ice and **never takes falling damage**.
+- It still takes passing strikes when it takes off from beside an engaged enemy and lands out of reach.
+- Flying is an ability, so it only exists in the Advanced game. In the Basic game every unit walks.
 
 ## 8. Attacking
 
@@ -220,18 +219,44 @@ Flying figures never take falling damage.
 
 ## 11. Abilities (Advanced only)
 
-Each ability has a name and rules text on the card, and is implemented in code as a set of hooks into the rule steps (before movement, during each step, before an attack roll, after wounds, at the end of a turn, and so on). An ability may change any rule. When an ability contradicts the core rules, the ability wins.
+Each ability has a name and rules text on the card, and is implemented in code as a set of hooks into the rule steps (before movement, during each step, before an attack roll, after wounds, at the end of a turn, and so on). An ability may change any rule. When an ability contradicts the core rules, the ability wins. Abilities do not exist in the Basic game.
+
+General rulings:
+- Numbers in abilities (ranges, dice, bonuses, rolls needed) are on the card data and *tunable*.
+- **Auras do not stack.** A figure gets each named bonus at most once, however many sources are nearby.
+- Bonus dice from abilities add to height bonuses. Every roll lists why its dice changed.
+- **Special actions** (Ember Spit, Mortar Barrage, Lantern Gaze) are used **instead of** the figure's normal attack, and follow the normal attack rules (engagement, line of sight) unless they say otherwise.
+
+| Ability | What it does |
+|---|---|
+| **Flying** | See 7. |
+| **Trample** | May move through Small and Medium enemies (not end on them). Each one moved through rolls 1 defense die; on no shield it takes 1 wound. |
+| **Smoke Step** | After attacking, the figure may move up to 2 hexes, drawing no passing strikes. |
+| **Massed Volley** | The third and later attacks by figures of the same squad on the same target in one turn get +2 attack dice. |
+| **Grove Song** | Other friendly Elves within 3 hexes of the singer get +1 attack die. |
+| **Rally the Line** | Friendly Disciplined squad figures within 4 hexes of the commander get +1 defense die. |
+| **Deflector Field** | Friendly figures next to the guardian (not the guardian itself) get +1 defense die against attacks from 3 or more hexes away. |
+| **Hidden in the Leaves** | On forest, +2 defense dice against attacks from 4 or more hexes away. |
+| **Moss Armor** | +1 defense die against attacks from 4 or more hexes away. |
+| **Brace** | +2 defense dice when attacked by an adjacent enemy that moved this turn. |
+| **Answering Blade** | When defending against an adjacent attacker and rolling more shields than it rolled skulls, the attacker takes 1 wound. |
+| **Thick Hide** | Attacks from 3 or more hexes away deal 1 less wound. |
+| **Salvage Protocol** | When a figure of the squad destroys an enemy, one destroyed figure of that squad returns, unwounded, on a free spot next to the attacker. |
+| **Field Dressing** | At the end of the medic's turn, remove 1 wound from the most wounded friendly hero next to her (or herself). |
+| **Ember Spit** (special action) | Range 3: 2 attack dice against the target, and 1 attack die against every other figure next to the target (friend or foe, never the attacker). Each defends normally. |
+| **Mortar Barrage** (special action) | Range 3 to 8, **needs no line of sight**: 3 attack dice against the target and 1 against every other figure next to it. |
+| **Lantern Gaze** (special action) | Range 4, in sight: target an enemy Small or Medium figure that is not unique and roll a d20. On 16 or more it leaves its unit and joins your army as a unit of its own (you can place tokens on it from the next round). |
+
+A figure taken by mind control scores its share of its card's points for its new owner.
 
 ## 12. Winning
 
 - **Elimination**: when a player has no figures left, they are out. The last player with figures on the battlefield wins.
 - **Round limit** (optional): when the last round ends, the player with the highest score wins. Ties share the win.
-  - Advanced score: the points of every unit still on the battlefield. A squad scores in proportion to its surviving figures (for example 2 of 3 figures left scores 2/3 of its points, rounded down).
+  - Advanced score: the points of every figure still on the battlefield. Each squad figure is worth its share of the card's points (for example 2 of 3 figures left scores 2/3 of the points, rounded down).
   - Basic score: the number of surviving figures.
 - A player may **concede** at any time. They are out of the game and their remaining turns are skipped.
 
-## 13. Open items
+## 13. Point costs
 
-These will be decided in the phase listed, with a sensible default proposed then:
-- Flying over scenery (Phase 4).
-- Faction-pure mode reward (Phase 4).
+Point costs are checked against a balance model in `packages/content/src/balance.ts`: expected damage dealt and attacks survived, worked out exactly from the dice odds, adjusted for range, Move, size and abilities. Every unit must cost between 70% and 130% of what the model suggests (a test enforces it). Run `BALANCE_REPORT=1 pnpm test balance` to print the table.

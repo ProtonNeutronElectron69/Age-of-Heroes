@@ -15,6 +15,7 @@ export * from "./game/errors";
 export * from "./game/queries";
 export * from "./game/placement";
 export * from "./game/engagement";
+export * from "./game/abilities";
 export * from "./game/rounds";
 export * from "./game/draft";
 export * from "./game/deploy";

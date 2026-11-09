@@ -19,13 +19,30 @@ export function snakeOrder(firstRound: readonly PlayerId[], rounds: number): Pla
   return order;
 }
 
-export function startDraft(state: GameState, armySize: number, events: GameEvent[]): void {
+/** A points draft goes on until every player has passed or cannot afford anything; this caps its length. */
+const POINTS_DRAFT_ROUNDS = 40;
+
+export function startDraft(state: GameState, armySize: number | null, events: GameEvent[]): void {
   const rng = new Rng(state.rng);
   const { order, rolls } = rollOff(state, rng);
   state.rng = rng.state;
   state.phase = "draft";
-  state.draft = { order: snakeOrder(order, armySize), index: 0, rolls, picks: [] };
+  state.draft = { order: snakeOrder(order, armySize ?? POINTS_DRAFT_ROUNDS), index: 0, rolls, picks: [], passed: [] };
   events.push({ type: "draftStarted", rolls, order });
+}
+
+/** Points a player has spent in a points draft. */
+export function pointsSpent(state: GameState, player: PlayerId, ctx: RulesContext): number {
+  return state.units
+    .filter((u) => u.owner === player)
+    .reduce((n, u) => n + (ctx.cards.get(u.cardId)?.advanced.points ?? 0), 0);
+}
+
+/** The faction a player is locked into in faction-pure mode, if any. */
+export function lockedFaction(state: GameState, player: PlayerId, ctx: RulesContext): string | null {
+  if (!state.config.factionPure) return null;
+  const first = state.units.find((u) => u.owner === player);
+  return first ? (ctx.cards.get(first.cardId)?.faction ?? null) : null;
 }
 
 /** Who picks next. */
@@ -54,15 +71,32 @@ export function spaceNeeded(state: GameState, player: PlayerId, ctx: RulesContex
 
 /**
  * Cards that can be drafted right now: unique cards nobody has taken yet and
- * any common card. With a player given, only cards whose figures still fit
- * in that player's start zone.
+ * any common card. With a player given, only cards whose figures still fit in
+ * that player's start zone, that they can afford (points draft), and of their
+ * faction (faction-pure mode).
  */
 export function draftableCards(state: GameState, ctx: RulesContext, player?: PlayerId): string[] {
-  const taken = new Set(state.units.map((u) => u.cardId));
-  const room = player ? zoneCapacity(state, player, ctx) - spaceNeeded(state, player, ctx) : Infinity;
-  return [...ctx.cards.values()]
-    .filter((c) => !(isUnique(c) && taken.has(c.id)) && cardSpace(c) <= room)
-    .map((c) => c.id);
+  return [...ctx.cards.keys()].filter((id) => pickProblem(state, ctx, id, player) === null);
+}
+
+/** Why a card cannot be drafted, or null if it can. */
+export function pickProblem(state: GameState, ctx: RulesContext, cardId: string, player?: PlayerId): string | null {
+  const card = ctx.cards.get(cardId);
+  if (!card) return `Unknown card "${cardId}"`;
+  if (isUnique(card) && state.units.some((u) => u.cardId === cardId)) {
+    return `${card.name} is unique and has already been drafted`;
+  }
+  if (!player) return null;
+  const room = zoneCapacity(state, player, ctx) - spaceNeeded(state, player, ctx);
+  if (cardSpace(card) > room) return `Your start zone only has room for ${room} more hexes of figures`;
+  const budget = state.config.budget;
+  if (budget !== null) {
+    const left = budget - pointsSpent(state, player, ctx);
+    if (card.advanced.points > left) return `${card.name} costs ${card.advanced.points} points; you have ${left} left`;
+  }
+  const faction = lockedFaction(state, player, ctx);
+  if (faction && card.faction !== faction) return `Your army is ${faction} only`;
+  return null;
 }
 
 export function createUnit(state: GameState, player: PlayerId, cardId: string, ctx: RulesContext): UnitState {
@@ -93,12 +127,8 @@ export function draftPick(
 ): void {
   if (state.phase !== "draft" || !state.draft) fail("The draft is over");
   if (currentDrafter(state) !== player) fail("It is not your pick");
-  const card = ctx.cards.get(cardId) ?? fail(`Unknown card "${cardId}"`);
-  if (isUnique(card) && state.units.some((u) => u.cardId === cardId)) {
-    fail(`${card.name} is unique and has already been drafted`);
-  }
-  const room = zoneCapacity(state, player, ctx) - spaceNeeded(state, player, ctx);
-  if (cardSpace(card) > room) fail(`Your start zone only has room for ${room} more hexes of figures`);
+  const problem = pickProblem(state, ctx, cardId, player);
+  if (problem) fail(problem);
   const unit = createUnit(state, player, cardId, ctx);
   state.draft.picks.push({ player, cardId, unitId: unit.id });
   events.push({ type: "cardDrafted", player, cardId, unitId: unit.id });
@@ -106,20 +136,35 @@ export function draftPick(
   continueDraft(state, events, ctx);
 }
 
+/** Points draft only: a player stops drafting for the rest of the draft. */
+export function draftPass(state: GameState, player: PlayerId, events: GameEvent[], ctx: RulesContext): void {
+  if (state.phase !== "draft" || !state.draft) fail("The draft is over");
+  if (state.config.budget === null) fail("Every player drafts the same number of cards; there is no passing");
+  if (currentDrafter(state) !== player) fail("It is not your pick");
+  state.draft.passed.push(player);
+  events.push({ type: "draftPassed", player });
+  state.draft.index += 1;
+  continueDraft(state, events, ctx);
+}
+
 /**
- * Move past picks that cannot happen (the player has left the game, or no
- * card fits in their start zone any more), and end the draft when no picks
- * remain.
+ * Move past picks that cannot happen (the player has left the game or
+ * passed, or no card fits their zone, budget and faction any more), and end
+ * the draft when nobody can pick.
  */
 export function continueDraft(state: GameState, events: GameEvent[], ctx: RulesContext): void {
   const d = state.draft;
   if (!d) return;
-  while (d.index < d.order.length) {
-    const player = d.order[d.index]!;
-    const p = state.players.find((x) => x.id === player);
-    if (p && !p.eliminated && draftableCards(state, ctx, player).length > 0) return;
+  const canPick = new Set(
+    state.players
+      .filter((p) => !p.eliminated && !d.passed.includes(p.id) && draftableCards(state, ctx, p.id).length > 0)
+      .map((p) => p.id),
+  );
+  while (d.index < d.order.length && canPick.size > 0) {
+    if (canPick.has(d.order[d.index]!)) return;
     d.index += 1;
   }
+  d.index = d.order.length;
   events.push({ type: "draftEnded" });
   startDeployment(state, events, ctx);
 }

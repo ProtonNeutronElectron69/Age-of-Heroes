@@ -116,12 +116,21 @@ describe("cards", () => {
     expect(cardCatalog(CARDS).size).toBe(CARDS.length);
   });
 
-  it("has a starter roster of 9 units across 4 factions, one of them two hexes long", () => {
-    expect(CARDS).toHaveLength(9);
+  it("has a roster of 16 units, 4 in each of 4 factions, two of them multi-hex", () => {
+    expect(CARDS).toHaveLength(16);
     expect(FACTIONS).toHaveLength(4);
-    for (const f of FACTIONS) expect(CARDS.filter((c) => c.faction === f).length).toBeGreaterThanOrEqual(2);
-    expect(CARDS.filter((c) => c.footprint !== "1").map((c) => c.id)).toEqual(["old-rootback"]);
+    for (const f of FACTIONS) expect(CARDS.filter((c) => c.faction === f)).toHaveLength(4);
+    expect(CARDS.filter((c) => c.footprint !== "1").map((c) => c.id)).toEqual(["old-rootback", "siege-walker-atlas"]);
     expect(new Set(CARDS.map((c) => c.tokenLabel)).size).toBe(CARDS.length);
+  });
+
+  it("only uses abilities the engine implements", () => {
+    const implemented = new Set([
+      "flying", "trample", "smoke-step", "massed-volley", "grove-song", "rally-the-line", "deflector-field",
+      "hidden-in-the-leaves", "moss-armor", "brace", "answering-blade", "thick-hide", "salvage-protocol",
+      "field-dressing", "ember-spit", "mortar-barrage", "lantern-gaze",
+    ]);
+    for (const c of CARDS) for (const a of c.advanced.abilities) expect(implemented.has(a.id), `${c.id} ${a.id}`).toBe(true);
   });
 
   it("gives every unit original, filled-in rules text on its back", () => {

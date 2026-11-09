@@ -6,6 +6,7 @@ import { SEAT_COLORS, SEAT_COLOR_NAMES } from "../scene/scale";
 import { resumeSavedGame, savedGame, startGame } from "../session";
 
 const ROUND_LIMITS = [null, 5, 8, 12] as const;
+const BUDGETS = [300, 400, 500, 600] as const;
 
 interface Props {
   /** Open the map editor, optionally starting from an existing map. */
@@ -19,6 +20,8 @@ export function SetupScreen({ onOpenEditor, initialMapId }: Props) {
   const [count, setCount] = useState(2);
   const [names, setNames] = useState<string[]>(SEAT_COLOR_NAMES.map((c) => `${c} Player`));
   const [armySize, setArmySize] = useState(3);
+  const [budget, setBudget] = useState(400);
+  const [factionPure, setFactionPure] = useState(false);
   const [roundLimit, setRoundLimit] = useState<number | null>(8);
   const [mine, setMine] = useState(() => customMaps());
   const [mapId, setMapId] = useState(() => (initialMapId && findMap(initialMapId) ? initialMapId : MAPS[0]!.id));
@@ -35,7 +38,7 @@ export function SetupScreen({ onOpenEditor, initialMapId }: Props) {
         seed: seedFromString(`${Date.now()}:${Math.random()}`),
         mapId: map.id,
         roundLimit,
-        armySize,
+        ...(mode === "advanced" ? { budget, factionPure } : { armySize }),
         players: Array.from({ length: players }, (_, i) => ({
           id: `p${i + 1}`,
           name: names[i]!.trim() || `Player ${i + 1}`,
@@ -71,7 +74,7 @@ export function SetupScreen({ onOpenEditor, initialMapId }: Props) {
           <p className="muted small">
             {mode === "basic"
               ? "The front of each card: move, range, attack and defense. Any wound destroys a figure."
-              : "The back of each card: Life, height bonuses, falling, engagement and strict line of sight. Special abilities arrive in a later phase."}
+              : "The back of each card: Life, points, special abilities, height bonuses, falling, engagement and strict line of sight."}
           </p>
         </fieldset>
 
@@ -150,6 +153,29 @@ export function SetupScreen({ onOpenEditor, initialMapId }: Props) {
           <p className="muted small">Turn order passes in this order (to the left).</p>
         </fieldset>
 
+        {mode === "advanced" ? (
+          <fieldset>
+            <legend>Army points</legend>
+            <div className="segmented" role="radiogroup" aria-label="Points budget">
+              {BUDGETS.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  role="radio"
+                  aria-checked={budget === n}
+                  className={budget === n ? "on" : ""}
+                  onClick={() => setBudget(n)}
+                >
+                  {n} points
+                </button>
+              ))}
+            </div>
+            <label className="check">
+              <input type="checkbox" checked={factionPure} onChange={(e) => setFactionPure(e.target.checked)} />
+              Faction-pure armies (every unit shares the faction of your first pick)
+            </label>
+          </fieldset>
+        ) : (
         <fieldset>
           <legend>Army size</legend>
           <div className="segmented" role="radiogroup" aria-label="Cards per player">
@@ -167,6 +193,7 @@ export function SetupScreen({ onOpenEditor, initialMapId }: Props) {
             ))}
           </div>
         </fieldset>
+        )}
 
         <fieldset>
           <legend>Round limit</legend>

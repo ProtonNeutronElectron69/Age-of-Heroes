@@ -164,7 +164,7 @@ function Die({ face, kind }: { face: DieFace; kind: "attack" | "defense" }) {
 
 /** Shows the dice from the latest command (attacks, swamp, lava and ice rolls). */
 export function DiceOverlay({ events, names, stamp }: { events: readonly GameEvent[]; names: Names; stamp: number }) {
-  const rolls = events.filter((e) => e.type === "attackRolled" || e.type === "terrainRoll");
+  const rolls = events.filter((e) => e.type === "attackRolled" || e.type === "terrainRoll" || e.type === "abilityRoll");
   const [dismissed, setDismissed] = useState<number | null>(null);
   useEffect(() => {
     if (rolls.length === 0) return;
@@ -176,6 +176,17 @@ export function DiceOverlay({ events, names, stamp }: { events: readonly GameEve
   return (
     <div className="panel dice-overlay" role="status" onClick={() => setDismissed(stamp)}>
       {rolls.map((e, i) => {
+        if (e.type === "abilityRoll") {
+          return (
+            <div key={i} className="roll">
+              <span className="d20">{e.roll}</span>
+              <span>
+                {names.figure(e.figureId)}: {names.ability(e.figureId, e.ability)} on {names.figure(e.targetId)}, needs{" "}
+                {e.needed}: <strong>{e.success ? "success" : "no effect"}</strong>
+              </span>
+            </div>
+          );
+        }
         if (e.type === "terrainRoll") {
           const result = e.outcome === "destroyed" ? "destroyed" : e.outcome === "slipped" ? "slips" : "safe";
           return (
@@ -197,13 +208,11 @@ export function DiceOverlay({ events, names, stamp }: { events: readonly GameEve
                   ? `Swamp vs ${names.figure(e.targetId)}`
                   : e.source === "passingStrike"
                     ? `${names.figure(e.attackerId!)} strikes ${names.figure(e.targetId)} as it leaves`
-                    : `${names.figure(e.attackerId!)} vs ${names.figure(e.targetId)}`}
+                    : e.ability
+                      ? `${names.figure(e.attackerId!)}: ${names.ability(e.attackerId!, e.ability)} on ${names.figure(e.targetId)}`
+                      : `${names.figure(e.attackerId!)} vs ${names.figure(e.targetId)}`}
             </div>
-            {(e.attackBonus > 0 || e.defenseBonus > 0) && (
-              <div className="muted small">
-                {e.attackBonus > 0 ? `+${e.attackBonus} attack for higher ground` : `+${e.defenseBonus} defense for higher ground`}
-              </div>
-            )}
+            {e.notes && e.notes.length > 0 && <div className="muted small">{e.notes.join(", ")}</div>}
             <div className="dice-row rolling">
               {e.attack.map((f, j) => (
                 <Die key={`a${j}`} face={f} kind="attack" />

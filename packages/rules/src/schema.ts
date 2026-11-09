@@ -80,6 +80,8 @@ export const abilitySchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   text: z.string().min(1),
+  /** Tunable numbers the ability uses (range, dice, bonus...). */
+  params: z.record(z.string(), z.number()).optional(),
 });
 
 const stat = z.number().int().min(0);
