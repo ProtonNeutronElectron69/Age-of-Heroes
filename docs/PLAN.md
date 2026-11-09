@@ -35,7 +35,7 @@ docs/              this plan and the rules
 
 ## Phases
 
-### Phase 0: Foundations (this PR)
+### Phase 0: Foundations (done)
 - [x] pnpm workspace with `rules`, `content` and `client` packages
 - [x] Hex math (axial coordinates, distance, rotation, lines, rings, world conversion)
 - [x] Piece and footprint shapes: 1, 2, 3-line, 3-triangle, 2x2, 7 and 24-hex
@@ -50,18 +50,21 @@ docs/              this plan and the rules
 - [x] CI (typecheck, test, build) and GitHub Pages deployment
 - [x] Rules written up in `docs/RULES.md`
 
-### Phase 1: Basic game (milestone 1)
-- [ ] About 8 original starter units (Basic stats, plus Height and footprint for tokens)
-- [ ] Game setup screen: players (2 to 6), map, Basic draft by card count
-- [ ] Deployment into start zones
-- [ ] Unit tokens on the board; hover or click to show the unit card
-- [ ] Token placement UI with a pass-the-device screen between players
-- [ ] Initiative and turn display
-- [ ] Movement: reachable hexes, climbing cost, friendly pass-through, all terrain effects
-- [ ] Basic line of sight
-- [ ] Attacks with animated dice; destruction on any wound
-- [ ] Round limit and elimination victory screens
-- [ ] Browser smoke test that plays a full scripted game
+### Phase 1: Basic game (milestone 1, this PR)
+- [x] 8 original starter units across 4 factions, with both card sides filled in
+- [x] Game setup screen: 2 to 6 players, names, army size, round limit, map
+- [x] Snake draft by card count, with unique cards exclusive and start zone room checked
+- [x] Deployment into start zones in draft order, with auto place
+- [x] Map layouts that pick spread-out start zones for each player count
+- [x] Unit tokens on the board, as tall as their Height, with the hit band shown; hover or click for the unit card
+- [x] Token placement with a pass-the-device screen between players
+- [x] Initiative and round bar showing revealed tokens
+- [x] Movement: reachable hexes, path preview and cost, climbing and headroom, friendly pass-through, water and swamp, lava, ice, road bonus
+- [x] Basic line of sight against terrain
+- [x] Attacks with dice results; destruction on any wound; swamp damage at the end of a turn
+- [x] Round limit and elimination victory screens
+- [x] Game log, and games saved in the browser so a reload can continue them
+- [x] Tests: engine unit tests, random full-game simulations, and a browser test that plays a full game through the UI
 
 ### Phase 2: Map editor
 - [ ] Place, rotate and stack all piece shapes in every terrain

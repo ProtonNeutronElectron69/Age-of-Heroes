@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { Board, SHAPES, hex, hexKey, isAdjacent, shapeCells, type MapDefinition, type PlacedPiece } from "../src";
 
-function map(pieces: PlacedPiece[], startZones: MapDefinition["startZones"] = []): MapDefinition {
-  return { formatVersion: 1, id: "t", name: "Test", description: "", pieces, startZones };
+function map(
+  pieces: PlacedPiece[],
+  startZones: MapDefinition["startZones"] = [],
+  layouts: MapDefinition["layouts"] = {},
+): MapDefinition {
+  return { formatVersion: 1, id: "t", name: "Test", description: "", pieces, startZones, layouts };
 }
 
 function piece(id: string, shape: PlacedPiece["shape"], q: number, r: number, layer: number, terrain = "grass"): PlacedPiece {
@@ -101,6 +105,17 @@ describe("board", () => {
       ),
     );
     expect(issues.map((i) => i.code).sort()).toEqual(["duplicateSeat", "startZoneOffBoard", "startZoneOverlap"]);
+  });
+
+  it("validates and applies start zone layouts", () => {
+    const zones = [0, 1, 2].map((seat) => ({ seat, hexes: [hex(seat, 0)] }));
+    const good = Board.fromMap(map([piece("a", "line3", 0, 0, 0)], zones, { "2": [0, 2] }));
+    expect(good.issues).toEqual([]);
+    expect([good.board.zoneFor(0, 2), good.board.zoneFor(1, 2), good.board.zoneFor(1, 3)]).toEqual([0, 2, 1]);
+    for (const bad of [{ "2": [0] }, { "2": [1, 1] }, { "2": [0, 5] }]) {
+      const { issues } = Board.fromMap(map([piece("a", "line3", 0, 0, 0)], zones, bad));
+      expect(issues.map((i) => i.code)).toEqual(["badLayout"]);
+    }
   });
 
   it("flags unknown terrain when given a terrain table", () => {

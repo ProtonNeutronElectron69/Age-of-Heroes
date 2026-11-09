@@ -1,0 +1,247 @@
+[
+  {
+    "id": "marisol-vance",
+    "name": "Captain Marisol Vance",
+    "tokenLabel": "MV",
+    "faction": "Iron Concord",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Human",
+    "unitClass": "Commander",
+    "personality": "Valiant",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": { "move": 5, "range": 4, "attack": 3, "defense": 4 },
+    "advanced": {
+      "life": 5,
+      "move": 5,
+      "range": 4,
+      "attack": 3,
+      "defense": 3,
+      "points": 85,
+      "abilities": [
+        {
+          "id": "rally-the-line",
+          "name": "Rally the Line",
+          "text": "When a friendly Disciplined squad figure within 4 hexes of Captain Vance defends, it rolls 1 extra defense die."
+        }
+      ]
+    }
+  },
+  {
+    "id": "concord-fusiliers",
+    "name": "Concord Fusiliers",
+    "tokenLabel": "CF",
+    "faction": "Iron Concord",
+    "unitType": "commonSquad",
+    "figureCount": 4,
+    "species": "Human",
+    "unitClass": "Soldier",
+    "personality": "Disciplined",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": { "move": 5, "range": 6, "attack": 2, "defense": 2 },
+    "advanced": {
+      "life": 1,
+      "move": 5,
+      "range": 6,
+      "attack": 2,
+      "defense": 2,
+      "points": 55,
+      "abilities": [
+        {
+          "id": "massed-volley",
+          "name": "Massed Volley",
+          "text": "If 3 or more Fusiliers attack the same target in one turn, the last of them rolls 2 extra attack dice."
+        }
+      ]
+    }
+  },
+  {
+    "id": "lady-asagiri",
+    "name": "Lady Asagiri the Unbowed",
+    "tokenLabel": "LA",
+    "faction": "House Kagero",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Human",
+    "unitClass": "Samurai",
+    "personality": "Relentless",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": { "move": 5, "range": 1, "attack": 4, "defense": 4 },
+    "advanced": {
+      "life": 6,
+      "move": 5,
+      "range": 1,
+      "attack": 4,
+      "defense": 4,
+      "points": 115,
+      "abilities": [
+        {
+          "id": "answering-blade",
+          "name": "Answering Blade",
+          "text": "When Lady Asagiri defends against an adjacent attacker and rolls more shields than it rolled skulls, the attacker takes 1 wound."
+        }
+      ]
+    }
+  },
+  {
+    "id": "hollow-reed-shinobi",
+    "name": "Hollow Reed Shinobi",
+    "tokenLabel": "HR",
+    "faction": "House Kagero",
+    "unitType": "commonSquad",
+    "figureCount": 3,
+    "species": "Human",
+    "unitClass": "Shinobi",
+    "personality": "Tricky",
+    "size": "small",
+    "height": 4,
+    "footprint": "1",
+    "basic": { "move": 6, "range": 3, "attack": 2, "defense": 2 },
+    "advanced": {
+      "life": 1,
+      "move": 6,
+      "range": 3,
+      "attack": 2,
+      "defense": 3,
+      "points": 50,
+      "abilities": [
+        {
+          "id": "smoke-step",
+          "name": "Smoke Step",
+          "text": "After a Shinobi attacks, it may move up to 2 hexes. It does not take passing strikes during this move."
+        }
+      ]
+    }
+  },
+  {
+    "id": "cinderjaw",
+    "name": "Cinderjaw, Wyrmling of the Glade",
+    "tokenLabel": "CJ",
+    "faction": "Verdant Court",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Dragon",
+    "unitClass": "Beast",
+    "personality": "Wild",
+    "size": "large",
+    "height": 7,
+    "footprint": "1",
+    "basic": { "move": 6, "range": 1, "attack": 4, "defense": 3 },
+    "advanced": {
+      "life": 6,
+      "move": 6,
+      "range": 1,
+      "attack": 4,
+      "defense": 3,
+      "points": 140,
+      "abilities": [
+        {
+          "id": "flying",
+          "name": "Flying",
+          "text": "Cinderjaw flies over terrain and figures while moving. Terrain only affects it where it ends its move, and it never takes falling damage."
+        },
+        {
+          "id": "ember-spit",
+          "name": "Ember Spit",
+          "text": "Instead of a normal attack, Cinderjaw may attack a figure up to 3 hexes away with 2 attack dice. Every figure adjacent to the target is also attacked with 1 die."
+        }
+      ]
+    }
+  },
+  {
+    "id": "glade-wardens",
+    "name": "Glade Wardens",
+    "tokenLabel": "GW",
+    "faction": "Verdant Court",
+    "unitType": "commonSquad",
+    "figureCount": 3,
+    "species": "Elf",
+    "unitClass": "Archer",
+    "personality": "Patient",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": { "move": 5, "range": 8, "attack": 2, "defense": 1 },
+    "advanced": {
+      "life": 1,
+      "move": 5,
+      "range": 8,
+      "attack": 2,
+      "defense": 2,
+      "points": 60,
+      "abilities": [
+        {
+          "id": "hidden-in-the-leaves",
+          "name": "Hidden in the Leaves",
+          "text": "A Warden standing on forest rolls 2 extra defense dice against attacks from 4 or more hexes away."
+        }
+      ]
+    }
+  },
+  {
+    "id": "sentinel-k7",
+    "name": "Sentinel K-7",
+    "tokenLabel": "K7",
+    "faction": "Nexus Collective",
+    "unitType": "commonHero",
+    "figureCount": 1,
+    "species": "Robot",
+    "unitClass": "Guardian",
+    "personality": "Precise",
+    "size": "large",
+    "height": 7,
+    "footprint": "1",
+    "basic": { "move": 4, "range": 5, "attack": 3, "defense": 5 },
+    "advanced": {
+      "life": 5,
+      "move": 4,
+      "range": 5,
+      "attack": 3,
+      "defense": 5,
+      "points": 105,
+      "abilities": [
+        {
+          "id": "deflector-field",
+          "name": "Deflector Field",
+          "text": "Friendly figures adjacent to K-7 roll 1 extra defense die against attacks from 3 or more hexes away."
+        }
+      ]
+    }
+  },
+  {
+    "id": "nexus-reclaimers",
+    "name": "Nexus Reclaimers",
+    "tokenLabel": "NR",
+    "faction": "Nexus Collective",
+    "unitType": "commonSquad",
+    "figureCount": 3,
+    "species": "Cyborg",
+    "unitClass": "Trooper",
+    "personality": "Relentless",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": { "move": 5, "range": 5, "attack": 3, "defense": 2 },
+    "advanced": {
+      "life": 1,
+      "move": 5,
+      "range": 5,
+      "attack": 3,
+      "defense": 2,
+      "points": 70,
+      "abilities": [
+        {
+          "id": "salvage-protocol",
+          "name": "Salvage Protocol",
+          "text": "When a Reclaimer destroys an enemy figure, return one destroyed Reclaimer to the battlefield adjacent to the attacker."
+        }
+      ]
+    }
+  }
+]

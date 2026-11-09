@@ -1,6 +1,6 @@
 import { Board } from "@aoh/rules";
 import { describe, expect, it } from "vitest";
-import { CARDS, MAPS, TERRAIN, TERRAIN_TABLE, cardCatalog, loadCard, loadMap } from "../src";
+import { CARDS, FACTIONS, MAPS, TERRAIN, TERRAIN_TABLE, cardCatalog, loadCard, loadMap } from "../src";
 
 describe("terrain", () => {
   it("has the five standard and five special types", () => {
@@ -48,6 +48,7 @@ describe("maps", () => {
     const used = new Set(m.pieces.map((p) => p.terrain));
     for (const t of TERRAIN) expect(used.has(t.id), t.id).toBe(true);
     expect(m.startZones.map((z) => z.seat)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(m.layouts["2"]).toEqual([0, 3]);
   });
 
   it("the proving grounds bridge has room underneath", () => {
@@ -68,6 +69,7 @@ describe("cards", () => {
     const base = {
       id: "c",
       name: "C",
+      tokenLabel: "C",
       faction: "f",
       species: "Human",
       unitClass: "Warrior",
@@ -85,5 +87,19 @@ describe("cards", () => {
 
   it("builds a catalog without duplicates", () => {
     expect(cardCatalog(CARDS).size).toBe(CARDS.length);
+  });
+
+  it("has a starter roster of 8 single-hex units across 4 factions", () => {
+    expect(CARDS).toHaveLength(8);
+    expect(FACTIONS).toHaveLength(4);
+    for (const f of FACTIONS) expect(CARDS.filter((c) => c.faction === f)).toHaveLength(2);
+    expect(CARDS.every((c) => c.footprint === "1")).toBe(true);
+    expect(new Set(CARDS.map((c) => c.tokenLabel)).size).toBe(CARDS.length);
+  });
+
+  it("fits a full 4-card army of the largest squads in every start zone", () => {
+    const m = MAPS.find((x) => x.id === "proving-grounds")!;
+    const biggest = Math.max(...CARDS.map((c) => c.figureCount));
+    for (const z of m.startZones) expect(z.hexes.length).toBeGreaterThanOrEqual(4 * biggest);
   });
 });
