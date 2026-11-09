@@ -7,7 +7,7 @@ import {
   hex,
   moveOptions,
   sceneryTable,
-  stepKey,
+  placementKey,
   type MapDefinition,
   type SceneryPlacement,
   type Token,
@@ -77,9 +77,9 @@ describe("scenery on the board", () => {
     expect(deploymentSpots(base, "p1", 5, ctx).map((s) => s.hex)).not.toContainEqual(hex(0, 3));
     const state = turnState(base, "p1:0", { "p1:0#1": { q: 0, r: 0, elevation: 1 } });
     const options = moveOptions(state, "p1:0#1", ctx);
-    expect(options.has(stepKey({ hex: hex(1, 0), elevation: 1 }))).toBe(true);
-    expect(options.has(stepKey({ hex: hex(2, 0), elevation: 1 }))).toBe(false);
-    expect(options.has(stepKey({ hex: hex(3, 0), elevation: 1 }))).toBe(false); // the row is cut by the tree
+    expect(options.has(placementKey({ hex: hex(1, 0), elevation: 1 }))).toBe(true);
+    expect(options.has(placementKey({ hex: hex(2, 0), elevation: 1 }))).toBe(false);
+    expect(options.has(placementKey({ hex: hex(3, 0), elevation: 1 }))).toBe(false); // the row is cut by the tree
   });
 });
 

@@ -22,11 +22,13 @@ interface Props {
   color?: string;
   /** Figures still alive, for squads. */
   alive?: number;
+  /** Wounds on the figure being shown (Advanced). */
+  wounds?: number;
   compact?: boolean;
 }
 
 /** A two-sided unit card: front for the Basic game, back for the Advanced game. */
-export function UnitCardView({ card, mode, color, alive, compact }: Props) {
+export function UnitCardView({ card, mode, color, alive, wounds, compact }: Props) {
   const [side, setSide] = useState<RulesMode>(mode);
   const squad = card.figureCount > 1;
   return (
@@ -42,6 +44,11 @@ export function UnitCardView({ card, mode, color, alive, compact }: Props) {
             {squad ? ` of ${card.figureCount}` : ""}
             {alive !== undefined && squad ? `, ${alive} left` : ""}
           </p>
+          {mode === "advanced" && wounds !== undefined && card.advanced.life > 1 && (
+            <p className="life-line small">
+              Life {card.advanced.life - wounds} of {card.advanced.life}
+            </p>
+          )}
         </div>
       </header>
 

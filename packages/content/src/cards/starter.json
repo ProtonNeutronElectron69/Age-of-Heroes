@@ -12,7 +12,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": { "move": 5, "range": 4, "attack": 3, "defense": 4 },
+    "basic": {
+      "move": 5,
+      "range": 4,
+      "attack": 3,
+      "defense": 4
+    },
     "advanced": {
       "life": 5,
       "move": 5,
@@ -42,7 +47,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": { "move": 5, "range": 6, "attack": 2, "defense": 2 },
+    "basic": {
+      "move": 5,
+      "range": 6,
+      "attack": 2,
+      "defense": 2
+    },
     "advanced": {
       "life": 1,
       "move": 5,
@@ -72,7 +82,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": { "move": 5, "range": 1, "attack": 4, "defense": 4 },
+    "basic": {
+      "move": 5,
+      "range": 1,
+      "attack": 4,
+      "defense": 4
+    },
     "advanced": {
       "life": 6,
       "move": 5,
@@ -102,7 +117,12 @@
     "size": "small",
     "height": 4,
     "footprint": "1",
-    "basic": { "move": 6, "range": 3, "attack": 2, "defense": 2 },
+    "basic": {
+      "move": 6,
+      "range": 3,
+      "attack": 2,
+      "defense": 2
+    },
     "advanced": {
       "life": 1,
       "move": 6,
@@ -132,7 +152,12 @@
     "size": "large",
     "height": 7,
     "footprint": "1",
-    "basic": { "move": 6, "range": 1, "attack": 4, "defense": 3 },
+    "basic": {
+      "move": 6,
+      "range": 1,
+      "attack": 4,
+      "defense": 3
+    },
     "advanced": {
       "life": 6,
       "move": 6,
@@ -167,7 +192,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": { "move": 5, "range": 8, "attack": 2, "defense": 1 },
+    "basic": {
+      "move": 5,
+      "range": 8,
+      "attack": 2,
+      "defense": 1
+    },
     "advanced": {
       "life": 1,
       "move": 5,
@@ -197,7 +227,12 @@
     "size": "large",
     "height": 7,
     "footprint": "1",
-    "basic": { "move": 4, "range": 5, "attack": 3, "defense": 5 },
+    "basic": {
+      "move": 4,
+      "range": 5,
+      "attack": 3,
+      "defense": 5
+    },
     "advanced": {
       "life": 5,
       "move": 4,
@@ -227,7 +262,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": { "move": 5, "range": 5, "attack": 3, "defense": 2 },
+    "basic": {
+      "move": 5,
+      "range": 5,
+      "attack": 3,
+      "defense": 2
+    },
     "advanced": {
       "life": 1,
       "move": 5,
@@ -240,6 +280,46 @@
           "id": "salvage-protocol",
           "name": "Salvage Protocol",
           "text": "When a Reclaimer destroys an enemy figure, return one destroyed Reclaimer to the battlefield adjacent to the attacker."
+        }
+      ]
+    }
+  },
+  {
+    "id": "old-rootback",
+    "name": "Old Rootback",
+    "tokenLabel": "OR",
+    "faction": "Verdant Court",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Beast",
+    "unitClass": "Behemoth",
+    "personality": "Patient",
+    "size": "huge",
+    "height": 9,
+    "footprint": "2x1",
+    "basic": {
+      "move": 4,
+      "range": 1,
+      "attack": 5,
+      "defense": 4
+    },
+    "advanced": {
+      "life": 8,
+      "move": 4,
+      "range": 1,
+      "attack": 5,
+      "defense": 4,
+      "points": 180,
+      "abilities": [
+        {
+          "id": "moss-armor",
+          "name": "Moss Armor",
+          "text": "Old Rootback rolls 1 extra defense die against attacks from 4 or more hexes away."
+        },
+        {
+          "id": "trample",
+          "name": "Trample",
+          "text": "Old Rootback may move through Small and Medium enemy figures. Each figure it moves through rolls 1 defense die; on a blank it takes 1 wound."
         }
       ]
     }

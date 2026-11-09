@@ -1,6 +1,7 @@
 import { hexKey } from "../hex";
 import type { UnitCard } from "../schema";
 import { fail } from "./errors";
+import { figureSpots } from "./placement";
 import type { FigureState, GameState, PlayerId, RulesContext, RulesMode, Step, UnitState } from "./types";
 
 /** Stats in effect for the chosen rule set. */
@@ -62,15 +63,29 @@ export function cardOf(unit: UnitState, ctx: RulesContext): UnitCard {
   return ctx.cards.get(unit.cardId) ?? fail(`Unknown card "${unit.cardId}"`);
 }
 
-/** Every figure on the battlefield, keyed by the spot it stands on. */
-export function occupancy(state: GameState): Map<string, { unit: UnitState; figure: FigureState }> {
-  const map = new Map<string, { unit: UnitState; figure: FigureState }>();
+export interface Occupant {
+  readonly unit: UnitState;
+  readonly figure: FigureState;
+}
+
+/** Every figure on the battlefield, keyed by each spot it covers (big figures cover several). */
+export function occupancy(state: GameState, ctx: RulesContext): Map<string, Occupant> {
+  const map = new Map<string, Occupant>();
   for (const unit of state.units) {
+    const card = ctx.cards.get(unit.cardId);
     for (const figure of unit.figures) {
-      if (!figure.destroyed && figure.position) map.set(stepKey(figure.position), { unit, figure });
+      if (figure.destroyed || !figure.position) continue;
+      const spots = card ? figureSpots(figure, card.footprint, card.height, ctx) : [figure.position];
+      for (const s of spots) map.set(stepKey(s), { unit, figure });
     }
   }
   return map;
+}
+
+/** The spots a figure covers right now. */
+export function spotsOf(unit: UnitState, figure: FigureState, ctx: RulesContext): Step[] {
+  const card = cardOf(unit, ctx);
+  return figureSpots(figure, card.footprint, card.height, ctx);
 }
 
 export function terrainAt(step: Step, ctx: RulesContext): string | undefined {

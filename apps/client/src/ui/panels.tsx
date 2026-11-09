@@ -191,8 +191,19 @@ export function DiceOverlay({ events, names, stamp }: { events: readonly GameEve
         return (
           <div key={i} className="roll">
             <div className="roll-title">
-              {e.attackerId ? names.figure(e.attackerId) : "Swamp"} vs {names.figure(e.targetId)}
+              {e.source === "fall"
+                ? `${names.figure(e.targetId)} falls`
+                : e.source === "swamp"
+                  ? `Swamp vs ${names.figure(e.targetId)}`
+                  : e.source === "passingStrike"
+                    ? `${names.figure(e.attackerId!)} strikes ${names.figure(e.targetId)} as it leaves`
+                    : `${names.figure(e.attackerId!)} vs ${names.figure(e.targetId)}`}
             </div>
+            {(e.attackBonus > 0 || e.defenseBonus > 0) && (
+              <div className="muted small">
+                {e.attackBonus > 0 ? `+${e.attackBonus} attack for higher ground` : `+${e.defenseBonus} defense for higher ground`}
+              </div>
+            )}
             <div className="dice-row rolling">
               {e.attack.map((f, j) => (
                 <Die key={`a${j}`} face={f} kind="attack" />

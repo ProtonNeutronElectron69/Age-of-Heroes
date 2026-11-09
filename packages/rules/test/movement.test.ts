@@ -5,7 +5,7 @@ import {
   hex,
   hexKey,
   moveOptions,
-  stepKey,
+  placementKey,
   type GameState,
   type RulesContext,
   type Step,
@@ -36,15 +36,15 @@ describe("movement options", () => {
     const { ctx, state } = rowGame(flat(9), at(0));
     const options = moveOptions(state, "p1:0#1", ctx);
     expect([...options.values()].map((o) => o.to.hex.q).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5]);
-    expect(options.get(stepKey(step(5)))!.cost).toBe(5);
+    expect(options.get(placementKey(step(5)))!.cost).toBe(5);
   });
 
   it("charges 1 extra per level climbed and nothing to go down", () => {
     const { ctx, state } = rowGame([["grass", 1], ["rock", 3], ["grass", 1], ["grass", 1]], at(0));
     const options = moveOptions(state, "p1:0#1", ctx);
-    expect(options.get(stepKey(step(1, 3)))!.cost).toBe(3);
-    expect(options.get(stepKey(step(2, 1)))!.cost).toBe(4);
-    expect(options.get(stepKey(step(3, 1)))!.cost).toBe(5);
+    expect(options.get(placementKey(step(1, 3)))!.cost).toBe(3);
+    expect(options.get(placementKey(step(2, 1)))!.cost).toBe(4);
+    expect(options.get(placementKey(step(3, 1)))!.cost).toBe(5);
   });
 
   it("limits a single climb to the figure's Height in the Advanced game only", () => {
@@ -55,36 +55,36 @@ describe("movement options", () => {
     const ctx = makeCtx(rowMap([["grass", 1], ["rock", 7]]), fast);
     const game = (mode: "basic" | "advanced") =>
       turnState(createGame(setup(2, { mapId: "test-row", mode }), ctx).state, "p1:0", { "p1:0#1": at(0) });
-    expect(moveOptions(game("basic"), "p1:0#1", ctx).has(stepKey(step(1, 7)))).toBe(true);
-    expect(moveOptions(game("advanced"), "p1:0#1", ctx).has(stepKey(step(1, 7)))).toBe(false);
+    expect(moveOptions(game("basic"), "p1:0#1", ctx).has(placementKey(step(1, 7)))).toBe(true);
+    expect(moveOptions(game("advanced"), "p1:0#1", ctx).has(placementKey(step(1, 7)))).toBe(false);
   });
 
   it("stops in water or swamp and charges 2 per wet hex", () => {
     const { ctx, state } = rowGame([["grass", 1], ["water", 1], ["swamp", 1], ["grass", 1]], at(0));
     const options = moveOptions(state, "p1:0#1", ctx);
-    expect([...options.keys()]).toEqual([stepKey(step(1))]);
-    expect(options.get(stepKey(step(1)))!.cost).toBe(2);
+    expect([...options.keys()]).toEqual([placementKey(step(1))]);
+    expect(options.get(placementKey(step(1)))!.cost).toBe(2);
     // Starting in water: wet to wet does not stop, but costs 2 each.
     const wet = rowGame([["water", 1], ["swamp", 1], ["water", 1], ["grass", 1]], at(0));
     const fromWet = moveOptions(wet.state, "p1:0#1", wet.ctx);
-    expect(fromWet.get(stepKey(step(2)))!.cost).toBe(4);
-    expect(fromWet.get(stepKey(step(3)))!.cost).toBe(5);
+    expect(fromWet.get(placementKey(step(2)))!.cost).toBe(4);
+    expect(fromWet.get(placementKey(step(3)))!.cost).toBe(5);
   });
 
   it("gives +3 move when the whole move stays on road", () => {
     const { ctx, state } = rowGame([...flat(9, "road"), ["grass", 1]], at(0));
     const options = moveOptions(state, "p1:0#1", ctx);
-    expect(options.has(stepKey(step(8)))).toBe(true);
-    expect(options.has(stepKey(step(9)))).toBe(false); // leaving the road loses the bonus
+    expect(options.has(placementKey(step(8)))).toBe(true);
+    expect(options.has(placementKey(step(9)))).toBe(false); // leaving the road loses the bonus
   });
 
   it("passes through friends, never through or onto enemies, and never ends on a friend", () => {
     const { ctx, state } = rowGame(flat(6), at(0), { "p1:1#1": at(1), "p2:0#1": at(3) });
     const options = moveOptions(state, "p1:0#1", ctx);
-    expect(options.has(stepKey(step(1)))).toBe(false);
-    expect(options.has(stepKey(step(2)))).toBe(true);
-    expect(options.has(stepKey(step(3)))).toBe(false);
-    expect(options.has(stepKey(step(4)))).toBe(false);
+    expect(options.has(placementKey(step(1)))).toBe(false);
+    expect(options.has(placementKey(step(2)))).toBe(true);
+    expect(options.has(placementKey(step(3)))).toBe(false);
+    expect(options.has(placementKey(step(4)))).toBe(false);
   });
 
   it("prefers a path around lava when one exists", () => {
@@ -98,7 +98,7 @@ describe("movement options", () => {
     const ctx = makeCtx(map);
     const base = createGame(setup(2, { mapId: "test-row", mode: "basic" }), ctx).state;
     const state = turnState(base, "p1:0", { "p1:0#1": at(0) });
-    const option = moveOptions(state, "p1:0#1", ctx).get(stepKey(step(2)))!;
+    const option = moveOptions(state, "p1:0#1", ctx).get(placementKey(step(2)))!;
     expect(option.hazards).toBe(0);
     expect(option.path.map((s) => hexKey(s.hex))).not.toContain("1,0");
   });
@@ -149,6 +149,21 @@ describe("move command", () => {
 
     const safe = withOutcome(state, cmd, ctx, (ev) => ev.some((e) => e.type === "terrainRoll" && e.outcome === "safe"));
     expect(safe.state.units[0]!.figures[0]!.position).toMatchObject({ hex: hex(2, 0) });
+  });
+
+  it("moves play on when the active player's last figure dies on their own turn", () => {
+    const ctx = makeCtx(rowMap([["grass", 1], ["lava", 1], ["grass", 1]]));
+    const base = createGame(
+      setup(3, { mapId: "test-row", mode: "basic", armies: { p1: ["hero"], p2: ["hero"], p3: ["hero"] } }),
+      ctx,
+    ).state;
+    const state = turnState(base, "p1:0", { "p1:0#1": at(0), "p2:0#1": at(2) });
+    // p3 has a figure off this row; it stays alive because it is not destroyed.
+    const r = withOutcome(state, move(state, [step(1)]), ctx, (ev) => ev.some((e) => e.type === "figureDestroyed"));
+    expect(r.state.players.find((p) => p.id === "p1")!.eliminated).toBe(true);
+    expect(r.state.phase).toBe("turns");
+    expect(r.state.active?.player).not.toBe("p1");
+    expect(applyCommand(r.state, { type: "endTurn", player: r.state.active!.player }, ctx).ok).toBe(true);
   });
 
   it("ice slides a slipping figure one hex on and ends its move", () => {

@@ -3,9 +3,10 @@ import {
   applyCommand,
   attackTargets,
   createGame,
+  figureSpots,
   currentDeployment,
   currentDrafter,
-  deploymentSpots,
+  deploymentPlacements,
   draftableCards,
   livingUnitsOf,
   moveOptions,
@@ -15,6 +16,8 @@ import {
   type GameSetup,
   type GameState,
   type RulesContext,
+  type RulesMode,
+  type Step,
 } from "@aoh/rules";
 import { describe, expect, it } from "vitest";
 import { MAPS, contextFor } from "../src";
@@ -36,11 +39,13 @@ function randomCommand(state: GameState, rng: Rng, c: RulesContext): Command {
     case "deploy": {
       const { player, unitId } = currentDeployment(state)!;
       const unit = state.units.find((u) => u.id === unitId)!;
-      const height = c.cards.get(unit.cardId)!.height;
-      const spots = [...deploymentSpots(state, player, height, c)];
+      const card = c.cards.get(unit.cardId)!;
+      const taken: Step[] = [];
       const placements = unit.figures.map((f) => {
-        const spot = spots.splice(rng.int(0, spots.length - 1), 1)[0]!;
-        return { figureId: f.id, ...spot };
+        const options = deploymentPlacements(state, player, card, c, taken);
+        const choice = options[rng.int(0, options.length - 1)]!;
+        taken.push(...choice.spots);
+        return { figureId: f.id, ...choice.placement };
       });
       return { type: "deployUnit", player, unitId, placements };
     }
@@ -81,23 +86,27 @@ function randomCommand(state: GameState, rng: Rng, c: RulesContext): Command {
 function checkInvariants(state: GameState): void {
   const spots = new Set<string>();
   for (const unit of state.units) {
+    const card = ctx.cards.get(unit.cardId)!;
     for (const f of unit.figures) {
       if (f.destroyed) {
         expect(f.position).toBeNull();
         continue;
       }
       if (!f.position) continue;
-      const key = stepKey(f.position);
-      expect(spots.has(key), `two figures on ${key}`).toBe(false);
-      spots.add(key);
-      expect(ctx.board.surfaceAt(f.position.hex, f.position.elevation), `${f.id} is floating`).toBeDefined();
+      for (const s of figureSpots(f, card.footprint, card.height, ctx)) {
+        const key = stepKey(s);
+        expect(spots.has(key), `two figures on ${key}`).toBe(false);
+        spots.add(key);
+        expect(ctx.board.surfaceAt(s.hex, s.elevation), `${f.id} is floating`).toBeDefined();
+      }
+      if (state.config.mode === "advanced") expect(f.wounds).toBeLessThan(card.advanced.life);
     }
   }
 }
 
-function playRandomGame(seed: number, players: number) {
+function playRandomGame(seed: number, players: number, mode: RulesMode) {
   const setup: GameSetup = {
-    mode: "basic",
+    mode,
     seed,
     mapId: map.id,
     roundLimit: 12,
@@ -124,15 +133,18 @@ function playRandomGame(seed: number, players: number) {
 }
 
 describe("random games on the Proving Grounds", () => {
-  for (const [seed, players] of [
-    [1, 2],
-    [2, 3],
-    [3, 4],
-    [4, 6],
-    [5, 2],
+  for (const [seed, players, mode] of [
+    [1, 2, "basic"],
+    [2, 3, "basic"],
+    [3, 4, "basic"],
+    [4, 6, "basic"],
+    [5, 2, "advanced"],
+    [6, 3, "advanced"],
+    [7, 4, "advanced"],
+    [8, 6, "advanced"],
   ] as const) {
-    it(`seed ${seed}, ${players} players: stays legal to the end and replays exactly`, () => {
-      const game = playRandomGame(seed, players);
+    it(`seed ${seed}, ${players} players, ${mode}: stays legal to the end and replays exactly`, () => {
+      const game = playRandomGame(seed, players, mode);
       expect(game.state.phase).toBe("gameOver");
       expect(game.moves).toBeGreaterThan(0);
       expect(game.attacks).toBeGreaterThan(0);

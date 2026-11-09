@@ -78,8 +78,15 @@ export function describeEvent(e: GameEvent, names: Names): string | null {
       return `${names.unit(e.unitId)} has been destroyed, so ${names.player(e.player)} loses turn ${e.token}.`;
     case "turnStarted":
       return null;
-    case "figureMoved":
-      return `${names.figure(e.figureId)} moves ${plural(e.path.length, "hex")}.`;
+    case "figureMoved": {
+      let hexes = 0;
+      let prev = e.from;
+      for (const s of e.path) {
+        if (s.hex.q !== prev.hex.q || s.hex.r !== prev.hex.r) hexes++;
+        prev = s;
+      }
+      return hexes === 0 ? `${names.figure(e.figureId)} turns.` : `${names.figure(e.figureId)} moves ${plural(hexes, "hex")}.`;
+    }
     case "terrainRoll": {
       const what =
         e.outcome === "destroyed" ? "and is destroyed" : e.outcome === "slipped" ? "and slips" : "and is safe";
@@ -88,8 +95,19 @@ export function describeEvent(e: GameEvent, names: Names): string | null {
     case "figureSlid":
       return `${names.figure(e.figureId)} slides.`;
     case "attackRolled": {
+      const result = `${plural(e.hits, "hit")}, ${plural(e.blocks, "block")}, ${plural(e.wounds, "wound")}`;
+      if (e.source === "fall") return `${names.figure(e.targetId)} falls: ${plural(e.wounds, "wound")}.`;
+      if (e.source === "passingStrike") {
+        return `${names.figure(e.attackerId!)} strikes ${names.figure(e.targetId)} as it walks away: ${plural(e.wounds, "wound")}.`;
+      }
       const who = e.attackerId ? names.figure(e.attackerId) : "The swamp";
-      return `${who} attacks ${names.figure(e.targetId)}: ${plural(e.hits, "hit")}, ${plural(e.blocks, "block")}, ${plural(e.wounds, "wound")}.`;
+      const bonus =
+        e.attackBonus > 0
+          ? ` (+${e.attackBonus} attack for height)`
+          : e.defenseBonus > 0
+            ? ` (+${e.defenseBonus} defense for height)`
+            : "";
+      return `${who} attacks ${names.figure(e.targetId)}${bonus}: ${result}.`;
     }
     case "figureWounded":
       return null;

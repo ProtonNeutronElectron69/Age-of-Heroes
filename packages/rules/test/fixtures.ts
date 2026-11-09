@@ -46,6 +46,15 @@ export const CARDS: UnitCard[] = [
     advanced: { life: 1, move: 5, range: 6, attack: 2, defense: 2, points: 60, abilities: [] },
   }),
   testCard("unique", { unitType: "uniqueHero", name: "Test Unique" }),
+  testCard("big", {
+    unitType: "uniqueHero",
+    name: "Test Big",
+    size: "huge",
+    height: 9,
+    footprint: "2x1",
+    basic: { move: 4, range: 1, attack: 4, defense: 4 },
+    advanced: { life: 8, move: 4, range: 1, attack: 4, defense: 4, points: 150, abilities: [] },
+  }),
 ];
 
 export const TERRAIN: TerrainRules[] = [
@@ -112,7 +121,7 @@ export function rowMap(columns: [string, number][], extra: PlacedPiece[] = []): 
     }
   });
   // Start zones live on a separate strip three rows away, out of reach of the test row.
-  const pad = Array.from({ length: 8 }, (_, q) => hex(q, 3));
+  const pad = Array.from({ length: 12 }, (_, q) => hex(q, 3));
   pad.forEach((h, i) => pieces.push({ id: `pad${i}`, shape: "single", terrain: "grass", origin: h, rotation: 0, layer: 0 }));
   return {
     formatVersion: 1,
@@ -122,7 +131,8 @@ export function rowMap(columns: [string, number][], extra: PlacedPiece[] = []): 
     pieces: [...pieces, ...extra],
     startZones: [
       { seat: 0, hexes: pad.slice(0, 4) },
-      { seat: 1, hexes: pad.slice(4) },
+      { seat: 1, hexes: pad.slice(4, 8) },
+      { seat: 2, hexes: pad.slice(8) },
     ],
     layouts: {},
     scenery: [],

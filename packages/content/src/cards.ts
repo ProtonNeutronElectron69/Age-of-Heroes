@@ -21,8 +21,8 @@ export function cardCatalog(cards: readonly UnitCard[]): ReadonlyMap<string, Uni
 }
 
 /**
- * The starter roster: eight original single-hex units across four factions.
- * Abilities on the card backs take effect with the Advanced rules (Phase 4).
+ * The starter roster: nine original units across four factions, including one
+ * two-hex behemoth. Abilities on the card backs take effect in Phase 4.
  */
 export const CARDS: readonly UnitCard[] = (starter as unknown[]).map(loadCard);
 

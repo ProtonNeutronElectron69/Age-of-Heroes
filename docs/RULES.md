@@ -104,16 +104,16 @@ Game options:
 - **Rule set**: Basic or Advanced.
 - **Players**: 2 to 6, each in a seat. Seat order is also the "to the left" order.
 - **Map**.
-- **Army size**: Basic: number of cards per player, 1 to 4 (default 3). Advanced: points budget (default 500).
+- **Army size**: number of cards per player, 1 to 4 (default 3), in both rule sets for now. The Advanced points budget (default 500) arrives in Phase 4.
 - **Faction-pure mode** (Advanced, optional): every unit in an army must share a faction. **Assumption:** the exact reward or requirement will be set in Phase 4.
 - **Round limit**: none, or a number of rounds.
 
 ### Drafting
 Armies are drafted from a shared pool in a **snake draft**: the pick order reverses each round of picks (seat 1, 2, 3, 3, 2, 1, 1, 2, 3 and so on). The first picker is decided by a d20 roll.
-- **Advanced**: each pick must fit within the player's remaining budget. A player who cannot afford anything, or chooses to stop, is out of the draft. The draft ends when everyone is out.
+- **Advanced** (from Phase 4): each pick must fit within the player's remaining budget. A player who cannot afford anything, or chooses to stop, is out of the draft. The draft ends when everyone is out. Until then the Advanced game drafts by card count like the Basic game.
 - **Basic**: each player picks cards until they have the agreed number.
 - **Uniques**: a unique unit can be drafted by only one player. Common units can be drafted any number of times by anyone. **Assumption.**
-- **Room to deploy**: an army can never have more figures than its start zone has spots. The draft does not allow a card that would not fit, and a player with no room left skips their remaining picks.
+- **Room to deploy**: an army can never need more hexes than its start zone has (a multi-hex figure needs one hex per footprint hex). The draft does not allow a card that would not fit, and a player with no room left skips their remaining picks.
 
 ### Deployment
 After the draft, units are deployed one at a time in the order they were drafted. (With preset armies, players take turns round the table, one unit each.) Each figure goes on a free spot in its owner's start zone where it fits.
@@ -136,6 +136,8 @@ Every player rolls a d20. If several players tie for the highest roll, only they
 
 If the unit holding a token has been destroyed by the time the token is revealed, **that turn is lost.**
 
+If a player loses their last figure during their own turn (to lava, a fall or a passing strike), they are out and play moves straight on to the next turn.
+
 ## 6. Taking a turn
 
 The revealed unit **activates**. Each of its figures may make one move and one attack.
@@ -151,7 +153,16 @@ The revealed unit **activates**. Each of its figures may make one move and one a
 - A figure can only stand where the open space above the ground is at least its Height (this matters under bridges). Climbing needs that much headroom where the figure starts, and dropping down needs it where the figure lands.
 - A figure can move through hexes holding **friendly** figures but not **enemy** figures, and cannot end its move on an occupied hex.
 - **Advanced:** a figure cannot climb a single step taller than its Height. In the Basic game there is no step limit. **Assumption.**
-- Multi-hex figures move by their front hex; the rest of the footprint follows. Exact rules will be written in Phase 3.
+
+### Multi-hex figures
+
+Some figures cover 2 or more hexes (2x1, 3x1 or 2x2 footprints). **Assumption** for all of this section.
+- **Standing:** the figure's front hex stands at one height. Each of its other hexes uses the ground nearest that height, at most 1 level up or down *(tunable)*. Every hex needs room for the figure's Height and no scenery. The figure's height for line of sight, height bonuses and falling is that of its highest hex.
+- **Moving:** the figure moves one step at a time. Either the whole figure shifts one hex in any direction, keeping its facing, or it turns 60 degrees in place around its front hex.
+- **Cost:** a shift costs 1 move, plus the largest extra terrain cost of the hexes it newly covers (water and swamp cost 1 extra), plus the most levels any of its hexes climbs. Turning in place is free.
+- **Terrain:** hexes newly covered by a shift or a turn apply their effects. Each new lava hex needs its own roll, and entering water or swamp from outside it ends the move. Multi-hex figures never slip on ice.
+- **Other figures:** nothing can stand on any of its hexes. It can pass through friendly figures but not enemies, like any figure.
+- **Deploying:** all of its hexes must be in the start zone. It can face any direction.
 
 ### Flying (Advanced ability)
 - While moving, a flying figure ignores terrain. It does not stop in water or swamp, does not roll for lava or ice it passes over, and pays no extra move to climb.
@@ -164,7 +175,7 @@ Flying is an ability, so it only exists in the Advanced game. In the Basic game 
 ## 8. Attacking
 
 ### Range and targets
-- Range is counted in hexes from the attacker to the target. For multi-hex figures, count from the nearest hex of each.
+- Range is counted in hexes from the attacker to the target. For multi-hex figures, count between the nearest hexes of each.
 - Range 1 means the target must be adjacent.
 - **Advanced:** an attack at range 1 needs the two figures to be engaged (see 9).
 
@@ -184,7 +195,7 @@ Dice:
 - **Defense die**: 3 shield faces, 3 blank faces.
 
 ### Elevation (Advanced only)
-Compare the elevations of the surfaces the two figures stand on.
+Compare the elevations of the surfaces the two figures stand on (for a multi-hex figure, its highest hex).
 - If the attacker is higher: **+1 attack die**, and **another +1** if the difference is at least the defender's Height.
 - If the defender is higher: **+1 defense die**, and **another +1** if the difference is at least the attacker's Height.
 
@@ -194,13 +205,14 @@ Compare the elevations of the surfaces the two figures stand on.
 
 ## 9. Engagement (Advanced only)
 
-- Two enemy figures are **engaged** if they are adjacent and the difference in their elevations is less than the Height of the lower figure. **Assumption** (this is the "too high to fight across" rule).
+- Two enemy figures are **engaged** if a hex of one is next to a hex of the other and the difference in those hexes' elevations is less than the Height of the lower figure. **Assumption** (this is the "too high to fight across" rule).
 - An engaged figure may only attack figures it is engaged with. It cannot shoot at distant targets.
-- **Passing strike**: when a figure moves out of a hex where it was engaged with one or more enemies, each of those enemies rolls 1 attack die against it. The moving figure does not roll defense. Each skull is 1 wound.
+- **Passing strike**: when a step takes a figure out of engagement with one or more enemies, each of those enemies rolls 1 attack die *(tunable)* against it before it leaves. The moving figure does not roll defense. Each skull is 1 wound. A figure destroyed this way falls where it stood. Moving while staying engaged with the same enemy draws no strike.
+- The game marks risky moves (ones that draw passing strikes, fall, or cross lava or ice) in orange, and suggests the safest path to each hex.
 
 ## 10. Falling (Advanced only)
 
-When a figure moves down by a drop of:
+Falling is checked on every step of a move. When a figure's highest hex moves down by a drop of:
 - at least its Height: roll 2 attack dice against it, 1 wound per skull, no defense roll *(tunable)*;
 - at least double its Height: roll 4 attack dice instead *(tunable)*.
 
@@ -221,6 +233,5 @@ Each ability has a name and rules text on the card, and is implemented in code a
 ## 13. Open items
 
 These will be decided in the phase listed, with a sensible default proposed then:
-- Multi-hex figure movement and rotation (Phase 3).
 - Flying over scenery (Phase 4).
 - Faction-pure mode reward (Phase 4).

@@ -116,12 +116,19 @@ describe("cards", () => {
     expect(cardCatalog(CARDS).size).toBe(CARDS.length);
   });
 
-  it("has a starter roster of 8 single-hex units across 4 factions", () => {
-    expect(CARDS).toHaveLength(8);
+  it("has a starter roster of 9 units across 4 factions, one of them two hexes long", () => {
+    expect(CARDS).toHaveLength(9);
     expect(FACTIONS).toHaveLength(4);
-    for (const f of FACTIONS) expect(CARDS.filter((c) => c.faction === f)).toHaveLength(2);
-    expect(CARDS.every((c) => c.footprint === "1")).toBe(true);
+    for (const f of FACTIONS) expect(CARDS.filter((c) => c.faction === f).length).toBeGreaterThanOrEqual(2);
+    expect(CARDS.filter((c) => c.footprint !== "1").map((c) => c.id)).toEqual(["old-rootback"]);
     expect(new Set(CARDS.map((c) => c.tokenLabel)).size).toBe(CARDS.length);
+  });
+
+  it("gives every unit original, filled-in rules text on its back", () => {
+    for (const c of CARDS) {
+      expect(c.advanced.abilities.length, c.id).toBeGreaterThan(0);
+      for (const a of c.advanced.abilities) expect(a.text.length, `${c.id} ${a.id}`).toBeGreaterThan(20);
+    }
   });
 
   it("fits a full 4-card army of the largest squads in every start zone of every map", () => {

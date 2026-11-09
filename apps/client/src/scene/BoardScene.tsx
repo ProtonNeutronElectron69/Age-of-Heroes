@@ -1,5 +1,5 @@
 import { Edges, OrbitControls } from "@react-three/drei";
-import type { ThreeEvent } from "@react-three/fiber";
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import {
   HEX_SIZE,
   LEVEL_HEIGHT,
@@ -12,9 +12,10 @@ import {
   type ScenerySpot,
   type Step,
   type TerrainTable,
+  type Vec3,
 } from "@aoh/rules";
-import { useMemo, type ReactNode } from "react";
-import { BufferGeometry, CylinderGeometry, Float32BufferAttribute, MeshStandardMaterial } from "three";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { BufferGeometry, CylinderGeometry, Float32BufferAttribute, MeshStandardMaterial, Vector3 } from "three";
 import { HEX_GAP } from "./scale";
 
 export interface Marker {
@@ -40,7 +41,26 @@ interface Props {
   onSceneryClick?: (spot: ScenerySpot) => void;
   /** Editor only: an invisible table top with a hex grid, for placing pieces on empty space. */
   ground?: GroundHandlers;
+  /** Figure's-eye view: put the camera at `eye` looking at `look` (board coordinates). */
+  eyeView?: { eye: Vec3; look: Vec3 } | null;
   children?: ReactNode;
+}
+
+/** Drives the camera from a figure's eye point, and puts it back afterwards. */
+function EyeCamera({ view, center }: { view: { eye: Vec3; look: Vec3 }; center: { x: number; z: number } }) {
+  const camera = useThree((s) => s.camera);
+  const saved = useRef<{ position: Vector3; fov: number } | null>(null);
+  useEffect(() => {
+    saved.current = { position: camera.position.clone(), fov: (camera as { fov?: number }).fov ?? 45 };
+    return () => {
+      if (saved.current) camera.position.copy(saved.current.position);
+    };
+  }, [camera]);
+  useFrame(() => {
+    camera.position.set(view.eye.x - center.x, view.eye.y, view.eye.z - center.z);
+    camera.lookAt(view.look.x - center.x, view.look.y, view.look.z - center.z);
+  });
+  return null;
 }
 
 /** Pointer travel (pixels) beyond which a click is treated as a camera drag. */
@@ -150,6 +170,7 @@ export function BoardScene({
   onSurfaceHover,
   onSceneryClick,
   ground,
+  eyeView,
   children,
 }: Props) {
   const cells = useMemo(() => board.cells(), [board]);
@@ -240,8 +261,10 @@ export function BoardScene({
         })}
         {children}
       </group>
+      {eyeView && <EyeCamera view={eyeView} center={center} />}
       <OrbitControls
         makeDefault
+        enabled={!eyeView}
         target={origin ? [0, 0, 0] : [-fitted.span * 0.1, 0, 0]}
         maxPolarAngle={Math.PI / 2.15}
         minDistance={6}
