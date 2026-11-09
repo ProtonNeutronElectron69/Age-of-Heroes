@@ -133,16 +133,27 @@ function corridor(a: Hex, b: Hex): Hex[] {
   return [...seen.values()];
 }
 
-function segmentBlocked(board: Board, from: Token, to: Token, eye: Vec3, target: Vec3, cells: Hex[], opts: SightOptions): boolean {
-  const fromKey = hexKey(from.hex);
-  const toKey = hexKey(to.hex);
+/** The ground under each hex of a figure, which never blocks its own view or its being seen. */
+function groundUnder(tokens: readonly Token[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const t of tokens) map.set(hexKey(t.hex), Math.max(map.get(hexKey(t.hex)) ?? 0, t.elevation));
+  return map;
+}
+
+function segmentBlocked(
+  board: Board,
+  ground: Map<string, number>,
+  eye: Vec3,
+  target: Vec3,
+  cells: Hex[],
+  opts: SightOptions,
+): boolean {
   for (const h of cells) {
     const key = hexKey(h);
+    const below = ground.get(key);
     const { x, z } = hexToWorld(h, HEX_SIZE);
     for (const cell of board.column(h)) {
-      // The ground a figure stands on never blocks its own view or its being seen.
-      if (key === fromKey && cell.layer < from.elevation) continue;
-      if (key === toKey && cell.layer < to.elevation) continue;
+      if (below !== undefined && cell.layer < below) continue;
       if (segmentHitsHexPrism(eye, target, x, z, cell.layer * LEVEL_HEIGHT, (cell.layer + 1) * LEVEL_HEIGHT)) {
         return true;
       }
@@ -168,8 +179,26 @@ function segmentBlocked(board: Board, from: Token, to: Token, eye: Vec3, target:
   return false;
 }
 
-export function hasLineOfSight(board: Board, from: Token, to: Token, opts: SightOptions): boolean {
-  const eye = eyePoint(from);
-  const cells = corridor(from.hex, to.hex);
-  return targetPoints(to, opts.strict).some((p) => !segmentBlocked(board, from, to, eye, p, cells, opts));
+/**
+ * Can `from` see `to`? Each side is one token, or one token per hex for a
+ * multi-hex figure: the attacker may look from any of its hexes and needs to
+ * see any part of the target (its hit band, when strict).
+ */
+export function hasLineOfSight(
+  board: Board,
+  from: Token | readonly Token[],
+  to: Token | readonly Token[],
+  opts: SightOptions,
+): boolean {
+  const viewers: readonly Token[] = Array.isArray(from) ? from : [from as Token];
+  const targets: readonly Token[] = Array.isArray(to) ? to : [to as Token];
+  const ground = groundUnder([...viewers, ...targets]);
+  for (const v of viewers) {
+    const eye = eyePoint(v);
+    for (const t of targets) {
+      const cells = corridor(v.hex, t.hex);
+      if (targetPoints(t, opts.strict).some((p) => !segmentBlocked(board, ground, eye, p, cells, opts))) return true;
+    }
+  }
+  return false;
 }

@@ -1,19 +1,26 @@
-import { hexAdd, hexNeighbors, hexSub, isAdjacent } from "../hex";
+import { ATTACK_DIE, countFaces, rollDice } from "../dice";
+import { DIRECTIONS, hexAdd, hexEquals, hexSub, isAdjacent } from "../hex";
 import { Rng } from "../rng";
 import type { UnitCard } from "../schema";
+import type { Footprint } from "../shapes";
 import { moveCostOf, type TerrainRules } from "../terrain";
+import { spotsEngaged } from "./engagement";
 import { fail } from "./errors";
-import { cardOf, findFigure, occupancy, sameStep, statsOf, stepKey, type EffectiveStats } from "./queries";
-import { destroyFigure } from "./rounds";
-import type { FigureState, GameEvent, GameState, PlayerId, RulesContext, Step, UnitState } from "./types";
+import { figureSpots, placementKey, placementSpots, standingElevation, tuningOf, type Placement } from "./placement";
+import { cardOf, findFigure, occupancy, statsOf, stepKey, type EffectiveStats, type Occupant } from "./queries";
+import { checkGameOver, destroyFigure, woundFigure } from "./rounds";
+import type { FigureState, GameEvent, GameState, PathStep, PlayerId, RulesContext, Step, UnitState } from "./types";
 
 /** A reachable destination and the path the engine suggests to get there. */
 export interface MoveOption {
-  readonly to: Step;
+  /** Where the front hex ends up, and the facing for multi-hex figures. */
+  readonly to: PathStep;
+  /** Every spot the figure covers at the destination. */
+  readonly spots: Step[];
   /** Steps after the start, ending at `to`. */
-  readonly path: Step[];
+  readonly path: PathStep[];
   readonly cost: number;
-  /** Lava and ice hexes on the path (each one means a d20 roll). */
+  /** Risky moments on the path: lava and ice rolls, falls and passing strikes. */
   readonly hazards: number;
 }
 
@@ -22,7 +29,15 @@ interface Mover {
   readonly figure: FigureState;
   readonly card: UnitCard;
   readonly stats: EffectiveStats;
-  readonly start: Step;
+  readonly footprint: Footprint;
+  readonly start: Placement;
+  readonly startSpots: Step[];
+}
+
+/** An enemy figure, with the spots it covers, for engagement checks. */
+interface Enemy extends Occupant {
+  readonly spots: Step[];
+  readonly height: number;
 }
 
 function terrainOf(step: Step, ctx: RulesContext): TerrainRules | undefined {
@@ -30,7 +45,7 @@ function terrainOf(step: Step, ctx: RulesContext): TerrainRules | undefined {
   return id ? ctx.terrain.get(id) : undefined;
 }
 
-/** Movement points to step from one spot to an adjacent one. */
+/** Movement points for a single-hex figure to step from one spot to an adjacent one. */
 export function stepCost(from: Step, to: Step, ctx: RulesContext): number {
   return moveCostOf(terrainOf(to, ctx)) + Math.max(0, to.elevation - from.elevation);
 }
@@ -41,16 +56,11 @@ export function stopsMovement(from: Step, to: Step, ctx: RulesContext): boolean 
   return group !== undefined && terrainOf(from, ctx)?.stopGroup !== group;
 }
 
-function isHazard(step: Step, ctx: RulesContext): boolean {
-  const t = terrainOf(step, ctx);
-  return t?.entryDestroyOnOrBelow !== undefined || t?.slip !== undefined;
-}
-
 /**
  * Can a figure physically step between two adjacent spots? The destination
- * must have room for the figure, climbing needs headroom in the current hex,
- * and dropping needs headroom in the destination. In the Advanced game a
- * single step may not climb more levels than the figure's Height.
+ * must have room for the figure and no scenery, climbing needs headroom in
+ * the current hex, and dropping needs headroom in the destination. In the
+ * Advanced game a single step may not climb more levels than the figure's Height.
  */
 export function canStep(from: Step, to: Step, height: number, ctx: RulesContext, mode: GameState["config"]["mode"]): boolean {
   if (!isAdjacent(from.hex, to.hex)) return false;
@@ -65,32 +75,157 @@ export function canStep(from: Step, to: Step, height: number, ctx: RulesContext,
   return true;
 }
 
-function neighborsOf(step: Step, ctx: RulesContext): Step[] {
-  const result: Step[] = [];
-  for (const h of hexNeighbors(step.hex)) {
-    for (const s of ctx.board.surfaces(h)) result.push({ hex: h, elevation: s.elevation });
-  }
-  return result;
-}
-
 function moverFor(state: GameState, figureId: string, ctx: RulesContext): Mover {
   const found = findFigure(state, figureId) ?? fail(`Unknown figure "${figureId}"`);
   const { unit, figure } = found;
   if (figure.destroyed || !figure.position) fail("That figure is not on the battlefield");
   const card = cardOf(unit, ctx);
-  if (card.footprint !== "1") fail("Multi-hex figures arrive with the Advanced rules");
-  const start: Step = { hex: figure.position.hex, elevation: figure.position.elevation };
-  return { unit, figure, card, stats: statsOf(card, state.config.mode), start };
+  const stats = statsOf(card, state.config.mode);
+  const pos = figure.position;
+  const start: Placement = { hex: pos.hex, elevation: pos.elevation, rotation: card.footprint === "1" ? 0 : pos.rotation };
+  return {
+    unit,
+    figure,
+    card,
+    stats,
+    footprint: card.footprint,
+    start,
+    startSpots: figureSpots(figure, card.footprint, stats.height, ctx),
+  };
 }
 
-/** The extra move a figure gets for staying on bonus terrain (road), if it starts there. */
-function stayOnBonus(start: Step, ctx: RulesContext): { terrain: string; bonus: number } | null {
-  const t = terrainOf(start, ctx);
-  return t?.stayOnBonusMove ? { terrain: t.id, bonus: t.stayOnBonusMove } : null;
+function enemiesOf(state: GameState, mover: Mover, ctx: RulesContext): Enemy[] {
+  if (state.config.mode !== "advanced") return [];
+  const result: Enemy[] = [];
+  for (const unit of state.units) {
+    if (unit.owner === mover.unit.owner) continue;
+    const card = ctx.cards.get(unit.cardId);
+    if (!card) continue;
+    for (const figure of unit.figures) {
+      const spots = figureSpots(figure, card.footprint, card.height, ctx);
+      if (spots.length > 0) result.push({ unit, figure, spots, height: card.height });
+    }
+  }
+  return result;
+}
+
+function engagedIds(enemies: readonly Enemy[], spots: readonly Step[], height: number): Set<string> {
+  const ids = new Set<string>();
+  for (const e of enemies) if (spotsEngaged(spots, height, e.spots, e.height)) ids.add(e.figure.id);
+  return ids;
+}
+
+/** What happens on one step of a move. */
+interface StepInfo {
+  readonly to: Placement;
+  readonly spots: Step[];
+  readonly cost: number;
+  readonly stops: boolean;
+  /** Spots newly covered on this step. */
+  readonly entered: Step[];
+  readonly lava: number;
+  readonly ice: number;
+  /** Levels dropped (positive) by the figure's highest hex. */
+  readonly drop: number;
+  /** Enemies the figure walks away from (Advanced passing strikes). */
+  readonly strikes: Enemy[];
+}
+
+function fallDice(drop: number, height: number, state: GameState, ctx: RulesContext): number {
+  if (state.config.mode !== "advanced" || drop < height) return 0;
+  const { minorDice, majorDice } = tuningOf(ctx).falling;
+  return drop >= height * 2 ? majorDice : minorDice;
+}
+
+function hazardsOf(info: StepInfo, mover: Mover, state: GameState, ctx: RulesContext): number {
+  return info.lava + info.ice + info.strikes.length + (fallDice(info.drop, mover.stats.height, state, ctx) > 0 ? 1 : 0);
+}
+
+/**
+ * Work out one step from `from` to `to`: either a move of the front hex to an
+ * adjacent hex (keeping the facing), or, for multi-hex figures, a turn of 60
+ * degrees in place. Returns a reason string when the step is not allowed.
+ */
+function evaluateStep(
+  state: GameState,
+  mover: Mover,
+  from: Placement,
+  fromSpots: readonly Step[],
+  to: Placement,
+  occ: Map<string, Occupant>,
+  enemies: readonly Enemy[],
+  ctx: RulesContext,
+): StepInfo | string {
+  const single = mover.footprint === "1";
+  const turning = hexEquals(from.hex, to.hex) && from.elevation === to.elevation;
+  if (turning) {
+    const diff = (((to.rotation - from.rotation) % 6) + 6) % 6;
+    if (single || (diff !== 1 && diff !== 5)) return "The figure cannot move that way";
+  } else if (!isAdjacent(from.hex, to.hex) || to.rotation !== from.rotation) {
+    return "The figure cannot move that way";
+  }
+  const height = mover.stats.height;
+  const spots = placementSpots(mover.footprint, height, to, ctx);
+  if (!spots) return "The figure does not fit there";
+  if (!turning) {
+    for (let i = 0; i < spots.length; i++) {
+      if (!canStep(fromSpots[i]!, spots[i]!, height, ctx, state.config.mode)) return "The figure cannot move that way";
+    }
+  }
+  for (const s of spots) {
+    const o = occ.get(stepKey(s));
+    if (o && o.figure.id !== mover.figure.id && o.unit.owner !== mover.unit.owner) {
+      return "The path goes through an enemy figure";
+    }
+  }
+
+  const entered = spots.filter((s) => !fromSpots.some((f) => hexEquals(f.hex, s.hex)));
+  const extra = Math.max(0, ...entered.map((s) => moveCostOf(terrainOf(s, ctx)) - 1));
+  const climb = Math.max(0, ...spots.map((s, i) => s.elevation - fromSpots[i]!.elevation));
+  const stops = spots.some((s, i) => entered.includes(s) && stopsMovement(fromSpots[i]!, s, ctx));
+  const before = engagedIds(enemies, fromSpots, height);
+  const after = engagedIds(enemies, spots, height);
+  return {
+    to,
+    spots,
+    cost: (turning ? 0 : 1) + extra + climb,
+    stops,
+    entered,
+    lava: entered.filter((s) => terrainOf(s, ctx)?.entryDestroyOnOrBelow !== undefined).length,
+    ice: single ? entered.filter((s) => terrainOf(s, ctx)?.slip !== undefined).length : 0,
+    drop: standingElevation(fromSpots) - standingElevation(spots),
+    strikes: enemies.filter((e) => before.has(e.figure.id) && !after.has(e.figure.id)),
+  };
+}
+
+/** Placements reachable in one step: shifts in all six directions, and turns for multi-hex figures. */
+function nextPlacements(from: Placement, footprint: Footprint, ctx: RulesContext): Placement[] {
+  const result: Placement[] = [];
+  for (const d of DIRECTIONS) {
+    const hex = hexAdd(from.hex, d);
+    for (const s of ctx.board.surfaces(hex)) result.push({ hex, elevation: s.elevation, rotation: from.rotation });
+  }
+  if (footprint !== "1") {
+    result.push({ ...from, rotation: (from.rotation + 1) % 6 }, { ...from, rotation: (from.rotation + 5) % 6 });
+  }
+  return result;
+}
+
+/** The extra move a figure gets for staying on bonus terrain (road), if all of it starts there. */
+function stayOnBonus(spots: readonly Step[], ctx: RulesContext): { terrain: string; bonus: number } | null {
+  const first = terrainOf(spots[0]!, ctx);
+  if (!first?.stayOnBonusMove) return null;
+  if (!spots.every((s) => terrainOf(s, ctx)?.id === first.id)) return null;
+  return { terrain: first.id, bonus: first.stayOnBonusMove };
+}
+
+function asPathStep(p: Placement, footprint: Footprint): PathStep {
+  return footprint === "1" ? { hex: p.hex, elevation: p.elevation } : { hex: p.hex, elevation: p.elevation, rotation: p.rotation };
 }
 
 interface Label {
-  readonly step: Step;
+  readonly placement: Placement;
+  readonly spots: Step[];
   readonly cost: number;
   readonly hazards: number;
   readonly stopped: boolean;
@@ -98,9 +233,9 @@ interface Label {
 }
 
 /**
- * Search every spot the figure can reach within `budget`. For each spot keep,
- * per cost, the path with the fewest hazards, so a slightly longer path that
- * avoids lava is still offered.
+ * Search every placement the figure can reach within `budget`. For each
+ * placement keep, per cost, the path with the fewest hazards, so a slightly
+ * longer path that avoids lava or a passing strike is still offered.
  */
 function search(
   state: GameState,
@@ -109,31 +244,31 @@ function search(
   onlyTerrain: string | null,
   ctx: RulesContext,
 ): Map<string, MoveOption> {
-  const occ = occupancy(state);
-  const owner = mover.unit.owner;
+  const occ = occupancy(state, ctx);
+  const enemies = enemiesOf(state, mover, ctx);
   const labels = new Map<string, Label>();
   const buckets: Label[][] = Array.from({ length: budget + 1 }, () => []);
-  const startLabel: Label = { step: mover.start, cost: 0, hazards: 0, stopped: false, prev: null };
-  buckets[0]!.push(startLabel);
+  buckets[0]!.push({ placement: mover.start, spots: mover.startSpots, cost: 0, hazards: 0, stopped: false, prev: null });
 
   for (let c = 0; c <= budget; c++) {
+    // Turning costs nothing, so labels can be appended to the bucket being read.
     for (const label of buckets[c]!) {
       if (label.stopped) continue;
-      for (const to of neighborsOf(label.step, ctx)) {
-        if (onlyTerrain && terrainOf(to, ctx)?.id !== onlyTerrain) continue;
-        if (!canStep(label.step, to, mover.stats.height, ctx, state.config.mode)) continue;
-        const occupant = occ.get(stepKey(to));
-        if (occupant && occupant.figure.id !== mover.figure.id && occupant.unit.owner !== owner) continue;
-        const cost = c + stepCost(label.step, to, ctx);
+      for (const to of nextPlacements(label.placement, mover.footprint, ctx)) {
+        const info = evaluateStep(state, mover, label.placement, label.spots, to, occ, enemies, ctx);
+        if (typeof info === "string") continue;
+        if (onlyTerrain && !info.spots.every((s) => terrainOf(s, ctx)?.id === onlyTerrain)) continue;
+        const cost = c + info.cost;
         if (cost > budget) continue;
         const next: Label = {
-          step: to,
+          placement: to,
+          spots: info.spots,
           cost,
-          hazards: label.hazards + (isHazard(to, ctx) ? 1 : 0),
-          stopped: stopsMovement(label.step, to, ctx),
+          hazards: label.hazards + hazardsOf(info, mover, state, ctx),
+          stopped: info.stops,
           prev: label,
         };
-        const key = `${stepKey(to)}|${cost}|${next.stopped}`;
+        const key = `${placementKey(to)}|${cost}|${next.stopped}`;
         const existing = labels.get(key);
         if (existing && existing.hazards <= next.hazards) continue;
         labels.set(key, next);
@@ -142,30 +277,40 @@ function search(
     }
   }
 
+  const startKey = placementKey(mover.start);
   const best = new Map<string, MoveOption>();
   for (const label of labels.values()) {
-    if (sameStep(label.step, mover.start)) continue;
-    const key = stepKey(label.step);
-    if (occ.has(key)) continue; // cannot end on another figure
-    const current = best.get(key);
-    if (
-      current &&
-      (current.hazards < label.hazards || (current.hazards === label.hazards && current.cost <= label.cost))
-    ) {
+    const key = placementKey(label.placement);
+    if (key === startKey) continue;
+    // A figure cannot end its move on another figure.
+    if (label.spots.some((s) => {
+      const o = occ.get(stepKey(s));
+      return o !== undefined && o.figure.id !== mover.figure.id;
+    })) {
       continue;
     }
-    const path: Step[] = [];
-    for (let l: Label | null = label; l && l.prev; l = l.prev) path.unshift(l.step);
-    best.set(key, { to: label.step, path, cost: label.cost, hazards: label.hazards });
+    const current = best.get(key);
+    if (current && (current.hazards < label.hazards || (current.hazards === label.hazards && current.cost <= label.cost))) {
+      continue;
+    }
+    const path: PathStep[] = [];
+    for (let l: Label | null = label; l && l.prev; l = l.prev) path.unshift(asPathStep(l.placement, mover.footprint));
+    best.set(key, {
+      to: asPathStep(label.placement, mover.footprint),
+      spots: label.spots,
+      path,
+      cost: label.cost,
+      hazards: label.hazards,
+    });
   }
   return best;
 }
 
-/** Every destination the figure could move to this turn, with a suggested path. */
+/** Every placement the figure could move to this turn, keyed by placementKey, with a suggested path. */
 export function moveOptions(state: GameState, figureId: string, ctx: RulesContext): Map<string, MoveOption> {
   const mover = moverFor(state, figureId, ctx);
   const options = search(state, mover, mover.stats.move, null, ctx);
-  const bonus = stayOnBonus(mover.start, ctx);
+  const bonus = stayOnBonus(mover.startSpots, ctx);
   if (bonus) {
     for (const [key, opt] of search(state, mover, mover.stats.move + bonus.bonus, bonus.terrain, ctx)) {
       const current = options.get(key);
@@ -189,39 +334,72 @@ function activeMover(state: GameState, player: PlayerId, figureId: string, ctx: 
   return { active, mover };
 }
 
-/** Check a requested path step by step and return its total cost. */
-function validatePath(state: GameState, mover: Mover, path: readonly Step[], ctx: RulesContext): number {
-  if (path.length === 0) fail("The path is empty");
-  const occ = occupancy(state);
-  let from = mover.start;
-  let cost = 0;
-  path.forEach((to, i) => {
-    if (!canStep(from, to, mover.stats.height, ctx, state.config.mode)) fail("The figure cannot move that way");
-    const occupant = occ.get(stepKey(to));
-    if (occupant && occupant.figure.id !== mover.figure.id && occupant.unit.owner !== mover.unit.owner) {
-      fail("The path goes through an enemy figure");
-    }
-    if (stopsMovement(from, to, ctx) && i < path.length - 1) fail("Entering water or swamp ends movement");
-    cost += stepCost(from, to, ctx);
-    from = to;
-  });
-  const last = path[path.length - 1]!;
-  const endOccupant = occ.get(stepKey(last));
-  if (endOccupant && endOccupant.figure.id !== mover.figure.id) fail("A figure cannot end its move on another figure");
-  if (sameStep(last, mover.start)) fail("The figure must end somewhere new");
+function toPlacement(step: PathStep, current: Placement, footprint: Footprint): Placement {
+  return { hex: step.hex, elevation: step.elevation, rotation: footprint === "1" ? 0 : (step.rotation ?? current.rotation) };
+}
 
-  let budget = mover.stats.move;
-  const bonus = stayOnBonus(mover.start, ctx);
-  if (bonus && path.every((s) => terrainOf(s, ctx)?.id === bonus.terrain)) budget += bonus.bonus;
+/** Check a requested path step by step. */
+function validatePath(state: GameState, mover: Mover, path: readonly PathStep[], ctx: RulesContext): void {
+  if (path.length === 0) fail("The path is empty");
+  const occ = occupancy(state, ctx);
+  const enemies = enemiesOf(state, mover, ctx);
+  let from = mover.start;
+  let fromSpots = mover.startSpots;
+  let cost = 0;
+  let allBonusTerrain = true;
+  const bonus = stayOnBonus(mover.startSpots, ctx);
+  path.forEach((raw, i) => {
+    const to = toPlacement(raw, from, mover.footprint);
+    const info = evaluateStep(state, mover, from, fromSpots, to, occ, enemies, ctx);
+    if (typeof info === "string") fail(info);
+    if (info.stops && i < path.length - 1) fail("Entering water or swamp ends movement");
+    if (bonus && !info.spots.every((s) => terrainOf(s, ctx)?.id === bonus.terrain)) allBonusTerrain = false;
+    cost += info.cost;
+    from = to;
+    fromSpots = info.spots;
+  });
+  for (const s of fromSpots) {
+    const o = occ.get(stepKey(s));
+    if (o && o.figure.id !== mover.figure.id) fail("A figure cannot end its move on another figure");
+  }
+  if (placementKey(from) === placementKey(mover.start)) fail("The figure must end somewhere new");
+  const budget = mover.stats.move + (bonus && allBonusTerrain ? bonus.bonus : 0);
   if (cost > budget) fail(`That move costs ${cost} but the figure only has ${budget}`);
-  return cost;
+}
+
+/** Roll attack dice against a figure with no defense roll (falls and passing strikes). */
+function unblockable(
+  state: GameState,
+  rng: Rng,
+  dice: number,
+  mover: Mover,
+  source: "fall" | "passingStrike",
+  attackerId: string | null,
+  events: GameEvent[],
+): void {
+  const attack = rollDice(rng, ATTACK_DIE, dice);
+  const hits = countFaces(attack, "skull");
+  events.push({
+    type: "attackRolled",
+    source,
+    attackerId,
+    targetId: mover.figure.id,
+    attack,
+    defense: [],
+    hits,
+    blocks: 0,
+    wounds: hits,
+    attackBonus: 0,
+    defenseBonus: 0,
+  });
+  woundFigure(state, mover.unit, mover.figure, hits, mover.stats.life, source, events);
 }
 
 export function moveFigure(
   state: GameState,
   player: PlayerId,
   figureId: string,
-  path: readonly Step[],
+  path: readonly PathStep[],
   events: GameEvent[],
   ctx: RulesContext,
 ): void {
@@ -231,49 +409,77 @@ export function moveFigure(
 
   const rng = new Rng(state.rng);
   const { figure, unit } = mover;
-  const traversed: Step[] = [];
+  const single = mover.footprint === "1";
+  const occ = occupancy(state, ctx);
+  const enemies = enemiesOf(state, mover, ctx);
+  const traversed: PathStep[] = [];
   const after: GameEvent[] = [];
-  let prev = mover.start;
+  let from = mover.start;
+  let fromSpots = mover.startSpots;
 
-  const enter = (step: Step, canSlip: boolean): "ok" | "destroyed" | "slipped" => {
-    figure.position = { hex: step.hex, elevation: step.elevation, rotation: 0 };
-    const t = terrainOf(step, ctx);
-    if (t?.entryDestroyOnOrBelow !== undefined) {
+  const lavaRolls = (spots: readonly Step[]): boolean => {
+    for (const s of spots) {
+      const t = terrainOf(s, ctx);
+      if (t?.entryDestroyOnOrBelow === undefined) continue;
       const roll = rng.d20();
       const destroyed = roll <= t.entryDestroyOnOrBelow;
       after.push({ type: "terrainRoll", figureId, terrain: t.id, roll, outcome: destroyed ? "destroyed" : "safe" });
       if (destroyed) {
         destroyFigure(unit, figure, "lava", after);
-        return "destroyed";
+        return true;
       }
     }
-    if (t?.slip && canSlip) {
-      const roll = rng.d20();
-      const slipped = roll <= t.slip.onOrBelow;
-      after.push({ type: "terrainRoll", figureId, terrain: t.id, roll, outcome: slipped ? "slipped" : "safe" });
-      if (slipped) return "slipped";
-    }
-    return "ok";
+    return false;
   };
 
-  for (const step of path) {
-    traversed.push(step);
-    const outcome = enter(step, true);
-    if (outcome === "destroyed") break;
-    if (outcome === "slipped") {
-      const slide = slideTarget(state, mover, prev, step, ctx);
-      if (slide) {
-        after.push({ type: "figureSlid", figureId, to: slide });
-        enter(slide, false); // a slide can carry a figure into lava, but never slips twice
-      }
-      break;
+  for (const raw of path) {
+    const to = toPlacement(raw, from, mover.footprint);
+    const info = evaluateStep(state, mover, from, fromSpots, to, occ, enemies, ctx);
+    if (typeof info === "string") break; // validated above; cannot happen
+
+    // 1. Enemies left behind strike as the figure walks away.
+    for (const e of info.strikes) {
+      unblockable(state, rng, tuningOf(ctx).passingStrikeDice, mover, "passingStrike", e.figure.id, after);
+      if (figure.destroyed) break;
     }
-    prev = step;
+    if (figure.destroyed) break;
+
+    // 2. Move.
+    figure.position = { hex: to.hex, elevation: to.elevation, rotation: to.rotation };
+    traversed.push(asPathStep(to, mover.footprint));
+
+    // 3. Falling (Advanced).
+    const dice = fallDice(info.drop, mover.stats.height, state, ctx);
+    if (dice > 0) {
+      unblockable(state, rng, dice, mover, "fall", null, after);
+      if (figure.destroyed) break;
+    }
+
+    // 4. Lava.
+    if (lavaRolls(info.entered)) break;
+
+    // 5. Ice (single-hex figures only).
+    if (info.ice > 0) {
+      const t = terrainOf(info.spots[0]!, ctx)!;
+      const roll = rng.d20();
+      const slipped = roll <= t.slip!.onOrBelow;
+      after.push({ type: "terrainRoll", figureId, terrain: t.id, roll, outcome: slipped ? "slipped" : "safe" });
+      if (slipped) {
+        const slide = slideTarget(mover, fromSpots[0]!, info.spots[0]!, occ, ctx);
+        if (slide) {
+          after.push({ type: "figureSlid", figureId, to: slide });
+          figure.position = { hex: slide.hex, elevation: slide.elevation, rotation: 0 };
+          lavaRolls([slide]); // a slide can carry a figure into lava, but never slips twice
+        }
+        break;
+      }
+    }
+    from = to;
+    fromSpots = info.spots;
   }
 
-  // A slip can leave a figure on a spot it was only passing through.
-  if (!figure.destroyed && figure.position) {
-    const occ = occupancy(state);
+  // A slip can leave a single-hex figure on a spot it was only passing through.
+  if (single && !figure.destroyed && figure.position) {
     const here = occ.get(stepKey(figure.position));
     if (here && here.figure.id !== figure.id) {
       const fallback = [...traversed].reverse().find((s) => {
@@ -282,22 +488,22 @@ export function moveFigure(
       });
       const back = fallback ?? mover.start;
       figure.position = { hex: back.hex, elevation: back.elevation, rotation: 0 };
-      after.push({ type: "figureSlid", figureId, to: back });
+      after.push({ type: "figureSlid", figureId, to: { hex: back.hex, elevation: back.elevation } });
     }
   }
 
   state.rng = rng.state;
-  events.push({ type: "figureMoved", figureId, from: mover.start, path: traversed }, ...after);
+  events.push({ type: "figureMoved", figureId, from: asPathStep(mover.start, mover.footprint), path: traversed }, ...after);
+  checkGameOver(state, events, ctx);
 }
 
 /**
  * Where a slipping figure slides: one hex further in its direction of travel,
  * onto the highest surface there that is not above it, if it fits and is free.
  */
-function slideTarget(state: GameState, mover: Mover, from: Step, at: Step, ctx: RulesContext): Step | null {
+function slideTarget(mover: Mover, from: Step, at: Step, occ: Map<string, Occupant>, ctx: RulesContext): Step | null {
   const dir = hexSub(at.hex, from.hex);
   const hex = hexAdd(at.hex, dir);
-  const occ = occupancy(state);
   const candidates = ctx.board
     .surfaces(hex)
     .filter((s) => s.elevation <= at.elevation)

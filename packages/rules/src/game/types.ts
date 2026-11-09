@@ -3,6 +3,7 @@ import type { DieFace } from "../dice";
 import type { Hex } from "../hex";
 import type { UnitCard } from "../schema";
 import type { TerrainTable } from "../terrain";
+import type { Tuning } from "../tuning";
 
 export type PlayerId = string;
 export type RulesMode = "basic" | "advanced";
@@ -20,6 +21,14 @@ export type TokenAssignment = Record<TokenId, string>;
 export interface Step {
   readonly hex: Hex;
   readonly elevation: number;
+}
+
+/**
+ * One step of a move: where the figure's front hex goes, and for multi-hex
+ * figures which way it faces (0 to 5, in 60 degree steps).
+ */
+export interface PathStep extends Step {
+  readonly rotation?: number;
 }
 
 export interface PlayerState {
@@ -159,9 +168,11 @@ export interface RulesContext {
   readonly cards: ReadonlyMap<string, UnitCard>;
   readonly board: Board;
   readonly terrain: TerrainTable;
+  /** Rule numbers; defaults to DEFAULT_TUNING. */
+  readonly tuning?: Tuning;
 }
 
-export interface FigurePlacement extends Step {
+export interface FigurePlacement extends PathStep {
   readonly figureId: string;
 }
 
@@ -174,12 +185,12 @@ export type Command =
       readonly placements: readonly FigurePlacement[];
     }
   | { readonly type: "placeTokens"; readonly player: PlayerId; readonly tokens: TokenAssignment }
-  | { readonly type: "move"; readonly player: PlayerId; readonly figureId: string; readonly path: readonly Step[] }
+  | { readonly type: "move"; readonly player: PlayerId; readonly figureId: string; readonly path: readonly PathStep[] }
   | { readonly type: "attack"; readonly player: PlayerId; readonly figureId: string; readonly targetId: string }
   | { readonly type: "endTurn"; readonly player: PlayerId }
   | { readonly type: "concede"; readonly player: PlayerId };
 
-export type DamageSource = "attack" | "swamp" | "lava";
+export type DamageSource = "attack" | "swamp" | "lava" | "fall" | "passingStrike";
 
 export type GameEvent =
   | { readonly type: "draftStarted"; readonly rolls: RollOff[]; readonly order: PlayerId[] }
@@ -199,7 +210,7 @@ export type GameEvent =
   | { readonly type: "tokenRevealed"; readonly player: PlayerId; readonly token: TokenId; readonly unitId: string }
   | { readonly type: "turnLost"; readonly player: PlayerId; readonly token: NumberedToken; readonly unitId: string }
   | { readonly type: "turnStarted"; readonly player: PlayerId; readonly token: NumberedToken; readonly unitId: string }
-  | { readonly type: "figureMoved"; readonly figureId: string; readonly from: Step; readonly path: Step[] }
+  | { readonly type: "figureMoved"; readonly figureId: string; readonly from: PathStep; readonly path: PathStep[] }
   | {
       readonly type: "terrainRoll";
       readonly figureId: string;
@@ -219,6 +230,9 @@ export type GameEvent =
       readonly hits: number;
       readonly blocks: number;
       readonly wounds: number;
+      /** Extra attack and defense dice from height (Advanced). */
+      readonly attackBonus: number;
+      readonly defenseBonus: number;
     }
   | { readonly type: "figureWounded"; readonly figureId: string; readonly wounds: number; readonly total: number }
   | {

@@ -162,6 +162,8 @@ export function eliminate(state: GameState, player: PlayerId, events: GameEvent[
 /**
  * Once armies are on the battlefield, eliminate players with no living units.
  * End the game if at most one player remains. Returns true if the game ended.
+ * If the player whose turn it is was knocked out (say their last figure fell
+ * into lava), their turn ends and play moves on.
  */
 export function checkGameOver(state: GameState, events: GameEvent[], ctx: RulesContext): boolean {
   if (state.phase === "gameOver") return true;
@@ -173,6 +175,13 @@ export function checkGameOver(state: GameState, events: GameEvent[], ctx: RulesC
   if (activePlayers(state).length <= 1) {
     finish(state, "elimination", events, ctx);
     return true;
+  }
+  const active = state.active;
+  if (state.phase === "turns" && active && state.players.find((p) => p.id === active.player)?.eliminated) {
+    events.push({ type: "turnEnded", player: active.player, token: active.token, unitId: active.unitId });
+    state.active = null;
+    stepPointer(state);
+    advance(state, events, ctx);
   }
   return false;
 }

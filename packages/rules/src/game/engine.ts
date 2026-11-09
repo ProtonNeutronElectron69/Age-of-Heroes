@@ -2,7 +2,7 @@ import { deepClone } from "../clone";
 import { MAX_PLAYERS, MIN_PLAYERS } from "../schema";
 import { attack, endOfTurnTerrain } from "./combat";
 import { currentDeployment, deployUnit, skipDepartedDeployers, startDeployment } from "./deploy";
-import { continueDraft, createUnit, currentDrafter, draftPick, figuresOwned, startDraft, zoneCapacity } from "./draft";
+import { continueDraft, createUnit, currentDrafter, draftPick, spaceNeeded, startDraft, zoneCapacity } from "./draft";
 import { fail, RulesError } from "./errors";
 import { moveFigure } from "./movement";
 import { findUnit, isUnitAlive } from "./queries";
@@ -81,17 +81,16 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
         createUnit(state, p.id, cardId, ctx);
       }
       const room = zoneCapacity(state, p.id, ctx);
-      if (figuresOwned(state, p.id) > room) {
+      if (spaceNeeded(state, p.id, ctx) > room) {
         throw new RulesError(`${p.name}'s army has more figures than their start zone can hold (${room})`);
       }
     }
     startDeployment(state, events, ctx);
-  } else if (setup.mode === "basic") {
+  } else {
+    // Both rule sets draft by card count for now; the points budget arrives in Phase 4.
     const size = state.config.armySize!;
     if (!Number.isInteger(size) || size < 1) throw new RulesError("Army size must be at least 1 card");
     startDraft(state, size, events);
-  } else {
-    throw new RulesError("Drafting with a points budget arrives with the Advanced rules; pass armies instead");
   }
   return { state, events };
 }
@@ -204,9 +203,11 @@ function placeTokens(
 function endTurn(state: GameState, player: PlayerId, events: GameEvent[], ctx: RulesContext): void {
   if (state.phase !== "turns" || !state.active) fail("No turn is in progress");
   if (state.active.player !== player) fail("It is not your turn");
-  const { token, unitId } = state.active;
+  const active = state.active;
+  const { token, unitId } = active;
   endOfTurnTerrain(state, unitId, events, ctx);
   if (checkGameOver(state, events, ctx)) return;
+  if (state.active !== active) return; // the player was knocked out and play has moved on
   events.push({ type: "turnEnded", player, token, unitId });
   state.active = null;
   stepPointer(state);

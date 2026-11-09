@@ -897,3 +897,29 @@ legend {
     max-height: 40%;
   }
 }
+
+/* ---- Advanced game ---------------------------------------------------- */
+
+.life-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: #b3261e;
+  color: #fff;
+  font-size: 10px;
+}
+
+.life-line {
+  color: #ff8a80;
+  margin: 2px 0 0;
+}
+
+.tag {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(255, 107, 94, 0.2);
+  color: #ffb4ab;
+  font-size: 11px;
+}

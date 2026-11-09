@@ -1,5 +1,5 @@
 import { MAPS, buildBoard } from "@aoh/content";
-import { MAX_PLAYERS, MIN_PLAYERS, seedFromString, type MapDefinition } from "@aoh/rules";
+import { MAX_PLAYERS, MIN_PLAYERS, seedFromString, type MapDefinition, type RulesMode } from "@aoh/rules";
 import { useMemo, useState } from "react";
 import { customMaps, deleteCustomMap, findMap } from "../maps";
 import { SEAT_COLORS, SEAT_COLOR_NAMES } from "../scene/scale";
@@ -15,6 +15,7 @@ interface Props {
 }
 
 export function SetupScreen({ onOpenEditor, initialMapId }: Props) {
+  const [mode, setMode] = useState<RulesMode>("basic");
   const [count, setCount] = useState(2);
   const [names, setNames] = useState<string[]>(SEAT_COLOR_NAMES.map((c) => `${c} Player`));
   const [armySize, setArmySize] = useState(3);
@@ -30,7 +31,7 @@ export function SetupScreen({ onOpenEditor, initialMapId }: Props) {
   const start = () => {
     startGame(
       {
-        mode: "basic",
+        mode,
         seed: seedFromString(`${Date.now()}:${Math.random()}`),
         mapId: map.id,
         roundLimit,
@@ -49,7 +50,30 @@ export function SetupScreen({ onOpenEditor, initialMapId }: Props) {
     <div className="screen setup">
       <section className="panel setup-panel">
         <h1>Age of Heroes</h1>
-        <p className="muted">Basic game. Hot-seat for 2 to 6 players on one device.</p>
+        <p className="muted">Hot-seat for 2 to 6 players on one device.</p>
+
+        <fieldset>
+          <legend>Rules</legend>
+          <div className="segmented" role="radiogroup" aria-label="Rule set">
+            {(["basic", "advanced"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={mode === m}
+                className={mode === m ? "on" : ""}
+                onClick={() => setMode(m)}
+              >
+                {m === "basic" ? "Basic" : "Advanced"}
+              </button>
+            ))}
+          </div>
+          <p className="muted small">
+            {mode === "basic"
+              ? "The front of each card: move, range, attack and defense. Any wound destroys a figure."
+              : "The back of each card: Life, height bonuses, falling, engagement and strict line of sight. Special abilities arrive in a later phase."}
+          </p>
+        </fieldset>
 
         <fieldset>
           <legend>Battlefield</legend>
@@ -175,7 +199,6 @@ export function SetupScreen({ onOpenEditor, initialMapId }: Props) {
             New map
           </button>
         </div>
-        <p className="muted small">The Advanced game arrives in a later phase.</p>
       </section>
     </div>
   );

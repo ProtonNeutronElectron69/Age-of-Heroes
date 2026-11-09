@@ -1,5 +1,7 @@
 import { hexKey } from "../hex";
+import type { UnitCard } from "../schema";
 import { fail } from "./errors";
+import { placementSpots, type Placement } from "./placement";
 import { cardOf, findUnit, occupancy, statsOf, stepKey } from "./queries";
 import { startRound } from "./rounds";
 import type { FigurePlacement, GameEvent, GameState, PlayerId, RulesContext, Step } from "./types";
@@ -52,10 +54,10 @@ function finishDeployment(state: GameState, events: GameEvent[]): void {
   startRound(state, events);
 }
 
-/** Spots in a player's start zone where a figure of the given Height could stand. */
+/** Spots in a player's start zone where a single-hex figure of the given Height could stand. */
 export function deploymentSpots(state: GameState, player: PlayerId, height: number, ctx: RulesContext): Step[] {
   const zone = state.players.find((p) => p.id === player)?.zone ?? -1;
-  const taken = occupancy(state);
+  const taken = occupancy(state, ctx);
   const spots: Step[] = [];
   for (const h of ctx.board.startZone(zone)) {
     for (const s of ctx.board.surfaces(h)) {
@@ -64,6 +66,39 @@ export function deploymentSpots(state: GameState, player: PlayerId, height: numb
     }
   }
   return spots;
+}
+
+/**
+ * Every placement in a player's start zone where a figure of this card could
+ * be set up right now: all its hexes in the zone, free, with room to stand.
+ * Multi-hex figures may face any of the six directions.
+ */
+export function deploymentPlacements(
+  state: GameState,
+  player: PlayerId,
+  card: UnitCard,
+  ctx: RulesContext,
+  extraTaken: readonly Step[] = [],
+): { placement: Placement; spots: Step[] }[] {
+  const zoneId = state.players.find((p) => p.id === player)?.zone ?? -1;
+  const zone = new Set(ctx.board.startZone(zoneId).map(hexKey));
+  const taken = occupancy(state, ctx);
+  const extra = new Set(extraTaken.map(stepKey));
+  const rotations = card.footprint === "1" ? [0] : [0, 1, 2, 3, 4, 5];
+  const result: { placement: Placement; spots: Step[] }[] = [];
+  for (const h of ctx.board.startZone(zoneId)) {
+    for (const s of ctx.board.surfaces(h)) {
+      for (const rotation of rotations) {
+        const placement = { hex: h, elevation: s.elevation, rotation };
+        const spots = placementSpots(card.footprint, card.height, placement, ctx);
+        if (!spots) continue;
+        if (spots.every((x) => zone.has(hexKey(x.hex)) && !taken.has(stepKey(x)) && !extra.has(stepKey(x)))) {
+          result.push({ placement, spots });
+        }
+      }
+    }
+  }
+  return result;
 }
 
 export function deployUnit(
@@ -80,7 +115,6 @@ export function deployUnit(
   if (current.unitId !== unitId) fail("Deploy your units in draft order");
   const unit = findUnit(state, unitId) ?? fail(`Unknown unit "${unitId}"`);
   const card = cardOf(unit, ctx);
-  if (card.footprint !== "1") fail("Multi-hex figures arrive with the Advanced rules");
   const { height } = statsOf(card, state.config.mode);
 
   const ids = new Set(unit.figures.map((f) => f.id));
@@ -89,27 +123,38 @@ export function deployUnit(
   }
   const zoneId = state.players.find((p) => p.id === player)!.zone;
   const zone = new Set(ctx.board.startZone(zoneId).map(hexKey));
-  const taken = occupancy(state);
+  const taken = occupancy(state, ctx);
   const used = new Set<string>();
+  const rotationOf = (p: FigurePlacement) => (card.footprint === "1" ? 0 : (((p.rotation ?? 0) % 6) + 6) % 6);
   for (const p of placements) {
-    if (!zone.has(hexKey(p.hex))) fail("Figures must start in your start zone");
-    const surface = ctx.board.surfaceAt(p.hex, p.elevation) ?? fail("There is no ground there");
-    if (surface.clearance < height) fail("The figure does not fit there");
-    if (ctx.board.sceneryAt(p.hex, p.elevation)) fail("Scenery is in the way");
-    const key = stepKey(p);
-    if (taken.has(key) || used.has(key)) fail("That spot is already taken");
-    used.add(key);
+    if (!ctx.board.surfaceAt(p.hex, p.elevation)) fail("There is no ground there");
+    const spots = placementSpots(card.footprint, height, { hex: p.hex, elevation: p.elevation, rotation: rotationOf(p) }, ctx);
+    if (!spots) {
+      if (ctx.board.sceneryAt(p.hex, p.elevation)) fail("Scenery is in the way");
+      fail("The figure does not fit there");
+    }
+    for (const s of spots) {
+      if (!zone.has(hexKey(s.hex))) fail("Figures must start in your start zone");
+      const key = stepKey(s);
+      if (taken.has(key) || used.has(key)) fail("That spot is already taken");
+      used.add(key);
+    }
   }
 
   for (const p of placements) {
     const figure = unit.figures.find((f) => f.id === p.figureId)!;
-    figure.position = { hex: p.hex, elevation: p.elevation, rotation: 0 };
+    figure.position = { hex: p.hex, elevation: p.elevation, rotation: rotationOf(p) };
   }
   events.push({
     type: "unitDeployed",
     player,
     unitId,
-    placements: placements.map((p) => ({ figureId: p.figureId, hex: p.hex, elevation: p.elevation })),
+    placements: placements.map((p) => ({
+      figureId: p.figureId,
+      hex: p.hex,
+      elevation: p.elevation,
+      ...(card.footprint === "1" ? {} : { rotation: rotationOf(p) }),
+    })),
   });
   state.deploy!.index += 1;
   skipDepartedDeployers(state);

@@ -66,7 +66,7 @@ docs/              this plan and the rules
 - [x] Game log, and games saved in the browser so a reload can continue them
 - [x] Tests: engine unit tests, random full-game simulations, and a browser test that plays a full game through the UI
 
-### Phase 2: Map editor (this PR)
+### Phase 2: Map editor (done)
 - [x] Place, rotate and stack all seven piece shapes in all ten terrains; pieces land on whatever is under them
 - [x] Bridges and overhangs, with a manual level control and live validation (overlaps, floating pieces, scenery, zones, layouts)
 - [x] Scenery (trees, ruined walls, boulders) that blocks movement, deployment and line of sight
@@ -77,13 +77,18 @@ docs/              this plan and the rules
 - [x] Setup screen offers only the player counts a map supports
 - [x] Browser test that builds, exports, imports and plays a custom map
 
-### Phase 3: Advanced rules core
-- [ ] Card backs and Advanced stats (Life, wounds)
-- [ ] Elevation bonuses, Height climbing limit, falling damage
-- [ ] Engagement and passing strikes
-- [ ] Strict 3D line of sight with the figure's-eye camera
-- [ ] Multi-hex figure movement (2x1, 3x1, 2x2)
-- [ ] Squad activations with interleaved moves and attacks
+### Phase 3: Advanced rules core (this PR)
+- [x] Advanced mode selectable at setup; drafts by card count until the Phase 4 points budget
+- [x] Card backs shown in the Advanced game; Life and wounds tracked, with life badges on tokens
+- [x] Elevation bonuses, the Height climbing limit, and falling damage on every step
+- [x] Engagement, the engaged-attack restriction, melee needing engagement, and passing strikes
+- [x] Strict 3D line of sight against hit bands, with figures blocking, plus a figure's-eye camera
+- [x] Multi-hex figures (2x1, 3x1, 2x2): standing with a 1-level straddle, shifting and turning, deployment with facing, sight and range from any hex
+- [x] Squad activations with interleaved moves and attacks (both rule sets)
+- [x] Risky paths (lava, ice, falls, passing strikes) shown in orange and avoided by the suggested path
+- [x] Rule numbers (falling dice, passing strike dice, height bonuses, straddle) as tuning data
+- [x] One original 2x1 unit, Old Rootback, to bring big figures into play
+- [x] Tests: Advanced rule and multi-hex unit tests, random Advanced games, and an Advanced browser game
 
 ### Phase 4: Abilities and armies
 - [ ] Ability hook system

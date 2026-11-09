@@ -38,7 +38,7 @@ export function DraftScreen({ session }: { session: Session }) {
             const reason = isUnique(card) && taken.has(card.id) ? "Already drafted" : !ok ? "No room in start zone" : null;
             return (
               <div key={card.id} className={`draft-card ${ok ? "" : "unavailable"}`}>
-                <UnitCardView card={card} mode="basic" />
+                <UnitCardView card={card} mode={state.config.mode} />
                 <button
                   type="button"
                   className="primary"
@@ -56,10 +56,12 @@ export function DraftScreen({ session }: { session: Session }) {
           <h2>Armies</h2>
           {state.players.map((p) => {
             const units = state.units.filter((u) => u.owner === p.id);
+            const points = units.reduce((n, u) => n + (ctx.cards.get(u.cardId)?.advanced.points ?? 0), 0);
             return (
               <div key={p.id} className="army">
                 <h3>
                   <span className="swatch" style={{ background: p.color }} /> {p.name}
+                  {state.config.mode === "advanced" && <span className="muted small"> {points} points</span>}
                 </h3>
                 {units.length === 0 ? (
                   <p className="muted small">No units yet</p>

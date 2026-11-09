@@ -1,10 +1,11 @@
-// Plays a complete 2-player Basic game through the real UI in headless Chromium.
-// Usage: pnpm --filter @aoh/client e2e   (builds are served from apps/client/dist)
+// Plays a complete 2-player game through the real UI in headless Chromium.
+// Usage: node e2e/full-game.mjs [basic|advanced]   (serves the build in apps/client/dist)
 import { chromium } from "playwright";
 import { preview } from "vite";
 
-const ROUNDS = 5;
-const shots = process.env.E2E_SCREENSHOTS; // optional folder for screenshots
+const MODE = process.argv[2] === "advanced" ? "advanced" : "basic";
+const ROUNDS = MODE === "advanced" ? 8 : 5;
+const shotsDir = process.env.E2E_SCREENSHOTS; // optional folder for screenshots
 
 function fail(message) {
   throw new Error(message);
@@ -21,7 +22,7 @@ page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("dialog", (d) => d.accept());
 
-const shot = async (name) => shots && page.screenshot({ path: `${shots}/${name}.png` });
+const shot = async (name) => shotsDir && page.screenshot({ path: `${shotsDir}/${MODE}-${name}.png` });
 const hexDistance = (a, b) => {
   const dq = a.q - b.q;
   const dr = a.r - b.r;
@@ -46,6 +47,7 @@ let attacks = 0;
 
 try {
   await page.goto(url);
+  if (MODE === "advanced") await page.getByRole("radio", { name: "Advanced" }).click();
   await page.getByRole("radio", { name: "2 cards" }).click();
   await page.getByRole("radio", { name: `${ROUNDS} rounds` }).click();
   await shot("1-setup");
@@ -154,7 +156,7 @@ try {
   if (!/wins|share the win|Nobody/.test(heading)) fail(`Unexpected result: ${heading}`);
   if (moves === 0) fail("No figure moved during the game");
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
-  console.log(`Full game played: ${moves} moves, ${attacks} attacks. Result: ${heading}`);
+  console.log(`Full ${MODE} game played: ${moves} moves, ${attacks} attacks. Result: ${heading}`);
 } finally {
   await browser.close();
   await new Promise((resolve) => server.httpServer.close(resolve));

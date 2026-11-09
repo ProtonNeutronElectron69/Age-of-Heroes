@@ -2,7 +2,9 @@ import { Rng } from "../rng";
 import { isUnique } from "../schema";
 import { fail } from "./errors";
 import { deploymentSpots, startDeployment } from "./deploy";
+import { footprintSize } from "./placement";
 import { rollOff } from "./rounds";
+import type { UnitCard } from "../schema";
 import type { GameEvent, GameState, PlayerId, RulesContext, UnitState } from "./types";
 
 /**
@@ -33,13 +35,21 @@ export function currentDrafter(state: GameState): PlayerId | null {
   return d.order[d.index] ?? null;
 }
 
-/** How many figures fit in a player's start zone. */
+/** How many hexes a player's start zone has room on. */
 export function zoneCapacity(state: GameState, player: PlayerId, ctx: RulesContext): number {
   return deploymentSpots(state, player, 1, ctx).length;
 }
 
-export function figuresOwned(state: GameState, player: PlayerId): number {
-  return state.units.filter((u) => u.owner === player).reduce((n, u) => n + u.figures.length, 0);
+/** Hexes a card's figures take up: figure count times footprint size. */
+export function cardSpace(card: UnitCard): number {
+  return card.figureCount * footprintSize(card.footprint);
+}
+
+/** Hexes a player's army takes up. */
+export function spaceNeeded(state: GameState, player: PlayerId, ctx: RulesContext): number {
+  return state.units
+    .filter((u) => u.owner === player)
+    .reduce((n, u) => n + (ctx.cards.get(u.cardId) ? cardSpace(ctx.cards.get(u.cardId)!) : u.figures.length), 0);
 }
 
 /**
@@ -49,9 +59,9 @@ export function figuresOwned(state: GameState, player: PlayerId): number {
  */
 export function draftableCards(state: GameState, ctx: RulesContext, player?: PlayerId): string[] {
   const taken = new Set(state.units.map((u) => u.cardId));
-  const room = player ? zoneCapacity(state, player, ctx) - figuresOwned(state, player) : Infinity;
+  const room = player ? zoneCapacity(state, player, ctx) - spaceNeeded(state, player, ctx) : Infinity;
   return [...ctx.cards.values()]
-    .filter((c) => !(isUnique(c) && taken.has(c.id)) && c.figureCount <= room)
+    .filter((c) => !(isUnique(c) && taken.has(c.id)) && cardSpace(c) <= room)
     .map((c) => c.id);
 }
 
@@ -87,8 +97,8 @@ export function draftPick(
   if (isUnique(card) && state.units.some((u) => u.cardId === cardId)) {
     fail(`${card.name} is unique and has already been drafted`);
   }
-  const room = zoneCapacity(state, player, ctx) - figuresOwned(state, player);
-  if (card.figureCount > room) fail(`Your start zone only has room for ${room} more figures`);
+  const room = zoneCapacity(state, player, ctx) - spaceNeeded(state, player, ctx);
+  if (cardSpace(card) > room) fail(`Your start zone only has room for ${room} more hexes of figures`);
   const unit = createUnit(state, player, cardId, ctx);
   state.draft.picks.push({ player, cardId, unitId: unit.id });
   events.push({ type: "cardDrafted", player, cardId, unitId: unit.id });
