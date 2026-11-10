@@ -16,7 +16,3 @@ export function loadMap(data: unknown): MapDefinition {
 
 /** The premade map library. */
 export const MAPS: readonly MapDefinition[] = [provingGrounds, twinFords, theMesa, glacierPass].map(loadMap);
-
-export function getMap(id: string): MapDefinition | undefined {
-  return MAPS.find((m) => m.id === id);
-}

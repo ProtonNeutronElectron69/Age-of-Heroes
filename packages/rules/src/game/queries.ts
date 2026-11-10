@@ -88,10 +88,6 @@ export function spotsOf(unit: UnitState, figure: FigureState, ctx: RulesContext)
   return figureSpots(figure, card.footprint, card.height, ctx);
 }
 
-export function terrainAt(step: Step, ctx: RulesContext): string | undefined {
-  return ctx.board.surfaceAt(step.hex, step.elevation)?.terrain;
-}
-
 /**
  * Score of what a player still has on the board. Advanced: point value, with
  * squads counting in proportion to their surviving figures. Basic (no point

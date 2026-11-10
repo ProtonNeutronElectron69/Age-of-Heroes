@@ -468,39 +468,39 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
             </p>
           </fieldset>
         ) : (
-        <fieldset>
-          <legend>Players</legend>
-          <div className="segmented" role="radiogroup" aria-label="Number of players">
-            {Array.from({ length: MAX_PLAYERS - MIN_PLAYERS + 1 }, (_, i) => i + MIN_PLAYERS).map((n) => (
-              <button
-                key={n}
-                type="button"
-                role="radio"
-                aria-checked={players === n}
-                className={players === n ? "on" : ""}
-                disabled={!counts.includes(n)}
-                title={counts.includes(n) ? undefined : "This map does not have enough start zones"}
-                onClick={() => setCount(n)}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-          <ol className="player-list">
-            {Array.from({ length: players }, (_, i) => (
-              <li key={i}>
-                <span className="swatch" style={{ background: SEAT_COLORS[i] }} />
-                <input
-                  aria-label={`Player ${i + 1} name`}
-                  value={names[i]}
-                  maxLength={24}
-                  onChange={(e) => setNames(names.map((n, j) => (j === i ? e.target.value : n)))}
-                />
-              </li>
-            ))}
-          </ol>
-          <p className="muted small">Turn order passes in this order (to the left).</p>
-        </fieldset>
+          <fieldset>
+            <legend>Players</legend>
+            <div className="segmented" role="radiogroup" aria-label="Number of players">
+              {Array.from({ length: MAX_PLAYERS - MIN_PLAYERS + 1 }, (_, i) => i + MIN_PLAYERS).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  role="radio"
+                  aria-checked={players === n}
+                  className={players === n ? "on" : ""}
+                  disabled={!counts.includes(n)}
+                  title={counts.includes(n) ? undefined : "This map does not have enough start zones"}
+                  onClick={() => setCount(n)}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <ol className="player-list">
+              {Array.from({ length: players }, (_, i) => (
+                <li key={i}>
+                  <span className="swatch" style={{ background: SEAT_COLORS[i] }} />
+                  <input
+                    aria-label={`Player ${i + 1} name`}
+                    value={names[i]}
+                    maxLength={24}
+                    onChange={(e) => setNames(names.map((n, j) => (j === i ? e.target.value : n)))}
+                  />
+                </li>
+              ))}
+            </ol>
+            <p className="muted small">Turn order passes in this order (to the left).</p>
+          </fieldset>
         )}
 
         {mode === "advanced" ? (
@@ -526,23 +526,23 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
             </label>
           </fieldset>
         ) : (
-        <fieldset>
-          <legend>Army size</legend>
-          <div className="segmented" role="radiogroup" aria-label="Cards per player">
-            {[1, 2, 3, 4].map((n) => (
-              <button
-                key={n}
-                type="button"
-                role="radio"
-                aria-checked={armySize === n}
-                className={armySize === n ? "on" : ""}
-                onClick={() => setArmySize(n)}
-              >
-                {n} {n === 1 ? "card" : "cards"}
-              </button>
-            ))}
-          </div>
-        </fieldset>
+          <fieldset>
+            <legend>Army size</legend>
+            <div className="segmented" role="radiogroup" aria-label="Cards per player">
+              {[1, 2, 3, 4].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  role="radio"
+                  aria-checked={armySize === n}
+                  className={armySize === n ? "on" : ""}
+                  onClick={() => setArmySize(n)}
+                >
+                  {n} {n === 1 ? "card" : "cards"}
+                </button>
+              ))}
+            </div>
+          </fieldset>
         )}
 
         <fieldset>

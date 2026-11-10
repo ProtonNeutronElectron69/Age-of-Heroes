@@ -93,7 +93,7 @@ Scenery stands on a single hex, on top of the terrain there:
 - No figure can enter or stand on a hex where scenery stands (at that level).
 - Scenery blocks line of sight in both the Basic and the Advanced game, just like terrain. A short wall or boulder can be seen over by taller figures.
 - Scenery must stand on terrain and fit under anything above it.
-- How flying figures treat scenery will be decided with the Advanced abilities (Phase 4).
+- Flying figures fly over scenery but cannot land on it (see Flying in section 7).
 
 ### Start zones
 Each map has up to 6 start zones. The map says which zones are used for each player count, so that, for example, two players start in opposite corners. Turn order still goes round the table in seat order. Players set up their figures only in their own zone. A map can be played by any number of players it has a separate start zone for.

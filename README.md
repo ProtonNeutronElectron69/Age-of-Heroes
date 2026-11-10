@@ -1,33 +1,70 @@
 # Age of Heroes
 
-An expandable, turn-based 3D tactics game for 2 to 6 players. Heroes and squads from every era and genre fight on battlefields built from stacked hex pieces.
+A turn-based 3D tactics game for 2 to 6 players in the browser. Heroes and squads from every era and myth fight on battlefields built from stacked hex pieces. Sabre-tooth cats, samurai, musketeers, knights, World War 2 riflemen, robots, dragons, undead and angels can all share one battlefield.
 
-- **Rules:** [docs/RULES.md](docs/RULES.md)
-- **Plan and progress:** [docs/PLAN.md](docs/PLAN.md)
-- **Online play and hosting the game server:** [docs/HOSTING.md](docs/HOSTING.md)
+**Play it:** <https://protonneutronelectron69.github.io/Age-of-Heroes/>, published from `main` on every merge.
 
-## Running locally
+## What's in the game
+
+- **Two rule sets.** In the Basic game, any wound destroys a figure and the front of each card is used. The Advanced game uses the back of each card:
+  - Life;
+  - a points-budget draft;
+  - height bonuses, falling and engagement;
+  - strict line of sight;
+  - special abilities.
+- **30 original units** in 6 factions: 15 heroes and 15 squads, 15 ranged and 15 melee. Some figures cover 2 to 4 hexes.
+- **Turns driven by secret tokens:** each player hides activation tokens on their units, rolls for initiative, then takes three turns a round.
+- **3D battlefields** with ten terrain types, bridges, overhangs and scenery, a figure's-eye camera, and four premade maps.
+- **Map editor:** build, save, export and import your own maps, and play on them.
+- **Hot-seat play** on one device, with a pass-the-device screen for the secret tokens.
+- **Online play:** room codes, each device sees only what its player may see, reconnecting, spectators, and an authoritative server.
+- **Saved games and replays:** named saves, save files, and online games the host can save and resume later. Finished games can be watched move by move.
+
+The rules are in [docs/RULES.md](docs/RULES.md). Progress and what's next are in [docs/PLAN.md](docs/PLAN.md).
+
+## Documentation
+
+| Document | For |
+|---|---|
+| [docs/RULES.md](docs/RULES.md) | The full rules, which the engine implements |
+| [docs/PLAN.md](docs/PLAN.md) | Status, roadmap and design decisions |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code is organised and how a game flows through it |
+| [docs/CONTENT.md](docs/CONTENT.md) | Adding units, abilities and maps, and the rules the tests enforce |
+| [docs/HOSTING.md](docs/HOSTING.md) | Running and hosting the online game server |
+| [CLAUDE.md](CLAUDE.md) | Working rules for contributors and coding agents |
+
+## Development
 
 Requires Node 22+ and pnpm 10.
 
 ```bash
 pnpm install
-pnpm dev        # start the game at http://localhost:5173
-pnpm test       # run the rules and content tests
+pnpm dev        # the game at http://localhost:5173
+pnpm server     # the online game server at ws://localhost:8080/ws (the dev build fills in this address)
 pnpm typecheck  # type-check every package
-pnpm server     # build and run the online game server on ws://localhost:8080/ws
+pnpm test       # unit, content, balance, protocol, server and random full-game tests
 pnpm build      # production builds: the game in apps/client/dist, the server in apps/server/dist
-pnpm e2e        # browser tests: Basic and Advanced games, the map editor, saved games, and an online game (run pnpm build first)
-BALANCE_REPORT=1 pnpm test balance   # print unit point costs against the balance model
+pnpm e2e        # browser tests (run pnpm build first; about 10 minutes)
 ```
+
+```bash
+BALANCE_REPORT=1 pnpm test balance   # unit point costs against the balance model
+```
+
+Before pushing, run `pnpm typecheck && pnpm test && pnpm build`. CI runs those and the browser tests on every push and pull request. The browser tests use Playwright's Chromium; locally, run `pnpm --filter @aoh/client exec playwright install chromium` once if it is missing.
 
 ## Project layout
 
 | Path | What it is |
 |---|---|
-| `packages/rules` | The rules engine: hex math, map model, dice, turn engine. Pure TypeScript with no graphics, so it can also run on a server. |
-| `packages/content` | Game data: terrain, scenery, the premade maps and the starter units, validated on load. |
-| `packages/protocol` | The online message format, checked with schemas, and the replay file format. |
-| `apps/client` | The browser game, map editor, online lobby and replay viewer, built with React and Three.js. |
-| `apps/server` | The online game server: rooms, room codes, reconnecting and spectators. It runs the rules engine and sends each player only their own view. |
-| `docs` | Rules, implementation plan and hosting guide. |
+| `packages/rules` | The rules engine: hex math, the stacked map model, dice, line of sight, draft, movement, combat and abilities. Pure, deterministic TypeScript, so it runs the same in the browser and on the server. |
+| `packages/content` | Game data: the 30 units, four premade maps, terrain, scenery, tunable rule numbers, and the balance model for point costs. |
+| `packages/protocol` | The online message format (checked with schemas) and the game record format used for saves and replays. |
+| `apps/client` | The browser game: setup, draft, battle, map editor, online lobby, saved games and replay viewer, built with React and Three.js. Browser tests live in `apps/client/e2e`. |
+| `apps/server` | The online game server: rooms, room codes, seats and reconnecting, spectators, and saving and resuming games. It runs the rules engine and sends each player only their own view. |
+| `docs` | Rules, roadmap, architecture, content guide and hosting guide. |
+
+## Deployment
+
+- **The game:** `.github/workflows/deploy.yml` builds the client and publishes it to GitHub Pages on every merge to `main`. The `GAME_SERVER_URL` repository variable, if set, becomes the server the published game offers for online play.
+- **The online server:** a Docker image (`apps/server/Dockerfile`) and a Render blueprint (`render.yaml`). See [docs/HOSTING.md](docs/HOSTING.md).
