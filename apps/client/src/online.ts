@@ -1,4 +1,4 @@
-import type { ClientMessage, RoomInfo, RoomSettings, ServerMessage } from "@aoh/protocol";
+import type { ClientMessage, Replay, RoomInfo, RoomSettings, ServerMessage } from "@aoh/protocol";
 import type { MapDefinition } from "@aoh/rules";
 import { useSyncExternalStore } from "react";
 import { applyServerGame, connectRemote, endOnlineSession, setOnlineReplay, setSessionError } from "./session";
@@ -22,6 +22,8 @@ export interface OnlineState {
   readonly map: MapDefinition | null;
   readonly connected: boolean;
   readonly error: string | null;
+  /** This device came to play (create, join or resume), not just to watch. */
+  readonly wantsSeat: boolean;
 }
 
 const SEAT_KEY = "age-of-heroes:online:v1";
@@ -106,6 +108,7 @@ let state: OnlineState = {
   map: null,
   connected: false,
   error: null,
+  wantsSeat: false,
 };
 const listeners = new Set<() => void>();
 let socket: WebSocket | null = null;
@@ -219,7 +222,16 @@ function receive(msg: ServerMessage): void {
     case "replay":
       setOnlineReplay(msg.replay);
       return;
+    case "saved":
+      saveWaiter?.resolve(msg.record);
+      saveWaiter = null;
+      return;
     case "error":
+      if (saveWaiter) {
+        saveWaiter.reject(new Error(msg.message));
+        saveWaiter = null;
+        return;
+      }
       if (state.status === "connecting" || awaitingWelcome) {
         // Joining failed (no such room, room full, the game was cleared...): give up rather than retry.
         disconnect();
@@ -233,7 +245,7 @@ function receive(msg: ServerMessage): void {
   }
 }
 
-function begin(url: string, first: ClientMessage, name?: string): void {
+function begin(url: string, first: ClientMessage, name?: string, wantsSeat = true): void {
   const address = normalizeServerUrl(url);
   if (!address) {
     set({ error: "Enter the game server's address first" });
@@ -242,7 +254,7 @@ function begin(url: string, first: ClientMessage, name?: string): void {
   if (name !== undefined) write(NAME_KEY, name);
   connectStarted = Date.now();
   retries = 0;
-  set({ status: "connecting", error: null });
+  set({ status: "connecting", error: null, wantsSeat });
   open(address, first);
 }
 
@@ -255,7 +267,46 @@ export function joinRoom(url: string, code: string, name: string): void {
 }
 
 export function spectateRoom(url: string, code: string): void {
-  begin(url, { t: "spectate", code });
+  begin(url, { t: "spectate", code }, undefined, false);
+}
+
+/** Open a room for a saved game, playing `playerId`'s army. Others join with the code and pick theirs. */
+export function resumeRoom(url: string, record: Replay, playerId: string): void {
+  begin(url, { t: "resume", record, playerId });
+}
+
+/** In a resumed room: take one of the saved armies. */
+export function claimArmy(playerId: string): void {
+  if (!send({ t: "claim", playerId })) set({ error: "Not connected to the game server" });
+}
+
+let saveWaiter: { resolve: (record: Replay) => void; reject: (err: Error) => void } | null = null;
+
+/** Host only: ask the server for the whole game, to download and resume later. */
+export function requestSave(): Promise<Replay> {
+  return new Promise((resolve, reject) => {
+    if (saveWaiter) return reject(new Error("Already saving"));
+    if (!send({ t: "save" })) return reject(new Error("Not connected to the game server"));
+    const timer = window.setTimeout(() => {
+      saveWaiter = null;
+      reject(new Error("The server did not answer; try again"));
+    }, 15000);
+    saveWaiter = {
+      resolve: (record) => {
+        window.clearTimeout(timer);
+        resolve(record);
+      },
+      reject: (err) => {
+        window.clearTimeout(timer);
+        reject(err);
+      },
+    };
+  });
+}
+
+/** Is this device the host of the online game it is in? */
+export function isOnlineHost(s: OnlineState = state): boolean {
+  return s.me !== null && (s.room?.members.some((m) => m.host && m.playerId === s.me) ?? false);
 }
 
 /** A seat from an earlier visit, if any. */

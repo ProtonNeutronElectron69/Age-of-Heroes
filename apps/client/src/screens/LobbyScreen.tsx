@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { leaveOnline, startRoom, useOnline } from "../online";
+import { claimArmy, leaveOnline, startRoom, useOnline } from "../online";
 
 /** Waiting room for an online game: share the code, see who is here, and start. */
 export function LobbyScreen() {
@@ -38,13 +38,28 @@ export function LobbyScreen() {
   const me = room.members.find((m) => m.playerId === online.me);
   const isHost = me?.host ?? false;
   const count = room.members.length;
-  const canStart = isHost && room.playerCounts.includes(count);
   const max = Math.max(...room.playerCounts);
+  const resume = room.resume;
+  // A resumed game continues once every army still in it has its player back.
+  const missing = resume ? resume.armies.filter((a) => !a.taken && !a.out) : [];
+  const canStart = isHost && (resume ? missing.length === 0 : room.playerCounts.includes(count));
+  const choosing = resume !== null && online.me === null && online.wantsSeat;
 
   return (
     <div className="screen setup">
       <section className="panel setup-panel lobby" aria-label="Lobby">
-        <h1>Online game</h1>
+        <h1>{resume ? "Resumed game" : "Online game"}</h1>
+        {resume && (
+          <p className="small">
+            {resume.name ? <strong>{resume.name}</strong> : "A saved game"},{" "}
+            {resume.phase === "draft"
+              ? "in the draft"
+              : resume.phase === "deploy"
+                ? "during deployment"
+                : `round ${resume.round}`}
+            .
+          </p>
+        )}
         <p className="muted">Share this code so others can join from their own device.</p>
         <p className="room-code" aria-label="Room code">
           {room.code}
@@ -59,6 +74,42 @@ export function LobbyScreen() {
           Copy code
         </button>
 
+        {resume ? (
+          <>
+            <h2>Armies</h2>
+            <p className="muted small">
+              {choosing ? "Which army is yours?" : "Each player picks their own army when they join."}
+            </p>
+            <ul className="player-list lobby-players" aria-label="Armies">
+              {resume.armies.map((a) => {
+                const holder = room.members.find((m) => m.playerId === a.playerId);
+                return (
+                  <li key={a.playerId}>
+                    <span className="swatch" style={{ background: a.color }} />
+                    <span className="army-name">
+                      {a.name}
+                      {holder && holder.playerId === online.me ? " (you)" : ""}
+                      {holder?.host ? <span className="tag host-tag">host</span> : null}
+                      {holder && !holder.connected ? <span className="muted small"> disconnected</span> : null}
+                    </span>
+                    {a.out ? (
+                      <span className="muted small">out of the game</span>
+                    ) : holder ? (
+                      <span className="muted small">taken</span>
+                    ) : choosing ? (
+                      <button type="button" className="primary" onClick={() => claimArmy(a.playerId)}>
+                        This is me
+                      </button>
+                    ) : (
+                      <span className="muted small">waiting</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        ) : (
+        <>
         <h2>
           Players ({count} of up to {max})
         </h2>
@@ -75,7 +126,9 @@ export function LobbyScreen() {
             </li>
           ))}
         </ul>
-        {room.spectators > 0 && (
+        </>
+        )}
+        {room.spectators > 0 && !choosing && (
           <p className="muted small">
             {room.spectators} watching
           </p>
@@ -96,14 +149,24 @@ export function LobbyScreen() {
           </p>
         )}
         <div className="actions">
-          {online.me === null ? (
-            <p className="muted">You are watching. The game starts when the host is ready.</p>
+          {choosing ? null : online.me === null ? (
+            <p className="muted">
+              {resume && online.wantsSeat
+                ? "Every army is taken, so you are watching."
+                : "You are watching. The game starts when the host is ready."}
+            </p>
           ) : isHost ? (
             <button type="button" className="primary" disabled={!canStart} onClick={startRoom}>
-              {canStart ? "Start game" : `Waiting for players (${room.playerCounts.join(", ")} needed)`}
+              {resume
+                ? canStart
+                  ? "Continue game"
+                  : `Waiting for ${missing.map((a) => a.name).join(", ")}`
+                : canStart
+                  ? "Start game"
+                  : `Waiting for players (${room.playerCounts.join(", ")} needed)`}
             </button>
           ) : (
-            <p className="muted">Waiting for the host to start.</p>
+            <p className="muted">Waiting for the host to {resume ? "continue" : "start"}.</p>
           )}
           <button type="button" onClick={leaveOnline}>
             Leave

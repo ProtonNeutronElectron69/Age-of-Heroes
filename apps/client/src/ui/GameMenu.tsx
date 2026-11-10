@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { closeOnline, leaveOnline } from "../online";
-import { canSave, endSession, type Session } from "../session";
+import { closeOnline, isOnlineHost, leaveOnline, requestSave, useOnline } from "../online";
+import { endSession, replayOf, type Session } from "../session";
 import { Notice, SaveDialog } from "./SaveDialog";
 
-/** Save (hot-seat games) and leave buttons, shared by the draft and play screens. */
+/** Save and leave buttons, shared by the draft and play screens. Online, only the host can save. */
 export function GameMenu({ session, className = "" }: { session: Session; className?: string }) {
+  const online = useOnline();
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
@@ -17,6 +18,8 @@ export function GameMenu({ session, className = "" }: { session: Session; classN
   const isOnline = session.kind === "online";
   const over = session.state.phase === "gameOver";
   const watching = isOnline && session.me === null;
+  const canSave = !over && (!isOnline || isOnlineHost(online));
+  const getRecord = () => (isOnline ? requestSave() : Promise.resolve(replayOf(session)!));
   const quitLabel = over ? "Back to menu" : watching ? "Stop watching" : isOnline ? "Leave game" : "Quit game";
   const quit = () => {
     if (!isOnline) {
@@ -31,7 +34,7 @@ export function GameMenu({ session, className = "" }: { session: Session; classN
   return (
     <>
       <div className={`actions menu ${className}`}>
-        {canSave(session) && !over && (
+        {canSave && (
           <button type="button" onClick={() => setSaving(true)}>
             Save game
           </button>
@@ -46,6 +49,7 @@ export function GameMenu({ session, className = "" }: { session: Session; classN
           {saving && (
             <SaveDialog
               session={session}
+              getRecord={getRecord}
               onDone={(message) => {
                 setSaving(false);
                 setNotice(message);

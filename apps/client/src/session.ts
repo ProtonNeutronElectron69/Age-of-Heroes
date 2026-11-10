@@ -295,11 +295,6 @@ export function loadGame(record: { setup: GameSetup; map: MapDefinition; command
   }
 }
 
-/** Can this game be saved on this device? Online games are kept by the server instead. */
-export function canSave(s: Session): boolean {
-  return s.kind === "local";
-}
-
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);

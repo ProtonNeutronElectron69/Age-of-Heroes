@@ -11,9 +11,6 @@ import {
   type GameState,
   type PlayerView,
 } from "@aoh/rules";
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { WebSocket } from "ws";
 import { startGameServer, type GameServer } from "../src/server";
@@ -283,88 +280,112 @@ describe("a full online game", () => {
   });
 });
 
-describe("keeping rooms through a restart", () => {
-  it("brings back the room, the seats and the game after the server restarts", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "aoh-rooms-"));
-    try {
-      const first = await startGameServer({ port: 0, host: "127.0.0.1", dataDir: dir });
-      const host = await Client.connect(first.port);
-      const hw = host.next("welcome");
-      host.send({ t: "create", name: "Ana", settings: settings() });
-      const hostSeat = await hw;
-      const guest = await Client.connect(first.port);
-      const gw = guest.next("welcome");
-      guest.send({ t: "join", code: hostSeat.code, name: "Bo" });
-      const guestSeat = await gw;
-      const started = host.next("game");
-      host.send({ t: "start" });
-      let state = stateFromView((await started).view);
+describe("saving and resuming an online game", () => {
+  it("lets only the host save, and resumes the game in a new room where players claim their armies", async () => {
+    const { code, host, others } = await room(2);
+    const guest = others[0]!;
+    const started = host.client.next("game");
+    host.client.send({ t: "start" });
+    let state = stateFromView((await started).view);
+    const clients = new Map([
+      [host.playerId, host.client],
+      [guest.playerId, guest.client],
+    ]);
+    const first = currentDrafter(state)!;
+    await act(clients, { type: "draftPick", player: first, cardId: draftableCards(state, ctx, first)[0]! });
+    state = stateFromView(host.client.lastView()!);
 
-      // One pick before the restart.
-      const clients = new Map([
-        [hostSeat.playerId!, host],
-        [guestSeat.playerId!, guest],
-      ]);
-      const firstPicker = currentDrafter(state)!;
-      const picked = draftableCards(state, ctx, firstPicker)[0]!;
-      await act(clients, { type: "draftPick", player: firstPicker, cardId: picked });
-      await first.close();
-      expect(readdirSync(dir)).toEqual([`${hostSeat.code}.json`]);
-      // A damaged file is skipped, not fatal.
-      writeFileSync(join(dir, "QQQQQ.json"), "{ not json");
+    // Only the host gets the file.
+    const refused = guest.client.next("error");
+    guest.client.send({ t: "save" });
+    expect((await refused).message).toMatch(/Only the host/);
+    const savedMsg = host.client.next("saved");
+    host.client.send({ t: "save" });
+    const record = (await savedMsg).record;
+    expect(record.setup.seed).not.toBe(0);
+    expect(record.commands).toHaveLength(1);
+    expect(record.savedAt).toBeTruthy();
+    expect(replayGame(record.setup, record.commands, ctx).state.units).toEqual(stateFromView(host.client.lastView()!).units);
+    for (const c of [host.client, guest.client]) await c.close();
+    void code;
 
-      const second = await startGameServer({ port: 0, host: "127.0.0.1", dataDir: dir });
-      try {
-        expect(second.rooms.roomCount).toBe(1);
-        // A wrong token still gets nowhere.
-        const stranger = await Client.connect(second.port);
-        const refused = stranger.next("error");
-        stranger.send({ t: "rejoin", code: hostSeat.code, token: "not-a-real-token" });
-        expect((await refused).message).toMatch(/not yours/);
+    // Later: the host resumes it as the army they choose.
+    const newHost = await Client.connect();
+    const hw = newHost.next("welcome");
+    newHost.send({ t: "resume", record: { ...record, name: "Tuesday game" }, playerId: guest.playerId });
+    const hostWelcome = await hw;
+    expect(hostWelcome.playerId).toBe(guest.playerId);
+    expect(hostWelcome.room.resume?.name).toBe("Tuesday game");
+    expect(hostWelcome.room.resume?.armies.map((a) => [a.playerId, a.taken])).toEqual([
+      [host.playerId, false],
+      [guest.playerId, true],
+    ]);
+    const tooSoon = newHost.next("error");
+    newHost.send({ t: "start" });
+    expect((await tooSoon).message).toMatch(/Waiting for Ana/);
 
-        const back = new Map<string, Client>();
-        for (const seat of [hostSeat, guestSeat]) {
-          const c = await Client.connect(second.port);
-          const snapshot = c.next("game", (m) => m.snapshot);
-          c.send({ t: "rejoin", code: seat.code, token: seat.token });
-          const caughtUp = await snapshot;
-          const view = caughtUp.view;
-          expect(view.viewer).toBe(seat.playerId);
-          // The catch-up carries the log so far, including the pick made before the restart.
-          expect(caughtUp.events.some((e) => e.type === "cardDrafted")).toBe(true);
-          expect(view.config.seed).toBe(0);
-          back.set(seat.playerId!, c);
-          state = stateFromView(view);
-        }
-        expect(state.phase).toBe("draft");
-        expect(state.units.map((u) => u.cardId)).toEqual([picked]);
+    // A friend joins with the code and picks the other army.
+    const friend = await Client.connect();
+    const fw = friend.next("welcome");
+    friend.send({ t: "join", code: hostWelcome.code, name: "Whoever" });
+    const friendIn = await fw;
+    expect(friendIn.playerId).toBeNull();
+    expect(friendIn.room.resume).not.toBeNull();
+    const taken = friend.next("error");
+    friend.send({ t: "claim", playerId: guest.playerId });
+    expect((await taken).message).toMatch(/already been taken/);
+    const seated = friend.next("welcome");
+    friend.send({ t: "claim", playerId: host.playerId });
+    const friendSeat = await seated;
+    expect(friendSeat.playerId).toBe(host.playerId);
+    expect(friendSeat.token).toBeTruthy();
+    const members = await newHost.seen("room", (m) => m.room.members.length === 2);
+    expect(members.room.members.map((m) => [m.name, m.color])).toEqual(
+      record.setup.players.map((p) => [p.name, p.color]),
+    );
 
-        // The game carries on from where it was.
-        const nextPicker = currentDrafter(state)!;
-        expect(nextPicker).not.toBeNull();
-        await act(back, { type: "draftPick", player: nextPicker, cardId: draftableCards(state, ctx, nextPicker)[0]! });
-        state = stateFromView(back.get(nextPicker)!.lastView()!);
-        expect(state.units).toHaveLength(2);
-        for (const c of [stranger, ...back.values()]) await c.close();
-      } finally {
-        await second.close();
-      }
+    // Carry on: same game, same position, and the log so far.
+    const snapshots = [newHost.next("game"), friend.next("game")];
+    newHost.send({ t: "start" });
+    const [a, b] = (await Promise.all(snapshots)) as [GameMessage, GameMessage];
+    expect(a.snapshot).toBe(true);
+    expect(a.events.some((e) => e.type === "cardDrafted")).toBe(true);
+    const resumed = stateFromView(a.view);
+    expect(resumed.units).toEqual(state.units);
+    expect(currentDrafter(resumed)).toBe(currentDrafter(state));
+    expect(b.view.viewer).toBe(host.playerId);
+    const back = new Map([
+      [host.playerId, friend],
+      [guest.playerId, newHost],
+    ]);
+    const p = currentDrafter(resumed)!;
+    await act(back, { type: "draftPick", player: p, cardId: draftableCards(resumed, ctx, p)[0]! });
+    expect(stateFromView(newHost.lastView()!).units).toHaveLength(2);
+    for (const c of [newHost, friend]) await c.close();
+  });
 
-      // Rooms everyone has left are removed from the folder too.
-      const third = await startGameServer({ port: 0, host: "127.0.0.1", dataDir: dir });
-      const solo = await Client.connect(third.port);
-      const sw = solo.next("welcome");
-      solo.send({ t: "create", name: "Cy", settings: settings() });
-      const soloRoom = (await sw).code;
-      solo.send({ t: "leave" });
-      await new Promise((r) => setTimeout(r, 50));
-      await solo.close();
-      await third.close();
-      expect(readdirSync(dir)).not.toContain(`${soloRoom}.json`);
-      expect(third.rooms.roomCount).toBe(1);
-      expect(readdirSync(dir)).toContain(`${hostSeat.code}.json`);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+  it("refuses saves it cannot continue", async () => {
+    const c = await Client.connect();
+    const setup = {
+      mode: "basic" as const,
+      seed: 5,
+      mapId: map.id,
+      roundLimit: 3,
+      armySize: 1,
+      players: [
+        { id: "p1", name: "Ana", color: "#e53935" },
+        { id: "p2", name: "Bo", color: "#1e88e5" },
+      ],
+    };
+    const over = c.next("error");
+    c.send({ t: "resume", record: { formatVersion: 1, setup, map, commands: [{ type: "concede", player: "p2" }] }, playerId: "p1" });
+    expect((await over).message).toMatch(/already over/);
+    const nobody = c.next("error");
+    c.send({ t: "resume", record: { formatVersion: 1, setup, map, commands: [] }, playerId: "p9" });
+    expect((await nobody).message).toMatch(/Choose one of the armies/);
+    const broken = c.next("error");
+    c.send({ t: "resume", record: { formatVersion: 1, setup, map, commands: [{ type: "endTurn", player: "p1" }] }, playerId: "p1" });
+    expect((await broken).message).toMatch(/could not be loaded/);
+    await c.close();
   });
 });

@@ -15,8 +15,6 @@ RUN pnpm --filter @aoh/server build
 FROM node:22-alpine
 WORKDIR /app
 COPY --from=build /app/apps/server/dist/index.js ./index.js
-# Somewhere to keep rooms when DATA_DIR=/data is set (mount a persistent disk there).
-RUN mkdir -p /data && chown node:node /data
 ENV NODE_ENV=production
 ENV PORT=8080
 EXPOSE 8080

@@ -6,6 +6,7 @@ import {
   type GameSetup,
   type GameState,
   type MapDefinition,
+  type Phase,
   type PlayerView,
   type RulesMode,
   type TokenAssignment,
@@ -65,6 +66,30 @@ export const roomSettingsSchema = z.object({
 });
 export type RoomSettings = z.infer<typeof roomSettingsSchema>;
 
+// ---------------------------------------------------------------------------
+// Replays
+
+const setupSchema = z.object({
+  mode: z.enum(["basic", "advanced"]),
+  seed: z.number().int(),
+  mapId: z.string().min(1),
+  roundLimit: z.number().int().nullable().optional(),
+  players: z.array(z.object({ id, name: z.string().min(1), color: z.string().min(1) })).min(2).max(6),
+  armies: z.record(z.string(), z.array(z.string())).optional(),
+  armySize: z.number().int().optional(),
+  budget: z.number().int().optional(),
+  factionPure: z.boolean().optional(),
+});
+
+export const replaySchema = z.object({
+  formatVersion: z.literal(1),
+  setup: setupSchema,
+  map: mapSchema,
+  commands: z.array(commandSchema),
+  name: z.string().max(80).optional(),
+  savedAt: z.string().max(40).optional(),
+});
+
 const nameSchema = z
   .string()
   .transform((s) => s.trim())
@@ -82,11 +107,18 @@ export const clientMessageSchema = z.discriminatedUnion("t", [
   z.object({ t: z.literal("start") }),
   z.object({ t: z.literal("command"), command: commandSchema }),
   z.object({ t: z.literal("leave") }),
+  /** Open a room for a saved game, playing the chosen army. */
+  z.object({ t: z.literal("resume"), record: replaySchema, playerId: id }),
+  /** In a resumed room: take one of the saved armies. */
+  z.object({ t: z.literal("claim"), playerId: id }),
+  /** Host only: get the whole game as a file to resume later. */
+  z.object({ t: z.literal("save") }),
 ]);
 /** A client message. Commands are typed as the engine's own Command, which the schema checks the shape of. */
 export type ClientMessage =
-  | Exclude<z.infer<typeof clientMessageSchema>, { t: "command" }>
-  | { readonly t: "command"; readonly command: Command };
+  | Exclude<z.infer<typeof clientMessageSchema>, { t: "command" } | { t: "resume" }>
+  | { readonly t: "command"; readonly command: Command }
+  | { readonly t: "resume"; readonly record: Replay; readonly playerId: string };
 
 export interface RoomMember {
   readonly playerId: string;
@@ -110,6 +142,24 @@ export interface RoomInfo {
   readonly started: boolean;
   /** Player counts the map can host. */
   readonly playerCounts: number[];
+  /** A saved game waiting for its players to claim their armies; null for a new game. */
+  readonly resume: ResumeInfo | null;
+}
+
+export interface ResumeInfo {
+  /** The save's name, if it has one. */
+  readonly name: string | null;
+  readonly phase: Phase;
+  readonly round: number;
+  readonly armies: {
+    readonly playerId: string;
+    readonly name: string;
+    readonly color: string;
+    /** Someone in the room has claimed it. */
+    readonly taken: boolean;
+    /** Already out of the game; it does not need a player to continue. */
+    readonly out: boolean;
+  }[];
 }
 
 /**
@@ -152,31 +202,9 @@ export type ServerMessage =
       readonly snapshot: boolean;
     }
   | { readonly t: "replay"; readonly replay: Replay }
+  /** The host's save of the game (sent only to the host, who asked for it). */
+  | { readonly t: "saved"; readonly record: Replay }
   | { readonly t: "error"; readonly message: string };
-
-// ---------------------------------------------------------------------------
-// Replays
-
-const setupSchema = z.object({
-  mode: z.enum(["basic", "advanced"]),
-  seed: z.number().int(),
-  mapId: z.string().min(1),
-  roundLimit: z.number().int().nullable().optional(),
-  players: z.array(z.object({ id, name: z.string().min(1), color: z.string().min(1) })).min(2).max(6),
-  armies: z.record(z.string(), z.array(z.string())).optional(),
-  armySize: z.number().int().optional(),
-  budget: z.number().int().optional(),
-  factionPure: z.boolean().optional(),
-});
-
-export const replaySchema = z.object({
-  formatVersion: z.literal(1),
-  setup: setupSchema,
-  map: mapSchema,
-  commands: z.array(commandSchema),
-  name: z.string().max(80).optional(),
-  savedAt: z.string().max(40).optional(),
-});
 
 /** Read a replay file. Throws with a readable message if it is malformed. */
 export function parseReplay(data: unknown): Replay {

@@ -2,7 +2,6 @@ import { createServer, type Server } from "node:http";
 import type { ServerMessage } from "@aoh/protocol";
 import { WebSocketServer, type WebSocket } from "ws";
 import { RoomManager, type Connection } from "./rooms";
-import { FileRoomStore } from "./store";
 
 export interface GameServerOptions {
   /** Port to listen on (0 picks a free one). */
@@ -10,10 +9,6 @@ export interface GameServerOptions {
   readonly host?: string;
   /** Browser origins allowed to connect; empty allows any. */
   readonly allowedOrigins?: readonly string[];
-  /** Folder to keep rooms in, so games survive a restart. Without it, rooms live only in memory. */
-  readonly dataDir?: string;
-  /** Rooms with nobody connected are removed after this long. */
-  readonly idleMs?: number;
 }
 
 export interface GameServer {
@@ -31,10 +26,7 @@ const MAX_MESSAGES_PER_SECOND = 40;
  * HTTP server with a health check at /health and the game WebSocket at /ws.
  */
 export function startGameServer(options: GameServerOptions): Promise<GameServer> {
-  const rooms = new RoomManager({
-    ...(options.dataDir ? { store: new FileRoomStore(options.dataDir) } : {}),
-    ...(options.idleMs !== undefined ? { idleMs: options.idleMs } : {}),
-  });
+  const rooms = new RoomManager();
   const http: Server = createServer((req, res) => {
     if (req.url === "/health") {
       res.writeHead(200, { "content-type": "application/json" });
@@ -93,10 +85,7 @@ export function startGameServer(options: GameServerOptions): Promise<GameServer>
             clearInterval(sweeper);
             for (const client of wss.clients) client.terminate();
             wss.close();
-            http.close(() => {
-              rooms.flush();
-              done();
-            });
+            http.close(() => done());
           }),
       });
     });

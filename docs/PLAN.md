@@ -122,9 +122,10 @@ Saved games are in this PR; the computer opponent and the tutorial are on hold.
   - [x] Named saves of hot-seat games in the browser: save from the draft or the battle, then load, download or delete them from the setup screen
   - [x] Save files: download a game and load it on any device; the same file opens in the replay viewer
   - [x] The unfinished game is still kept automatically, and the setup screen says which game "Continue" resumes
-  - [x] Online games kept through a server restart when the server has a data folder (`DATA_DIR`): seats, rejoin tokens and the game come back, and players reconnect on their own. With a data folder, rooms wait 72 hours for their players (`ROOM_IDLE_HOURS`)
+  - [x] Online save files: the host can save at any moment and download the game; later the host resumes it in a new room from the Online panel, each player claims their army, and the host continues from the exact same position. The server keeps nothing on disk
+  - [x] Coming back to an online game (reload, dropped connection) brings back the whole game log, not just the board
   - [x] The client waits up to 90 seconds for a sleeping server to wake, and says so
-  - [x] Tests: a server restart mid-game, damaged room files, and a browser test that saves, quits, reloads and loads a game three ways
+  - [x] Tests: host-only saving, resuming and claiming armies on the server; browser tests that save, quit, reload and load a hot-seat game three ways, and save an online game mid-battle and resume it in a new room with both players
 - [ ] Computer opponent (on hold)
 - [ ] Tutorial built on the Basic game (on hold)
 
