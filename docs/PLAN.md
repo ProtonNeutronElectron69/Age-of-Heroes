@@ -100,7 +100,15 @@ docs/              this plan and the rules
 - [x] Optional faction-pure mode
 - [x] Balance model to set and check point costs, enforced by a test
 - [x] Client: budget and faction options, points in the draft, special action buttons, ability rolls and notes in the dice panel and log
-- [ ] Grow the roster toward 30 units (later content drops)
+- [x] Grow the roster to 30 units (the "legends" drop, below)
+
+### Roster: 30 units (this PR)
+- [x] 14 new original units across all eras and myths: sabre-tooth predators, ancient desert archers, Viking huscarls, medieval knights, samurai, World War 2 riflemen, relentless hunter robots, skeleton legions, orc raiders, a necromancer, a death knight, a bone wyrm, an angel and a battle mage
+- [x] Two new factions, the Ashen Host (undead, orcs and dark magic) and the Dawnhold Covenant (knights, northmen, archers, an angel and a wizard), and one new unit for each starter faction: 6 factions of 5
+- [x] Balance across the roster: 15 heroes and 15 squads, 15 ranged and 15 melee units, and every faction has heroes, squads, ranged and melee units
+- [x] 13 new abilities: Charge, Steady Aim, Longshot, Pack Hunt, Way of the Blade, Bloodrage, Smite the Unholy, Command the Dead, Shield Wall, Soul Reap, Reboot, Reassemble, and the Arc Lightning special action
+- [x] The first 3x1 figure (Marrowcoil, the Bone Wyrm), checked to deploy on every map
+- [x] Point costs set with the balance model (every unit within 0.85 to 1.2 of its modelled value); random full games now close in and fight, exercising the new abilities
 
 ### Phase 5: Online multiplayer (done)
 - [x] Shared protocol package: every client message checked with a schema before the server acts on it

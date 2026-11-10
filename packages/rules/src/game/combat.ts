@@ -228,7 +228,7 @@ function resolve(
   });
   const life = statsOf(defender.card, state.config.mode).life;
   woundFigure(state, defender.unit, defender.figure, wounds, life, "attack", events);
-  afterAttack(state, ctx, attacker, defender, distance, roll.hits, roll.blocks, events);
+  afterAttack(state, ctx, rng, attacker, defender, distance, roll.hits, roll.blocks, events);
 }
 
 export function attack(

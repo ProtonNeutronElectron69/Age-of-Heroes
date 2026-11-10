@@ -1,4 +1,5 @@
 import { unitCardSchema, type UnitCard } from "@aoh/rules";
+import legends from "./cards/legends.json";
 import starter from "./cards/starter.json";
 
 /** Parse and validate a unit card. Throws with a readable message if the data is malformed. */
@@ -21,10 +22,11 @@ export function cardCatalog(cards: readonly UnitCard[]): ReadonlyMap<string, Uni
 }
 
 /**
- * The starter roster: nine original units across four factions, including one
- * two-hex behemoth. Abilities on the card backs take effect in Phase 4.
+ * The roster: the 16 starter units in four factions, and the 30-unit "legends"
+ * drop that adds two factions (the Ashen Host and the Dawnhold Covenant) and a
+ * new unit for each starter faction. Every unit is original.
  */
-export const CARDS: readonly UnitCard[] = (starter as unknown[]).map(loadCard);
+export const CARDS: readonly UnitCard[] = [...(starter as unknown[]), ...(legends as unknown[])].map(loadCard);
 
 export const CARD_CATALOG = cardCatalog(CARDS);
 

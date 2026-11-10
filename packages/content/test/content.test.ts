@@ -1,4 +1,4 @@
-import { hexDistance } from "@aoh/rules";
+import { createGame, deploymentPlacements, hexDistance } from "@aoh/rules";
 import { describe, expect, it } from "vitest";
 import {
   CARDS,
@@ -116,12 +116,38 @@ describe("cards", () => {
     expect(cardCatalog(CARDS).size).toBe(CARDS.length);
   });
 
-  it("has a roster of 16 units, 4 in each of 4 factions, two of them multi-hex", () => {
-    expect(CARDS).toHaveLength(16);
-    expect(FACTIONS).toHaveLength(4);
-    for (const f of FACTIONS) expect(CARDS.filter((c) => c.faction === f)).toHaveLength(4);
-    expect(CARDS.filter((c) => c.footprint !== "1").map((c) => c.id)).toEqual(["old-rootback", "siege-walker-atlas"]);
+  it("has a roster of 30 units, 5 in each of 6 factions, three of them multi-hex", () => {
+    expect(CARDS).toHaveLength(30);
+    expect(FACTIONS).toEqual([
+      "Iron Concord",
+      "House Kagero",
+      "Verdant Court",
+      "Nexus Collective",
+      "Ashen Host",
+      "Dawnhold Covenant",
+    ]);
+    for (const f of FACTIONS) expect(CARDS.filter((c) => c.faction === f), f).toHaveLength(5);
+    expect(CARDS.filter((c) => c.footprint !== "1").map((c) => [c.id, c.footprint])).toEqual([
+      ["old-rootback", "2x1"],
+      ["siege-walker-atlas", "2x2"],
+      ["marrowcoil", "3x1"],
+    ]);
     expect(new Set(CARDS.map((c) => c.tokenLabel)).size).toBe(CARDS.length);
+  });
+
+  it("balances heroes against squads and ranged against melee", () => {
+    const heroes = CARDS.filter((c) => c.figureCount === 1);
+    const ranged = CARDS.filter((c) => c.advanced.range > 1);
+    expect(heroes).toHaveLength(15);
+    expect(ranged).toHaveLength(15);
+    // Every faction can field both kinds of unit and both kinds of attack.
+    for (const f of FACTIONS) {
+      const units = CARDS.filter((c) => c.faction === f);
+      expect(units.some((c) => c.figureCount === 1), `${f} heroes`).toBe(true);
+      expect(units.some((c) => c.figureCount > 1), `${f} squads`).toBe(true);
+      expect(units.some((c) => c.advanced.range > 1), `${f} ranged`).toBe(true);
+      expect(units.some((c) => c.advanced.range === 1), `${f} melee`).toBe(true);
+    }
   });
 
   it("only uses abilities the engine implements", () => {
@@ -129,6 +155,8 @@ describe("cards", () => {
       "flying", "trample", "smoke-step", "massed-volley", "grove-song", "rally-the-line", "deflector-field",
       "hidden-in-the-leaves", "moss-armor", "brace", "answering-blade", "thick-hide", "salvage-protocol",
       "field-dressing", "ember-spit", "mortar-barrage", "lantern-gaze",
+      "charge", "steady-aim", "longshot", "pack-hunt", "duelist", "bloodrage", "smite-the-unholy",
+      "command-the-dead", "shield-wall", "soul-reap", "reboot", "reassemble", "arc-lightning",
     ]);
     for (const c of CARDS) for (const a of c.advanced.abilities) expect(implemented.has(a.id), `${c.id} ${a.id}`).toBe(true);
   });
@@ -137,6 +165,22 @@ describe("cards", () => {
     for (const c of CARDS) {
       expect(c.advanced.abilities.length, c.id).toBeGreaterThan(0);
       for (const a of c.advanced.abilities) expect(a.text.length, `${c.id} ${a.id}`).toBeGreaterThan(20);
+    }
+  });
+
+  it("lets every multi-hex unit deploy in every start zone of every map", () => {
+    const big = CARDS.filter((c) => c.footprint !== "1");
+    for (const m of MAPS) {
+      const { ctx } = contextFor(m);
+      for (const n of ctx.board.playerCounts()) {
+        const players = Array.from({ length: n }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}`, color: "#fff" }));
+        const state = createGame({ mode: "advanced", seed: 1, mapId: m.id, players }, ctx).state;
+        for (const p of state.players) {
+          for (const card of big) {
+            expect(deploymentPlacements(state, p.id, card, ctx).length, `${m.id}, ${n} players, ${p.id}, ${card.id}`).toBeGreaterThan(0);
+          }
+        }
+      }
     }
   });
 

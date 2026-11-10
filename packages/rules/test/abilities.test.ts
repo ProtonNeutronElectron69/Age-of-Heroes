@@ -50,6 +50,20 @@ const ABILITY_CARDS: UnitCard[] = [
   hero("mortar", [ab("mortar-barrage", { range: 8, minRange: 3, dice: 3, splashDice: 1, ignoresSight: 1 })]),
   hero("monk", [ab("lantern-gaze", { range: 4, needed: 16 })]),
   hero("bigfoe", [], { size: "large", height: 7 }),
+  hero("knight", [ab("charge", { bonus: 1 })]),
+  squad("rifles", [ab("steady-aim", { bonus: 1 })]),
+  squad("bows", [ab("longshot", { minDistance: 5, bonus: 1 })]),
+  squad("cats", [ab("pack-hunt", { bonus: 1 })]),
+  squad("blades", [ab("duelist", { bonus: 1 })]),
+  squad("orcs", [ab("bloodrage", { bonus: 1 })]),
+  hero("angel", [ab("smite-the-unholy", { bonus: 2 })]),
+  hero("necro", [ab("command-the-dead", { range: 4, bonus: 1 })]),
+  squad("dead", [], { species: "Undead" }),
+  squad("wall", [ab("shield-wall", { bonus: 1 })]),
+  hero("reaper", [ab("soul-reap", { heal: 1 })]),
+  squad("bots", [ab("reboot", { needed: 17 })]),
+  squad("bones", [ab("reassemble", { needed: 15 })], { species: "Undead" }),
+  hero("mage", [ab("arc-lightning", { range: 5, dice: 3, splashDice: 1 })]),
 ];
 
 const flat = (n: number, terrain = "grass"): [string, number][] => Array.from({ length: n }, () => [terrain, 1]);
@@ -286,5 +300,127 @@ describe("special actions", () => {
   it("refuses powers a figure does not have", () => {
     const g = game(flat(4), { p1: ["hero"], p2: ["hero"] }, { "p1:0#1": at(0), "p2:0#1": at(1) });
     expect(attackProblem(g.state, "p1:0#1", "p2:0#1", g.ctx, "ember-spit")).toMatch(/no such power/);
+  });
+});
+
+describe("abilities added with the larger roster", () => {
+  const bonus = (g: { state: GameState; ctx: RulesContext }, from: string, to: string) => attackDice(g.state, from, to, g.ctx);
+
+  it("Charge adds a die to a melee attack right after moving", () => {
+    const g = game(flat(6), { p1: ["knight"], p2: ["hero"] }, { "p1:0#1": at(0), "p2:0#1": at(2) });
+    const moved = apply(g.state, { type: "move", player: "p1", figureId: "p1:0#1", path: [step(1)] }, g.ctx).state;
+    expect(attackDice(moved, "p1:0#1", "p2:0#1", g.ctx).notes).toContain("charge +1 attack");
+    const still = game(flat(6), { p1: ["knight"], p2: ["hero"] }, { "p1:0#1": at(1), "p2:0#1": at(2) });
+    expect(bonus(still, "p1:0#1", "p2:0#1").attackBonus).toBe(0);
+  });
+
+  it("Steady Aim helps only a figure that has not moved", () => {
+    const g = game(flat(8), { p1: ["rifles"], p2: ["hero"] }, { "p1:0#1": at(0), "p2:0#1": at(5) });
+    expect(bonus(g, "p1:0#1", "p2:0#1").notes).toContain("steady-aim +1 attack");
+    const moved = apply(g.state, { type: "move", player: "p1", figureId: "p1:0#1", path: [step(1)] }, g.ctx).state;
+    expect(attackDice(moved, "p1:0#1", "p2:0#1", g.ctx).attackBonus).toBe(0);
+  });
+
+  it("Longshot needs a distant target", () => {
+    const far = game(flat(8), { p1: ["bows"], p2: ["hero"] }, { "p1:0#1": at(0), "p2:0#1": at(5) });
+    expect(bonus(far, "p1:0#1", "p2:0#1").notes).toEqual(["longshot +1 attack"]);
+    const near = game(flat(8), { p1: ["bows"], p2: ["hero"] }, { "p1:0#1": at(0), "p2:0#1": at(4) });
+    expect(bonus(near, "p1:0#1", "p2:0#1").attackBonus).toBe(0);
+  });
+
+  it("Pack Hunt needs another figure of the squad next to the target", () => {
+    const pos = { "p1:0#1": at(2), "p1:0#2": at(4), "p2:0#1": at(3) };
+    const g = game(flat(6), { p1: ["cats"], p2: ["hero"] }, pos);
+    expect(bonus(g, "p1:0#1", "p2:0#1").notes).toEqual(["pack-hunt +1 attack"]);
+    const alone = game(flat(6), { p1: ["cats"], p2: ["hero"] }, { ...pos, "p1:0#2": at(0) });
+    expect(bonus(alone, "p1:0#1", "p2:0#1").attackBonus).toBe(0);
+  });
+
+  it("Duelist adds a die against an adjacent hero, not a squad", () => {
+    const vsHero = game(flat(4), { p1: ["blades"], p2: ["hero"] }, { "p1:0#1": at(0), "p2:0#1": at(1) });
+    expect(bonus(vsHero, "p1:0#1", "p2:0#1").notes).toEqual(["duelist +1 attack"]);
+    const vsSquad = game(flat(4), { p1: ["blades"], p2: ["squad"] }, { "p1:0#1": at(0), "p2:0#1": at(1) });
+    expect(bonus(vsSquad, "p1:0#1", "p2:0#1").attackBonus).toBe(0);
+  });
+
+  it("Bloodrage grows once the squad has lost a figure", () => {
+    const g = game(flat(6), { p1: ["orcs"], p2: ["hero"] }, { "p1:0#1": at(0), "p2:0#1": at(1) });
+    expect(bonus(g, "p1:0#1", "p2:0#1").attackBonus).toBe(0);
+    g.state.units[0]!.figures[2]!.destroyed = true;
+    expect(bonus(g, "p1:0#1", "p2:0#1").notes).toEqual(["bloodrage +1 attack"]);
+  });
+
+  it("Smite the Unholy adds 2 dice against Undead and Oni only", () => {
+    const undead = game(flat(4), { p1: ["angel"], p2: ["dead"] }, { "p1:0#1": at(0), "p2:0#1": at(1) });
+    expect(bonus(undead, "p1:0#1", "p2:0#1").notes).toEqual(["smite-the-unholy +2 attack"]);
+    const living = game(flat(4), { p1: ["angel"], p2: ["hero"] }, { "p1:0#1": at(0), "p2:0#1": at(1) });
+    expect(bonus(living, "p1:0#1", "p2:0#1").attackBonus).toBe(0);
+  });
+
+  it("Command the Dead strengthens other friendly Undead nearby", () => {
+    const pos = { "p1:0#1": at(0), "p1:1#1": at(3), "p2:0#1": at(4) };
+    const g = game(flat(9), { p1: ["necro", "dead"], p2: ["hero"] }, pos);
+    expect(bonus(g, "p1:1#1", "p2:0#1").notes).toEqual(["command-the-dead +1 attack"]);
+    const far = game(flat(9), { p1: ["necro", "dead"], p2: ["hero"] }, { ...pos, "p1:1#1": at(5), "p2:0#1": at(6) });
+    expect(bonus(far, "p1:1#1", "p2:0#1").attackBonus).toBe(0);
+    const living = game(flat(9), { p1: ["necro", "squad"], p2: ["hero"] }, pos);
+    expect(bonus(living, "p1:1#1", "p2:0#1").attackBonus).toBe(0);
+  });
+
+  it("Shield Wall adds a defense die while a squadmate stands next to the defender", () => {
+    const g = game(flat(8), { p1: ["squad"], p2: ["wall"] }, { "p1:0#1": at(0), "p2:0#1": at(3), "p2:0#2": at(4) });
+    expect(bonus(g, "p1:0#1", "p2:0#1")).toMatchObject({ defenseBonus: 1, notes: ["shield-wall +1 defense"] });
+    const alone = game(flat(8), { p1: ["squad"], p2: ["wall"] }, { "p1:0#1": at(0), "p2:0#1": at(3), "p2:0#2": at(6) });
+    expect(bonus(alone, "p1:0#1", "p2:0#1").defenseBonus).toBe(0);
+  });
+
+  it("Soul Reap heals the reaper when it destroys a figure", () => {
+    const g = game(flat(6), { p1: ["reaper"], p2: ["hero", "hero"] }, { "p1:0#1": at(0), "p2:0#1": at(1), "p2:1#1": at(5) });
+    g.state.units[0]!.figures[0]!.wounds = 2;
+    g.state.units.find((u) => u.id === "p2:0")!.figures[0]!.wounds = 3;
+    const cmd = { type: "attack" as const, player: "p1", figureId: "p1:0#1", targetId: "p2:0#1" };
+    const r = withOutcome(g.state, cmd, g.ctx, (ev) => ev.some((e) => e.type === "figureDestroyed"));
+    expect(ofType(r.events, "figureHealed")).toEqual([{ type: "figureHealed", figureId: "p1:0#1", amount: 1, total: 1 }]);
+  });
+
+  it("Reboot may stand a destroyed machine back up where it fell", () => {
+    const g = game(flat(6), { p1: ["hero"], p2: ["bots", "hero"] }, { "p1:0#1": at(0), "p2:0#1": at(1), "p2:1#1": at(5) });
+    const cmd = { type: "attack" as const, player: "p1", figureId: "p1:0#1", targetId: "p2:0#1" };
+    const up = withOutcome(g.state, cmd, g.ctx, (ev) => ev.some((e) => e.type === "abilityRoll" && e.success));
+    expect(ofType(up.events, "abilityRoll")[0]).toMatchObject({ ability: "reboot", figureId: "p2:0#1", needed: 17 });
+    expect(up.state.units.find((u) => u.id === "p2:0")!.figures[0]).toMatchObject({ destroyed: false, wounds: 0 });
+    expect(up.state.units.find((u) => u.id === "p2:0")!.figures[0]!.position!.hex.q).toBe(1);
+    const down = withOutcome(g.state, cmd, g.ctx, (ev) => ev.some((e) => e.type === "abilityRoll" && !e.success));
+    expect(down.state.units.find((u) => u.id === "p2:0")!.figures[0]!.destroyed).toBe(true);
+    // Basic game: no abilities, no roll.
+    const basic = game(flat(6), { p1: ["hero"], p2: ["bots", "hero"] }, { "p1:0#1": at(0), "p2:0#1": at(1), "p2:1#1": at(5) }, "p1:0", "basic");
+    const plain = withOutcome(basic.state, cmd, basic.ctx, (ev) => ev.some((e) => e.type === "figureDestroyed"));
+    expect(ofType(plain.events, "abilityRoll")).toHaveLength(0);
+  });
+
+  it("Reassemble may bring back a fallen figure at the end of the squad's turn", () => {
+    const g = game(flat(6), { p1: ["bones"], p2: ["hero"] }, { "p1:0#1": at(0), "p1:0#2": at(1), "p2:0#1": at(5) });
+    const fallen = g.state.units[0]!.figures[2]!;
+    fallen.destroyed = true;
+    const cmd = { type: "endTurn" as const, player: "p1" };
+    const back = withOutcome(g.state, cmd, g.ctx, (ev) => ev.some((e) => e.type === "figureRevived"));
+    const roll = ofType(back.events, "abilityRoll")[0]!;
+    expect(roll).toMatchObject({ ability: "reassemble", targetId: "p1:0#3", success: true });
+    const revived = back.state.units[0]!.figures[2]!;
+    expect(revived.destroyed).toBe(false);
+    expect([0, 1].some((q) => Math.abs(revived.position!.hex.q - q) === 1)).toBe(true);
+    const stays = withOutcome(g.state, cmd, g.ctx, (ev) => ev.some((e) => e.type === "abilityRoll" && !e.success));
+    expect(stays.state.units[0]!.figures[2]!.destroyed).toBe(true);
+  });
+
+  it("Arc Lightning is an area attack: the target and everything next to it", () => {
+    const card = ABILITY_CARDS.find((c) => c.id === "mage")!;
+    const g = game(flat(8), { p1: ["mage"], p2: ["hero", "hero"] }, { "p1:0#1": at(0), "p2:0#1": at(4), "p2:1#1": at(5) });
+    expect(specialActions(g.state, card)).toEqual([{ id: "arc-lightning", name: "arc-lightning", kind: "area" }]);
+    const r = apply(g.state, { type: "attack", player: "p1", figureId: "p1:0#1", targetId: "p2:0#1", ability: "arc-lightning" }, g.ctx);
+    expect(ofType(r.events, "attackRolled").map((e) => [e.targetId, e.attack.length])).toEqual([
+      ["p2:0#1", 3],
+      ["p2:1#1", 1],
+    ]);
   });
 });

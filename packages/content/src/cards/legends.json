@@ -1,0 +1,543 @@
+[
+  {
+    "id": "harrow-riflemen",
+    "name": "Harrow Line Riflemen",
+    "tokenLabel": "HL",
+    "faction": "Iron Concord",
+    "unitType": "commonSquad",
+    "figureCount": 3,
+    "species": "Human",
+    "unitClass": "Soldier",
+    "personality": "Disciplined",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": {
+      "move": 5,
+      "range": 7,
+      "attack": 2,
+      "defense": 2
+    },
+    "advanced": {
+      "life": 1,
+      "move": 5,
+      "range": 7,
+      "attack": 2,
+      "defense": 2,
+      "points": 65,
+      "abilities": [
+        {
+          "id": "steady-aim",
+          "name": "Steady Aim",
+          "text": "A Rifleman that has not moved this turn rolls 1 extra attack die.",
+          "params": {
+            "bonus": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "crimson-lotus-guard",
+    "name": "Crimson Lotus Guard",
+    "tokenLabel": "LG",
+    "faction": "House Kagero",
+    "unitType": "commonSquad",
+    "figureCount": 3,
+    "species": "Human",
+    "unitClass": "Samurai",
+    "personality": "Disciplined",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": {
+      "move": 5,
+      "range": 1,
+      "attack": 3,
+      "defense": 3
+    },
+    "advanced": {
+      "life": 1,
+      "move": 5,
+      "range": 1,
+      "attack": 3,
+      "defense": 3,
+      "points": 95,
+      "abilities": [
+        {
+          "id": "duelist",
+          "name": "Way of the Blade",
+          "text": "When a Guard attacks an adjacent hero, it rolls 1 extra attack die.",
+          "params": {
+            "bonus": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "duskfang-prowlers",
+    "name": "Duskfang Prowlers",
+    "tokenLabel": "DP",
+    "faction": "Verdant Court",
+    "unitType": "commonSquad",
+    "figureCount": 3,
+    "species": "Beast",
+    "unitClass": "Predator",
+    "personality": "Wild",
+    "size": "medium",
+    "height": 4,
+    "footprint": "1",
+    "basic": {
+      "move": 7,
+      "range": 1,
+      "attack": 3,
+      "defense": 2
+    },
+    "advanced": {
+      "life": 1,
+      "move": 7,
+      "range": 1,
+      "attack": 3,
+      "defense": 2,
+      "points": 90,
+      "abilities": [
+        {
+          "id": "pack-hunt",
+          "name": "Pack Hunt",
+          "text": "When a Prowler attacks a figure that another Prowler is standing next to, it rolls 1 extra attack die.",
+          "params": {
+            "bonus": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "hollowsteel-hunters",
+    "name": "Hollowsteel Hunters",
+    "tokenLabel": "HH",
+    "faction": "Nexus Collective",
+    "unitType": "commonSquad",
+    "figureCount": 3,
+    "species": "Robot",
+    "unitClass": "Hunter",
+    "personality": "Relentless",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": {
+      "move": 5,
+      "range": 1,
+      "attack": 3,
+      "defense": 3
+    },
+    "advanced": {
+      "life": 1,
+      "move": 5,
+      "range": 1,
+      "attack": 3,
+      "defense": 3,
+      "points": 95,
+      "abilities": [
+        {
+          "id": "reboot",
+          "name": "Reboot",
+          "text": "When a Hunter is destroyed by an attack, roll a d20. On 17 or more it stands back up where it fell, with no wounds.",
+          "params": {
+            "needed": 17
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "barrow-legion",
+    "name": "Barrow Legion",
+    "tokenLabel": "BL",
+    "faction": "Ashen Host",
+    "unitType": "commonSquad",
+    "figureCount": 4,
+    "species": "Undead",
+    "unitClass": "Warrior",
+    "personality": "Relentless",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": {
+      "move": 4,
+      "range": 1,
+      "attack": 2,
+      "defense": 2
+    },
+    "advanced": {
+      "life": 1,
+      "move": 4,
+      "range": 1,
+      "attack": 2,
+      "defense": 2,
+      "points": 70,
+      "abilities": [
+        {
+          "id": "reassemble",
+          "name": "Reassemble",
+          "text": "At the end of the Legion's turn, if any of its figures are destroyed, roll a d20. On 15 or more one of them returns, with no wounds, next to a Legion figure still standing.",
+          "params": {
+            "needed": 15
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "ruinmaw-raiders",
+    "name": "Ruinmaw Orc Raiders",
+    "tokenLabel": "RM",
+    "faction": "Ashen Host",
+    "unitType": "commonSquad",
+    "figureCount": 3,
+    "species": "Orc",
+    "unitClass": "Raider",
+    "personality": "Wild",
+    "size": "medium",
+    "height": 6,
+    "footprint": "1",
+    "basic": {
+      "move": 5,
+      "range": 3,
+      "attack": 3,
+      "defense": 2
+    },
+    "advanced": {
+      "life": 1,
+      "move": 5,
+      "range": 3,
+      "attack": 3,
+      "defense": 2,
+      "points": 80,
+      "abilities": [
+        {
+          "id": "bloodrage",
+          "name": "Bloodrage",
+          "text": "Once any Raider of this squad has been destroyed, every Raider left rolls 1 extra attack die.",
+          "params": {
+            "bonus": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "morvane",
+    "name": "Morvane the Gravecaller",
+    "tokenLabel": "MG",
+    "faction": "Ashen Host",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Human",
+    "unitClass": "Necromancer",
+    "personality": "Wise",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": {
+      "move": 5,
+      "range": 5,
+      "attack": 3,
+      "defense": 3
+    },
+    "advanced": {
+      "life": 4,
+      "move": 5,
+      "range": 5,
+      "attack": 3,
+      "defense": 2,
+      "points": 70,
+      "abilities": [
+        {
+          "id": "command-the-dead",
+          "name": "Command the Dead",
+          "text": "Other friendly Undead figures within 4 hexes of Morvane roll 1 extra attack die.",
+          "params": {
+            "range": 4,
+            "bonus": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "vorhal",
+    "name": "Vorhal, the Unburied Lord",
+    "tokenLabel": "VU",
+    "faction": "Ashen Host",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Undead",
+    "unitClass": "Knight",
+    "personality": "Relentless",
+    "size": "medium",
+    "height": 6,
+    "footprint": "1",
+    "basic": {
+      "move": 4,
+      "range": 1,
+      "attack": 4,
+      "defense": 4
+    },
+    "advanced": {
+      "life": 6,
+      "move": 4,
+      "range": 1,
+      "attack": 4,
+      "defense": 4,
+      "points": 120,
+      "abilities": [
+        {
+          "id": "soul-reap",
+          "name": "Soul Reap",
+          "text": "When Vorhal destroys a figure with an attack, remove 1 wound from Vorhal.",
+          "params": {
+            "heal": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "marrowcoil",
+    "name": "Marrowcoil, the Bone Wyrm",
+    "tokenLabel": "MC",
+    "faction": "Ashen Host",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Undead",
+    "unitClass": "Wyrm",
+    "personality": "Wild",
+    "size": "huge",
+    "height": 6,
+    "footprint": "3x1",
+    "basic": {
+      "move": 5,
+      "range": 1,
+      "attack": 4,
+      "defense": 3
+    },
+    "advanced": {
+      "life": 7,
+      "move": 5,
+      "range": 1,
+      "attack": 4,
+      "defense": 3,
+      "points": 105,
+      "abilities": [
+        {
+          "id": "trample",
+          "name": "Crushing Coils",
+          "text": "Marrowcoil may move through Small and Medium enemy figures. Each figure it moves through rolls 1 defense die; on a blank it takes 1 wound.",
+          "params": {
+            "defenseDice": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "silverlance-knights",
+    "name": "Silverlance Knights",
+    "tokenLabel": "SK",
+    "faction": "Dawnhold Covenant",
+    "unitType": "commonSquad",
+    "figureCount": 3,
+    "species": "Human",
+    "unitClass": "Knight",
+    "personality": "Valiant",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": {
+      "move": 5,
+      "range": 1,
+      "attack": 3,
+      "defense": 3
+    },
+    "advanced": {
+      "life": 1,
+      "move": 5,
+      "range": 1,
+      "attack": 3,
+      "defense": 3,
+      "points": 100,
+      "abilities": [
+        {
+          "id": "charge",
+          "name": "Charge",
+          "text": "A Knight that has moved this turn rolls 1 extra attack die when it attacks an adjacent enemy.",
+          "params": {
+            "bonus": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "stormwake-huscarls",
+    "name": "Stormwake Huscarls",
+    "tokenLabel": "SH",
+    "faction": "Dawnhold Covenant",
+    "unitType": "commonSquad",
+    "figureCount": 4,
+    "species": "Human",
+    "unitClass": "Warrior",
+    "personality": "Daring",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": {
+      "move": 5,
+      "range": 1,
+      "attack": 3,
+      "defense": 2
+    },
+    "advanced": {
+      "life": 1,
+      "move": 5,
+      "range": 1,
+      "attack": 3,
+      "defense": 2,
+      "points": 105,
+      "abilities": [
+        {
+          "id": "shield-wall",
+          "name": "Shield Wall",
+          "text": "A Huscarl rolls 1 extra defense die while another Huscarl stands next to it.",
+          "params": {
+            "bonus": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "sunbound-archers",
+    "name": "Sunbound Archers",
+    "tokenLabel": "SA",
+    "faction": "Dawnhold Covenant",
+    "unitType": "commonSquad",
+    "figureCount": 3,
+    "species": "Human",
+    "unitClass": "Archer",
+    "personality": "Patient",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": {
+      "move": 5,
+      "range": 7,
+      "attack": 2,
+      "defense": 1
+    },
+    "advanced": {
+      "life": 1,
+      "move": 5,
+      "range": 7,
+      "attack": 2,
+      "defense": 2,
+      "points": 65,
+      "abilities": [
+        {
+          "id": "longshot",
+          "name": "Longshot",
+          "text": "When an Archer attacks a figure 5 or more hexes away, it rolls 1 extra attack die.",
+          "params": {
+            "minDistance": 5,
+            "bonus": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "solenne",
+    "name": "Solenne, Herald of Dawn",
+    "tokenLabel": "SO",
+    "faction": "Dawnhold Covenant",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Angel",
+    "unitClass": "Herald",
+    "personality": "Valiant",
+    "size": "medium",
+    "height": 6,
+    "footprint": "1",
+    "basic": {
+      "move": 6,
+      "range": 1,
+      "attack": 4,
+      "defense": 3
+    },
+    "advanced": {
+      "life": 5,
+      "move": 6,
+      "range": 1,
+      "attack": 4,
+      "defense": 3,
+      "points": 125,
+      "abilities": [
+        {
+          "id": "flying",
+          "name": "Flying",
+          "text": "Solenne flies: count her move in hexes straight to where she lands, ignoring terrain, height and figures on the way. Terrain only affects her where she lands, and she never takes falling damage."
+        },
+        {
+          "id": "smite-the-unholy",
+          "name": "Smite the Unholy",
+          "text": "When Solenne attacks an Undead or Oni figure, she rolls 2 extra attack dice.",
+          "params": {
+            "bonus": 2
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "orrin-vael",
+    "name": "Magister Orrin Vael",
+    "tokenLabel": "OV",
+    "faction": "Dawnhold Covenant",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Human",
+    "unitClass": "Wizard",
+    "personality": "Wise",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": {
+      "move": 5,
+      "range": 5,
+      "attack": 3,
+      "defense": 2
+    },
+    "advanced": {
+      "life": 4,
+      "move": 5,
+      "range": 5,
+      "attack": 3,
+      "defense": 2,
+      "points": 65,
+      "abilities": [
+        {
+          "id": "arc-lightning",
+          "name": "Arc Lightning",
+          "text": "Special action instead of a normal attack. Range 5, in line of sight: roll 3 attack dice against the target and 1 attack die against every other figure next to it, friend or foe. Each defends normally.",
+          "params": {
+            "range": 5,
+            "dice": 3,
+            "splashDice": 1
+          }
+        }
+      ]
+    }
+  }
+]

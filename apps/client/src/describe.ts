@@ -139,7 +139,9 @@ export function describeEvent(e: GameEvent, names: Names): string | null {
     case "abilityUsed":
       return `${names.figure(e.figureId)}: ${e.detail.replace(e.ability, names.ability(e.figureId, e.ability))}.`;
     case "abilityRoll":
-      return `${names.figure(e.figureId)} uses ${names.ability(e.figureId, e.ability)} on ${names.figure(e.targetId)}: rolls ${e.roll}, needs ${e.needed}. ${e.success ? "Success!" : "No effect."}`;
+      return e.targetId === e.figureId
+        ? `${names.figure(e.figureId)} rolls for ${names.ability(e.figureId, e.ability)}: ${e.roll}, needs ${e.needed}. ${e.success ? "Success!" : "No effect."}`
+        : `${names.figure(e.figureId)} uses ${names.ability(e.figureId, e.ability)} on ${names.figure(e.targetId)}: rolls ${e.roll}, needs ${e.needed}. ${e.success ? "Success!" : "No effect."}`;
     case "figureHealed":
       return `${names.figure(e.figureId)} is healed (${plural(e.total, "wound")} left).`;
     case "figureRevived":

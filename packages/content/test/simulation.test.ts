@@ -4,6 +4,7 @@ import {
   attackTargets,
   createGame,
   figureSpots,
+  hexDistance,
   currentDeployment,
   currentDrafter,
   deploymentPlacements,
@@ -69,7 +70,14 @@ function randomCommand(state: GameState, rng: Rng, c: RulesContext): Command {
         if (!active.moved.includes(f.id) && !active.attacked.includes(f.id) && rng.float() < 0.7) {
           const options = [...moveOptions(state, f.id, c).values()];
           if (options.length > 0) {
-            return { type: "move", player: active.player, figureId: f.id, path: pick(rng, options).path };
+            // Usually close in on the nearest enemy, so armies meet and fight; sometimes wander.
+            const enemies = state.units
+              .filter((u) => u.owner !== active.player)
+              .flatMap((u) => u.figures.filter((x) => !x.destroyed && x.position).map((x) => x.position!.hex));
+            const gap = (o: (typeof options)[number]) => Math.min(...enemies.map((e) => hexDistance(e, o.to.hex)));
+            const toward = enemies.length > 0 && rng.float() < 0.75;
+            const choice = toward ? options.reduce((best, o) => (gap(o) < gap(best) ? o : best)) : pick(rng, options);
+            return { type: "move", player: active.player, figureId: f.id, path: choice.path };
           }
         }
         if (!active.attacked.includes(f.id)) {
