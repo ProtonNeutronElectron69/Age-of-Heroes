@@ -98,7 +98,15 @@ export function advance(state: GameState, events: GameEvent[], ctx: RulesContext
       stepPointer(state);
       continue;
     }
-    state.active = { player, unitId, token: token as NumberedToken, moved: [], attacked: [] };
+    state.active = {
+      player,
+      unitId,
+      token: token as NumberedToken,
+      moved: [],
+      attacked: [],
+      attackLog: [],
+      bonusMoves: {},
+    };
     events.push({ type: "turnStarted", player, token, unitId });
     return;
   }

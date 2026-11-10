@@ -7,6 +7,8 @@ import {
   engagedEnemies,
   eyePoint,
   figureSpots,
+  findFigure,
+  specialActions,
   hexToWorld,
   hexDistance,
   moveOptions,
@@ -47,9 +49,15 @@ export function PlayScreen({ session }: { session: Session }) {
   const [pinnedFigure, setPinnedFigure] = useState<string | null>(null);
   const [hoverStep, setHoverStep] = useState<Step | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [pending, setPending] = useState<Pending[]>([]);
+  // Placements chosen so far, tied to the unit being deployed so a new unit never sees the last one's.
+  const [pendingState, setPendingState] = useState<{ unitId: string | null; items: Pending[] }>({
+    unitId: null,
+    items: [],
+  });
   const [rotation, setRotation] = useState(0);
   const [eyeView, setEyeView] = useState(false);
+  /** Which action an attack click uses: null for a normal attack, or a special action's id. */
+  const [attackMode, setAttackMode] = useState<string | null>(null);
   const [revealedFor, setRevealedFor] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(true);
 
@@ -58,6 +66,8 @@ export function PlayScreen({ session }: { session: Session }) {
   const deployUnit = deploying ? state.units.find((u) => u.id === deploying.unitId)! : null;
   const deployCard = deployUnit ? ctx.cards.get(deployUnit.cardId)! : null;
   const deployBig = deployCard ? deployCard.footprint !== "1" : false;
+  const pending = deploying && pendingState.unitId === deploying.unitId ? pendingState.items : [];
+  const setPending = (items: Pending[]) => setPendingState({ unitId: deploying?.unitId ?? null, items });
   const deployOptions = useMemo(
     () =>
       deploying && deployCard
@@ -65,7 +75,6 @@ export function PlayScreen({ session }: { session: Session }) {
         : [],
     [state, deploying, deployCard, ctx, pending],
   );
-  useEffect(() => setPending([]), [deploying?.unitId]);
 
   const deployAt = (step: Step) =>
     deployOptions.find((o) => sameStep(o.placement, step) && o.placement.rotation === rotation) ??
@@ -97,11 +106,11 @@ export function PlayScreen({ session }: { session: Session }) {
   const active = state.phase === "turns" ? state.active : null;
   const activeUnit = active ? state.units.find((u) => u.id === active.unitId)! : null;
   const activeCard = activeUnit ? ctx.cards.get(activeUnit.cardId)! : null;
-  // A figure can act until it has attacked (moving first is optional).
+  // A figure can act until it has attacked (moving first is optional); Smoke Step allows a move after.
   const canAct = (id: string) =>
     !!active &&
     !!activeUnit?.figures.some((f) => f.id === id && !f.destroyed && f.position) &&
-    !active.attacked.includes(id);
+    (!active.attacked.includes(id) || (active.bonusMoves[id] ?? 0) > 0);
 
   // Pick the first figure that can still act when a turn starts or a figure finishes.
   const turnKey = active ? `${state.round}:${active.token}:${active.player}` : "";
@@ -117,10 +126,14 @@ export function PlayScreen({ session }: { session: Session }) {
   useEffect(() => {
     const f = activeUnit?.figures.find((x) => x.id === selected);
     setRotation(f?.position?.rotation ?? 0);
+    setAttackMode(null);
   }, [selected, turnKey]);
+  const specials = activeCard ? specialActions(state, activeCard) : [];
 
   const options = useMemo<Map<string, MoveOption>>(() => {
-    if (!active || !selected || active.moved.includes(selected) || active.attacked.includes(selected)) return new Map();
+    if (!active || !selected) return new Map();
+    const bonus = active.attacked.includes(selected) && (active.bonusMoves[selected] ?? 0) > 0;
+    if (!bonus && (active.moved.includes(selected) || active.attacked.includes(selected))) return new Map();
     try {
       return moveOptions(state, selected, ctx);
     } catch {
@@ -129,8 +142,8 @@ export function PlayScreen({ session }: { session: Session }) {
   }, [state, ctx, active, selected]);
   const targets = useMemo(() => {
     if (!active || !selected || active.attacked.includes(selected)) return new Set<string>();
-    return new Set(attackTargets(state, selected, ctx));
-  }, [state, ctx, active, selected]);
+    return new Set(attackTargets(state, selected, ctx, attackMode ?? undefined));
+  }, [state, ctx, active, selected, attackMode]);
   const moveBig = activeCard ? activeCard.footprint !== "1" : false;
 
   /** The move option for a hex: for big figures, prefer the facing chosen with R. */
@@ -305,7 +318,13 @@ export function PlayScreen({ session }: { session: Session }) {
       return;
     }
     if (active && selected && targets.has(id)) {
-      dispatch({ type: "attack", player: active.player, figureId: selected, targetId: id });
+      dispatch({
+        type: "attack",
+        player: active.player,
+        figureId: selected,
+        targetId: id,
+        ...(attackMode ? { ability: attackMode } : {}),
+      });
       return;
     }
     if (active && activeUnit?.figures.some((f) => f.id === id) && canAct(id)) {
@@ -316,9 +335,9 @@ export function PlayScreen({ session }: { session: Session }) {
   };
 
   const cardFigure = hoveredFigure ?? pinnedFigure;
-  const cardUnitId = cardFigure?.split("#")[0];
-  const cardUnit = cardUnitId ? state.units.find((u) => u.id === cardUnitId) : undefined;
-  const cardFigureState = cardUnit?.figures.find((f) => f.id === cardFigure);
+  const found = cardFigure ? findFigure(state, cardFigure) : undefined;
+  const cardUnit = found?.unit;
+  const cardFigureState = found?.figure;
 
   return (
     <div className="screen play">
@@ -401,7 +420,13 @@ export function PlayScreen({ session }: { session: Session }) {
                       >
                         {names.figure(f.id)}
                         <span className="muted small">
-                          {active.attacked.includes(f.id) ? " done" : active.moved.includes(f.id) ? " moved" : ""}
+                          {active.attacked.includes(f.id)
+                            ? (active.bonusMoves[f.id] ?? 0) > 0
+                              ? " may still move"
+                              : " done"
+                            : active.moved.includes(f.id)
+                              ? " moved"
+                              : ""}
                         </span>
                         {engaged > 0 && <span className="tag">engaged</span>}
                       </button>
@@ -409,6 +434,22 @@ export function PlayScreen({ session }: { session: Session }) {
                   );
                 })}
             </ul>
+            {specials.length > 0 && selected && !active.attacked.includes(selected) && (
+              <div className="segmented action-modes" role="radiogroup" aria-label="Attack with">
+                {[{ id: null as string | null, name: "Attack" }, ...specials].map((a) => (
+                  <button
+                    key={a.id ?? "attack"}
+                    type="button"
+                    role="radio"
+                    aria-checked={attackMode === a.id}
+                    className={attackMode === a.id ? "on" : ""}
+                    onClick={() => setAttackMode(a.id)}
+                  >
+                    {a.name}
+                  </button>
+                ))}
+              </div>
+            )}
             <p className="muted small">
               {selected
                 ? `Green hexes: move there. ${targets.size > 0 ? "Red rings: attack." : "No enemy in range and sight."} Orange hexes are risky (lava, ice${mode === "advanced" ? ", falls or passing strikes" : ""}).`

@@ -1,9 +1,10 @@
 import { ATTACK_DIE, countFaces, rollDice } from "../dice";
-import { DIRECTIONS, hexAdd, hexEquals, hexSub, isAdjacent } from "../hex";
+import { DIRECTIONS, hexAdd, hexDistance, hexEquals, hexSub, isAdjacent } from "../hex";
 import { Rng } from "../rng";
 import type { UnitCard } from "../schema";
 import type { Footprint } from "../shapes";
 import { moveCostOf, type TerrainRules } from "../terrain";
+import { canTrample, hasAbility, trampleRoll } from "./abilities";
 import { spotsEngaged } from "./engagement";
 import { fail } from "./errors";
 import { figureSpots, placementKey, placementSpots, standingElevation, tuningOf, type Placement } from "./placement";
@@ -32,6 +33,14 @@ interface Mover {
   readonly footprint: Footprint;
   readonly start: Placement;
   readonly startSpots: Step[];
+  /** Movement points available: Move, or a bonus move after attacking (Smoke Step). */
+  readonly budget: number;
+  /** A bonus move draws no passing strikes. */
+  readonly noStrikes: boolean;
+  /** Flying figures move straight to any spot within range, ignoring what is between. */
+  readonly flying: boolean;
+  /** Trample: may move through Small and Medium enemies. */
+  readonly trample: boolean;
 }
 
 /** An enemy figure, with the spots it covers, for engagement checks. */
@@ -83,6 +92,8 @@ function moverFor(state: GameState, figureId: string, ctx: RulesContext): Mover 
   const stats = statsOf(card, state.config.mode);
   const pos = figure.position;
   const start: Placement = { hex: pos.hex, elevation: pos.elevation, rotation: card.footprint === "1" ? 0 : pos.rotation };
+  const active = state.active;
+  const bonus = active && active.attacked.includes(figureId) ? active.bonusMoves[figureId] : undefined;
   return {
     unit,
     figure,
@@ -91,6 +102,10 @@ function moverFor(state: GameState, figureId: string, ctx: RulesContext): Mover 
     footprint: card.footprint,
     start,
     startSpots: figureSpots(figure, card.footprint, stats.height, ctx),
+    budget: bonus ?? stats.move,
+    noStrikes: bonus !== undefined,
+    flying: card.footprint === "1" && hasAbility(state, card, "flying"),
+    trample: hasAbility(state, card, "trample"),
   };
 }
 
@@ -129,6 +144,8 @@ interface StepInfo {
   readonly drop: number;
   /** Enemies the figure walks away from (Advanced passing strikes). */
   readonly strikes: Enemy[];
+  /** Enemies the figure moves through with Trample. */
+  readonly trampled: Occupant[];
 }
 
 function fallDice(drop: number, height: number, state: GameState, ctx: RulesContext): number {
@@ -172,10 +189,15 @@ function evaluateStep(
       if (!canStep(fromSpots[i]!, spots[i]!, height, ctx, state.config.mode)) return "The figure cannot move that way";
     }
   }
+  const trampled: Occupant[] = [];
   for (const s of spots) {
     const o = occ.get(stepKey(s));
     if (o && o.figure.id !== mover.figure.id && o.unit.owner !== mover.unit.owner) {
-      return "The path goes through an enemy figure";
+      const victim = ctx.cards.get(o.unit.cardId);
+      if (!victim || !canTrample(state, mover.card, victim)) return "The path goes through an enemy figure";
+      if (!fromSpots.some((f) => hexEquals(f.hex, s.hex)) && !trampled.some((t) => t.figure.id === o.figure.id)) {
+        trampled.push(o);
+      }
     }
   }
 
@@ -194,7 +216,8 @@ function evaluateStep(
     lava: entered.filter((s) => terrainOf(s, ctx)?.entryDestroyOnOrBelow !== undefined).length,
     ice: single ? entered.filter((s) => terrainOf(s, ctx)?.slip !== undefined).length : 0,
     drop: standingElevation(fromSpots) - standingElevation(spots),
-    strikes: enemies.filter((e) => before.has(e.figure.id) && !after.has(e.figure.id)),
+    strikes: mover.noStrikes ? [] : enemies.filter((e) => before.has(e.figure.id) && !after.has(e.figure.id)),
+    trampled,
   };
 }
 
@@ -306,13 +329,44 @@ function search(
   return best;
 }
 
+/**
+ * Flying: every free spot within Move hexes (counted straight across), at
+ * any height. Terrain and figures in between do not matter; only where the
+ * figure lands does.
+ */
+function flightOptions(state: GameState, mover: Mover, ctx: RulesContext): Map<string, MoveOption> {
+  const occ = occupancy(state, ctx);
+  const enemies = enemiesOf(state, mover, ctx);
+  const before = engagedIds(enemies, mover.startSpots, mover.stats.height);
+  const options = new Map<string, MoveOption>();
+  for (const hex of ctx.board.hexes()) {
+    const cost = hexDistance(mover.start.hex, hex);
+    if (cost > mover.budget) continue;
+    for (const s of ctx.board.surfaces(hex)) {
+      const to: Placement = { hex, elevation: s.elevation, rotation: 0 };
+      if (placementKey(to) === placementKey(mover.start)) continue;
+      const spots = placementSpots("1", mover.stats.height, to, ctx);
+      if (!spots) continue;
+      const o = occ.get(stepKey(spots[0]!));
+      if (o && o.figure.id !== mover.figure.id) continue;
+      const after = engagedIds(enemies, spots, mover.stats.height);
+      const strikes = mover.noStrikes ? 0 : [...before].filter((id) => !after.has(id)).length;
+      const lava = ctx.terrain.get(s.terrain)?.entryDestroyOnOrBelow !== undefined ? 1 : 0;
+      const dest = asPathStep(to, "1");
+      options.set(placementKey(to), { to: dest, spots, path: [dest], cost, hazards: strikes + lava });
+    }
+  }
+  return options;
+}
+
 /** Every placement the figure could move to this turn, keyed by placementKey, with a suggested path. */
 export function moveOptions(state: GameState, figureId: string, ctx: RulesContext): Map<string, MoveOption> {
   const mover = moverFor(state, figureId, ctx);
-  const options = search(state, mover, mover.stats.move, null, ctx);
-  const bonus = stayOnBonus(mover.startSpots, ctx);
+  if (mover.flying) return flightOptions(state, mover, ctx);
+  const options = search(state, mover, mover.budget, null, ctx);
+  const bonus = mover.noStrikes ? null : stayOnBonus(mover.startSpots, ctx);
   if (bonus) {
-    for (const [key, opt] of search(state, mover, mover.stats.move + bonus.bonus, bonus.terrain, ctx)) {
+    for (const [key, opt] of search(state, mover, mover.budget + bonus.bonus, bonus.terrain, ctx)) {
       const current = options.get(key);
       if (!current || opt.hazards < current.hazards || (opt.hazards === current.hazards && opt.cost < current.cost)) {
         options.set(key, opt);
@@ -329,8 +383,12 @@ function activeMover(state: GameState, player: PlayerId, figureId: string, ctx: 
   if (active.player !== player) fail("It is not your turn");
   const mover = moverFor(state, figureId, ctx);
   if (mover.unit.id !== active.unitId) fail("Only the activated unit can act this turn");
-  if (active.moved.includes(figureId)) fail("That figure has already moved this turn");
-  if (active.attacked.includes(figureId)) fail("A figure cannot move after attacking");
+  if (active.attacked.includes(figureId)) {
+    // Smoke Step allows one short move after attacking, even after moving before.
+    if (!active.bonusMoves[figureId]) fail("A figure cannot move after attacking");
+  } else if (active.moved.includes(figureId)) {
+    fail("That figure has already moved this turn");
+  }
   return { active, mover };
 }
 
@@ -341,6 +399,17 @@ function toPlacement(step: PathStep, current: Placement, footprint: Footprint): 
 /** Check a requested path step by step. */
 function validatePath(state: GameState, mover: Mover, path: readonly PathStep[], ctx: RulesContext): void {
   if (path.length === 0) fail("The path is empty");
+  if (mover.flying) {
+    if (path.length !== 1) fail("A flying figure moves straight to where it lands");
+    const dest = toPlacement(path[0]!, mover.start, "1");
+    const option = flightOptions(state, mover, ctx).get(placementKey(dest));
+    if (!option) {
+      const cost = hexDistance(mover.start.hex, dest.hex);
+      if (cost > mover.budget) fail(`That move costs ${cost} but the figure only has ${mover.budget}`);
+      fail("The figure cannot land there");
+    }
+    return;
+  }
   const occ = occupancy(state, ctx);
   const enemies = enemiesOf(state, mover, ctx);
   let from = mover.start;
@@ -363,7 +432,7 @@ function validatePath(state: GameState, mover: Mover, path: readonly PathStep[],
     if (o && o.figure.id !== mover.figure.id) fail("A figure cannot end its move on another figure");
   }
   if (placementKey(from) === placementKey(mover.start)) fail("The figure must end somewhere new");
-  const budget = mover.stats.move + (bonus && allBonusTerrain ? bonus.bonus : 0);
+  const budget = mover.budget + (bonus && allBonusTerrain && !mover.noStrikes ? bonus.bonus : 0);
   if (cost > budget) fail(`That move costs ${cost} but the figure only has ${budget}`);
 }
 
@@ -405,7 +474,8 @@ export function moveFigure(
 ): void {
   const { active, mover } = activeMover(state, player, figureId, ctx);
   validatePath(state, mover, path, ctx);
-  active.moved.push(figureId);
+  if (!active.moved.includes(figureId)) active.moved.push(figureId);
+  if (mover.noStrikes) delete active.bonusMoves[figureId];
 
   const rng = new Rng(state.rng);
   const { figure, unit } = mover;
@@ -432,6 +502,16 @@ export function moveFigure(
     return false;
   };
 
+  if (mover.flying) {
+    flyTo(state, mover, toPlacement(path[0]!, from, "1"), rng, enemies, after, traversed, lavaRolls, ctx);
+    state.rng = rng.state;
+    events.push({ type: "figureMoved", figureId, from: asPathStep(mover.start, mover.footprint), path: traversed }, ...after);
+    checkGameOver(state, events, ctx);
+    return;
+  }
+
+  const trampledSoFar = new Set<string>();
+  const self = { unit, figure, card: mover.card, spots: fromSpots };
   for (const raw of path) {
     const to = toPlacement(raw, from, mover.footprint);
     const info = evaluateStep(state, mover, from, fromSpots, to, occ, enemies, ctx);
@@ -444,9 +524,14 @@ export function moveFigure(
     }
     if (figure.destroyed) break;
 
-    // 2. Move.
+    // 2. Move, trampling anything small in the way.
     figure.position = { hex: to.hex, elevation: to.elevation, rotation: to.rotation };
     traversed.push(asPathStep(to, mover.footprint));
+    for (const victim of info.trampled) {
+      if (trampledSoFar.has(victim.figure.id) || victim.figure.destroyed) continue;
+      trampledSoFar.add(victim.figure.id);
+      trampleRoll(state, rng, { ...self, spots: info.spots }, victim, ctx, after);
+    }
 
     // 3. Falling (Advanced).
     const dice = fallDice(info.drop, mover.stats.height, state, ctx);
@@ -495,6 +580,33 @@ export function moveFigure(
   state.rng = rng.state;
   events.push({ type: "figureMoved", figureId, from: asPathStep(mover.start, mover.footprint), path: traversed }, ...after);
   checkGameOver(state, events, ctx);
+}
+
+/** A flight: passing strikes on take-off, then only the landing hex matters (lava). */
+function flyTo(
+  state: GameState,
+  mover: Mover,
+  to: Placement,
+  rng: Rng,
+  enemies: readonly Enemy[],
+  after: GameEvent[],
+  traversed: PathStep[],
+  lavaRolls: (spots: readonly Step[]) => boolean,
+  ctx: RulesContext,
+): void {
+  const spots = placementSpots("1", mover.stats.height, to, ctx)!;
+  if (!mover.noStrikes) {
+    const before = engagedIds(enemies, mover.startSpots, mover.stats.height);
+    const landed = engagedIds(enemies, spots, mover.stats.height);
+    for (const e of enemies) {
+      if (!before.has(e.figure.id) || landed.has(e.figure.id)) continue;
+      unblockable(state, rng, tuningOf(ctx).passingStrikeDice, mover, "passingStrike", e.figure.id, after);
+      if (mover.figure.destroyed) return;
+    }
+  }
+  mover.figure.position = { hex: to.hex, elevation: to.elevation, rotation: 0 };
+  traversed.push(asPathStep(to, "1"));
+  lavaRolls(spots);
 }
 
 /**

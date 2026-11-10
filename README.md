@@ -15,7 +15,8 @@ pnpm dev        # start the game at http://localhost:5173
 pnpm test       # run the rules and content tests
 pnpm typecheck  # type-check every package
 pnpm build      # production build in apps/client/dist
-pnpm e2e        # browser tests: a full game, then the map editor (run pnpm build first)
+pnpm e2e        # browser tests: Basic and Advanced games, then the map editor (run pnpm build first)
+BALANCE_REPORT=1 pnpm test balance   # print unit point costs against the balance model
 ```
 
 ## Project layout

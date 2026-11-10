@@ -1,8 +1,18 @@
 import { deepClone } from "../clone";
 import { MAX_PLAYERS, MIN_PLAYERS } from "../schema";
+import { endOfTurnAbilities } from "./abilities";
 import { attack, endOfTurnTerrain } from "./combat";
 import { currentDeployment, deployUnit, skipDepartedDeployers, startDeployment } from "./deploy";
-import { continueDraft, createUnit, currentDrafter, draftPick, spaceNeeded, startDraft, zoneCapacity } from "./draft";
+import {
+  continueDraft,
+  createUnit,
+  currentDrafter,
+  draftPass,
+  draftPick,
+  spaceNeeded,
+  startDraft,
+  zoneCapacity,
+} from "./draft";
 import { fail, RulesError } from "./errors";
 import { moveFigure } from "./movement";
 import { findUnit, isUnitAlive } from "./queries";
@@ -41,6 +51,11 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
     }
   }
 
+  // The Advanced game drafts by points when a budget is given; otherwise by card count.
+  const pointsDraft = !setup.armies && setup.mode === "advanced" && setup.budget !== undefined;
+  if (pointsDraft && (!Number.isInteger(setup.budget) || setup.budget! < 1)) {
+    throw new RulesError("The points budget must be a positive whole number");
+  }
   const state: GameState = {
     formatVersion: 1,
     config: {
@@ -48,7 +63,9 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
       seed: setup.seed >>> 0,
       mapId: setup.mapId,
       roundLimit: setup.roundLimit ?? null,
-      armySize: setup.armies ? null : (setup.armySize ?? DEFAULT_ARMY_SIZE),
+      armySize: setup.armies || pointsDraft ? null : (setup.armySize ?? DEFAULT_ARMY_SIZE),
+      budget: pointsDraft ? setup.budget! : null,
+      factionPure: setup.factionPure ?? false,
     },
     rng: setup.seed >>> 0,
     round: 0,
@@ -86,8 +103,9 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
       }
     }
     startDeployment(state, events, ctx);
+  } else if (pointsDraft) {
+    startDraft(state, null, events);
   } else {
-    // Both rule sets draft by card count for now; the points budget arrives in Phase 4.
     const size = state.config.armySize!;
     if (!Number.isInteger(size) || size < 1) throw new RulesError("Army size must be at least 1 card");
     startDraft(state, size, events);
@@ -107,6 +125,9 @@ export function applyCommand(state: GameState, command: Command, ctx: RulesConte
       case "draftPick":
         draftPick(next, command.player, command.cardId, events, ctx);
         break;
+      case "draftPass":
+        draftPass(next, command.player, events, ctx);
+        break;
       case "deployUnit":
         deployUnit(next, command.player, command.unitId, command.placements, events, ctx);
         break;
@@ -117,7 +138,7 @@ export function applyCommand(state: GameState, command: Command, ctx: RulesConte
         moveFigure(next, command.player, command.figureId, command.path, events, ctx);
         break;
       case "attack":
-        attack(next, command.player, command.figureId, command.targetId, events, ctx);
+        attack(next, command.player, command.figureId, command.targetId, events, ctx, command.ability);
         break;
       case "endTurn":
         endTurn(next, command.player, events, ctx);
@@ -206,6 +227,7 @@ function endTurn(state: GameState, player: PlayerId, events: GameEvent[], ctx: R
   const active = state.active;
   const { token, unitId } = active;
   endOfTurnTerrain(state, unitId, events, ctx);
+  endOfTurnAbilities(state, unitId, ctx, events);
   if (checkGameOver(state, events, ctx)) return;
   if (state.active !== active) return; // the player was knocked out and play has moved on
   events.push({ type: "turnEnded", player, token, unitId });

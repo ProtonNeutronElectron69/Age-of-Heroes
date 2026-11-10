@@ -29,7 +29,11 @@
         {
           "id": "rally-the-line",
           "name": "Rally the Line",
-          "text": "When a friendly Disciplined squad figure within 4 hexes of Captain Vance defends, it rolls 1 extra defense die."
+          "text": "When a friendly Disciplined squad figure within 4 hexes of Captain Vance defends, it rolls 1 extra defense die.",
+          "params": {
+            "range": 4,
+            "bonus": 1
+          }
         }
       ]
     }
@@ -59,12 +63,16 @@
       "range": 6,
       "attack": 2,
       "defense": 2,
-      "points": 55,
+      "points": 75,
       "abilities": [
         {
           "id": "massed-volley",
           "name": "Massed Volley",
-          "text": "If 3 or more Fusiliers attack the same target in one turn, the last of them rolls 2 extra attack dice."
+          "text": "Each Fusilier that is the third or later from its squad to attack the same target in a turn rolls 2 extra attack dice.",
+          "params": {
+            "attacks": 3,
+            "bonus": 2
+          }
         }
       ]
     }
@@ -99,7 +107,10 @@
         {
           "id": "answering-blade",
           "name": "Answering Blade",
-          "text": "When Lady Asagiri defends against an adjacent attacker and rolls more shields than it rolled skulls, the attacker takes 1 wound."
+          "text": "When Lady Asagiri defends against an adjacent attacker and rolls more shields than it rolled skulls, the attacker takes 1 wound.",
+          "params": {
+            "wounds": 1
+          }
         }
       ]
     }
@@ -129,12 +140,15 @@
       "range": 3,
       "attack": 2,
       "defense": 3,
-      "points": 50,
+      "points": 65,
       "abilities": [
         {
           "id": "smoke-step",
           "name": "Smoke Step",
-          "text": "After a Shinobi attacks, it may move up to 2 hexes. It does not take passing strikes during this move."
+          "text": "After a Shinobi attacks, it may move up to 2 hexes. It does not take passing strikes during this move.",
+          "params": {
+            "move": 2
+          }
         }
       ]
     }
@@ -169,12 +183,17 @@
         {
           "id": "flying",
           "name": "Flying",
-          "text": "Cinderjaw flies over terrain and figures while moving. Terrain only affects it where it ends its move, and it never takes falling damage."
+          "text": "Cinderjaw flies: count its move in hexes straight to where it lands, ignoring terrain, height and figures on the way. Terrain only affects it where it lands, and it never takes falling damage."
         },
         {
           "id": "ember-spit",
           "name": "Ember Spit",
-          "text": "Instead of a normal attack, Cinderjaw may attack a figure up to 3 hexes away with 2 attack dice. Every figure adjacent to the target is also attacked with 1 die."
+          "text": "Instead of a normal attack, Cinderjaw may spit fire at a figure up to 3 hexes away with 2 attack dice. Every other figure next to the target, except Cinderjaw, is also attacked with 1 die.",
+          "params": {
+            "range": 3,
+            "dice": 2,
+            "splashDice": 1
+          }
         }
       ]
     }
@@ -209,7 +228,11 @@
         {
           "id": "hidden-in-the-leaves",
           "name": "Hidden in the Leaves",
-          "text": "A Warden standing on forest rolls 2 extra defense dice against attacks from 4 or more hexes away."
+          "text": "A Warden standing on forest rolls 2 extra defense dice against attacks from 4 or more hexes away.",
+          "params": {
+            "minDistance": 4,
+            "bonus": 2
+          }
         }
       ]
     }
@@ -239,12 +262,16 @@
       "range": 5,
       "attack": 3,
       "defense": 5,
-      "points": 105,
+      "points": 115,
       "abilities": [
         {
           "id": "deflector-field",
           "name": "Deflector Field",
-          "text": "Friendly figures adjacent to K-7 roll 1 extra defense die against attacks from 3 or more hexes away."
+          "text": "Friendly figures adjacent to K-7 roll 1 extra defense die against attacks from 3 or more hexes away.",
+          "params": {
+            "minDistance": 3,
+            "bonus": 1
+          }
         }
       ]
     }
@@ -274,7 +301,7 @@
       "range": 5,
       "attack": 3,
       "defense": 2,
-      "points": 70,
+      "points": 85,
       "abilities": [
         {
           "id": "salvage-protocol",
@@ -314,12 +341,289 @@
         {
           "id": "moss-armor",
           "name": "Moss Armor",
-          "text": "Old Rootback rolls 1 extra defense die against attacks from 4 or more hexes away."
+          "text": "Old Rootback rolls 1 extra defense die against attacks from 4 or more hexes away.",
+          "params": {
+            "minDistance": 4,
+            "bonus": 1
+          }
         },
         {
           "id": "trample",
           "name": "Trample",
-          "text": "Old Rootback may move through Small and Medium enemy figures. Each figure it moves through rolls 1 defense die; on a blank it takes 1 wound."
+          "text": "Old Rootback may move through Small and Medium enemy figures. Each figure it moves through rolls 1 defense die; on a blank it takes 1 wound.",
+          "params": {
+            "defenseDice": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gatewarden-pikemen",
+    "name": "Gatewarden Pikemen",
+    "tokenLabel": "GP",
+    "faction": "Iron Concord",
+    "unitType": "commonSquad",
+    "figureCount": 3,
+    "species": "Human",
+    "unitClass": "Soldier",
+    "personality": "Disciplined",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": {
+      "move": 4,
+      "range": 1,
+      "attack": 3,
+      "defense": 3
+    },
+    "advanced": {
+      "life": 1,
+      "move": 4,
+      "range": 1,
+      "attack": 3,
+      "defense": 3,
+      "points": 75,
+      "abilities": [
+        {
+          "id": "brace",
+          "name": "Brace",
+          "text": "When an adjacent enemy that moved this turn attacks a Pikeman, the Pikeman rolls 2 extra defense dice.",
+          "params": {
+            "bonus": 2
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "sister-maren",
+    "name": "Sister Maren Holloway",
+    "tokenLabel": "SM",
+    "faction": "Iron Concord",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Human",
+    "unitClass": "Medic",
+    "personality": "Valiant",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": {
+      "move": 5,
+      "range": 3,
+      "attack": 2,
+      "defense": 3
+    },
+    "advanced": {
+      "life": 4,
+      "move": 5,
+      "range": 3,
+      "attack": 2,
+      "defense": 3,
+      "points": 65,
+      "abilities": [
+        {
+          "id": "field-dressing",
+          "name": "Field Dressing",
+          "text": "At the end of her turn, Sister Maren removes 1 wound from herself or a friendly hero next to her, whichever is most wounded.",
+          "params": {
+            "heal": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "kenzo",
+    "name": "Kenzo the Lantern Monk",
+    "tokenLabel": "KZ",
+    "faction": "House Kagero",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Human",
+    "unitClass": "Monk",
+    "personality": "Tricky",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": {
+      "move": 5,
+      "range": 1,
+      "attack": 3,
+      "defense": 3
+    },
+    "advanced": {
+      "life": 4,
+      "move": 5,
+      "range": 1,
+      "attack": 3,
+      "defense": 3,
+      "points": 100,
+      "abilities": [
+        {
+          "id": "lantern-gaze",
+          "name": "Lantern Gaze",
+          "text": "Instead of attacking, Kenzo may stare down an enemy Small or Medium figure that is not unique, up to 4 hexes away and in sight. Roll a d20: on 16 or more, that figure leaves its unit and joins your army as a unit of its own.",
+          "params": {
+            "range": 4,
+            "needed": 16
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "ashfang-oni",
+    "name": "Ashfang Oni",
+    "tokenLabel": "AO",
+    "faction": "House Kagero",
+    "unitType": "commonHero",
+    "figureCount": 1,
+    "species": "Oni",
+    "unitClass": "Brute",
+    "personality": "Relentless",
+    "size": "large",
+    "height": 7,
+    "footprint": "1",
+    "basic": {
+      "move": 5,
+      "range": 1,
+      "attack": 5,
+      "defense": 3
+    },
+    "advanced": {
+      "life": 5,
+      "move": 5,
+      "range": 1,
+      "attack": 5,
+      "defense": 3,
+      "points": 110,
+      "abilities": [
+        {
+          "id": "thick-hide",
+          "name": "Thick Hide",
+          "text": "Attacks from 3 or more hexes away deal 1 less wound to the Oni.",
+          "params": {
+            "minDistance": 3,
+            "reduce": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "sylvanne",
+    "name": "Sylvanne, Voice of the Grove",
+    "tokenLabel": "SV",
+    "faction": "Verdant Court",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Elf",
+    "unitClass": "Druid",
+    "personality": "Wise",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": {
+      "move": 5,
+      "range": 4,
+      "attack": 2,
+      "defense": 3
+    },
+    "advanced": {
+      "life": 4,
+      "move": 5,
+      "range": 4,
+      "attack": 2,
+      "defense": 3,
+      "points": 75,
+      "abilities": [
+        {
+          "id": "grove-song",
+          "name": "Grove Song",
+          "text": "Other friendly Elf figures within 3 hexes of Sylvanne roll 1 extra attack die.",
+          "params": {
+            "range": 3,
+            "bonus": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "siege-walker-atlas",
+    "name": "Siege Walker Atlas",
+    "tokenLabel": "SW",
+    "faction": "Nexus Collective",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Robot",
+    "unitClass": "Siege Engine",
+    "personality": "Precise",
+    "size": "huge",
+    "height": 10,
+    "footprint": "2x2",
+    "basic": {
+      "move": 3,
+      "range": 6,
+      "attack": 4,
+      "defense": 5
+    },
+    "advanced": {
+      "life": 9,
+      "move": 3,
+      "range": 6,
+      "attack": 4,
+      "defense": 5,
+      "points": 230,
+      "abilities": [
+        {
+          "id": "mortar-barrage",
+          "name": "Mortar Barrage",
+          "text": "Instead of a normal attack, Atlas may lob a shell at a figure 3 to 8 hexes away, even one out of sight, with 3 attack dice. Every other figure next to the target is also attacked with 1 die.",
+          "params": {
+            "range": 8,
+            "minRange": 3,
+            "dice": 3,
+            "splashDice": 1,
+            "ignoresSight": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "skyhook-raiders",
+    "name": "Skyhook Raiders",
+    "tokenLabel": "SR",
+    "faction": "Nexus Collective",
+    "unitType": "commonSquad",
+    "figureCount": 3,
+    "species": "Cyborg",
+    "unitClass": "Trooper",
+    "personality": "Daring",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "basic": {
+      "move": 6,
+      "range": 4,
+      "attack": 2,
+      "defense": 2
+    },
+    "advanced": {
+      "life": 1,
+      "move": 6,
+      "range": 4,
+      "attack": 2,
+      "defense": 2,
+      "points": 75,
+      "abilities": [
+        {
+          "id": "flying",
+          "name": "Jet Packs",
+          "text": "Raiders fly: count their move in hexes straight to where they land, ignoring terrain, height and figures on the way. Terrain only affects them where they land, and they never take falling damage."
         }
       ]
     }

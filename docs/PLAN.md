@@ -77,7 +77,7 @@ docs/              this plan and the rules
 - [x] Setup screen offers only the player counts a map supports
 - [x] Browser test that builds, exports, imports and plays a custom map
 
-### Phase 3: Advanced rules core (this PR)
+### Phase 3: Advanced rules core (done)
 - [x] Advanced mode selectable at setup; drafts by card count until the Phase 4 points budget
 - [x] Card backs shown in the Advanced game; Life and wounds tracked, with life badges on tokens
 - [x] Elevation bonuses, the Height climbing limit, and falling damage on every step
@@ -90,13 +90,15 @@ docs/              this plan and the rules
 - [x] One original 2x1 unit, Old Rootback, to bring big figures into play
 - [x] Tests: Advanced rule and multi-hex unit tests, random Advanced games, and an Advanced browser game
 
-### Phase 4: Abilities and armies
-- [ ] Ability hook system
-- [ ] Flying and a first set of abilities (mind control, area attacks, shields, tag-based auras)
-- [ ] Roster of about 16 original units across 4 crossover factions, growing toward 30
-- [ ] Snake draft with points budget and unique limits
-- [ ] Optional faction-pure mode
-- [ ] Combat simulator to set and check point costs
+### Phase 4: Abilities and armies (this PR)
+- [x] Ability system: abilities named on cards with tunable params, implemented as hooks into attacks, defense, movement, reactions and end of turn
+- [x] All 17 abilities on the roster: flying, trample, smoke step, massed volley, grove song, rally the line, deflector field, hidden in the leaves, moss armor, brace, answering blade, thick hide, salvage protocol, field dressing, and the special actions ember spit and mortar barrage (area attacks) and lantern gaze (mind control)
+- [x] Roster of 16 original units, 4 in each of 4 crossover factions (two of them multi-hex)
+- [x] Snake draft with a points budget, passing, unique limits and start zone room
+- [x] Optional faction-pure mode
+- [x] Balance model to set and check point costs, enforced by a test
+- [x] Client: budget and faction options, points in the draft, special action buttons, ability rolls and notes in the dice panel and log
+- [ ] Grow the roster toward 30 units (later content drops)
 
 ### Phase 5: Online multiplayer
 - [ ] Authoritative game server running the rules engine

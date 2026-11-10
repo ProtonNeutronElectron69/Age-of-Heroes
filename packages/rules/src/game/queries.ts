@@ -105,8 +105,9 @@ export function scoreOf(state: GameState, player: PlayerId, ctx: RulesContext): 
     if (state.config.mode === "basic") {
       score += alive;
     } else {
+      // Each figure is worth its share of the card's points (a controlled squad figure counts once).
       const card = ctx.cards.get(unit.cardId);
-      if (card) score += Math.floor((card.advanced.points * alive) / unit.figures.length);
+      if (card) score += Math.floor((card.advanced.points * alive) / card.figureCount);
     }
   }
   return score;

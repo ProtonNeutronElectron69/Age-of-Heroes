@@ -74,6 +74,10 @@ export interface ActiveTurn {
   moved: string[];
   /** Figures of the active unit that have attacked this turn. A figure cannot move after attacking. */
   attacked: string[];
+  /** Every attack made this turn, in order (used by abilities such as Massed Volley). */
+  attackLog: { attackerId: string; targetId: string }[];
+  /** Extra moves granted after attacking (Smoke Step), by figure id: movement points allowed. */
+  bonusMoves: Record<string, number>;
 }
 
 export interface TurnPointer {
@@ -94,6 +98,8 @@ export interface DraftState {
   index: number;
   readonly rolls: RollOff[];
   picks: { player: PlayerId; cardId: string; unitId: string }[];
+  /** Players who have finished drafting (points draft). */
+  passed: PlayerId[];
 }
 
 export interface DeployState {
@@ -117,8 +123,12 @@ export interface GameConfig {
   readonly mapId: string;
   /** Game ends after this round; null means play until one army remains. */
   readonly roundLimit: number | null;
-  /** Basic draft: cards per player. */
+  /** Draft by card count: cards per player. */
   readonly armySize: number | null;
+  /** Draft by points (Advanced): each player's budget. */
+  readonly budget: number | null;
+  /** Every unit in an army must share the faction of its first pick. */
+  readonly factionPure: boolean;
 }
 
 export interface GameState {
@@ -160,8 +170,12 @@ export interface GameSetup {
   readonly players: readonly PlayerSetup[];
   /** Skip the draft and use these armies (card ids per player). */
   readonly armies?: Readonly<Record<PlayerId, readonly string[]>>;
-  /** Basic draft: cards per player (default 4). */
+  /** Draft by card count: cards per player (default 4). */
   readonly armySize?: number;
+  /** Advanced only: draft by points with this budget per player instead of by card count. */
+  readonly budget?: number;
+  /** Every unit in an army must share the faction of its first pick. */
+  readonly factionPure?: boolean;
 }
 
 export interface RulesContext {
@@ -186,11 +200,19 @@ export type Command =
     }
   | { readonly type: "placeTokens"; readonly player: PlayerId; readonly tokens: TokenAssignment }
   | { readonly type: "move"; readonly player: PlayerId; readonly figureId: string; readonly path: readonly PathStep[] }
-  | { readonly type: "attack"; readonly player: PlayerId; readonly figureId: string; readonly targetId: string }
+  | {
+      readonly type: "attack";
+      readonly player: PlayerId;
+      readonly figureId: string;
+      readonly targetId: string;
+      /** Use a special attack or power from the card instead of a normal attack. */
+      readonly ability?: string;
+    }
+  | { readonly type: "draftPass"; readonly player: PlayerId }
   | { readonly type: "endTurn"; readonly player: PlayerId }
   | { readonly type: "concede"; readonly player: PlayerId };
 
-export type DamageSource = "attack" | "swamp" | "lava" | "fall" | "passingStrike";
+export type DamageSource = "attack" | "swamp" | "lava" | "fall" | "passingStrike" | "ability";
 
 export type GameEvent =
   | { readonly type: "draftStarted"; readonly rolls: RollOff[]; readonly order: PlayerId[] }
@@ -230,9 +252,13 @@ export type GameEvent =
       readonly hits: number;
       readonly blocks: number;
       readonly wounds: number;
-      /** Extra attack and defense dice from height (Advanced). */
+      /** Extra attack and defense dice from height and abilities (Advanced). */
       readonly attackBonus: number;
       readonly defenseBonus: number;
+      /** Why the dice changed, e.g. "Rally the Line +1 defense". */
+      readonly notes?: string[];
+      /** The special attack used, if any. */
+      readonly ability?: string;
     }
   | { readonly type: "figureWounded"; readonly figureId: string; readonly wounds: number; readonly total: number }
   | {
@@ -245,7 +271,35 @@ export type GameEvent =
   | { readonly type: "roundEnded"; readonly round: number }
   | { readonly type: "playerConceded"; readonly player: PlayerId }
   | { readonly type: "playerEliminated"; readonly player: PlayerId }
-  | { readonly type: "gameOver"; readonly result: GameResult };
+  | { readonly type: "gameOver"; readonly result: GameResult }
+  | { readonly type: "draftPassed"; readonly player: PlayerId }
+  | {
+      /** A named ability did something worth logging. */
+      readonly type: "abilityUsed";
+      readonly ability: string;
+      readonly figureId: string;
+      readonly targetId?: string;
+      readonly detail: string;
+    }
+  | {
+      readonly type: "abilityRoll";
+      readonly ability: string;
+      readonly figureId: string;
+      readonly targetId: string;
+      readonly roll: number;
+      readonly needed: number;
+      readonly success: boolean;
+    }
+  | { readonly type: "figureHealed"; readonly figureId: string; readonly amount: number; readonly total: number }
+  | { readonly type: "figureRevived"; readonly figureId: string; readonly at: Step }
+  | {
+      /** A figure changed sides (mind control). It now belongs to a new unit. */
+      readonly type: "figureControlled";
+      readonly figureId: string;
+      readonly fromUnitId: string;
+      readonly toUnitId: string;
+      readonly player: PlayerId;
+    }
 
 export type CommandResult =
   | { readonly ok: true; readonly state: GameState; readonly events: GameEvent[]; readonly error?: undefined }

@@ -1,4 +1,4 @@
-import type { GameEvent, GameState, RulesContext, UnitCard } from "@aoh/rules";
+import { findFigure, type GameEvent, type GameState, type RulesContext, type UnitCard } from "@aoh/rules";
 
 /** Human-readable names for players, units and figures. */
 export class Names {
@@ -24,20 +24,35 @@ export class Names {
     return this.card(unitId)?.name ?? unitId;
   }
 
+  /** The unit a figure belongs to now (a mind-controlled figure moves to a new unit). */
+  unitOf(figureId: string) {
+    return findFigure(this.state, figureId)?.unit;
+  }
+
   /** "Concord Fusiliers 2" for squad figures, the hero's name otherwise. */
   figure(figureId: string): string {
-    const [unitId, n] = figureId.split("#");
-    const unit = this.state.units.find((u) => u.id === unitId);
-    const name = this.unit(unitId ?? "");
-    return unit && unit.figures.length > 1 ? `${name} ${n}` : name;
+    const n = figureId.split("#")[1];
+    const card = this.cardOfFigure(figureId);
+    const name = card?.name ?? figureId;
+    return card && card.figureCount > 1 ? `${name} ${n}` : name;
   }
 
   /** Short label shown on a figure's token, e.g. "CF2". */
   tokenLabel(figureId: string): string {
-    const [unitId, n] = figureId.split("#");
-    const unit = this.state.units.find((u) => u.id === unitId);
-    const label = this.card(unitId ?? "")?.tokenLabel ?? "?";
-    return unit && unit.figures.length > 1 ? `${label}${n}` : label;
+    const n = figureId.split("#")[1];
+    const card = this.cardOfFigure(figureId);
+    const label = card?.tokenLabel ?? "?";
+    return card && card.figureCount > 1 ? `${label}${n}` : label;
+  }
+
+  cardOfFigure(figureId: string): UnitCard | undefined {
+    const unit = this.unitOf(figureId);
+    return unit ? this.ctx.cards.get(unit.cardId) : undefined;
+  }
+
+  /** An ability's printed name, from the figure's card. */
+  ability(figureId: string, abilityId: string): string {
+    return this.cardOfFigure(figureId)?.advanced.abilities.find((a) => a.id === abilityId)?.name ?? abilityId;
   }
 
   terrain(id: string): string {
@@ -95,19 +110,17 @@ export function describeEvent(e: GameEvent, names: Names): string | null {
     case "figureSlid":
       return `${names.figure(e.figureId)} slides.`;
     case "attackRolled": {
-      const result = `${plural(e.hits, "hit")}, ${plural(e.blocks, "block")}, ${plural(e.wounds, "wound")}`;
+      const extras = e.notes && e.notes.length > 0 ? ` (${e.notes.join(", ")})` : "";
+      const result = `${plural(e.hits, "hit")}, ${plural(e.blocks, "block")}, ${plural(e.wounds, "wound")}${extras}`;
+      if (e.ability && e.attackerId) {
+        return `${names.figure(e.attackerId)} uses ${names.ability(e.attackerId, e.ability)} on ${names.figure(e.targetId)}: ${result}.`;
+      }
       if (e.source === "fall") return `${names.figure(e.targetId)} falls: ${plural(e.wounds, "wound")}.`;
       if (e.source === "passingStrike") {
         return `${names.figure(e.attackerId!)} strikes ${names.figure(e.targetId)} as it walks away: ${plural(e.wounds, "wound")}.`;
       }
       const who = e.attackerId ? names.figure(e.attackerId) : "The swamp";
-      const bonus =
-        e.attackBonus > 0
-          ? ` (+${e.attackBonus} attack for height)`
-          : e.defenseBonus > 0
-            ? ` (+${e.defenseBonus} defense for height)`
-            : "";
-      return `${who} attacks ${names.figure(e.targetId)}${bonus}: ${result}.`;
+      return `${who} attacks ${names.figure(e.targetId)}: ${result}.`;
     }
     case "figureWounded":
       return null;
@@ -121,6 +134,18 @@ export function describeEvent(e: GameEvent, names: Names): string | null {
       return `${names.player(e.player)} concedes.`;
     case "playerEliminated":
       return `${names.player(e.player)} is out of the game.`;
+    case "draftPassed":
+      return `${names.player(e.player)} is done drafting.`;
+    case "abilityUsed":
+      return `${names.figure(e.figureId)}: ${e.detail.replace(e.ability, names.ability(e.figureId, e.ability))}.`;
+    case "abilityRoll":
+      return `${names.figure(e.figureId)} uses ${names.ability(e.figureId, e.ability)} on ${names.figure(e.targetId)}: rolls ${e.roll}, needs ${e.needed}. ${e.success ? "Success!" : "No effect."}`;
+    case "figureHealed":
+      return `${names.figure(e.figureId)} is healed (${plural(e.total, "wound")} left).`;
+    case "figureRevived":
+      return `${names.figure(e.figureId)} returns to the battle.`;
+    case "figureControlled":
+      return `${names.figure(e.figureId)} now fights for ${names.player(e.player)}.`;
     case "gameOver": {
       const winners = e.result.winners.map((w) => names.player(w)).join(" and ");
       return winners ? `${winners} ${e.result.winners.length > 1 ? "share the win" : "wins"}!` : "Nobody wins.";

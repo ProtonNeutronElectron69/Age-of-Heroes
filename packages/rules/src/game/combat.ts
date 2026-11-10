@@ -1,8 +1,21 @@
 import { rollCombat } from "../dice";
-import { hexDistance } from "../hex";
 import { hasLineOfSight, type Token } from "../los";
 import { Rng } from "../rng";
+import { isUnique } from "../schema";
 import type { Tuning } from "../tuning";
+import {
+  abilityModifiers,
+  abilityOf,
+  afterAttack,
+  areaAttackOf,
+  combatant,
+  hasAbility,
+  mindControlOf,
+  param,
+  reduceWounds,
+  spotDistance,
+  type Combatant,
+} from "./abilities";
 import { engagedEnemies, spotsEngaged } from "./engagement";
 import { fail } from "./errors";
 import { figureSpots, standingElevation, tuningOf } from "./placement";
@@ -31,14 +44,14 @@ export function elevationBonus(
 
 const tokens = (spots: readonly Step[], height: number): Token[] => spots.map((s) => ({ ...s, height }));
 
-function minDistance(a: readonly Step[], b: readonly Step[]): number {
-  let best = Infinity;
-  for (const x of a) for (const y of b) best = Math.min(best, hexDistance(x.hex, y.hex));
-  return best;
+interface Reach {
+  readonly range: number;
+  readonly minRange: number;
+  readonly ignoresSight: boolean;
 }
 
-/** Why this attack is not allowed, or null if it is. */
-export function attackProblem(state: GameState, attackerId: string, targetId: string, ctx: RulesContext): string | null {
+/** Why an attack-like action from one figure at another is not allowed, or null if it is. */
+function actionProblem(state: GameState, attackerId: string, targetId: string, ctx: RulesContext, reach: Reach): string | null {
   const active = state.active;
   if (state.phase !== "turns" || !active) return "No turn is in progress";
   const a = findFigure(state, attackerId);
@@ -52,20 +65,22 @@ export function attackProblem(state: GameState, attackerId: string, targetId: st
   const mode = state.config.mode;
   const aCard = cardOf(a.unit, ctx);
   const tCard = cardOf(t.unit, ctx);
-  const aStats = statsOf(aCard, mode);
-  const tStats = statsOf(tCard, mode);
-  const aSpots = figureSpots(a.figure, aCard.footprint, aStats.height, ctx);
-  const tSpots = figureSpots(t.figure, tCard.footprint, tStats.height, ctx);
-  const distance = minDistance(aSpots, tSpots);
-  if (distance > aStats.range) return `Out of range (${distance} hexes, range ${aStats.range})`;
+  const aHeight = statsOf(aCard, mode).height;
+  const tHeight = statsOf(tCard, mode).height;
+  const aSpots = figureSpots(a.figure, aCard.footprint, aHeight, ctx);
+  const tSpots = figureSpots(t.figure, tCard.footprint, tHeight, ctx);
+  const distance = spotDistance(aSpots, tSpots);
+  if (distance > reach.range) return `Out of range (${distance} hexes, range ${reach.range})`;
+  if (distance < reach.minRange) return `Too close (needs at least ${reach.minRange} hexes)`;
 
   const strict = mode === "advanced";
   if (strict) {
-    const engaged = engagedEnemies(state, a.unit.owner, aSpots, aStats.height, ctx);
-    const withTarget = spotsEngaged(aSpots, aStats.height, tSpots, tStats.height);
+    const engaged = engagedEnemies(state, a.unit.owner, aSpots, aHeight, ctx);
+    const withTarget = spotsEngaged(aSpots, aHeight, tSpots, tHeight);
     if (engaged.length > 0 && !withTarget) return "An engaged figure can only attack enemies it is engaged with";
-    if (aStats.range === 1 && !withTarget) return "Too far above or below to reach";
+    if (reach.range === 1 && !withTarget) return "Too far above or below to reach";
   }
+  if (reach.ignoresSight) return null;
 
   const blockers: Token[] = [];
   if (strict) {
@@ -78,14 +93,51 @@ export function attackProblem(state: GameState, attackerId: string, targetId: st
       }
     }
   }
-  if (!hasLineOfSight(ctx.board, tokens(aSpots, aStats.height), tokens(tSpots, tStats.height), { strict, blockers })) {
+  if (!hasLineOfSight(ctx.board, tokens(aSpots, aHeight), tokens(tSpots, tHeight), { strict, blockers })) {
     return "No line of sight";
   }
   return null;
 }
 
-/** Enemy figures this figure could attack right now. */
-export function attackTargets(state: GameState, figureId: string, ctx: RulesContext): string[] {
+/**
+ * Why this attack is not allowed, or null if it is. With `ability`, the
+ * attack uses that special action from the card (area attack or mind control).
+ */
+export function attackProblem(
+  state: GameState,
+  attackerId: string,
+  targetId: string,
+  ctx: RulesContext,
+  ability?: string,
+): string | null {
+  const a = findFigure(state, attackerId);
+  if (!a) return "That figure is not on the battlefield";
+  const card = cardOf(a.unit, ctx);
+  if (!ability) {
+    return actionProblem(state, attackerId, targetId, ctx, {
+      range: statsOf(card, state.config.mode).range,
+      minRange: 1,
+      ignoresSight: false,
+    });
+  }
+  if (state.config.mode !== "advanced" || !abilityOf(card, ability)) return "That figure has no such power";
+  const area = areaAttackOf(card, ability);
+  if (area) return actionProblem(state, attackerId, targetId, ctx, area);
+  const mind = mindControlOf(card, ability);
+  if (mind) {
+    const t = findFigure(state, targetId);
+    if (t) {
+      const tCard = cardOf(t.unit, ctx);
+      if (isUnique(tCard)) return "Unique figures cannot be controlled";
+      if (tCard.size !== "small" && tCard.size !== "medium") return "Only Small or Medium figures can be controlled";
+    }
+    return actionProblem(state, attackerId, targetId, ctx, { range: mind.range, minRange: 1, ignoresSight: false });
+  }
+  return "That power is not an attack";
+}
+
+/** Enemy figures this figure could attack right now (with a special action, if given). */
+export function attackTargets(state: GameState, figureId: string, ctx: RulesContext, ability?: string): string[] {
   const a = findFigure(state, figureId);
   if (!a) return [];
   const targets: string[] = [];
@@ -93,37 +145,90 @@ export function attackTargets(state: GameState, figureId: string, ctx: RulesCont
     if (unit.owner === a.unit.owner) continue;
     for (const figure of unit.figures) {
       if (figure.destroyed || !figure.position) continue;
-      if (attackProblem(state, figureId, figure.id, ctx) === null) targets.push(figure.id);
+      if (attackProblem(state, figureId, figure.id, ctx, ability) === null) targets.push(figure.id);
     }
   }
   return targets;
 }
 
-/** The dice an attack would roll, including height bonuses. */
+/** The dice an attack would roll, with height and ability bonuses and the reasons for them. */
 export function attackDice(
   state: GameState,
   attackerId: string,
   targetId: string,
   ctx: RulesContext,
-): { attack: number; defense: number; attackBonus: number; defenseBonus: number } {
+  baseAttack?: number,
+): { attack: number; defense: number; attackBonus: number; defenseBonus: number; notes: string[] } {
   const a = findFigure(state, attackerId) ?? fail(`Unknown figure "${attackerId}"`);
   const t = findFigure(state, targetId) ?? fail(`Unknown figure "${targetId}"`);
+  return diceFor(state, ctx, combatant(a.unit, a.figure, ctx), combatant(t.unit, t.figure, ctx), baseAttack);
+}
+
+function diceFor(state: GameState, ctx: RulesContext, attacker: Combatant, defender: Combatant, baseAttack?: number) {
   const mode = state.config.mode;
-  const aCard = cardOf(a.unit, ctx);
-  const tCard = cardOf(t.unit, ctx);
-  const aStats = statsOf(aCard, mode);
-  const tStats = statsOf(tCard, mode);
-  let bonus = { attackBonus: 0, defenseBonus: 0 };
+  const aStats = statsOf(attacker.card, mode);
+  const tStats = statsOf(defender.card, mode);
+  let attackBonus = 0;
+  let defenseBonus = 0;
+  const notes: string[] = [];
   if (mode === "advanced") {
-    const aElev = standingElevation(figureSpots(a.figure, aCard.footprint, aStats.height, ctx));
-    const tElev = standingElevation(figureSpots(t.figure, tCard.footprint, tStats.height, ctx));
-    bonus = elevationBonus(aElev, aStats.height, tElev, tStats.height, tuningOf(ctx));
+    const height = elevationBonus(
+      standingElevation(attacker.spots),
+      aStats.height,
+      standingElevation(defender.spots),
+      tStats.height,
+      tuningOf(ctx),
+    );
+    if (height.attackBonus > 0) notes.push(`Higher ground +${height.attackBonus} attack`);
+    if (height.defenseBonus > 0) notes.push(`Higher ground +${height.defenseBonus} defense`);
+    const mods = abilityModifiers(state, ctx, attacker, defender, spotDistance(attacker.spots, defender.spots));
+    attackBonus = height.attackBonus + mods.attack;
+    defenseBonus = height.defenseBonus + mods.defense;
+    notes.push(...mods.notes);
   }
   return {
-    attack: aStats.attack + bonus.attackBonus,
-    defense: tStats.defense + bonus.defenseBonus,
-    ...bonus,
+    attack: (baseAttack ?? aStats.attack) + attackBonus,
+    defense: tStats.defense + defenseBonus,
+    attackBonus,
+    defenseBonus,
+    notes,
   };
+}
+
+/** Roll one attack against one defender and apply the result. */
+function resolve(
+  state: GameState,
+  ctx: RulesContext,
+  rng: Rng,
+  attacker: Combatant,
+  defender: Combatant,
+  baseAttack: number,
+  ability: string | undefined,
+  events: GameEvent[],
+): void {
+  const dice = diceFor(state, ctx, attacker, defender, baseAttack);
+  const roll = rollCombat(rng, dice.attack, dice.defense);
+  const distance = spotDistance(attacker.spots, defender.spots);
+  const notes = [...dice.notes];
+  const wounds = reduceWounds(state, defender, distance, roll.wounds, notes);
+  events.push({
+    type: "attackRolled",
+    source: "attack",
+    attackerId: attacker.figure.id,
+    targetId: defender.figure.id,
+    attack: roll.attack,
+    defense: roll.defense,
+    hits: roll.hits,
+    blocks: roll.blocks,
+    wounds,
+    attackBonus: dice.attackBonus,
+    defenseBonus: dice.defenseBonus,
+    ...(notes.length > 0 ? { notes } : {}),
+    ...(ability ? { ability } : {}),
+  });
+  const life = statsOf(defender.card, state.config.mode).life;
+  woundFigure(state, defender.unit, defender.figure, wounds, life, "attack", events);
+  afterAttack(state, ctx, attacker, defender, distance, roll.hits, roll.blocks, events);
 }
 
 export function attack(
@@ -133,34 +238,63 @@ export function attack(
   targetId: string,
   events: GameEvent[],
   ctx: RulesContext,
+  ability?: string,
 ): void {
   if (state.active && state.active.player !== player) fail("It is not your turn");
-  const problem = attackProblem(state, figureId, targetId, ctx);
+  const problem = attackProblem(state, figureId, targetId, ctx, ability);
   if (problem) fail(problem);
 
+  const a = findFigure(state, figureId)!;
   const t = findFigure(state, targetId)!;
-  const tStats = statsOf(cardOf(t.unit, ctx), state.config.mode);
-  const dice = attackDice(state, figureId, targetId, ctx);
-
+  const attacker = combatant(a.unit, a.figure, ctx);
+  const defender = combatant(t.unit, t.figure, ctx);
   const rng = new Rng(state.rng);
-  const roll = rollCombat(rng, dice.attack, dice.defense);
+  const area = ability ? areaAttackOf(attacker.card, ability) : undefined;
+  const mind = ability ? mindControlOf(attacker.card, ability) : undefined;
+
+  if (area) {
+    // The target takes the full blast; every other figure next to it takes the splash.
+    const splashed: Combatant[] = [];
+    for (const unit of state.units) {
+      for (const figure of unit.figures) {
+        if (figure.destroyed || !figure.position || figure.id === targetId || figure.id === figureId) continue;
+        const c = combatant(unit, figure, ctx);
+        if (spotDistance(c.spots, defender.spots) <= 1) splashed.push(c);
+      }
+    }
+    resolve(state, ctx, rng, attacker, defender, area.dice, area.id, events);
+    for (const c of splashed) {
+      if (!c.figure.destroyed) resolve(state, ctx, rng, attacker, c, area.splashDice, area.id, events);
+    }
+  } else if (mind) {
+    const roll = rng.d20();
+    const success = roll >= mind.needed;
+    events.push({ type: "abilityRoll", ability: mind.id, figureId, targetId, roll, needed: mind.needed, success });
+    if (success) takeControl(state, player, defender, events);
+  } else {
+    resolve(state, ctx, rng, attacker, defender, statsOf(attacker.card, state.config.mode).attack, undefined, events);
+  }
+
   state.rng = rng.state;
-  state.active!.attacked.push(figureId);
-  events.push({
-    type: "attackRolled",
-    source: "attack",
-    attackerId: figureId,
-    targetId,
-    attack: roll.attack,
-    defense: roll.defense,
-    hits: roll.hits,
-    blocks: roll.blocks,
-    wounds: roll.wounds,
-    attackBonus: dice.attackBonus,
-    defenseBonus: dice.defenseBonus,
-  });
-  woundFigure(state, t.unit, t.figure, roll.wounds, tStats.life, "attack", events);
+  const active = state.active!;
+  active.attacked.push(figureId);
+  active.attackLog.push({ attackerId: figureId, targetId });
+  // Smoke Step: a short move after attacking.
+  if (!attacker.figure.destroyed && hasAbility(state, attacker.card, "smoke-step")) {
+    active.bonusMoves[figureId] = param(abilityOf(attacker.card, "smoke-step"), "move", 2);
+  }
   checkGameOver(state, events, ctx);
+}
+
+/** Mind control: the figure leaves its unit and joins the controller's army as a unit of its own. */
+function takeControl(state: GameState, player: PlayerId, target: Combatant, events: GameEvent[]): void {
+  const from = target.unit;
+  from.figures = from.figures.filter((f) => f.id !== target.figure.id);
+  let n = state.units.filter((u) => u.owner === player).length;
+  let id = `${player}:${n}`;
+  while (state.units.some((u) => u.id === id)) id = `${player}:${++n}`;
+  state.units.push({ id, cardId: from.cardId, owner: player, figures: [target.figure] });
+  events.push({ type: "figureControlled", figureId: target.figure.id, fromUnitId: from.id, toUnitId: id, player });
 }
 
 /** End-of-turn terrain damage (swamp) for every figure of the unit that just acted. */

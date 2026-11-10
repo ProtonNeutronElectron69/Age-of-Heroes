@@ -923,3 +923,25 @@ legend {
   color: #ffb4ab;
   font-size: 11px;
 }
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.draft-header .turn-banner button {
+  margin-left: 12px;
+}
+
+.action-modes {
+  margin: 4px 0 8px;
+}
+
+.action-modes button {
+  font-size: 13px;
+  padding: 5px 10px;
+}

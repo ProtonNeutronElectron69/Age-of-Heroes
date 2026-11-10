@@ -60,6 +60,7 @@ export const CARDS: UnitCard[] = [
 export const TERRAIN: TerrainRules[] = [
   { id: "grass", name: "Grass", category: "standard", color: "#00ff00" },
   { id: "rock", name: "Rock", category: "standard", color: "#888888" },
+  { id: "forest", name: "Forest", category: "standard", color: "#226622" },
   { id: "water", name: "Water", category: "special", color: "#0000ff", stopGroup: "wet", moveCost: 2 },
   {
     id: "swamp",
@@ -219,7 +220,7 @@ export function turnState(
   s.tokens[owner] = allOn(unitId);
   s.initiative = s.players.map((p) => p.id);
   s.pointer = { token: "1", orderIndex: s.initiative.indexOf(owner) };
-  s.active = { player: owner, unitId, token: "1", moved: [], attacked: [] };
+  s.active = { player: owner, unitId, token: "1", moved: [], attacked: [], attackLog: [], bonusMoves: {} };
   return s;
 }
 

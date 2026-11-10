@@ -47,8 +47,12 @@ let attacks = 0;
 
 try {
   await page.goto(url);
-  if (MODE === "advanced") await page.getByRole("radio", { name: "Advanced" }).click();
-  await page.getByRole("radio", { name: "2 cards" }).click();
+  if (MODE === "advanced") {
+    await page.getByRole("radio", { name: "Advanced" }).click();
+    await page.getByRole("radio", { name: "300 points" }).click();
+  } else {
+    await page.getByRole("radio", { name: "2 cards" }).click();
+  }
   await page.getByRole("radio", { name: `${ROUNDS} rounds` }).click();
   await shot("1-setup");
   await page.getByRole("button", { name: "Start draft" }).click();
@@ -157,6 +161,10 @@ try {
   if (moves === 0) fail("No figure moved during the game");
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(`Full ${MODE} game played: ${moves} moves, ${attacks} attacks. Result: ${heading}`);
+} catch (err) {
+  await shot("failure");
+  if (errors.length > 0) console.error(`Console errors:\n${errors.join("\n")}`);
+  throw err;
 } finally {
   await browser.close();
   await new Promise((resolve) => server.httpServer.close(resolve));

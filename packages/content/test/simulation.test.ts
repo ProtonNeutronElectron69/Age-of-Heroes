@@ -10,6 +10,7 @@ import {
   draftableCards,
   livingUnitsOf,
   moveOptions,
+  specialActions,
   replayGame,
   stepKey,
   type Command,
@@ -34,6 +35,8 @@ function randomCommand(state: GameState, rng: Rng, c: RulesContext): Command {
   switch (state.phase) {
     case "draft": {
       const player = currentDrafter(state)!;
+      const owned = state.units.some((u) => u.owner === player);
+      if (state.config.budget !== null && owned && rng.float() < 0.15) return { type: "draftPass", player };
       return { type: "draftPick", player, cardId: pick(rng, draftableCards(state, c, player)) };
     }
     case "deploy": {
@@ -70,9 +73,25 @@ function randomCommand(state: GameState, rng: Rng, c: RulesContext): Command {
           }
         }
         if (!active.attacked.includes(f.id)) {
+          // Sometimes use a special action (area attack or mind control) instead.
+          const specials = specialActions(state, c.cards.get(unit.cardId)!);
+          if (specials.length > 0 && rng.float() < 0.5) {
+            const ability = pick(rng, specials).id;
+            const targets = attackTargets(state, f.id, c, ability);
+            if (targets.length > 0) {
+              return { type: "attack", player: active.player, figureId: f.id, targetId: pick(rng, targets), ability };
+            }
+          }
           const targets = attackTargets(state, f.id, c);
           if (targets.length > 0) {
             return { type: "attack", player: active.player, figureId: f.id, targetId: pick(rng, targets) };
+          }
+        }
+        // Smoke Step: take the short move after attacking.
+        if (active.bonusMoves[f.id]) {
+          const options = [...moveOptions(state, f.id, c).values()];
+          if (options.length > 0) {
+            return { type: "move", player: active.player, figureId: f.id, path: pick(rng, options).path };
           }
         }
       }
@@ -110,7 +129,7 @@ function playRandomGame(seed: number, players: number, mode: RulesMode) {
     seed,
     mapId: map.id,
     roundLimit: 12,
-    armySize: 3,
+    ...(mode === "advanced" ? { budget: 400 } : { armySize: 3 }),
     players: Array.from({ length: players }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}`, color: "#fff" })),
   };
   const rng = new Rng(seed * 7919 + 1);
@@ -118,6 +137,7 @@ function playRandomGame(seed: number, players: number, mode: RulesMode) {
   const commands: Command[] = [];
   let moves = 0;
   let attacks = 0;
+  const abilityEvents: string[] = [];
   while (state.phase !== "gameOver") {
     const cmd = randomCommand(state, rng, ctx);
     const r = applyCommand(state, cmd, ctx);
@@ -126,10 +146,21 @@ function playRandomGame(seed: number, players: number, mode: RulesMode) {
     if (cmd.type === "attack") attacks++;
     commands.push(cmd);
     state = r.state;
+    for (const e of r.events) {
+      if (e.type === "abilityUsed" || e.type === "abilityRoll") abilityEvents.push(e.ability);
+      if (e.type === "attackRolled" && e.ability) abilityEvents.push(e.ability);
+      if (e.type === "attackRolled" && e.notes) abilityEvents.push(...e.notes.map((n) => n.split(" +")[0]!.split(" -")[0]!));
+      if (e.type === "figureMoved" && cmd.type === "move" && cmd.path.length === 1 && e.path.length === 1) {
+        const unit = state.units.find((u) => u.figures.some((f) => f.id === e.figureId));
+        if (unit && ctx.cards.get(unit.cardId)!.advanced.abilities.some((a) => a.id === "flying") && mode === "advanced") {
+          abilityEvents.push("flying");
+        }
+      }
+    }
     checkInvariants(state);
     if (commands.length > 5000) throw new Error(`seed ${seed}: game did not end`);
   }
-  return { setup, state, commands, moves, attacks };
+  return { setup, state, commands, moves, attacks, abilityEvents };
 }
 
 describe("random games on the Proving Grounds", () => {
@@ -148,7 +179,24 @@ describe("random games on the Proving Grounds", () => {
       expect(game.state.phase).toBe("gameOver");
       expect(game.moves).toBeGreaterThan(0);
       expect(game.attacks).toBeGreaterThan(0);
+      if (mode === "advanced") expect(game.state.config.budget).toBe(400);
       expect(replayGame(game.setup, game.commands, ctx).state).toEqual(game.state);
     });
   }
+
+  it("uses many different abilities across the Advanced games", () => {
+    const used = new Set<string>();
+    for (const [seed, players] of [
+      [5, 2],
+      [6, 3],
+      [7, 4],
+      [8, 6],
+    ] as const) {
+      for (const a of playRandomGame(seed, players, "advanced").abilityEvents) used.add(a);
+    }
+    if ((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SIM_REPORT) {
+      (globalThis as { console?: { log: (s: string) => void } }).console?.log([...used].sort().join(", "));
+    }
+    expect(used.size).toBeGreaterThanOrEqual(6);
+  });
 });
