@@ -1,9 +1,8 @@
-import { Html } from "@react-three/drei";
 import type { ThreeEvent } from "@react-three/fiber";
 import { useFrame } from "@react-three/fiber";
 import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS, hexKey, hexToWorld, type Step } from "@aoh/rules";
-import { useRef } from "react";
-import type { Mesh } from "three";
+import { useMemo, useRef, type RefObject } from "react";
+import { Vector3, type Group, type Mesh } from "three";
 
 export interface FigureView {
   readonly id: string;
@@ -23,6 +22,8 @@ interface Props {
   figures: readonly FigureView[];
   onClick?: (id: string) => void;
   onHover?: (id: string | null) => void;
+  /** The <FigureLabels> layer drawn over the canvas, kept in step with the camera. */
+  labels?: RefObject<HTMLDivElement | null>;
 }
 
 const RING: Record<FigureView["status"], string | null> = {
@@ -101,23 +102,77 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
             <meshBasicMaterial color={ringColor} transparent opacity={0.9} depthWrite={false} />
           </mesh>
         )}
-        <Html position={[0, h + 0.35, 0]} center zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-          <span className={`figure-label ${f.status}`} style={{ borderColor: f.color }}>
-            {f.label}
-            {f.lifeLeft !== undefined && <span className="life-badge">{f.lifeLeft}</span>}
-          </span>
-        </Html>
       </group>
     </>
   );
 }
 
-export function Figures({ figures, onClick, onHover }: Props) {
+export function Figures({ figures, onClick, onHover, labels }: Props) {
   return (
     <>
       {figures.map((f) => (
         <Token key={f.id} f={f} onClick={onClick} onHover={onHover} />
       ))}
+      {labels && <LabelTracker figures={figures} layer={labels} />}
     </>
+  );
+}
+
+/** Where a figure's name tag floats: just above its front hex. */
+function labelAnchor(f: FigureView): Vector3 {
+  const front = f.spots[0]!;
+  const { x, z } = hexToWorld(front.hex, HEX_SIZE);
+  return new Vector3(x, (front.elevation + f.height) * LEVEL_HEIGHT + 0.35, z);
+}
+
+/** Moves the DOM name tags to follow their figures on screen, every frame. */
+function LabelTracker({ figures, layer }: { figures: readonly FigureView[]; layer: RefObject<HTMLDivElement | null> }) {
+  const anchors = useMemo(() => new Map(figures.map((f) => [f.id, labelAnchor(f)])), [figures]);
+  const v = useMemo(() => new Vector3(), []);
+  // Anchors are in board coordinates; this group shares the figures' parent, so it maps them to the world.
+  const frame = useRef<Group>(null);
+  useFrame(({ camera, size }) => {
+    const el = layer.current;
+    if (!el || !frame.current) return;
+    for (const child of Array.from(el.children) as HTMLElement[]) {
+      const anchor = anchors.get(child.dataset.id ?? "");
+      if (anchor) frame.current.localToWorld(v.copy(anchor)).project(camera);
+      if (!anchor || v.z < -1 || v.z > 1) {
+        child.style.visibility = "hidden";
+        continue;
+      }
+      const x = ((v.x + 1) / 2) * size.width;
+      const y = ((1 - v.y) / 2) * size.height;
+      child.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%)`;
+      // Nearer tags draw on top of farther ones.
+      child.style.zIndex = String(Math.round((1 - v.z) * 100000));
+      child.style.visibility = "visible";
+    }
+  });
+  return <group ref={frame} />;
+}
+
+/**
+ * Name tags for the figures, as plain DOM over the canvas. Render it next to
+ * the <Canvas> and pass the same ref to <Figures labels>.
+ */
+export function FigureLabels({
+  figures,
+  layer,
+}: {
+  figures: readonly FigureView[];
+  layer: RefObject<HTMLDivElement | null>;
+}) {
+  return (
+    <div className="label-layer" ref={layer} aria-hidden="true">
+      {figures.map((f) => (
+        <div key={f.id} className="label-anchor" data-id={f.id}>
+          <span className={`figure-label ${f.status}`} style={{ borderColor: f.color }}>
+            {f.label}
+            {f.lifeLeft !== undefined && <span className="life-badge">{f.lifeLeft}</span>}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }

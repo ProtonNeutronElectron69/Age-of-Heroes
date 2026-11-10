@@ -9,6 +9,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 | Platform | Browser game: TypeScript, Three.js (via React Three Fiber), React for menus and cards |
 | Players | 2 to 6 in every mode |
 | Play modes | Hot-seat first, then online; computer opponent maybe later |
+| Online hosting | Game server in a Docker image; Render recommended (free tier, deploys from `render.yaml`). See [HOSTING.md](HOSTING.md) |
 | First milestone | Basic game playable end to end |
 | Line of sight | Advanced: automatic check from eye point to hit band, plus a figure's-eye camera. Basic: forgiving |
 | Art | None at first: units are tokens as tall as their Height, terrain is flat colour. Hovering or clicking a token shows its card |
@@ -20,8 +21,9 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 ```
 packages/rules     the rules engine in plain TypeScript, no graphics; runs in the browser or on a server
 packages/content   unit cards, terrain, tile pieces and maps as data files, validated on load
-apps/client        the game: 3D scene, cards, map editor
-apps/server        Phase 5: online game server using the same rules engine
+packages/protocol  online messages, validated with schemas, plus replay files
+apps/client        the game: 3D scene, cards, map editor, online lobby, replay viewer
+apps/server        online game server: rooms, authority and secrecy, using the same rules engine
 docs/              this plan and the rules
 ```
 
@@ -90,7 +92,7 @@ docs/              this plan and the rules
 - [x] One original 2x1 unit, Old Rootback, to bring big figures into play
 - [x] Tests: Advanced rule and multi-hex unit tests, random Advanced games, and an Advanced browser game
 
-### Phase 4: Abilities and armies (this PR)
+### Phase 4: Abilities and armies (done)
 - [x] Ability system: abilities named on cards with tunable params, implemented as hooks into attacks, defense, movement, reactions and end of turn
 - [x] All 17 abilities on the roster: flying, trample, smoke step, massed volley, grove song, rally the line, deflector field, hidden in the leaves, moss armor, brace, answering blade, thick hide, salvage protocol, field dressing, and the special actions ember spit and mortar barrage (area attacks) and lantern gaze (mind control)
 - [x] Roster of 16 original units, 4 in each of 4 crossover factions (two of them multi-hex)
@@ -100,13 +102,19 @@ docs/              this plan and the rules
 - [x] Client: budget and faction options, points in the draft, special action buttons, ability rolls and notes in the dice panel and log
 - [ ] Grow the roster toward 30 units (later content drops)
 
-### Phase 5: Online multiplayer
-- [ ] Authoritative game server running the rules engine
-- [ ] Lobbies with room codes, up to 6 players
-- [ ] Secret token placement enforced by the server
-- [ ] Reconnecting and spectating
-- [ ] Game replays from the command log
-- [ ] Choose and set up a host for the server
+### Phase 5: Online multiplayer (this PR)
+- [x] Shared protocol package: every client message checked with a schema before the server acts on it
+- [x] Authoritative game server running the rules engine; a player can only act for their own seat
+- [x] Lobbies with 5-letter room codes, up to 6 players, host starts the game; any map, including custom ones, with every setup option
+- [x] Each device sees only its own view: other players' secret tokens, the dice seed and the RNG never leave the server
+- [x] Reconnecting: a seat token kept in the browser puts a player back in their seat after a dropped connection or a reload
+- [x] Spectating by room code, with the same hidden information as an outsider
+- [x] Leaving mid-game concedes; the game goes on for the rest
+- [x] Game replays: download the record at game over and step through it in the replay viewer (online and hot-seat games)
+- [x] Client: Online panel on the setup screen, lobby, turn gating per device, connection status, no pass-the-device screen online
+- [x] Docker image for the server, a Render blueprint, and hosting steps in [HOSTING.md](HOSTING.md)
+- [x] Tests: protocol and server tests (secrecy, authority, rejoin, spectators, replays) and a browser test with two players and a spectator on separate devices
+- [ ] Create the Render service and set `GAME_SERVER_URL` (needs the repository owner's Render account; steps in HOSTING.md)
 
 ### Phase 6: Later (optional)
 - [ ] Computer opponent

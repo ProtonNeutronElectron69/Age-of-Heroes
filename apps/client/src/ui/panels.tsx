@@ -10,6 +10,7 @@ import {
   type TokenAssignment,
   type TokenId,
 } from "@aoh/rules";
+import type { Replay } from "@aoh/protocol";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { describeEvent, type Names } from "../describe";
 
@@ -264,16 +265,33 @@ export function EventLog({ events, names }: { events: readonly GameEvent[]; name
 // ---------------------------------------------------------------------------
 // Game over
 
+/** Save a finished game as a file that the replay viewer can open. */
+export function downloadReplay(replay: Replay): void {
+  const blob = new Blob([JSON.stringify(replay)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const day = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `age-of-heroes-replay-${replay.map.id}-${day}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export function GameOver({
   state,
   names,
   onNewGame,
   onClose,
+  onDownload,
 }: {
   state: GameState;
   names: Names;
   onNewGame: () => void;
   onClose: () => void;
+  /** Offered once the full record of the game is available. */
+  onDownload?: () => void;
 }) {
   const result = state.result!;
   const winners = result.winners.map((w) => names.player(w));
@@ -310,6 +328,11 @@ export function GameOver({
           <button type="button" onClick={onClose}>
             View battlefield
           </button>
+          {onDownload && (
+            <button type="button" onClick={onDownload}>
+              Download replay
+            </button>
+          )}
         </div>
       </div>
     </div>

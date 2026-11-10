@@ -1,0 +1,14 @@
+# Render Blueprint for the Age of Heroes game server. See docs/HOSTING.md.
+services:
+  - type: web
+    name: age-of-heroes-server
+    runtime: docker
+    plan: free
+    dockerfilePath: ./apps/server/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Comma-separated web addresses allowed to connect, e.g. https://<user>.github.io
+      - key: ALLOWED_ORIGINS
+        sync: false
