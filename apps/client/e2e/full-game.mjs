@@ -44,6 +44,7 @@ async function screenPoint(q, r, elevation) {
 
 let moves = 0;
 let attacks = 0;
+let eyeChecked = false;
 
 try {
   await page.goto(url);
@@ -150,7 +151,20 @@ try {
         break;
       }
     }
-    if (!switched) await page.getByRole("button", { name: "End turn" }).click();
+    if (!switched) {
+      const endTurn = page.getByRole("button", { name: "End turn" });
+      const eye = page.getByRole("button", { name: "Eye view" });
+      // Once a game: eye view must be closed before the turn can end.
+      if (!eyeChecked && (await eye.isEnabled())) {
+        eyeChecked = true;
+        await eye.click();
+        await page.getByRole("button", { name: "Exit eye view" }).waitFor();
+        if (await endTurn.isEnabled()) fail("End turn is allowed while in eye view");
+        await page.getByRole("button", { name: "Exit eye view" }).click();
+        await page.getByRole("button", { name: "Eye view" }).waitFor();
+      }
+      await endTurn.click();
+    }
   }
 
   const over = page.getByRole("dialog", { name: "Game over" });
@@ -159,6 +173,7 @@ try {
   const heading = await over.getByRole("heading").innerText();
   if (!/wins|share the win|Nobody/.test(heading)) fail(`Unexpected result: ${heading}`);
   if (moves === 0) fail("No figure moved during the game");
+  if (!eyeChecked) fail("Eye view was never tried");
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(`Full ${MODE} game played: ${moves} moves, ${attacks} attacks. Result: ${heading}`);
 } catch (err) {
