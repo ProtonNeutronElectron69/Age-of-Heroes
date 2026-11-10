@@ -14,7 +14,9 @@
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e": "pnpm --filter @aoh/client e2e"
+    "e2e": "pnpm --filter @aoh/client e2e",
+    "affected": "node scripts/affected.mjs",
+    "check:affected": "node scripts/affected.mjs --run"
   },
   "devDependencies": {
     "typescript": "7.0.2",

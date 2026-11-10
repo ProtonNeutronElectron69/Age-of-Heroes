@@ -45,13 +45,15 @@ pnpm typecheck  # type-check every package
 pnpm test       # unit, content, balance, protocol, server and random full-game tests
 pnpm build      # production builds: the game in apps/client/dist, the server in apps/server/dist
 pnpm e2e        # browser tests (run pnpm build first; about 10 minutes)
+pnpm affected   # which checks this branch's changes need
+pnpm check:affected  # run just those checks
 ```
 
 ```bash
 BALANCE_REPORT=1 pnpm test balance   # unit point costs against the balance model
 ```
 
-Before pushing, run `pnpm typecheck && pnpm test && pnpm build`. CI runs those and the browser tests on every push and pull request. The browser tests use Playwright's Chromium; locally, run `pnpm --filter @aoh/client exec playwright install chromium` once if it is missing.
+Before pushing, run `pnpm check:affected`. CI runs the checks a pull request's changes affect, and every check on each push to `main`; see [docs/TESTING.md](docs/TESTING.md). The browser tests use Playwright's Chromium; locally, run `pnpm --filter @aoh/client exec playwright install chromium` once if it is missing.
 
 ## Project layout
 

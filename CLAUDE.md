@@ -4,6 +4,7 @@
 - [docs/PLAN.md](docs/PLAN.md) has the current status, what is next and what is on hold. [docs/RULES.md](docs/RULES.md) has the rules the engine implements.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) maps the code.
 - [docs/CONTENT.md](docs/CONTENT.md) explains how to add units, abilities and maps.
+- [docs/TESTING.md](docs/TESTING.md) explains which checks each kind of change runs.
 - Keep the docs current: change RULES, PLAN and the other docs in the same pull request as the behaviour they describe.
 
 ## Engine rules
@@ -29,7 +30,7 @@
 - **Browser tests:** `apps/client/e2e` drives the canvas through `window.__aoh` and `window.__aohUi` (`scene/TestHook.tsx`, `PlayScreen.tsx`). Keep those hooks working when changing the play screen.
 
 ## Checks and delivery
-- **Before pushing:** run `pnpm typecheck && pnpm test && pnpm build`.
-- **Before a pull request that touches the client or server:** also run `pnpm e2e` (about 10 minutes; it needs the build). The tests render WebGL in software, so wait for state, not for time, and avoid fixed sleeps.
+- **Before pushing:** run `pnpm check:affected`. It runs the typecheck, build, unit tests and browser tests that the branch's changes affect (`pnpm affected` shows the plan). Docs-only changes need nothing. Browser tests render WebGL in software, so wait for state, not for time, and avoid fixed sleeps.
+- **Test routing:** `scripts/affected.mjs` decides what runs, in CI too. When you add a package, a browser test or a client file only one browser test uses, update its rules, `docs/TESTING.md` and `scripts/affected.test.mjs` in the same pull request.
 - **Pull requests:** work goes to a branch and lands as one pull request per phase or content drop, with CI green. The owner decides when to merge.
 - **Writing style for docs and UI text:** plain, short sentences; no em dashes (use commas or semicolons).
