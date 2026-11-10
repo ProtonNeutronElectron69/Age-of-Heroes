@@ -100,7 +100,17 @@ docs/              this plan and the rules
 - [x] Optional faction-pure mode
 - [x] Balance model to set and check point costs, enforced by a test
 - [x] Client: budget and faction options, points in the draft, special action buttons, ability rolls and notes in the dice panel and log
-- [ ] Grow the roster toward 30 units (later content drops)
+- [x] Grow the roster to 30 units (the "legends" drop, below)
+
+### Roster: 30 units (this PR)
+- [x] 14 new original units across all eras and myths: sabre-tooth predators, ancient desert archers, Viking huscarls, medieval knights, samurai, World War 2 riflemen, relentless hunter robots, skeleton legions, orc raiders, a necromancer, a death knight, a bone wyrm, an angel and a battle mage
+- [x] Two new factions, the Ashen Host (undead, orcs and dark magic) and the Dawnhold Covenant (knights, northmen, archers, an angel and a wizard), and one new unit for each starter faction: 6 factions of 5
+- [x] Balance across the roster: 15 heroes and 15 squads, 15 ranged and 15 melee units, and every faction has heroes, squads, ranged and melee units
+- [x] 14 new abilities: Charge, Steady Aim, Longshot, Pack Hunt, Way of the Blade, Bloodrage, Fury, Smite the Unholy, Command the Dead, Shield Wall, Soul Reap, Reboot, Reassemble, and the Arc Lightning special action
+- [x] Life: heroes have 2 to 8 (the Siege Walker drops from 9 to 8); most squads have 1, and three tough squads of 2 or 3 figures have more: Hollowsteel Hunters (2 figures, 3 Life), Silverlance Knights and Duskfang Prowlers (3 figures, 2 Life). A test enforces it
+- [x] Every squad has 1 special ability and every hero 2 (Flying not counted); the starter heroes, and the Skyhook Raiders, gained one each, mostly reusing existing rules under names of their own. A test enforces the counts
+- [x] The first 3x1 figure (Marrowcoil, the Bone Wyrm), checked to deploy on every map
+- [x] Point costs set with the balance model, every unit within 0.9 to 1.05 of its modelled value (some starter costs moved by 5 to 15 points to get there); random full games now close in and fight, exercising the new abilities
 
 ### Phase 5: Online multiplayer (done)
 - [x] Shared protocol package: every client message checked with a schema before the server acts on it

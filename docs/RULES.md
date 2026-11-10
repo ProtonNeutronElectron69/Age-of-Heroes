@@ -45,7 +45,7 @@ Left panel (identity and synergy tags):
 - **Footprint**: the hexes the figure occupies: 1 hex, 2x1, 3x1 or 2x2.
 
 Right panel (stats):
-- **Life**: wounds the figure can take; it is destroyed when its wounds reach its Life. Heroes usually have 4 to 8 Life; squad figures almost always have 1.
+- **Life**: wounds the figure can take; it is destroyed when its wounds reach its Life. Heroes have 2 to 8 Life. Most squad figures have 1; a few tough squads of only 2 or 3 figures have up to 3 Life per figure.
 - **Move**, **Range**, **Attack**, **Defense**: as on the front, possibly with different values.
 - **Points**: drafting cost.
 - **Abilities**: special powers that change or break the core rules.
@@ -234,7 +234,7 @@ General rulings:
 - Numbers in abilities (ranges, dice, bonuses, rolls needed) are on the card data and *tunable*.
 - **Auras do not stack.** A figure gets each named bonus at most once, however many sources are nearby.
 - Bonus dice from abilities add to height bonuses. Every roll lists why its dice changed.
-- **Special actions** (Ember Spit, Mortar Barrage, Lantern Gaze) are used **instead of** the figure's normal attack, and follow the normal attack rules (engagement, line of sight) unless they say otherwise.
+- **Special actions** (Ember Spit, Mortar Barrage, Arc Lightning, Lantern Gaze) are used **instead of** the figure's normal attack, and follow the normal attack rules (engagement, line of sight) unless they say otherwise.
 
 | Ability | What it does |
 |---|---|
@@ -255,6 +255,37 @@ General rulings:
 | **Ember Spit** (special action) | Range 3: 2 attack dice against the target, and 1 attack die against every other figure next to the target (friend or foe, never the attacker). Each defends normally. |
 | **Mortar Barrage** (special action) | Range 3 to 8, **needs no line of sight**: 3 attack dice against the target and 1 against every other figure next to it. |
 | **Lantern Gaze** (special action) | Range 4, in sight: target an enemy Small or Medium figure that is not unique and roll a d20. On 16 or more it leaves its unit and joins your army as a unit of its own (you can place tokens on it from the next round). |
+| **Arc Lightning** (special action) | Range 5, in sight: 3 attack dice against the target, and 1 attack die against every other figure next to the target (friend or foe, never the attacker). Each defends normally. |
+| **Charge** | +1 attack die when attacking an adjacent enemy after moving this turn. (Brace answers it.) |
+| **Steady Aim** | +1 attack die if the figure has not moved this turn. |
+| **Longshot** | +1 attack die against a figure 5 or more hexes away. |
+| **Pack Hunt** | +1 attack die when another figure of the same squad is next to the target. |
+| **Way of the Blade** (duelist) | +1 attack die when attacking an adjacent hero. |
+| **Bloodrage** | +1 attack die once any figure of the squad has been destroyed. |
+| **Smite the Unholy** | +2 attack dice against Undead and Oni figures. |
+| **Command the Dead** | Other friendly Undead figures within 4 hexes of the necromancer get +1 attack die (an aura). |
+| **Shield Wall** | +1 defense die while another figure of the same squad stands next to the defender. |
+| **Soul Reap** | When the figure destroys a figure with an attack, it removes 1 wound from itself. |
+| **Reboot** | When a figure of the squad is destroyed by an attack, roll a d20. On 17 or more it stands back up where it fell, with no wounds. |
+| **Reassemble** | At the end of the squad's turn, if any of its figures are destroyed, roll a d20. On 15 or more one of them returns, with no wounds, next to a figure of the squad that is still standing. |
+| **Fury** | +1 attack die while the figure has at least 1 wound. |
+
+Every squad has 1 special ability and every hero has 2; Flying comes on top and does not count. Many cards give one of these rules a name of their own, and the card text spells it out. For example:
+- Flying: Jet Packs (Skyhook Raiders).
+- Smoke Step: Hit and Run (Skyhook Raiders), Drifting Lantern (Kenzo).
+- Charge: Lightning Draw (Lady Asagiri).
+- Way of the Blade: Officer's Sabre (Captain Vance).
+- Steady Aim: Targeting Array (Sentinel K-7).
+- Moss Armor: Ember Scales (Cinderjaw).
+- Hidden in the Leaves: Forest Veil (Sylvanne).
+- Trample: Crushing Stride (Siege Walker Atlas), Crushing Coils (Marrowcoil).
+- Thick Hide: Bone Plates (Marrowcoil).
+- Smite the Unholy: Blessed Rounds (Sister Maren).
+- Answering Blade: Grave Riposte (Vorhal).
+- Field Dressing: Benediction (Solenne).
+- Deflector Field: Arcane Ward (Orrin Vael).
+- Ember Spit: Grave Blight (Morvane), with range 4.
+- Fury: Oni Fury (Ashfang Oni).
 
 A figure taken by mind control scores its share of its card's points for its new owner.
 

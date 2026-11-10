@@ -39,6 +39,21 @@ export const ABILITY_VALUE: Readonly<Record<string, number>> = {
   "ember-spit": 1.2,
   "mortar-barrage": 1.2,
   "lantern-gaze": 1.55,
+  // Added with the larger roster.
+  charge: 1.12,
+  "steady-aim": 1.1,
+  longshot: 1.08,
+  "pack-hunt": 1.12,
+  duelist: 1.08,
+  bloodrage: 1.08,
+  "smite-the-unholy": 1.08,
+  "command-the-dead": 1.3,
+  "shield-wall": 1.12,
+  "soul-reap": 1.12,
+  reboot: 1.12,
+  reassemble: 1.15,
+  "arc-lightning": 1.2,
+  fury: 1.08,
 };
 
 function binomial(n: number, k: number): number {

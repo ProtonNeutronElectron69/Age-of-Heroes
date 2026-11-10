@@ -1,6 +1,6 @@
 import { DEFENSE_DIE, countFaces, rollDice } from "../dice";
 import { hexDistance, isAdjacent } from "../hex";
-import type { Rng } from "../rng";
+import { Rng } from "../rng";
 import type { Ability, UnitCard } from "../schema";
 import { isSquad } from "../schema";
 import { figureSpots, placementSpots } from "./placement";
@@ -15,12 +15,17 @@ import type { FigureState, GameEvent, GameState, RulesContext, Step, UnitState }
  *
  * Ability ids:
  * - Movement: flying, trample, smoke-step
- * - Attack bonuses: massed-volley, grove-song (aura)
- * - Defense bonuses: rally-the-line (aura), deflector-field (aura), hidden-in-the-leaves, moss-armor, brace
- * - Reactions: answering-blade, thick-hide, salvage-protocol
- * - End of turn: field-dressing
- * - Special actions (used instead of a normal attack): ember-spit, mortar-barrage (area attacks), lantern-gaze (mind control)
+ * - Attack bonuses: massed-volley, grove-song (aura), command-the-dead (aura), charge, pack-hunt, duelist,
+ *   steady-aim, longshot, bloodrage, fury, smite-the-unholy
+ * - Defense bonuses: rally-the-line (aura), deflector-field (aura), hidden-in-the-leaves, moss-armor, brace, shield-wall
+ * - Reactions: answering-blade, thick-hide, salvage-protocol, soul-reap, reboot
+ * - End of turn: field-dressing, reassemble
+ * - Special actions (used instead of a normal attack): ember-spit, mortar-barrage, arc-lightning (area attacks),
+ *   lantern-gaze (mind control)
  */
+
+/** Species that Smite the Unholy is aimed at. */
+export const UNHOLY_SPECIES: readonly string[] = ["Undead", "Oni"];
 
 export function abilityOf(card: UnitCard, id: string): Ability | undefined {
   return card.advanced.abilities.find((a) => a.id === id);
@@ -118,6 +123,73 @@ export function abilityModifiers(
     }
   }
 
+  // Command the Dead: other friendly Undead near the necromancer attack harder.
+  if (attacker.card.species === "Undead") {
+    const master = friendsWith(state, attacker.unit.owner, "command-the-dead", ctx, attacker.figure.id).find(
+      (s) => spotDistance(s.spots, attacker.spots) <= param(abilityOf(s.card, "command-the-dead"), "range", 4),
+    );
+    if (master) {
+      const a = abilityOf(master.card, "command-the-dead")!;
+      add("attack", param(a, "bonus", 1), a.name);
+    }
+  }
+
+  const moved = state.active?.moved.includes(attacker.figure.id) ?? false;
+
+  // Charge: a melee attack straight after moving.
+  const charge = abilityOf(attacker.card, "charge");
+  if (charge && distance <= 1 && moved) add("attack", param(charge, "bonus", 1), charge.name);
+
+  // Steady Aim: the figure has not moved this turn.
+  const aim = abilityOf(attacker.card, "steady-aim");
+  if (aim && !moved) add("attack", param(aim, "bonus", 1), aim.name);
+
+  // Longshot: a distant target.
+  const longshot = abilityOf(attacker.card, "longshot");
+  if (longshot && distance >= param(longshot, "minDistance", 5)) add("attack", param(longshot, "bonus", 1), longshot.name);
+
+  // Pack Hunt: another figure of the same squad is next to the target.
+  const pack = abilityOf(attacker.card, "pack-hunt");
+  if (pack) {
+    const flanked = attacker.unit.figures.some(
+      (f) =>
+        f.id !== attacker.figure.id &&
+        !f.destroyed &&
+        f.position &&
+        spotDistance(figureSpots(f, attacker.card.footprint, attacker.card.height, ctx), defender.spots) <= 1,
+    );
+    if (flanked) add("attack", param(pack, "bonus", 1), pack.name);
+  }
+
+  // Duelist: a melee attack on a hero.
+  const duelist = abilityOf(attacker.card, "duelist");
+  if (duelist && distance <= 1 && !isSquad(defender.card)) add("attack", param(duelist, "bonus", 1), duelist.name);
+
+  // Bloodrage: the squad has lost at least one figure.
+  const rage = abilityOf(attacker.card, "bloodrage");
+  if (rage && attacker.unit.figures.some((f) => f.destroyed)) add("attack", param(rage, "bonus", 1), rage.name);
+
+  // Fury: the figure is wounded.
+  const fury = abilityOf(attacker.card, "fury");
+  if (fury && attacker.figure.wounds > 0) add("attack", param(fury, "bonus", 1), fury.name);
+
+  // Smite the Unholy: against the undead and demons.
+  const smite = abilityOf(attacker.card, "smite-the-unholy");
+  if (smite && UNHOLY_SPECIES.includes(defender.card.species)) add("attack", param(smite, "bonus", 2), smite.name);
+
+  // Shield Wall: a squadmate stands next to the defender.
+  const wall = abilityOf(defender.card, "shield-wall");
+  if (wall) {
+    const braced = defender.unit.figures.some(
+      (f) =>
+        f.id !== defender.figure.id &&
+        !f.destroyed &&
+        f.position &&
+        spotDistance(figureSpots(f, defender.card.footprint, defender.card.height, ctx), defender.spots) <= 1,
+    );
+    if (braced) add("defense", param(wall, "bonus", 1), wall.name);
+  }
+
   // Rally the Line: friendly Disciplined squads near the commander defend better.
   if (isSquad(defender.card) && defender.card.personality === "Disciplined") {
     const leader = friendsWith(state, defender.unit.owner, "rally-the-line", ctx, defender.figure.id).find(
@@ -179,6 +251,7 @@ export function reduceWounds(
 export function afterAttack(
   state: GameState,
   ctx: RulesContext,
+  rng: Rng,
   attacker: Combatant,
   defender: Combatant,
   distance: number,
@@ -187,6 +260,43 @@ export function afterAttack(
   events: GameEvent[],
 ): void {
   if (state.config.mode !== "advanced") return;
+
+  // Reboot: a destroyed machine may get straight back up where it fell.
+  const reboot = abilityOf(defender.card, "reboot");
+  const fell = defender.spots[0];
+  if (reboot && defender.card.footprint === "1" && defender.figure.destroyed && fell && defender.unit.figures.includes(defender.figure)) {
+    const roll = rng.d20();
+    const needed = param(reboot, "needed", 17);
+    events.push({
+      type: "abilityRoll",
+      ability: reboot.id,
+      figureId: defender.figure.id,
+      targetId: defender.figure.id,
+      roll,
+      needed,
+      success: roll >= needed,
+    });
+    if (roll >= needed) {
+      defender.figure.destroyed = false;
+      defender.figure.wounds = 0;
+      defender.figure.position = { hex: fell.hex, elevation: fell.elevation, rotation: 0 };
+      events.push({ type: "figureRevived", figureId: defender.figure.id, at: fell });
+    }
+  }
+
+  // Soul Reap: a kill restores the reaper.
+  const reap = abilityOf(attacker.card, "soul-reap");
+  if (reap && defender.figure.destroyed && !attacker.figure.destroyed && attacker.figure.wounds > 0) {
+    const amount = Math.min(attacker.figure.wounds, param(reap, "heal", 1));
+    attacker.figure.wounds -= amount;
+    events.push({ type: "figureHealed", figureId: attacker.figure.id, amount, total: attacker.figure.wounds });
+    events.push({
+      type: "abilityUsed",
+      ability: reap.id,
+      figureId: attacker.figure.id,
+      detail: `${reap.name}: ${amount} wound removed`,
+    });
+  }
 
   // Answering Blade: a parried melee attack cuts the attacker.
   const blade = abilityOf(defender.card, "answering-blade");
@@ -248,13 +358,19 @@ const key = (s: Step) => `${s.hex.q},${s.hex.r}@${s.elevation}`;
 // ---------------------------------------------------------------------------
 // End of turn
 
-/** Field Dressing: the medic patches up the most wounded hero next to her (or herself). */
+/**
+ * End-of-turn abilities of the unit that just acted: Field Dressing (the medic patches
+ * up the most wounded hero next to her, or herself) and Reassemble (a fallen figure of
+ * the squad may pull itself together).
+ */
 export function endOfTurnAbilities(state: GameState, unitId: string, ctx: RulesContext, events: GameEvent[]): void {
   if (state.config.mode !== "advanced") return;
   const unit = state.units.find((u) => u.id === unitId);
   const card = unit ? ctx.cards.get(unit.cardId) : undefined;
-  const dressing = card ? abilityOf(card, "field-dressing") : undefined;
-  if (!unit || !card || !dressing) return;
+  if (!unit || !card) return;
+  reassemble(state, unit, card, ctx, events);
+  const dressing = abilityOf(card, "field-dressing");
+  if (!dressing) return;
   for (const medic of unit.figures) {
     if (medic.destroyed || !medic.position) continue;
     const medicSpots = figureSpots(medic, card.footprint, card.height, ctx);
@@ -283,6 +399,29 @@ export function endOfTurnAbilities(state: GameState, unitId: string, ctx: RulesC
       detail: `${dressing.name}: ${amount} wound removed`,
     });
   }
+}
+
+/** Reassemble: roll for one destroyed figure; on a high roll it returns next to a living squadmate. */
+function reassemble(state: GameState, unit: UnitState, card: UnitCard, ctx: RulesContext, events: GameEvent[]): void {
+  const ability = abilityOf(card, "reassemble");
+  if (!ability) return;
+  const fallen = unit.figures.find((f) => f.destroyed);
+  const living = unit.figures.filter((f) => !f.destroyed && f.position);
+  if (!fallen || living.length === 0) return;
+  const rng = new Rng(state.rng);
+  const roll = rng.d20();
+  state.rng = rng.state;
+  const needed = param(ability, "needed", 15);
+  const success = roll >= needed;
+  events.push({ type: "abilityRoll", ability: ability.id, figureId: living[0]!.id, targetId: fallen.id, roll, needed, success });
+  if (!success) return;
+  const around = living.flatMap((f) => figureSpots(f, card.footprint, card.height, ctx));
+  const spot = freeSpotNear(state, ctx, around, card);
+  if (!spot) return;
+  fallen.destroyed = false;
+  fallen.wounds = 0;
+  fallen.position = { hex: spot.hex, elevation: spot.elevation, rotation: 0 };
+  events.push({ type: "figureRevived", figureId: fallen.id, at: spot });
 }
 
 // ---------------------------------------------------------------------------
@@ -336,7 +475,7 @@ export interface MindControlSpec {
   readonly needed: number;
 }
 
-const AREA_IDS = ["ember-spit", "mortar-barrage"] as const;
+const AREA_IDS = ["ember-spit", "mortar-barrage", "arc-lightning"] as const;
 const MIND_IDS = ["lantern-gaze"] as const;
 
 export function areaAttackOf(card: UnitCard, id: string): AreaAttackSpec | undefined {

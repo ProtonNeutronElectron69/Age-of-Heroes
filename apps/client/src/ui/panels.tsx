@@ -181,8 +181,9 @@ export function DiceOverlay({ events, names, stamp }: { events: readonly GameEve
             <div key={i} className="roll">
               <span className="d20">{e.roll}</span>
               <span>
-                {names.figure(e.figureId)}: {names.ability(e.figureId, e.ability)} on {names.figure(e.targetId)}, needs{" "}
-                {e.needed}: <strong>{e.success ? "success" : "no effect"}</strong>
+                {names.figure(e.figureId)}: {names.ability(e.figureId, e.ability)}
+                {e.targetId !== e.figureId ? ` on ${names.figure(e.targetId)}` : ""}, needs {e.needed}:{" "}
+                <strong>{e.success ? "success" : "no effect"}</strong>
               </span>
             </div>
           );
