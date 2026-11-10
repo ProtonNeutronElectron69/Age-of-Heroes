@@ -91,16 +91,32 @@ let attacks = 0;
 
 /** Take one action on this player's device if it is their turn to do something. */
 async function act(p) {
+  try {
+    return await tryAct(p);
+  } catch (err) {
+    // The game moved on between looking and clicking (the server answered, the turn passed):
+    // look again next time rather than wait on a button that is gone.
+    if (err?.name === "TimeoutError") return "retry";
+    throw err;
+  }
+}
+
+/** Short waits: a button that is not there within a few seconds is not coming back. */
+const QUICK = { timeout: 5000 };
+
+async function tryAct(p) {
   const { page } = p;
+  // Wait for the server to answer the last command before deciding anything.
+  await page.waitForFunction(() => !document.querySelector("[data-pending]"), null, QUICK);
   // Secret tokens: online there is no pass screen, the panel just appears.
   const lock = page.getByRole("button", { name: /Lock in tokens|^Place / });
   if (await lock.count()) {
     const rows = page.locator(".token-table tbody tr");
     const n = await rows.count();
     for (const [row, token] of [[0, "1"], [n - 1, "2"], [0, "3"], [n - 1, "X"]]) {
-      await rows.nth(row).getByRole("button", { name: new RegExp(`^Token ${token} on`) }).click();
+      await rows.nth(row).getByRole("button", { name: new RegExp(`^Token ${token} on`) }).click(QUICK);
     }
-    await page.getByRole("button", { name: "Lock in tokens" }).click();
+    await page.getByRole("button", { name: "Lock in tokens" }).click(QUICK);
     return "tokens";
   }
 
@@ -139,11 +155,11 @@ async function act(p) {
   if (ui?.selected) p.handled.add(ui.selected);
   const buttons = turn.locator(".figure-button:not([disabled])");
   for (let i = 0; i < (await buttons.count()); i++) {
-    await buttons.nth(i).click();
+    await buttons.nth(i).click(QUICK);
     const sel = await page.evaluate(() => window.__aohUi?.selected);
     if (sel && !p.handled.has(sel)) return "switch";
   }
-  await endTurn.click();
+  await endTurn.click(QUICK);
   await page.waitForTimeout(150);
   return "end";
 }
@@ -231,13 +247,23 @@ try {
   // ---- Play ---------------------------------------------------------------
   phase("play");
   let reloaded = false;
+  let saveFile = null;
+  let savedAt = null;
   let idle = 0;
+  let retries = 0;
   for (let step = 0; step < 3000; step++) {
     if (await alice.page.getByRole("dialog", { name: "Game over" }).count()) break;
     let did = false;
     for (const p of [alice, bob]) {
       const what = await act(p);
-      if (what) did = true;
+      if (what === "retry") {
+        if (++retries > 10) fail(`${p.label}'s page kept missing its buttons`);
+        continue;
+      }
+      if (what) {
+        did = true;
+        retries = 0;
+      }
       if (what === "tokens" && p === bob && !reloaded) {
         // Drop Bob's connection mid-game: the page must come back to his seat.
         reloaded = true;
@@ -245,6 +271,21 @@ try {
         phase("reloading Bob's page");
         await bob.page.reload();
         await bob.page.getByText("Playing as Bob").waitFor({ timeout: 15000 });
+        // The catch-up brings the whole log back, not just the board.
+        await bob.page.locator(".log-lines li").filter({ hasText: "drafts" }).first().waitFor({ timeout: 5000 });
+
+        // The host saves the game as a file; nobody else can.
+        phase("saving");
+        if (await bob.page.getByRole("button", { name: "Save game" }).count()) fail("A guest could save the game");
+        await alice.page.getByRole("button", { name: "Save game" }).click();
+        const dialog = alice.page.getByRole("dialog", { name: "Save game" });
+        await dialog.getByLabel("Save name").fill("Online test save");
+        const [saveDownload] = await Promise.all([
+          alice.page.waitForEvent("download"),
+          dialog.getByRole("button", { name: "Download file" }).click(),
+        ]);
+        saveFile = await saveDownload.path();
+        savedAt = { round: await alice.page.locator(".round-label").innerText(), log: await alice.page.locator(".log-lines").innerText() };
       }
     }
     if (did) idle = 0;
@@ -280,9 +321,40 @@ try {
   if (!/wins|share the win|nobody wins/.test(status)) fail(`The replay did not reach the end: ${status}`);
   await shot(alice, "5-replay");
 
+  // ---- Resume the saved game in a new room --------------------------------
+  phase("resuming");
+  await alice.page.getByRole("button", { name: "Close replay" }).click();
+  await alice.page.getByRole("radio", { name: "Online" }).click();
+  await alice.page.getByLabel("Resume file").setInputFiles(saveFile);
+  await alice.page.getByRole("group", { name: "Resume a saved game" }).getByRole("button", { name: /Alice/ }).click();
+  const newCodeEl = alice.page.getByLabel("Room code");
+  await newCodeEl.waitFor();
+  const newCode = (await newCodeEl.innerText()).trim();
+  if (newCode === code) fail("Resuming reused the old room code");
+  if (!(await alice.page.getByRole("button", { name: /Waiting for Bob/ }).isDisabled())) fail("The host could continue without Bob");
+
+  await bob.page.getByRole("button", { name: "New game" }).click();
+  await bob.page.getByRole("radio", { name: "Online" }).click();
+  await bob.page.getByLabel("Room code").fill(newCode);
+  await bob.page.getByRole("button", { name: "Join", exact: true }).click();
+  const armies = bob.page.getByRole("list", { name: "Armies" });
+  await armies.waitFor();
+  await armies.getByRole("listitem").filter({ hasText: "Bob" }).getByRole("button", { name: "This is me" }).click();
+  await bob.page.getByText("Waiting for the host to continue.").waitFor();
+  await shot(alice, "6-resume-lobby");
+  await alice.page.getByRole("button", { name: "Continue game" }).click();
+  for (const p of [alice, bob]) {
+    await p.page.locator(".round-label").waitFor();
+    const round = await p.page.locator(".round-label").innerText();
+    if (round !== savedAt.round) fail(`${p.label} resumed at "${round}", saved at "${savedAt.round}"`);
+  }
+  if ((await alice.page.locator(".log-lines").innerText()) !== savedAt.log) fail("The resumed log differs from the saved one");
+  await bob.page.getByText("Playing as Bob").waitFor();
+  await shot(bob, "7-resumed");
+
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(
-    `Online game played in room ${code}: ${moves} moves, ${attacks} attacks, ${replay.commands.length} commands. Result: ${heading}`,
+    `Online game played in room ${code}: ${moves} moves, ${attacks} attacks, ${replay.commands.length} commands. Result: ${heading} Saved at ${savedAt.round} and resumed in room ${newCode}.`,
   );
 } catch (err) {
   for (const p of everyone) await shot(p, "failure").catch(() => {});

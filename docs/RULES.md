@@ -125,6 +125,7 @@ Online, the host picks the options above and shares a room code. Seats and color
 - **Leaving**: leaving a game in progress concedes (section 12). A dropped connection or a page reload does not: the player returns to the same seat.
 - **Spectators** can watch with a room code. They see what a player outside the game would see: no secret tokens.
 - **Replays**: when the game ends, everyone can download its full record and watch it again move by move, with every token shown.
+- **Saving**: the host can save the game at any time and download it. To carry on later, the host resumes the save in a new room, each player picks their army again, and play continues from the same moment with the same dice. The save holds the whole game, hidden tokens included, so only the host gets it.
 
 ## 5. Rounds
 

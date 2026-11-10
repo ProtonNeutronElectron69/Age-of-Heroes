@@ -102,7 +102,7 @@ docs/              this plan and the rules
 - [x] Client: budget and faction options, points in the draft, special action buttons, ability rolls and notes in the dice panel and log
 - [ ] Grow the roster toward 30 units (later content drops)
 
-### Phase 5: Online multiplayer (this PR)
+### Phase 5: Online multiplayer (done)
 - [x] Shared protocol package: every client message checked with a schema before the server acts on it
 - [x] Authoritative game server running the rules engine; a player can only act for their own seat
 - [x] Lobbies with 5-letter room codes, up to 6 players, host starts the game; any map, including custom ones, with every setup option
@@ -116,8 +116,20 @@ docs/              this plan and the rules
 - [x] Tests: protocol and server tests (secrecy, authority, rejoin, spectators, replays) and a browser test with two players and a spectator on separate devices
 - [ ] Create the Render service and set `GAME_SERVER_URL` (needs the repository owner's Render account; steps in HOSTING.md)
 
-### Phase 6: Later (optional)
-- [ ] Computer opponent
-- [ ] Sound, real models and art
-- [ ] Tutorial built on the Basic game
-- [ ] Saved games
+### Phase 6: Saved games, computer opponent, tutorial
+Saved games are in this PR; the computer opponent and the tutorial are on hold.
+- [x] Saved games (this PR)
+  - [x] Named saves of hot-seat games in the browser: save from the draft or the battle, then load, download or delete them from the setup screen
+  - [x] Save files: download a game and load it on any device; the same file opens in the replay viewer
+  - [x] The unfinished game is still kept automatically, and the setup screen says which game "Continue" resumes
+  - [x] Online save files: the host can save at any moment and download the game; later the host resumes it in a new room from the Online panel, each player claims their army, and the host continues from the exact same position. The server keeps nothing on disk
+  - [x] Coming back to an online game (reload, dropped connection) brings back the whole game log, not just the board
+  - [x] The client waits up to 90 seconds for a sleeping server to wake, and says so
+  - [x] Tests: host-only saving, resuming and claiming armies on the server; browser tests that save, quit, reload and load a hot-seat game three ways, and save an online game mid-battle and resume it in a new room with both players
+- [ ] Computer opponent (on hold)
+- [ ] Tutorial built on the Basic game (on hold)
+
+### Phase 7: Sound, models and art (on hold until the core game is complete)
+- [ ] Sound effects and music
+- [ ] 3D models for the figures in place of tokens
+- [ ] Terrain textures and scenery art

@@ -1,6 +1,7 @@
 import { currentDrafter, lockedFaction, pickProblem, pointsSpent } from "@aoh/rules";
 import { canControl, dispatch, type Session } from "../session";
 import { Names } from "../describe";
+import { GameMenu } from "../ui/GameMenu";
 import { OnlineBar } from "../ui/OnlineBar";
 import { UnitCardView } from "../ui/UnitCardView";
 
@@ -36,6 +37,7 @@ export function DraftScreen({ session }: { session: Session }) {
             The order snakes: it reverses every round of picks.
           </p>
         </div>
+        <GameMenu session={session} className="draft-menu" />
         {drafter && (
           <p className="turn-banner" style={{ borderColor: names.playerColor(drafter) }}>
             <span className="swatch" style={{ background: names.playerColor(drafter) }} />

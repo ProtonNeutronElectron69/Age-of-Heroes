@@ -29,10 +29,12 @@ import { Names } from "../describe";
 import { BoardScene, boardCenter, type Marker } from "../scene/BoardScene";
 import { FigureLabels, Figures, type FigureView } from "../scene/Figures";
 import { TestHook } from "../scene/TestHook";
-import { closeOnline, leaveOnline } from "../online";
+import { closeOnline } from "../online";
+import { downloadGameFile } from "../saves";
 import { canControl, clearError, dispatch, endSession, replayOf, type Session } from "../session";
+import { GameMenu } from "../ui/GameMenu";
 import { OnlineBar } from "../ui/OnlineBar";
-import { DiceOverlay, EventLog, GameOver, PassScreen, RoundBar, TokenPanel, downloadReplay } from "../ui/panels";
+import { DiceOverlay, EventLog, GameOver, PassScreen, RoundBar, TokenPanel } from "../ui/panels";
 import { UnitCardView } from "../ui/UnitCardView";
 
 interface Pending {
@@ -350,20 +352,7 @@ export function PlayScreen({ session }: { session: Session }) {
     setPinnedFigure(pinnedFigure === id ? null : id);
   };
 
-  // ---- Leaving -------------------------------------------------------------
-  const over = state.phase === "gameOver";
-  const watching = isOnline && session.me === null;
-  const quitLabel = over ? "Back to menu" : watching ? "Stop watching" : isOnline ? "Leave game" : "Quit game";
-  const quit = () => {
-    if (!isOnline) {
-      if (over || window.confirm("Quit this game? It cannot be resumed.")) endSession();
-    } else if (over || watching) {
-      closeOnline();
-    } else if (window.confirm("Leave this game? You concede, and your army is removed.")) {
-      leaveOnline();
-    }
-  };
-  const replay = over ? replayOf(session) : null;
+  const replay = state.phase === "gameOver" ? replayOf(session) : null;
 
   const cardFigure = hoveredFigure ?? pinnedFigure;
   const found = cardFigure ? findFigure(state, cardFigure) : undefined;
@@ -371,7 +360,7 @@ export function PlayScreen({ session }: { session: Session }) {
   const cardFigureState = found?.figure;
 
   return (
-    <div className="screen play">
+    <div className="screen play" data-pending={busy ? "true" : undefined}>
       <Canvas
         className="canvas"
         camera={{ position: [-center.span * 0.1, center.span * 0.72, center.span * 0.8], fov: 45 }}
@@ -567,11 +556,7 @@ export function PlayScreen({ session }: { session: Session }) {
             wounds={cardFigureState?.wounds}
           />
         )}
-        <div className="actions menu">
-          <button type="button" onClick={quit}>
-            {quitLabel}
-          </button>
-        </div>
+        <GameMenu session={session} />
       </aside>
 
       {session.error && (
@@ -596,7 +581,7 @@ export function PlayScreen({ session }: { session: Session }) {
           names={names}
           onNewGame={isOnline ? closeOnline : endSession}
           onClose={() => setShowResult(false)}
-          onDownload={replay ? () => downloadReplay(replay) : undefined}
+          onDownload={replay ? () => downloadGameFile(replay, `replay ${session.map.name}`) : undefined}
         />
       )}
     </div>

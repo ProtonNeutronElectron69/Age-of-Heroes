@@ -17,7 +17,7 @@ pnpm test       # run the rules and content tests
 pnpm typecheck  # type-check every package
 pnpm server     # build and run the online game server on ws://localhost:8080/ws
 pnpm build      # production builds: the game in apps/client/dist, the server in apps/server/dist
-pnpm e2e        # browser tests: Basic and Advanced games, the map editor, and an online game (run pnpm build first)
+pnpm e2e        # browser tests: Basic and Advanced games, the map editor, saved games, and an online game (run pnpm build first)
 BALANCE_REPORT=1 pnpm test balance   # print unit point costs against the balance model
 ```
 

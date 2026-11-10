@@ -1,6 +1,6 @@
-import { MAPS, buildBoard } from "@aoh/content";
+import { MAPS, buildBoard, contextFor } from "@aoh/content";
 import { MAX_NAME_LENGTH, parseReplay, type Replay, type RoomSettings } from "@aoh/protocol";
-import { MAX_PLAYERS, MIN_PLAYERS, seedFromString, type MapDefinition, type RulesMode } from "@aoh/rules";
+import { MAX_PLAYERS, MIN_PLAYERS, replayGame, seedFromString, type MapDefinition, type RulesMode } from "@aoh/rules";
 import { useMemo, useRef, useState } from "react";
 import { customMaps, deleteCustomMap, findMap } from "../maps";
 import {
@@ -9,16 +9,24 @@ import {
   defaultServerUrl,
   joinRoom,
   rejoinSaved,
+  resumeRoom,
   savedName,
   savedSeat,
   spectateRoom,
   useOnline,
 } from "../online";
 import { SEAT_COLORS, SEAT_COLOR_NAMES } from "../scene/scale";
-import { resumeSavedGame, savedGame, startGame } from "../session";
+import { deleteSave, describeSummary, downloadGameFile, formatSavedAt, listSaves, type SaveSlot } from "../saves";
+import { loadGame, resumeSavedGame, savedGame, startGame } from "../session";
 
 const ROUND_LIMITS = [null, 5, 8, 12] as const;
 const BUDGETS = [300, 400, 500, 600] as const;
+
+interface ResumeChoice {
+  readonly record: Replay;
+  readonly label: string;
+  readonly armies: readonly { readonly id: string; readonly name: string; readonly color: string; readonly out: boolean }[];
+}
 
 interface Props {
   /** Open the map editor, optionally starting from an existing map. */
@@ -39,6 +47,12 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
   const [code, setCode] = useState("");
   const [replayError, setReplayError] = useState<string | null>(null);
   const replayInput = useRef<HTMLInputElement>(null);
+  const saveInput = useRef<HTMLInputElement>(null);
+  const [saves, setSaves] = useState(() => listSaves());
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const resumeInput = useRef<HTMLInputElement>(null);
+  const [resumeChoice, setResumeChoice] = useState<ResumeChoice | null>(null);
+  const [resumeError, setResumeError] = useState<string | null>(null);
   const [mode, setMode] = useState<RulesMode>("basic");
   const [count, setCount] = useState(2);
   const [names, setNames] = useState<string[]>(SEAT_COLOR_NAMES.map((c) => `${c} Player`));
@@ -68,12 +82,75 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
     createRoom(serverUrl, myName.trim(), settings);
   };
 
+  const readGameFile = async (file: File): Promise<Replay> => {
+    try {
+      return parseReplay(JSON.parse(await file.text()));
+    } catch (e) {
+      throw new Error(e instanceof SyntaxError ? "That file is not an Age of Heroes game file." : (e as Error).message);
+    }
+  };
+
   const openReplay = async (file: File) => {
     try {
-      onOpenReplay(parseReplay(JSON.parse(await file.text())));
+      onOpenReplay(await readGameFile(file));
     } catch (e) {
-      setReplayError(e instanceof SyntaxError ? "That file is not a replay." : (e as Error).message);
+      setReplayError((e as Error).message);
     }
+  };
+
+  /** Loading replaces the unfinished game kept from last time, so check first. */
+  const mayReplaceCurrent = () =>
+    !saved ||
+    window.confirm(
+      `Loading replaces your unfinished game${saved.summary ? ` (${describeSummary(saved.summary)})` : ""}. Save it first if you want to keep it. Load anyway?`,
+    );
+
+  const openSave = async (file: File) => {
+    setLoadError(null);
+    try {
+      const record = await readGameFile(file);
+      if (!mayReplaceCurrent()) return;
+      const problem = loadGame(record);
+      if (problem) setLoadError(problem);
+    } catch (e) {
+      setLoadError((e as Error).message);
+    }
+  };
+
+  /** Check a saved game can be continued, then ask which army is the host's. */
+  const chooseResume = (record: Replay, label: string) => {
+    setResumeError(null);
+    setResumeChoice(null);
+    try {
+      const { state } = replayGame(record.setup, record.commands, contextFor(record.map).ctx);
+      if (state.phase === "gameOver") throw new Error("That game is already over; watch it as a replay instead.");
+      setResumeChoice({
+        record,
+        label,
+        armies: record.setup.players.map((p) => ({
+          ...p,
+          out: state.players.find((x) => x.id === p.id)?.eliminated ?? false,
+        })),
+      });
+    } catch (e) {
+      setResumeError((e as Error).message);
+    }
+  };
+
+  const openResumeFile = async (file: File) => {
+    try {
+      const record = await readGameFile(file);
+      chooseResume(record, record.name ?? file.name.replace(/\.json$/i, ""));
+    } catch (e) {
+      setResumeError((e as Error).message);
+    }
+  };
+
+  const loadSlot = (slot: SaveSlot) => {
+    setLoadError(null);
+    if (!mayReplaceCurrent()) return;
+    const problem = loadGame(slot.record);
+    if (problem) setLoadError(problem);
   };
 
   const start = () => {
@@ -93,6 +170,92 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
       map,
     );
   };
+
+  const savedSection = (saved || saves.length > 0 || loadError) && (
+          <fieldset>
+            <legend>Saved games</legend>
+            {saved && (
+              <div className="save-row current">
+                <div className="save-info">
+                  <strong>Last game</strong>
+                  <span className="muted small">
+                    {saved.summary ? describeSummary(saved.summary) : "Kept automatically"}
+                  </span>
+                </div>
+                <div className="save-actions">
+                  {where === "local" ? (
+                    <button type="button" className="primary" onClick={() => resumeSavedGame()}>
+                      Continue
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        chooseResume({ formatVersion: 1, setup: saved.setup, map: saved.map, commands: saved.commands }, "Last game")
+                      }
+                    >
+                      Host online
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            {saves.length > 0 && (
+              <ul className="save-list" aria-label="Saved games">
+                {saves.map((slot) => (
+                  <li key={slot.id} className="save-row">
+                    <div className="save-info">
+                      <strong>{slot.name}</strong>
+                      <span className="muted small">
+                        {describeSummary(slot.summary)}
+                        {formatSavedAt(slot.savedAt) ? `, saved ${formatSavedAt(slot.savedAt)}` : ""}
+                      </span>
+                    </div>
+                    <div className="save-actions">
+                      {where === "local" ? (
+                        <button type="button" onClick={() => loadSlot(slot)} aria-label={`Load ${slot.name}`}>
+                          Load
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => chooseResume(slot.record, slot.name)}
+                          aria-label={`Host ${slot.name} online`}
+                        >
+                          Host online
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => downloadGameFile(slot.record, slot.name)}
+                        aria-label={`Download ${slot.name}`}
+                        title="Download as a file"
+                      >
+                        File
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Delete ${slot.name}`}
+                        onClick={() => {
+                          if (!window.confirm(`Delete the save "${slot.name}"?`)) return;
+                          deleteSave(slot.id);
+                          setSaves(listSaves());
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {loadError && (
+              <p className="issues" role="alert">
+                {loadError}
+              </p>
+            )}
+          </fieldset>
+  );
 
   return (
     <div className="screen setup">
@@ -117,6 +280,8 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
             ? "Hot-seat for 2 to 6 players on one device."
             : "Each player on their own device, connected through a game server."}
         </p>
+
+        {where === "local" && savedSection}
 
         {where === "online" && (
           <fieldset>
@@ -177,8 +342,57 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
             <p className="muted small">
               Join a friend's room with its code, or set up a game below and create a room for others to join.
             </p>
+
+            <div className="resume-row">
+              <button type="button" onClick={() => resumeInput.current?.click()}>
+                Resume from a save file
+              </button>
+              <input
+                ref={resumeInput}
+                type="file"
+                accept=".json,application/json"
+                hidden
+                aria-label="Resume file"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void openResumeFile(file);
+                }}
+              />
+              <span className="muted small">or pick one under Saved games.</span>
+            </div>
+            {resumeError && (
+              <p className="issues" role="alert">
+                {resumeError}
+              </p>
+            )}
+            {resumeChoice && (
+              <div className="resume-choice" role="group" aria-label="Resume a saved game">
+                <p className="small">
+                  Resume <strong>{resumeChoice.label}</strong> in a new room. Which army is yours?
+                </p>
+                <div className="actions">
+                  {resumeChoice.armies.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      disabled={!serverOk}
+                      title={!serverOk ? "Enter the game server address first" : undefined}
+                      onClick={() => resumeRoom(serverUrl, resumeChoice.record, a.id)}
+                    >
+                      <span className="swatch" style={{ background: a.color }} /> {a.name}
+                      {a.out ? " (out)" : ""}
+                    </button>
+                  ))}
+                  <button type="button" className="link-button" onClick={() => setResumeChoice(null)}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </fieldset>
         )}
+        {where === "online" && savedSection}
 
         <fieldset>
           <legend>Rules</legend>
@@ -365,9 +579,9 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
               Create room
             </button>
           )}
-          {saved && where === "local" && (
-            <button type="button" onClick={() => resumeSavedGame()}>
-              Continue saved game
+          {where === "local" && (
+            <button type="button" onClick={() => saveInput.current?.click()}>
+              Load a save file
             </button>
           )}
           <button type="button" onClick={() => onOpenEditor(null)}>
@@ -387,6 +601,18 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
               e.target.value = "";
               setReplayError(null);
               if (file) void openReplay(file);
+            }}
+          />
+          <input
+            ref={saveInput}
+            type="file"
+            accept=".json,application/json"
+            hidden
+            aria-label="Save file"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) void openSave(file);
             }}
           />
         </div>

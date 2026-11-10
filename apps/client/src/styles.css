@@ -1060,3 +1060,103 @@ legend {
   visibility: hidden;
   will-change: transform;
 }
+
+/* ---- Saved games ------------------------------------------------------ */
+
+.save-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.save-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.save-row.current {
+  margin-bottom: 6px;
+  border-color: rgba(242, 181, 68, 0.45);
+}
+
+.save-info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 220px;
+}
+
+.save-info strong {
+  overflow-wrap: anywhere;
+}
+
+.save-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.save-actions button {
+  padding: 5px 10px;
+  font-size: 13px;
+}
+
+.save-dialog {
+  width: min(420px, calc(100% - 32px));
+  padding: 20px 22px;
+  background: var(--panel-solid);
+}
+
+.save-dialog h2 {
+  margin-top: 0;
+}
+
+/* The save dialog and its notice are drawn on the page itself, over every screen. */
+.page-overlay {
+  position: fixed;
+  z-index: 30;
+}
+
+.toast.notice {
+  position: fixed;
+  background: var(--panel-solid);
+  border: 1px solid var(--accent);
+  cursor: default;
+  z-index: 31;
+}
+
+.draft-menu {
+  margin-top: 0;
+}
+
+/* ---- Resuming a saved game online ------------------------------------- */
+
+.resume-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.resume-choice {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(242, 181, 68, 0.45);
+  border-radius: 8px;
+}
+
+.resume-choice .actions {
+  align-items: center;
+}
+
+.lobby-players .army-name {
+  flex: 1;
+}

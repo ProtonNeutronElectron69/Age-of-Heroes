@@ -12,6 +12,7 @@ import {
   applyCommand,
   createGame,
   eventsFor,
+  replayGame,
   viewFor,
   type Command,
   type GameEvent,
@@ -35,6 +36,14 @@ interface Member {
   conn: Connection | null;
 }
 
+/** A room made from a saved game: players claim their armies, then the host carries on. */
+interface Resume {
+  readonly record: Replay;
+  /** The game as it was when saved, rebuilt from the record. */
+  readonly state: GameState;
+  readonly events: GameEvent[];
+}
+
 interface Room {
   readonly code: string;
   readonly settings: RoomSettings;
@@ -47,6 +56,10 @@ interface Room {
   setup: GameSetup | null;
   state: GameState | null;
   commands: Command[];
+  /** Everything that has happened, so a player who comes back sees the whole log. */
+  events: GameEvent[];
+  /** Set while a resumed game waits for its players; cleared once it continues. */
+  resume: Resume | null;
   lastActive: number;
 }
 
@@ -146,6 +159,12 @@ export class RoomManager {
         return this.command(conn, msg.command as Command);
       case "leave":
         return this.leave(conn);
+      case "resume":
+        return this.resume(conn, msg.record, msg.playerId);
+      case "claim":
+        return this.claim(conn, msg.playerId);
+      case "save":
+        return this.save(conn);
     }
   }
 
@@ -168,6 +187,8 @@ export class RoomManager {
       setup: null,
       state: null,
       commands: [],
+      events: [],
+      resume: null,
       lastActive: this.now(),
     };
     this.rooms.set(room.code, room);
@@ -176,10 +197,84 @@ export class RoomManager {
     this.welcome(conn, room, member);
   }
 
+  /** Open a room for a saved game. The person resuming it hosts, playing the army they choose. */
+  private resume(conn: Connection, record: Replay, playerId: string): void {
+    this.mustBeFree(conn);
+    if (this.rooms.size >= this.maxRooms) throw new Error("The server is full; try again later");
+    const { ctx, issues } = contextFor(record.map);
+    if (issues.some((i) => i.severity === "error")) throw new Error("The map in that save has problems");
+    let replayed: { state: GameState; events: GameEvent[] };
+    try {
+      replayed = replayGame(record.setup, record.commands, ctx);
+    } catch (err) {
+      throw new Error(`That save could not be loaded. It may come from an older version of the rules. (${(err as Error).message})`);
+    }
+    if (replayed.state.phase === "gameOver") throw new Error("That game is already over; watch it as a replay instead");
+    const army = record.setup.players.find((p) => p.id === playerId);
+    if (!army) throw new Error("Choose one of the armies in the save");
+    const s = record.setup;
+    const room: Room = {
+      code: this.newCode(),
+      settings: {
+        mode: s.mode,
+        roundLimit: s.roundLimit ?? null,
+        ...(s.armySize !== undefined ? { armySize: s.armySize } : {}),
+        ...(s.budget !== undefined ? { budget: s.budget, factionPure: s.factionPure ?? false } : {}),
+        map: record.map,
+      },
+      ctx,
+      playerCounts: [s.players.length],
+      members: [],
+      hostId: playerId,
+      spectators: new Set(),
+      nextPlayer: 1,
+      setup: null,
+      state: null,
+      commands: [],
+      events: [],
+      resume: { record, state: replayed.state, events: replayed.events },
+      lastActive: this.now(),
+    };
+    this.rooms.set(room.code, room);
+    const member = this.seatArmy(room, conn, army.id, army.name);
+    this.welcome(conn, room, member);
+  }
+
+  /** In a resumed room, take one of the saved armies. */
+  private claim(conn: Connection, playerId: string): void {
+    const { room, playerId: current } = this.seatOf(conn);
+    if (!room.resume) throw new Error("Only a resumed game has armies to choose");
+    if (current) throw new Error("You already have an army");
+    const army = room.resume.record.setup.players.find((p) => p.id === playerId);
+    if (!army) throw new Error("There is no such army in this game");
+    if (room.members.some((m) => m.playerId === playerId)) throw new Error(`${army.name} has already been taken`);
+    room.spectators.delete(conn);
+    const member = this.seatArmy(room, conn, army.id, army.name);
+    this.welcome(conn, room, member);
+    this.broadcastRoom(room);
+  }
+
+  /** The host's copy of the whole game, to download and resume later. */
+  private save(conn: Connection): void {
+    const { room, playerId } = this.seatOf(conn);
+    if (playerId !== room.hostId) throw new Error("Only the host can save the game");
+    if (!room.state) throw new Error("The game has not started yet");
+    conn.send({ t: "saved", record: { ...this.replay(room), savedAt: new Date(this.now()).toISOString() } });
+  }
+
   private join(conn: Connection, code: string, name: string): void {
     this.mustBeFree(conn);
     const room = this.room(code);
     if (room.state) throw new Error("That game has already started; you can watch it instead");
+    if (room.resume) {
+      // A saved game: come in and choose which army is yours.
+      if (room.members.length >= room.resume.record.setup.players.length) throw new Error("Every army in that game is taken");
+      room.spectators.add(conn);
+      this.seats.set(conn, { room, playerId: null });
+      this.welcome(conn, room, null);
+      this.broadcastRoom(room);
+      return;
+    }
     if (room.members.length >= Math.max(...room.playerCounts)) throw new Error("That room is full");
     const member = this.addMember(room, conn, name);
     this.welcome(conn, room, member);
@@ -217,6 +312,7 @@ export class RoomManager {
     const { room, playerId } = this.seatOf(conn);
     if (playerId !== room.hostId) throw new Error("Only the host can start the game");
     if (room.state) throw new Error("The game has already started");
+    if (room.resume) return this.continueResumed(room);
     const n = room.members.length;
     if (!room.playerCounts.includes(n)) {
       throw new Error(`This map is for ${room.playerCounts.join(", ")} players; there are ${n}`);
@@ -235,9 +331,27 @@ export class RoomManager {
     const { state, events } = createGame(setup, room.ctx);
     room.setup = setup;
     room.state = state;
+    room.events = [...events];
     room.lastActive = this.now();
     this.broadcastRoom(room);
     this.broadcastGame(room, events, true);
+  }
+
+  /** Every army still in the game has its player back: carry on exactly where the save left off. */
+  private continueResumed(room: Room): void {
+    const { record, state, events } = room.resume!;
+    const missing = record.setup.players.filter(
+      (p) => !room.members.some((m) => m.playerId === p.id) && !state.players.find((x) => x.id === p.id)?.eliminated,
+    );
+    if (missing.length > 0) throw new Error(`Waiting for ${missing.map((p) => p.name).join(", ")} to join`);
+    room.setup = record.setup;
+    room.state = state;
+    room.commands = [...record.commands];
+    room.events = [...events];
+    room.resume = null;
+    room.lastActive = this.now();
+    this.broadcastRoom(room);
+    this.broadcastGame(room, room.events, true);
   }
 
   private command(conn: Connection, command: Command): void {
@@ -249,6 +363,7 @@ export class RoomManager {
     if (!result.ok) throw new Error(result.error);
     room.state = result.state;
     room.commands.push(command);
+    room.events.push(...result.events);
     room.lastActive = this.now();
     this.broadcastGame(room, result.events, false);
     if (result.state.phase === "gameOver") this.broadcastReplay(room);
@@ -277,6 +392,7 @@ export class RoomManager {
           if (result.ok) {
             room.state = result.state;
             room.commands.push({ type: "concede", player: playerId });
+            room.events.push(...result.events);
             this.broadcastGame(room, result.events, false);
             if (result.state.phase === "gameOver") this.broadcastReplay(room);
           }
@@ -300,6 +416,16 @@ export class RoomManager {
     };
     room.members.push(member);
     this.seats.set(conn, { room, playerId: member.playerId });
+    room.lastActive = this.now();
+    return member;
+  }
+
+  /** Seat someone as a given saved army (resumed games keep their original player ids). */
+  private seatArmy(room: Room, conn: Connection, playerId: string, name: string): Member {
+    const member: Member = { playerId, name, token: randomBytes(18).toString("base64url"), conn };
+    const order = room.resume!.record.setup.players.map((p) => p.id);
+    room.members = [...room.members, member].sort((a, b) => order.indexOf(a.playerId) - order.indexOf(b.playerId));
+    this.seats.set(conn, { room, playerId });
     room.lastActive = this.now();
     return member;
   }
@@ -338,17 +464,35 @@ export class RoomManager {
       armySize: s.mode === "advanced" && s.budget !== undefined ? null : (s.armySize ?? 3),
       budget: s.mode === "advanced" ? (s.budget ?? null) : null,
       factionPure: s.mode === "advanced" && (s.factionPure ?? false),
-      members: room.members.map((m, i) => ({
-        playerId: m.playerId,
-        name: m.name,
-        seat: i,
-        color: SEAT_COLORS[i]!,
-        connected: m.conn !== null,
-        host: m.playerId === room.hostId,
-      })),
+      members: room.members.map((m, i) => {
+        const setupPlayers = (room.setup ?? room.resume?.record.setup)?.players;
+        const seat = setupPlayers ? setupPlayers.findIndex((p) => p.id === m.playerId) : i;
+        return {
+          playerId: m.playerId,
+          name: m.name,
+          seat,
+          color: setupPlayers?.[seat]?.color ?? SEAT_COLORS[i]!,
+          connected: m.conn !== null,
+          host: m.playerId === room.hostId,
+        };
+      }),
       spectators: room.spectators.size,
       started: room.state !== null,
       playerCounts: room.playerCounts,
+      resume: room.resume
+        ? {
+            name: room.resume.record.name ?? null,
+            phase: room.resume.state.phase,
+            round: room.resume.state.round,
+            armies: room.resume.record.setup.players.map((p) => ({
+              playerId: p.id,
+              name: p.name,
+              color: p.color,
+              taken: room.members.some((m) => m.playerId === p.id),
+              out: room.resume!.state.players.find((x) => x.id === p.id)?.eliminated ?? false,
+            })),
+          }
+        : null,
     };
   }
 
@@ -363,7 +507,9 @@ export class RoomManager {
       map: room.settings.map,
     });
     if (room.state) {
-      conn.send({ t: "game", view: viewFor(room.state, member?.playerId ?? null), events: [], snapshot: true });
+      // A catch-up: the game as this person may see it, and the log so far.
+      const viewer = member?.playerId ?? null;
+      conn.send({ t: "game", view: viewFor(room.state, viewer), events: eventsFor(room.events, viewer), snapshot: true });
       if (room.state.phase === "gameOver") conn.send({ t: "replay", replay: this.replay(room) });
     }
   }
