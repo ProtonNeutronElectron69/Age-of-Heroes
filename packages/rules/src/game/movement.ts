@@ -54,11 +54,6 @@ function terrainOf(step: Step, ctx: RulesContext): TerrainRules | undefined {
   return id ? ctx.terrain.get(id) : undefined;
 }
 
-/** Movement points for a single-hex figure to step from one spot to an adjacent one. */
-export function stepCost(from: Step, to: Step, ctx: RulesContext): number {
-  return moveCostOf(terrainOf(to, ctx)) + Math.max(0, to.elevation - from.elevation);
-}
-
 /** Entering water or swamp from outside the "wet" group ends movement. */
 export function stopsMovement(from: Step, to: Step, ctx: RulesContext): boolean {
   const group = terrainOf(to, ctx)?.stopGroup;

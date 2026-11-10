@@ -1,6 +1,23 @@
-# Age of Heroes: Implementation Plan
+# Age of Heroes: Roadmap and Progress
 
-A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](RULES.md) for the game rules.
+A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](RULES.md) for the rules, [ARCHITECTURE.md](ARCHITECTURE.md) for how the code fits together, and [CONTENT.md](CONTENT.md) for adding units, abilities and maps.
+
+## Status
+
+The core game is complete and playable: the Basic and Advanced rules, a 30-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. Over 200 unit and simulation tests and 5 browser tests run in CI on every change; every merge to `main` publishes the game to GitHub Pages.
+
+### Next
+- **Needs the repository owner:** create the online game server on Render and set the `GAME_SERVER_URL` repository variable (about 10 minutes; see [HOSTING.md](HOSTING.md)). Until then the published site can only play online against a server whose address is typed in.
+- **On hold (Phase 6):** a computer opponent, and a tutorial built on the Basic game.
+- **On hold until the core game is complete (Phase 7):** sound and music, 3D figure models, terrain and scenery art.
+
+### Ideas, not scheduled
+- More premade maps.
+- A balance pass from real playtests (costs come from the balance model so far).
+- Further content drops: units, factions and abilities.
+
+### How work is delivered
+Each phase or drop is one pull request from a working branch, with CI green before it is merged. The owner asks for each merge. Keep [RULES.md](RULES.md), this file and the other docs up to date in the same pull request as the change.
 
 ## Decisions
 
@@ -8,36 +25,16 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 |---|---|
 | Platform | Browser game: TypeScript, Three.js (via React Three Fiber), React for menus and cards |
 | Players | 2 to 6 in every mode |
-| Play modes | Hot-seat first, then online; computer opponent maybe later |
-| Online hosting | Game server in a Docker image; Render recommended (free tier, deploys from `render.yaml`). See [HOSTING.md](HOSTING.md) |
-| First milestone | Basic game playable end to end |
+| Play modes | Hot-seat and online (done); computer opponent on hold |
+| Online hosting | Game server in a Docker image; Render recommended (free tier, deploys from `render.yaml`). The server keeps rooms in memory only; the host saves a game to a file to resume it later. See [HOSTING.md](HOSTING.md) |
 | Line of sight | Advanced: automatic check from eye point to hit band, plus a figure's-eye camera. Basic: forgiving |
-| Art | None at first: units are tokens as tall as their Height, terrain is flat colour. Hovering or clicking a token shows its card |
-| Unit roster | Original units built to the same balance targets as classic hex wargames (stat bands, hero and squad mix, point ranges). Point costs checked with a combat simulator |
-| Involvement | Hands-off: each phase ends with a pull request and a playable link |
-
-## Architecture
-
-```
-packages/rules     the rules engine in plain TypeScript, no graphics; runs in the browser or on a server
-packages/content   unit cards, terrain, tile pieces and maps as data files, validated on load
-packages/protocol  online messages, validated with schemas, plus replay files
-apps/client        the game: 3D scene, cards, map editor, online lobby, replay viewer
-apps/server        online game server: rooms, authority and secrecy, using the same rules engine
-docs/              this plan and the rules
-```
-
-- **Replayable turns.** The engine is a pure reducer: `applyCommand(state, command) -> (state, events)`. All dice use a seeded RNG stored in the state, so a game can be replayed exactly from its setup and command log. This is the base for online play, save games and bug reports.
-- **Hidden information.** `viewFor(state, player)` strips other players' unrevealed tokens and the RNG state. A server will only ever send views.
-- **Data-driven rules.** Terrain effects, dice faces and unit cards are data validated with schemas, so tuning does not need code changes.
-- **Line of sight** is checked against simple shapes (terrain cells and figure tokens), not visual models, so it is fast, deterministic and server-safe.
-- **Abilities** are code modules that hook into rule steps; cards reference them by id.
-- **Testing:** Vitest for the engine and content; Playwright for browser smoke tests and screenshots.
-- **Deployment:** GitHub Pages, built and published by GitHub Actions on every merge to `main`.
+| Art | None for now: units are tokens as tall as their Height, terrain is flat colour, hovering or clicking a token shows its card. Sound, models and art come after the core game (Phase 7) |
+| Unit roster | Original units only, across all eras and myths. Squads have 1 special ability and heroes 2 (Flying not counted); heroes have 2 to 8 Life, most squads 1 (tough squads of 2 or 3 figures up to 3). Point costs set with the balance model |
+| Involvement | Hands-off: work arrives as pull requests with a playable build; the owner decides when to merge |
 
 ## Phases
 
-### Phase 0: Foundations (done)
+### Phase 0: Foundations (done, #1)
 - [x] pnpm workspace with `rules`, `content` and `client` packages
 - [x] Hex math (axial coordinates, distance, rotation, lines, rings, world conversion)
 - [x] Piece and footprint shapes: 1, 2, 3-line, 3-triangle, 2x2, 7 and 24-hex
@@ -52,7 +49,7 @@ docs/              this plan and the rules
 - [x] CI (typecheck, test, build) and GitHub Pages deployment
 - [x] Rules written up in `docs/RULES.md`
 
-### Phase 1: Basic game (milestone 1, done)
+### Phase 1: Basic game (done, #2)
 - [x] 8 original starter units across 4 factions, with both card sides filled in
 - [x] Game setup screen: 2 to 6 players, names, army size, round limit, map
 - [x] Snake draft by card count, with unique cards exclusive and start zone room checked
@@ -68,7 +65,7 @@ docs/              this plan and the rules
 - [x] Game log, and games saved in the browser so a reload can continue them
 - [x] Tests: engine unit tests, random full-game simulations, and a browser test that plays a full game through the UI
 
-### Phase 2: Map editor (done)
+### Phase 2: Map editor (done, #3)
 - [x] Place, rotate and stack all seven piece shapes in all ten terrains; pieces land on whatever is under them
 - [x] Bridges and overhangs, with a manual level control and live validation (overlaps, floating pieces, scenery, zones, layouts)
 - [x] Scenery (trees, ruined walls, boulders) that blocks movement, deployment and line of sight
@@ -79,7 +76,7 @@ docs/              this plan and the rules
 - [x] Setup screen offers only the player counts a map supports
 - [x] Browser test that builds, exports, imports and plays a custom map
 
-### Phase 3: Advanced rules core (done)
+### Phase 3: Advanced rules core (done, #4)
 - [x] Advanced mode selectable at setup; drafts by card count until the Phase 4 points budget
 - [x] Card backs shown in the Advanced game; Life and wounds tracked, with life badges on tokens
 - [x] Elevation bonuses, the Height climbing limit, and falling damage on every step
@@ -92,7 +89,7 @@ docs/              this plan and the rules
 - [x] One original 2x1 unit, Old Rootback, to bring big figures into play
 - [x] Tests: Advanced rule and multi-hex unit tests, random Advanced games, and an Advanced browser game
 
-### Phase 4: Abilities and armies (done)
+### Phase 4: Abilities and armies (done, #5)
 - [x] Ability system: abilities named on cards with tunable params, implemented as hooks into attacks, defense, movement, reactions and end of turn
 - [x] All 17 abilities on the roster: flying, trample, smoke step, massed volley, grove song, rally the line, deflector field, hidden in the leaves, moss armor, brace, answering blade, thick hide, salvage protocol, field dressing, and the special actions ember spit and mortar barrage (area attacks) and lantern gaze (mind control)
 - [x] Roster of 16 original units, 4 in each of 4 crossover factions (two of them multi-hex)
@@ -100,9 +97,9 @@ docs/              this plan and the rules
 - [x] Optional faction-pure mode
 - [x] Balance model to set and check point costs, enforced by a test
 - [x] Client: budget and faction options, points in the draft, special action buttons, ability rolls and notes in the dice panel and log
-- [x] Grow the roster to 30 units (the "legends" drop, below)
+- [x] Grow the roster to 30 units (see Roster, below)
 
-### Roster: 30 units (this PR)
+### Roster: 30 units (done, #8)
 - [x] 14 new original units across all eras and myths: sabre-tooth predators, ancient desert archers, Viking huscarls, medieval knights, samurai, World War 2 riflemen, relentless hunter robots, skeleton legions, orc raiders, a necromancer, a death knight, a bone wyrm, an angel and a battle mage
 - [x] Two new factions, the Ashen Host (undead, orcs and dark magic) and the Dawnhold Covenant (knights, northmen, archers, an angel and a wizard), and one new unit for each starter faction: 6 factions of 5
 - [x] Balance across the roster: 15 heroes and 15 squads, 15 ranged and 15 melee units, and every faction has heroes, squads, ranged and melee units
@@ -112,7 +109,7 @@ docs/              this plan and the rules
 - [x] The first 3x1 figure (Marrowcoil, the Bone Wyrm), checked to deploy on every map
 - [x] Point costs set with the balance model, every unit within 0.9 to 1.05 of its modelled value (some starter costs moved by 5 to 15 points to get there); random full games now close in and fight, exercising the new abilities
 
-### Phase 5: Online multiplayer (done)
+### Phase 5: Online multiplayer (done, #6)
 - [x] Shared protocol package: every client message checked with a schema before the server acts on it
 - [x] Authoritative game server running the rules engine; a player can only act for their own seat
 - [x] Lobbies with 5-letter room codes, up to 6 players, host starts the game; any map, including custom ones, with every setup option
@@ -124,11 +121,11 @@ docs/              this plan and the rules
 - [x] Client: Online panel on the setup screen, lobby, turn gating per device, connection status, no pass-the-device screen online
 - [x] Docker image for the server, a Render blueprint, and hosting steps in [HOSTING.md](HOSTING.md)
 - [x] Tests: protocol and server tests (secrecy, authority, rejoin, spectators, replays) and a browser test with two players and a spectator on separate devices
-- [ ] Create the Render service and set `GAME_SERVER_URL` (needs the repository owner's Render account; steps in HOSTING.md)
+- [ ] Create the Render service and set `GAME_SERVER_URL` (needs the repository owner's Render account; see Next, below)
 
 ### Phase 6: Saved games, computer opponent, tutorial
-Saved games are in this PR; the computer opponent and the tutorial are on hold.
-- [x] Saved games (this PR)
+Saved games are done (#7); the computer opponent and the tutorial are on hold.
+- [x] Saved games
   - [x] Named saves of hot-seat games in the browser: save from the draft or the battle, then load, download or delete them from the setup screen
   - [x] Save files: download a game and load it on any device; the same file opens in the replay viewer
   - [x] The unfinished game is still kept automatically, and the setup screen says which game "Continue" resumes

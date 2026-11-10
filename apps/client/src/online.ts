@@ -114,7 +114,6 @@ const listeners = new Set<() => void>();
 let socket: WebSocket | null = null;
 /** What to send whenever the socket (re)opens. */
 let hello: ClientMessage | null = null;
-let token: string | null = null;
 let retries = 0;
 let retryTimer: number | null = null;
 let leaving = false;
@@ -194,7 +193,6 @@ function receive(msg: ServerMessage): void {
   switch (msg.t) {
     case "welcome": {
       awaitingWelcome = false;
-      token = msg.token;
       if (msg.token) {
         write(SEAT_KEY, { serverUrl: state.serverUrl, code: msg.code, token: msg.token } satisfies SavedSeat);
         hello = { t: "rejoin", code: msg.code, token: msg.token };
@@ -332,7 +330,6 @@ function disconnect(forgetSeat = true): void {
   retryTimer = null;
   socket?.close();
   socket = null;
-  token = null;
   hello = null;
   retries = 0;
   if (forgetSeat) write(SEAT_KEY, null);
@@ -353,10 +350,6 @@ export function closeOnline(): void {
 
 export function clearOnlineError(): void {
   set({ error: null });
-}
-
-export function hasSeatToken(): boolean {
-  return token !== null;
 }
 
 function subscribe(listener: () => void): () => void {

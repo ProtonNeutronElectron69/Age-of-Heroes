@@ -109,24 +109,24 @@ export function LobbyScreen() {
             </ul>
           </>
         ) : (
-        <>
-        <h2>
-          Players ({count} of up to {max})
-        </h2>
-        <ul className="player-list lobby-players">
-          {room.members.map((m) => (
-            <li key={m.playerId}>
-              <span className="swatch" style={{ background: m.color }} />
-              <span>
-                {m.name}
-                {m.playerId === online.me ? " (you)" : ""}
-                {m.host ? <span className="tag host-tag">host</span> : null}
-                {!m.connected ? <span className="muted small"> disconnected</span> : null}
-              </span>
-            </li>
-          ))}
-        </ul>
-        </>
+          <>
+            <h2>
+              Players ({count} of up to {max})
+            </h2>
+            <ul className="player-list lobby-players">
+              {room.members.map((m) => (
+                <li key={m.playerId}>
+                  <span className="swatch" style={{ background: m.color }} />
+                  <span>
+                    {m.name}
+                    {m.playerId === online.me ? " (you)" : ""}
+                    {m.host ? <span className="tag host-tag">host</span> : null}
+                    {!m.connected ? <span className="muted small"> disconnected</span> : null}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
         {room.spectators > 0 && !choosing && (
           <p className="muted small">
