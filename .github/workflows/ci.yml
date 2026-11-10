@@ -1,12 +1,46 @@
 name: CI
 
+# Pull requests run only the checks their changes affect (scripts/affected.mjs,
+# explained in docs/TESTING.md). Pushes to main and manual runs run everything.
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      check: ${{ steps.plan.outputs.check }}
+      unit: ${{ steps.plan.outputs.unit }}
+      e2e: ${{ steps.plan.outputs.e2e }}
+      e2e_any: ${{ steps.plan.outputs.e2e_any }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            node scripts/affected.mjs --base "$BASE" --github
+          else
+            node scripts/affected.mjs --all --github
+          fi
+
   check:
+    needs: plan
+    if: needs.plan.outputs.check == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,11 +51,26 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
-      - run: pnpm test
+      - name: Unit tests
+        env:
+          UNIT: ${{ needs.plan.outputs.unit }}
+        run: |
+          case "$UNIT" in
+            all) pnpm test ;;
+            "") echo "No unit tests are affected." ;;
+            *) pnpm exec vitest run $UNIT ;;
+          esac
       - run: pnpm build
 
   e2e:
+    needs: plan
+    if: needs.plan.outputs.e2e_any == 'true'
+    name: e2e (${{ matrix.test.id }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.plan.outputs.e2e) }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -32,4 +81,22 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm --filter @aoh/client exec playwright install --with-deps chromium
-      - run: pnpm e2e
+      - name: ${{ matrix.test.id }}
+        working-directory: apps/client
+        run: ${{ matrix.test.cmd }}
+
+  # One check that sums up the others, so branch protection can require it
+  # whatever was skipped.
+  result:
+    name: CI result
+    needs: [plan, check, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for r in $RESULTS; do
+            case "$r" in success|skipped) ;; *) exit 1 ;; esac
+          done

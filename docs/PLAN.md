@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable: the Basic and Advanced rules, a 30-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. Over 200 unit and simulation tests and 5 browser tests run in CI on every change; every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable: the Basic and Advanced rules, a 30-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. Over 200 unit and simulation tests and 5 browser tests run in CI, each pull request running only the ones its changes affect ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 - **Needs the repository owner:** create the online game server on Render and set the `GAME_SERVER_URL` repository variable (about 10 minutes; see [HOSTING.md](HOSTING.md)). Until then the published site can only play online against a server whose address is typed in.
@@ -140,6 +140,9 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 - [x] Eye view must be closed before ending a turn, and it closes itself when a turn ends any other way. Ending a turn in eye view used to crash the play screen to a grey page
 - [x] Eye view faces the enemy last clicked, else a target, else the nearest enemy. It no longer follows the pointer, which made the camera swing back and forth
 - [x] A red arrow floats and spins above the figure chosen to act
+
+### Faster checks
+- [x] CI runs only the checks a change affects: docs run nothing, unit card data runs the content tests, and each browser test runs only for the code it covers, in parallel. Pushes to `main` still run everything. `pnpm check:affected` does the same locally. See [TESTING.md](TESTING.md)
 
 ### Phase 7: Sound, models and art (on hold until the core game is complete)
 - [ ] Sound effects and music
