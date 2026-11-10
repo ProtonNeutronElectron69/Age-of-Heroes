@@ -945,3 +945,118 @@ legend {
   font-size: 13px;
   padding: 5px 10px;
 }
+
+/* ---- Online ----------------------------------------------------------- */
+
+.where {
+  margin: 6px 0 4px;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.join-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.code-input {
+  width: 8.5em;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 600;
+}
+
+.room-code {
+  margin: 14px 0 0;
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.lobby h2 {
+  margin: 18px 0 6px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.lobby-players li {
+  padding: 6px 0;
+}
+
+.host-tag {
+  background: rgba(242, 181, 68, 0.2);
+  color: var(--accent);
+}
+
+.online-bar {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.play .online-bar {
+  position: absolute;
+  z-index: 12;
+  bottom: 16px;
+  right: 300px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.online-bar.offline {
+  border-color: var(--danger);
+}
+
+.online-bar .reconnecting {
+  color: var(--danger);
+}
+
+/* ---- Replay ----------------------------------------------------------- */
+
+.scrubber {
+  width: 100%;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+.replay-controls button {
+  min-width: 40px;
+}
+
+@media (max-width: 720px) {
+  .play .online-bar {
+    right: auto;
+    left: 16px;
+    bottom: auto;
+    top: 52px;
+  }
+}
+
+/* Figure name tags, positioned over the canvas each frame by <Figures labels>. */
+.label-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.label-anchor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  will-change: transform;
+}

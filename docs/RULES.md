@@ -118,6 +118,14 @@ Armies are drafted from a shared pool in a **snake draft**: the pick order rever
 ### Deployment
 After the draft, units are deployed one at a time in the order they were drafted. (With preset armies, players take turns round the table, one unit each.) Each figure goes on a free spot in its owner's start zone where it fits.
 
+### Playing online
+Online, the host picks the options above and shares a room code. Seats and colors follow the order players join, and the host can start once the room holds a player count the map supports. The rules are the same, with these differences:
+- **Who acts**: each device acts only for its own player. The game server checks every action, so nobody can move another player's units.
+- **Hidden information**: each device sees only what that player could see at a table. Other players' activation tokens stay hidden until revealed, and the dice are rolled on the server, so no device can predict them.
+- **Leaving**: leaving a game in progress concedes (section 12). A dropped connection or a page reload does not: the player returns to the same seat.
+- **Spectators** can watch with a room code. They see what a player outside the game would see: no secret tokens.
+- **Replays**: when the game ends, everyone can download its full record and watch it again move by move, with every token shown.
+
 ## 5. Rounds
 
 Each round has three parts.

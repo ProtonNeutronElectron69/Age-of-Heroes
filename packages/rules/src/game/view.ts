@@ -3,7 +3,8 @@ import type { GameEvent, GameState, PlayerId, TokenAssignment, TokenId } from ".
 
 /**
  * What one player is allowed to see. Other players' unrevealed tokens are
- * hidden, and the RNG state is removed so nobody can predict future rolls.
+ * hidden, and both the RNG state and the starting seed are removed: with the
+ * seed and the moves so far, anyone could work out every future roll.
  * A server sends only views; hot-seat play uses them behind the pass screen.
  */
 export interface PlayerView extends Omit<GameState, "tokens" | "rng"> {
@@ -30,7 +31,7 @@ export function viewFor(state: GameState, viewer: PlayerId | null): PlayerView {
       visible[p.id] = shown;
     }
   }
-  return { ...rest, viewer, tokens: visible, tokensPlaced: placed };
+  return { ...rest, config: { ...rest.config, seed: 0 }, viewer, tokens: visible, tokensPlaced: placed };
 }
 
 /** Events carry no secret information yet; this is where per-player filtering will go. */

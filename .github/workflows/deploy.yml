@@ -25,7 +25,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+      - run: pnpm --filter @aoh/client build
+        env:
+          # The game server the published site offers by default (a repository variable, e.g. wss://example.onrender.com/ws).
+          VITE_SERVER_URL: ${{ vars.GAME_SERVER_URL }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

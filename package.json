@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "pnpm --filter @aoh/client dev",
-    "build": "pnpm --filter @aoh/client build",
+    "build": "pnpm --filter @aoh/client --filter @aoh/server build",
+    "server": "pnpm --filter @aoh/server build && pnpm --filter @aoh/server start",
     "preview": "pnpm --filter @aoh/client preview",
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",

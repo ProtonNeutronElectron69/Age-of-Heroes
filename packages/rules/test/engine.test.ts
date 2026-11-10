@@ -229,6 +229,8 @@ describe("determinism and hidden information", () => {
     expect(view.tokens[first]).toEqual({ "1": `${first}:0` });
     expect(view.tokensPlaced).toEqual({ [first]: true, [second]: true });
     expect("rng" in view).toBe(false);
+    expect(view.config.seed).toBe(0);
+    expect(s.config.seed).not.toBe(0);
     expect(viewFor(s, null).tokens[second]).toEqual({});
   });
 });

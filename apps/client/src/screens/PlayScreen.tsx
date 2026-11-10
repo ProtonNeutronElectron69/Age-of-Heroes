@@ -24,13 +24,15 @@ import {
   type Vec3,
 } from "@aoh/rules";
 import { Canvas } from "@react-three/fiber";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Names } from "../describe";
 import { BoardScene, boardCenter, type Marker } from "../scene/BoardScene";
-import { Figures, type FigureView } from "../scene/Figures";
+import { FigureLabels, Figures, type FigureView } from "../scene/Figures";
 import { TestHook } from "../scene/TestHook";
-import { clearError, dispatch, endSession, type Session } from "../session";
-import { DiceOverlay, EventLog, GameOver, PassScreen, RoundBar, TokenPanel } from "../ui/panels";
+import { closeOnline, leaveOnline } from "../online";
+import { canControl, clearError, dispatch, endSession, replayOf, type Session } from "../session";
+import { OnlineBar } from "../ui/OnlineBar";
+import { DiceOverlay, EventLog, GameOver, PassScreen, RoundBar, TokenPanel, downloadReplay } from "../ui/panels";
 import { UnitCardView } from "../ui/UnitCardView";
 
 interface Pending {
@@ -40,6 +42,9 @@ interface Pending {
 
 export function PlayScreen({ session }: { session: Session }) {
   const { state, ctx } = session;
+  const isOnline = session.kind === "online";
+  /** Online: waiting for the server to answer the last command, so nothing else may be sent. */
+  const busy = session.pending;
   const mode = state.config.mode;
   const names = useMemo(() => new Names(state, ctx), [state, ctx]);
   const board = ctx.board;
@@ -60,9 +65,12 @@ export function PlayScreen({ session }: { session: Session }) {
   const [attackMode, setAttackMode] = useState<string | null>(null);
   const [revealedFor, setRevealedFor] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(true);
+  const labelLayer = useRef<HTMLDivElement>(null);
 
   // ---- Deployment -------------------------------------------------------
-  const deploying = state.phase === "deploy" ? currentDeployment(state) : null;
+  const nextDeployment = state.phase === "deploy" ? currentDeployment(state) : null;
+  // Online, only the deploying player's device places figures; everyone else waits.
+  const deploying = nextDeployment && canControl(session, nextDeployment.player) ? nextDeployment : null;
   const deployUnit = deploying ? state.units.find((u) => u.id === deploying.unitId)! : null;
   const deployCard = deployUnit ? ctx.cards.get(deployUnit.cardId)! : null;
   const deployBig = deployCard ? deployCard.footprint !== "1" : false;
@@ -97,20 +105,26 @@ export function PlayScreen({ session }: { session: Session }) {
   };
 
   // ---- Token placement --------------------------------------------------
-  const tokenPlayer =
+  const tokenWaiting =
     state.phase === "placeTokens"
-      ? (state.players.filter((p) => waitingOn(state).includes(p.id)).sort((a, b) => a.seat - b.seat)[0]?.id ?? null)
-      : null;
+      ? state.players.filter((p) => waitingOn(state).includes(p.id)).sort((a, b) => a.seat - b.seat)
+      : [];
+  const tokenPlayer = tokenWaiting.find((p) => canControl(session, p.id))?.id ?? null;
+  // Online there is nobody to hide the tokens from: each device only ever sees its own.
+  const tokenPanelOpen = tokenPlayer !== null && !busy && (isOnline || revealedFor === tokenPlayer);
 
   // ---- Turns --------------------------------------------------------------
   const active = state.phase === "turns" ? state.active : null;
   const activeUnit = active ? state.units.find((u) => u.id === active.unitId)! : null;
   const activeCard = activeUnit ? ctx.cards.get(activeUnit.cardId)! : null;
+  const myTurn = canControl(session, active?.player);
   // A figure can act until it has attacked (moving first is optional); Smoke Step allows a move after.
-  const canAct = (id: string) =>
+  const mayAct = (id: string) =>
     !!active &&
     !!activeUnit?.figures.some((f) => f.id === id && !f.destroyed && f.position) &&
     (!active.attacked.includes(id) || (active.bonusMoves[id] ?? 0) > 0);
+  /** Can this device pick the figure to act with? */
+  const canAct = (id: string) => myTurn && mayAct(id);
 
   // Pick the first figure that can still act when a turn starts or a figure finishes.
   const turnKey = active ? `${state.round}:${active.token}:${active.player}` : "";
@@ -235,7 +249,7 @@ export function PlayScreen({ session }: { session: Session }) {
       if (eye && f.id === selected) continue;
       let status: FigureView["status"] = "idle";
       if (active && unit.id === active.unitId) {
-        status = f.id === selected ? "selected" : canAct(f.id) ? "ready" : "spent";
+        status = f.id === selected ? "selected" : mayAct(f.id) ? "ready" : "spent";
       } else if (targets.has(f.id)) {
         status = "target";
       }
@@ -296,6 +310,7 @@ export function PlayScreen({ session }: { session: Session }) {
 
   // ---- Interaction -------------------------------------------------------
   const onSurfaceClick = (step: Step) => {
+    if (busy) return;
     if (deploying && deployUnit) {
       if (pending.length >= deployUnit.figures.length) return;
       const option = deployAt(step);
@@ -312,6 +327,7 @@ export function PlayScreen({ session }: { session: Session }) {
   };
 
   const onFigureClick = (id: string) => {
+    if (busy) return;
     if (deploying && deployUnit?.figures.some((f) => f.id === id)) {
       const i = deployUnit.figures.findIndex((f) => f.id === id);
       if (i >= 0 && i < pending.length) setPending(pending.filter((_, j) => j !== i));
@@ -334,6 +350,21 @@ export function PlayScreen({ session }: { session: Session }) {
     setPinnedFigure(pinnedFigure === id ? null : id);
   };
 
+  // ---- Leaving -------------------------------------------------------------
+  const over = state.phase === "gameOver";
+  const watching = isOnline && session.me === null;
+  const quitLabel = over ? "Back to menu" : watching ? "Stop watching" : isOnline ? "Leave game" : "Quit game";
+  const quit = () => {
+    if (!isOnline) {
+      if (over || window.confirm("Quit this game? It cannot be resumed.")) endSession();
+    } else if (over || watching) {
+      closeOnline();
+    } else if (window.confirm("Leave this game? You concede, and your army is removed.")) {
+      leaveOnline();
+    }
+  };
+  const replay = over ? replayOf(session) : null;
+
   const cardFigure = hoveredFigure ?? pinnedFigure;
   const found = cardFigure ? findFigure(state, cardFigure) : undefined;
   const cardUnit = found?.unit;
@@ -355,12 +386,14 @@ export function PlayScreen({ session }: { session: Session }) {
           onSurfaceHover={setHoverStep}
           eyeView={eye}
         >
-          <Figures figures={figures} onClick={onFigureClick} onHover={setHoveredFigure} />
+          <Figures figures={figures} onClick={onFigureClick} onHover={setHoveredFigure} labels={labelLayer} />
         </BoardScene>
         <TestHook offset={center} />
       </Canvas>
+      <FigureLabels figures={figures} layer={labelLayer} />
 
       {state.phase !== "deploy" && state.round > 0 && <RoundBar state={state} names={names} />}
+      <OnlineBar session={session} />
 
       <aside className="hud-left">
         {deploying && deployUnit && deployCard && (
@@ -387,12 +420,34 @@ export function PlayScreen({ session }: { session: Session }) {
               <button
                 type="button"
                 className="primary"
-                disabled={pending.length !== deployUnit.figures.length}
+                disabled={pending.length !== deployUnit.figures.length || busy}
                 onClick={confirmDeploy}
               >
                 Confirm
               </button>
             </div>
+          </section>
+        )}
+
+        {nextDeployment && !deploying && (
+          <section className="panel" aria-label="Deployment">
+            <h2>Deployment</h2>
+            <p className="turn-banner" style={{ borderColor: names.playerColor(nextDeployment.player) }}>
+              <span className="swatch" style={{ background: names.playerColor(nextDeployment.player) }} />
+              <span>
+                Waiting for <strong>{names.player(nextDeployment.player)}</strong> to place{" "}
+                {names.unit(nextDeployment.unitId)}
+              </span>
+            </p>
+          </section>
+        )}
+
+        {state.phase === "placeTokens" && !tokenPanelOpen && tokenWaiting.length > 0 && isOnline && (
+          <section className="panel" aria-label="Activation tokens">
+            <h2>Activation tokens</h2>
+            <p className="muted small">
+              Waiting for {tokenWaiting.map((p) => names.player(p.id)).join(", ")} to place their tokens in secret.
+            </p>
           </section>
         )}
 
@@ -451,30 +506,41 @@ export function PlayScreen({ session }: { session: Session }) {
               </div>
             )}
             <p className="muted small">
-              {selected
+              {!myTurn
+                ? `Waiting for ${names.player(active.player)} to play this turn.`
+                : selected
                 ? `Green hexes: move there. ${targets.size > 0 ? "Red rings: attack." : "No enemy in range and sight."} Orange hexes are risky (lava, ice${mode === "advanced" ? ", falls or passing strikes" : ""}).`
                 : "This unit has finished."}
               {moveBig ? " Press R to turn." : ""}
               {hoverOption ? ` Move cost ${hoverOption.cost}.` : ""}
             </p>
             <div className="actions">
-              <button type="button" className="primary" onClick={() => dispatch({ type: "endTurn", player: active.player })}>
-                End turn
-              </button>
-              <button
-                type="button"
-                aria-pressed={eyeView}
-                onClick={() => setEyeView(!eyeView)}
-                disabled={!selected}
-                title="See the battlefield from the selected figure's eyes"
-              >
-                {eyeView ? "Exit eye view" : "Eye view"}
-              </button>
+              {myTurn && (
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={busy}
+                  onClick={() => dispatch({ type: "endTurn", player: active.player })}
+                >
+                  End turn
+                </button>
+              )}
+              {myTurn && (
+                <button
+                  type="button"
+                  aria-pressed={eyeView}
+                  onClick={() => setEyeView(!eyeView)}
+                  disabled={!selected}
+                  title="See the battlefield from the selected figure's eyes"
+                >
+                  {eyeView ? "Exit eye view" : "Eye view"}
+                </button>
+              )}
             </div>
           </section>
         )}
 
-        {tokenPlayer && revealedFor === tokenPlayer && (
+        {tokenPlayer && tokenPanelOpen && (
           <TokenPanel
             key={`${state.round}:${tokenPlayer}`}
             state={state}
@@ -502,13 +568,8 @@ export function PlayScreen({ session }: { session: Session }) {
           />
         )}
         <div className="actions menu">
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm("Quit this game? It cannot be resumed.")) endSession();
-            }}
-          >
-            Quit game
+          <button type="button" onClick={quit}>
+            {quitLabel}
           </button>
         </div>
       </aside>
@@ -521,7 +582,7 @@ export function PlayScreen({ session }: { session: Session }) {
 
       <DiceOverlay events={session.lastEvents} names={names} stamp={session.events.length} />
 
-      {tokenPlayer && revealedFor !== tokenPlayer && (
+      {tokenPlayer && !tokenPanelOpen && (
         <PassScreen
           name={names.player(tokenPlayer)}
           color={names.playerColor(tokenPlayer)}
@@ -530,7 +591,13 @@ export function PlayScreen({ session }: { session: Session }) {
       )}
 
       {state.phase === "gameOver" && showResult && (
-        <GameOver state={state} names={names} onNewGame={endSession} onClose={() => setShowResult(false)} />
+        <GameOver
+          state={state}
+          names={names}
+          onNewGame={isOnline ? closeOnline : endSession}
+          onClose={() => setShowResult(false)}
+          onDownload={replay ? () => downloadReplay(replay) : undefined}
+        />
       )}
     </div>
   );

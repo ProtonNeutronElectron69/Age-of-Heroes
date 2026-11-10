@@ -1,6 +1,7 @@
 import { currentDrafter, lockedFaction, pickProblem, pointsSpent } from "@aoh/rules";
-import { dispatch, type Session } from "../session";
+import { canControl, dispatch, type Session } from "../session";
 import { Names } from "../describe";
+import { OnlineBar } from "../ui/OnlineBar";
 import { UnitCardView } from "../ui/UnitCardView";
 
 /** A short button label for why a card cannot be drafted. */
@@ -21,6 +22,7 @@ export function DraftScreen({ session }: { session: Session }) {
   const pickNumber = Math.min((state.draft?.index ?? 0) + 1, total);
   const left = drafter && budget !== null ? budget - pointsSpent(state, drafter, ctx) : null;
   const faction = drafter ? lockedFaction(state, drafter, ctx) : null;
+  const myPick = canControl(session, drafter);
 
   return (
     <div className="screen draft">
@@ -38,18 +40,27 @@ export function DraftScreen({ session }: { session: Session }) {
           <p className="turn-banner" style={{ borderColor: names.playerColor(drafter) }}>
             <span className="swatch" style={{ background: names.playerColor(drafter) }} />
             <span>
-              <strong>{names.player(drafter)}</strong>, choose a unit.
+              {myPick ? (
+                <>
+                  <strong>{names.player(drafter)}</strong>, choose a unit.
+                </>
+              ) : (
+                <>
+                  Waiting for <strong>{names.player(drafter)}</strong> to choose.
+                </>
+              )}
               {left !== null && <span className="muted"> {left} points left.</span>}
               {faction && <span className="muted"> {faction} only.</span>}
             </span>
-            {budget !== null && (
-              <button type="button" onClick={() => dispatch({ type: "draftPass", player: drafter })}>
+            {budget !== null && myPick && (
+              <button type="button" disabled={session.pending} onClick={() => dispatch({ type: "draftPass", player: drafter })}>
                 Done drafting
               </button>
             )}
           </p>
         )}
       </header>
+      <OnlineBar session={session} />
 
       <div className="draft-body">
         <section className="card-grid" aria-label="Available units">
@@ -62,7 +73,7 @@ export function DraftScreen({ session }: { session: Session }) {
                 <button
                   type="button"
                   className="primary"
-                  disabled={!ok || !drafter}
+                  disabled={!ok || !drafter || !myPick || session.pending}
                   onClick={() => drafter && dispatch({ type: "draftPick", player: drafter, cardId: card.id })}
                 >
                   {ok ? `Draft ${card.name}` : shortReason(reason)}
