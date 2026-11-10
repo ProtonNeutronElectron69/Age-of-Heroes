@@ -16,7 +16,7 @@ import type { FigureState, GameEvent, GameState, RulesContext, Step, UnitState }
  * Ability ids:
  * - Movement: flying, trample, smoke-step
  * - Attack bonuses: massed-volley, grove-song (aura), command-the-dead (aura), charge, pack-hunt, duelist,
- *   steady-aim, longshot, bloodrage, smite-the-unholy
+ *   steady-aim, longshot, bloodrage, fury, smite-the-unholy
  * - Defense bonuses: rally-the-line (aura), deflector-field (aura), hidden-in-the-leaves, moss-armor, brace, shield-wall
  * - Reactions: answering-blade, thick-hide, salvage-protocol, soul-reap, reboot
  * - End of turn: field-dressing, reassemble
@@ -168,6 +168,10 @@ export function abilityModifiers(
   // Bloodrage: the squad has lost at least one figure.
   const rage = abilityOf(attacker.card, "bloodrage");
   if (rage && attacker.unit.figures.some((f) => f.destroyed)) add("attack", param(rage, "bonus", 1), rage.name);
+
+  // Fury: the figure is wounded.
+  const fury = abilityOf(attacker.card, "fury");
+  if (fury && attacker.figure.wounds > 0) add("attack", param(fury, "bonus", 1), fury.name);
 
   // Smite the Unholy: against the undead and demons.
   const smite = abilityOf(attacker.card, "smite-the-unholy");

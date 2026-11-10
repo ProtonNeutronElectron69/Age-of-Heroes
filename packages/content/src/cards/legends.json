@@ -252,7 +252,7 @@
       "range": 5,
       "attack": 3,
       "defense": 2,
-      "points": 70,
+      "points": 85,
       "abilities": [
         {
           "id": "command-the-dead",
@@ -261,6 +261,16 @@
           "params": {
             "range": 4,
             "bonus": 1
+          }
+        },
+        {
+          "id": "ember-spit",
+          "name": "Grave Blight",
+          "text": "Special action instead of a normal attack. Range 4, in line of sight: roll 2 attack dice against the target and 1 attack die against every other figure next to it, friend or foe. Each defends normally.",
+          "params": {
+            "range": 4,
+            "dice": 2,
+            "splashDice": 1
           }
         }
       ]
@@ -291,7 +301,7 @@
       "range": 1,
       "attack": 4,
       "defense": 4,
-      "points": 120,
+      "points": 135,
       "abilities": [
         {
           "id": "soul-reap",
@@ -299,6 +309,14 @@
           "text": "When Vorhal destroys a figure with an attack, remove 1 wound from Vorhal.",
           "params": {
             "heal": 1
+          }
+        },
+        {
+          "id": "answering-blade",
+          "name": "Grave Riposte",
+          "text": "When Vorhal defends against an adjacent attacker and rolls more shields than it rolled skulls, the attacker takes 1 wound.",
+          "params": {
+            "wounds": 1
           }
         }
       ]
@@ -329,7 +347,7 @@
       "range": 1,
       "attack": 4,
       "defense": 3,
-      "points": 105,
+      "points": 115,
       "abilities": [
         {
           "id": "trample",
@@ -337,6 +355,15 @@
           "text": "Marrowcoil may move through Small and Medium enemy figures. Each figure it moves through rolls 1 defense die; on a blank it takes 1 wound.",
           "params": {
             "defenseDice": 1
+          }
+        },
+        {
+          "id": "thick-hide",
+          "name": "Bone Plates",
+          "text": "Attacks on Marrowcoil from 3 or more hexes away deal 1 less wound.",
+          "params": {
+            "minDistance": 3,
+            "reduce": 1
           }
         }
       ]
@@ -482,7 +509,7 @@
       "range": 1,
       "attack": 4,
       "defense": 3,
-      "points": 125,
+      "points": 165,
       "abilities": [
         {
           "id": "flying",
@@ -495,6 +522,14 @@
           "text": "When Solenne attacks an Undead or Oni figure, she rolls 2 extra attack dice.",
           "params": {
             "bonus": 2
+          }
+        },
+        {
+          "id": "field-dressing",
+          "name": "Benediction",
+          "text": "At the end of Solenne's turn, remove 1 wound from the most wounded friendly hero next to her, or from herself.",
+          "params": {
+            "heal": 1
           }
         }
       ]
@@ -525,7 +560,7 @@
       "range": 5,
       "attack": 3,
       "defense": 2,
-      "points": 65,
+      "points": 80,
       "abilities": [
         {
           "id": "arc-lightning",
@@ -535,6 +570,15 @@
             "range": 5,
             "dice": 3,
             "splashDice": 1
+          }
+        },
+        {
+          "id": "deflector-field",
+          "name": "Arcane Ward",
+          "text": "Friendly figures next to Orrin (not Orrin himself) roll 1 extra defense die against attacks from 3 or more hexes away.",
+          "params": {
+            "minDistance": 3,
+            "bonus": 1
           }
         }
       ]

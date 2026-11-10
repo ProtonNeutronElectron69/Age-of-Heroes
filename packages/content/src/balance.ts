@@ -53,6 +53,7 @@ export const ABILITY_VALUE: Readonly<Record<string, number>> = {
   reboot: 1.12,
   reassemble: 1.15,
   "arc-lightning": 1.2,
+  fury: 1.08,
 };
 
 function binomial(n: number, k: number): number {

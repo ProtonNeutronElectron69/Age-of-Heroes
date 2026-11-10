@@ -156,9 +156,17 @@ describe("cards", () => {
       "hidden-in-the-leaves", "moss-armor", "brace", "answering-blade", "thick-hide", "salvage-protocol",
       "field-dressing", "ember-spit", "mortar-barrage", "lantern-gaze",
       "charge", "steady-aim", "longshot", "pack-hunt", "duelist", "bloodrage", "smite-the-unholy",
-      "command-the-dead", "shield-wall", "soul-reap", "reboot", "reassemble", "arc-lightning",
+      "command-the-dead", "shield-wall", "soul-reap", "reboot", "reassemble", "arc-lightning", "fury",
     ]);
     for (const c of CARDS) for (const a of c.advanced.abilities) expect(implemented.has(a.id), `${c.id} ${a.id}`).toBe(true);
+  });
+
+  it("gives every squad 1 special ability and every hero 2, not counting Flying", () => {
+    for (const c of CARDS) {
+      const special = c.advanced.abilities.filter((a) => a.id !== "flying");
+      expect(special.length, c.id).toBe(c.figureCount === 1 ? 2 : 1);
+      expect(new Set(special.map((a) => a.id)).size, `${c.id} repeats an ability`).toBe(special.length);
+    }
   });
 
   it("gives every unit original, filled-in rules text on its back", () => {

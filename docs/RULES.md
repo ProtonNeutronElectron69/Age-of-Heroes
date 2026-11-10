@@ -268,6 +268,24 @@ General rulings:
 | **Soul Reap** | When the figure destroys a figure with an attack, it removes 1 wound from itself. |
 | **Reboot** | When a figure of the squad is destroyed by an attack, roll a d20. On 17 or more it stands back up where it fell, with no wounds. |
 | **Reassemble** | At the end of the squad's turn, if any of its figures are destroyed, roll a d20. On 15 or more one of them returns, with no wounds, next to a figure of the squad that is still standing. |
+| **Fury** | +1 attack die while the figure has at least 1 wound. |
+
+Every squad has 1 special ability and every hero has 2; Flying comes on top and does not count. Many cards give one of these rules a name of their own, and the card text spells it out. For example:
+- Flying: Jet Packs (Skyhook Raiders).
+- Smoke Step: Hit and Run (Skyhook Raiders), Drifting Lantern (Kenzo).
+- Charge: Lightning Draw (Lady Asagiri).
+- Way of the Blade: Officer's Sabre (Captain Vance).
+- Steady Aim: Targeting Array (Sentinel K-7).
+- Moss Armor: Ember Scales (Cinderjaw).
+- Hidden in the Leaves: Forest Veil (Sylvanne).
+- Trample: Crushing Stride (Siege Walker Atlas), Crushing Coils (Marrowcoil).
+- Thick Hide: Bone Plates (Marrowcoil).
+- Smite the Unholy: Blessed Rounds (Sister Maren).
+- Answering Blade: Grave Riposte (Vorhal).
+- Field Dressing: Benediction (Solenne).
+- Deflector Field: Arcane Ward (Orrin Vael).
+- Ember Spit: Grave Blight (Morvane), with range 4.
+- Fury: Oni Fury (Ashfang Oni).
 
 A figure taken by mind control scores its share of its card's points for its new owner.
 

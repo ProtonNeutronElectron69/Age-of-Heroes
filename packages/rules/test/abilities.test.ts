@@ -64,6 +64,7 @@ const ABILITY_CARDS: UnitCard[] = [
   squad("bots", [ab("reboot", { needed: 17 })]),
   squad("bones", [ab("reassemble", { needed: 15 })], { species: "Undead" }),
   hero("mage", [ab("arc-lightning", { range: 5, dice: 3, splashDice: 1 })]),
+  hero("brute", [ab("fury", { bonus: 1 })]),
 ];
 
 const flat = (n: number, terrain = "grass"): [string, number][] => Array.from({ length: n }, () => [terrain, 1]);
@@ -348,6 +349,13 @@ describe("abilities added with the larger roster", () => {
     expect(bonus(g, "p1:0#1", "p2:0#1").attackBonus).toBe(0);
     g.state.units[0]!.figures[2]!.destroyed = true;
     expect(bonus(g, "p1:0#1", "p2:0#1").notes).toEqual(["bloodrage +1 attack"]);
+  });
+
+  it("Fury adds a die while the figure is wounded", () => {
+    const g = game(flat(4), { p1: ["brute"], p2: ["hero"] }, { "p1:0#1": at(0), "p2:0#1": at(1) });
+    expect(bonus(g, "p1:0#1", "p2:0#1").attackBonus).toBe(0);
+    g.state.units[0]!.figures[0]!.wounds = 1;
+    expect(bonus(g, "p1:0#1", "p2:0#1").notes).toEqual(["fury +1 attack"]);
   });
 
   it("Smite the Unholy adds 2 dice against Undead and Oni only", () => {

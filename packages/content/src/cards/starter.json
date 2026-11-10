@@ -24,7 +24,7 @@
       "range": 4,
       "attack": 3,
       "defense": 3,
-      "points": 85,
+      "points": 100,
       "abilities": [
         {
           "id": "rally-the-line",
@@ -32,6 +32,14 @@
           "text": "When a friendly Disciplined squad figure within 4 hexes of Captain Vance defends, it rolls 1 extra defense die.",
           "params": {
             "range": 4,
+            "bonus": 1
+          }
+        },
+        {
+          "id": "duelist",
+          "name": "Officer's Sabre",
+          "text": "When Captain Vance attacks an adjacent hero, she rolls 1 extra attack die.",
+          "params": {
             "bonus": 1
           }
         }
@@ -63,7 +71,7 @@
       "range": 6,
       "attack": 2,
       "defense": 2,
-      "points": 75,
+      "points": 80,
       "abilities": [
         {
           "id": "massed-volley",
@@ -102,7 +110,7 @@
       "range": 1,
       "attack": 4,
       "defense": 4,
-      "points": 115,
+      "points": 135,
       "abilities": [
         {
           "id": "answering-blade",
@@ -110,6 +118,14 @@
           "text": "When Lady Asagiri defends against an adjacent attacker and rolls more shields than it rolled skulls, the attacker takes 1 wound.",
           "params": {
             "wounds": 1
+          }
+        },
+        {
+          "id": "charge",
+          "name": "Lightning Draw",
+          "text": "When Lady Asagiri attacks an adjacent enemy after moving this turn, she rolls 1 extra attack die.",
+          "params": {
+            "bonus": 1
           }
         }
       ]
@@ -140,7 +156,7 @@
       "range": 3,
       "attack": 2,
       "defense": 3,
-      "points": 65,
+      "points": 70,
       "abilities": [
         {
           "id": "smoke-step",
@@ -178,7 +194,7 @@
       "range": 1,
       "attack": 4,
       "defense": 3,
-      "points": 140,
+      "points": 160,
       "abilities": [
         {
           "id": "flying",
@@ -193,6 +209,15 @@
             "range": 3,
             "dice": 2,
             "splashDice": 1
+          }
+        },
+        {
+          "id": "moss-armor",
+          "name": "Ember Scales",
+          "text": "Cinderjaw rolls 1 extra defense die against attacks from 4 or more hexes away.",
+          "params": {
+            "minDistance": 4,
+            "bonus": 1
           }
         }
       ]
@@ -223,7 +248,7 @@
       "range": 8,
       "attack": 2,
       "defense": 2,
-      "points": 60,
+      "points": 65,
       "abilities": [
         {
           "id": "hidden-in-the-leaves",
@@ -262,7 +287,7 @@
       "range": 5,
       "attack": 3,
       "defense": 5,
-      "points": 115,
+      "points": 140,
       "abilities": [
         {
           "id": "deflector-field",
@@ -270,6 +295,14 @@
           "text": "Friendly figures adjacent to K-7 roll 1 extra defense die against attacks from 3 or more hexes away.",
           "params": {
             "minDistance": 3,
+            "bonus": 1
+          }
+        },
+        {
+          "id": "steady-aim",
+          "name": "Targeting Array",
+          "text": "If K-7 has not moved this turn, it rolls 1 extra attack die.",
+          "params": {
             "bonus": 1
           }
         }
@@ -301,7 +334,7 @@
       "range": 5,
       "attack": 3,
       "defense": 2,
-      "points": 85,
+      "points": 90,
       "abilities": [
         {
           "id": "salvage-protocol",
@@ -336,7 +369,7 @@
       "range": 1,
       "attack": 5,
       "defense": 4,
-      "points": 180,
+      "points": 170,
       "abilities": [
         {
           "id": "moss-armor",
@@ -383,7 +416,7 @@
       "range": 1,
       "attack": 3,
       "defense": 3,
-      "points": 75,
+      "points": 80,
       "abilities": [
         {
           "id": "brace",
@@ -430,6 +463,14 @@
           "params": {
             "heal": 1
           }
+        },
+        {
+          "id": "smite-the-unholy",
+          "name": "Blessed Rounds",
+          "text": "When Sister Maren attacks an Undead or Oni figure, she rolls 2 extra attack dice.",
+          "params": {
+            "bonus": 2
+          }
         }
       ]
     }
@@ -469,6 +510,14 @@
             "range": 4,
             "needed": 16
           }
+        },
+        {
+          "id": "smoke-step",
+          "name": "Drifting Lantern",
+          "text": "After Kenzo attacks or uses Lantern Gaze, he may move up to 2 hexes. He does not take passing strikes during this move.",
+          "params": {
+            "move": 2
+          }
         }
       ]
     }
@@ -498,7 +547,7 @@
       "range": 1,
       "attack": 5,
       "defense": 3,
-      "points": 110,
+      "points": 125,
       "abilities": [
         {
           "id": "thick-hide",
@@ -507,6 +556,14 @@
           "params": {
             "minDistance": 3,
             "reduce": 1
+          }
+        },
+        {
+          "id": "fury",
+          "name": "Oni Fury",
+          "text": "While Ashfang Oni has at least 1 wound, it rolls 1 extra attack die.",
+          "params": {
+            "bonus": 1
           }
         }
       ]
@@ -537,7 +594,7 @@
       "range": 4,
       "attack": 2,
       "defense": 3,
-      "points": 75,
+      "points": 70,
       "abilities": [
         {
           "id": "grove-song",
@@ -546,6 +603,15 @@
           "params": {
             "range": 3,
             "bonus": 1
+          }
+        },
+        {
+          "id": "hidden-in-the-leaves",
+          "name": "Forest Veil",
+          "text": "While standing on forest, Sylvanne rolls 2 extra defense dice against attacks from 4 or more hexes away.",
+          "params": {
+            "minDistance": 4,
+            "bonus": 2
           }
         }
       ]
@@ -576,7 +642,7 @@
       "range": 6,
       "attack": 4,
       "defense": 5,
-      "points": 230,
+      "points": 235,
       "abilities": [
         {
           "id": "mortar-barrage",
@@ -588,6 +654,14 @@
             "dice": 3,
             "splashDice": 1,
             "ignoresSight": 1
+          }
+        },
+        {
+          "id": "trample",
+          "name": "Crushing Stride",
+          "text": "Atlas may move through Small and Medium enemy figures. Each figure it moves through rolls 1 defense die; on a blank it takes 1 wound.",
+          "params": {
+            "defenseDice": 1
           }
         }
       ]
@@ -624,6 +698,14 @@
           "id": "flying",
           "name": "Jet Packs",
           "text": "Raiders fly: count their move in hexes straight to where they land, ignoring terrain, height and figures on the way. Terrain only affects them where they land, and they never take falling damage."
+        },
+        {
+          "id": "smoke-step",
+          "name": "Hit and Run",
+          "text": "After a Raider attacks, it may move up to 2 hexes. It does not take passing strikes during this move.",
+          "params": {
+            "move": 2
+          }
         }
       ]
     }
