@@ -10,7 +10,6 @@ import {
   type TokenAssignment,
   type TokenId,
 } from "@aoh/rules";
-import type { Replay } from "@aoh/protocol";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { describeEvent, type Names } from "../describe";
 
@@ -264,20 +263,6 @@ export function EventLog({ events, names }: { events: readonly GameEvent[]; name
 
 // ---------------------------------------------------------------------------
 // Game over
-
-/** Save a finished game as a file that the replay viewer can open. */
-export function downloadReplay(replay: Replay): void {
-  const blob = new Blob([JSON.stringify(replay)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  const day = new Date().toISOString().slice(0, 10);
-  a.href = url;
-  a.download = `age-of-heroes-replay-${replay.map.id}-${day}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 
 export function GameOver({
   state,

@@ -117,6 +117,10 @@ let retryTimer: number | null = null;
 let leaving = false;
 /** True from opening a socket until the server says which room we are in. */
 let awaitingWelcome = false;
+/** When the current attempt to get into a room began. */
+let connectStarted = 0;
+/** How long to keep trying to reach a server before giving up. A sleeping free server can take a minute to wake. */
+const CONNECT_PATIENCE_MS = 90_000;
 
 function set(patch: Partial<OnlineState>): void {
   state = { ...state, ...patch };
@@ -171,7 +175,7 @@ function open(url: string, first: ClientMessage): void {
       return;
     }
     retries += 1;
-    if (state.status === "connecting" && retries >= 3) {
+    if (state.status === "connecting" && Date.now() - connectStarted > CONNECT_PATIENCE_MS) {
       // Never got in: the address is wrong or the server is down. Stop and say so.
       disconnect();
       set({ error: `Could not reach a game server at ${url}` });
@@ -236,6 +240,8 @@ function begin(url: string, first: ClientMessage, name?: string): void {
     return;
   }
   if (name !== undefined) write(NAME_KEY, name);
+  connectStarted = Date.now();
+  retries = 0;
   set({ status: "connecting", error: null });
   open(address, first);
 }

@@ -91,16 +91,32 @@ let attacks = 0;
 
 /** Take one action on this player's device if it is their turn to do something. */
 async function act(p) {
+  try {
+    return await tryAct(p);
+  } catch (err) {
+    // The game moved on between looking and clicking (the server answered, the turn passed):
+    // look again next time rather than wait on a button that is gone.
+    if (err?.name === "TimeoutError") return "retry";
+    throw err;
+  }
+}
+
+/** Short waits: a button that is not there within a few seconds is not coming back. */
+const QUICK = { timeout: 5000 };
+
+async function tryAct(p) {
   const { page } = p;
+  // Wait for the server to answer the last command before deciding anything.
+  await page.waitForFunction(() => !document.querySelector("[data-pending]"), null, QUICK);
   // Secret tokens: online there is no pass screen, the panel just appears.
   const lock = page.getByRole("button", { name: /Lock in tokens|^Place / });
   if (await lock.count()) {
     const rows = page.locator(".token-table tbody tr");
     const n = await rows.count();
     for (const [row, token] of [[0, "1"], [n - 1, "2"], [0, "3"], [n - 1, "X"]]) {
-      await rows.nth(row).getByRole("button", { name: new RegExp(`^Token ${token} on`) }).click();
+      await rows.nth(row).getByRole("button", { name: new RegExp(`^Token ${token} on`) }).click(QUICK);
     }
-    await page.getByRole("button", { name: "Lock in tokens" }).click();
+    await page.getByRole("button", { name: "Lock in tokens" }).click(QUICK);
     return "tokens";
   }
 
@@ -139,11 +155,11 @@ async function act(p) {
   if (ui?.selected) p.handled.add(ui.selected);
   const buttons = turn.locator(".figure-button:not([disabled])");
   for (let i = 0; i < (await buttons.count()); i++) {
-    await buttons.nth(i).click();
+    await buttons.nth(i).click(QUICK);
     const sel = await page.evaluate(() => window.__aohUi?.selected);
     if (sel && !p.handled.has(sel)) return "switch";
   }
-  await endTurn.click();
+  await endTurn.click(QUICK);
   await page.waitForTimeout(150);
   return "end";
 }
@@ -232,12 +248,20 @@ try {
   phase("play");
   let reloaded = false;
   let idle = 0;
+  let retries = 0;
   for (let step = 0; step < 3000; step++) {
     if (await alice.page.getByRole("dialog", { name: "Game over" }).count()) break;
     let did = false;
     for (const p of [alice, bob]) {
       const what = await act(p);
-      if (what) did = true;
+      if (what === "retry") {
+        if (++retries > 10) fail(`${p.label}'s page kept missing its buttons`);
+        continue;
+      }
+      if (what) {
+        did = true;
+        retries = 0;
+      }
       if (what === "tokens" && p === bob && !reloaded) {
         // Drop Bob's connection mid-game: the page must come back to his seat.
         reloaded = true;

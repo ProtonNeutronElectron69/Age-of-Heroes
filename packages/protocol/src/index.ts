@@ -112,12 +112,20 @@ export interface RoomInfo {
   readonly playerCounts: number[];
 }
 
-/** A finished game, enough to watch it again move by move. */
+/**
+ * The full record of a game: its setup, map and every command. Replaying the
+ * commands rebuilds the game exactly, so the same file serves as a replay of a
+ * finished game and as a save of one in progress.
+ */
 export interface Replay {
   readonly formatVersion: 1;
   readonly setup: GameSetup;
   readonly map: MapDefinition;
   readonly commands: Command[];
+  /** Saves only: the name the players gave it. */
+  readonly name?: string;
+  /** Saves only: when it was saved (ISO 8601). */
+  readonly savedAt?: string;
 }
 
 export type ServerMessage =
@@ -163,6 +171,8 @@ export const replaySchema = z.object({
   setup: setupSchema,
   map: mapSchema,
   commands: z.array(commandSchema),
+  name: z.string().max(80).optional(),
+  savedAt: z.string().max(40).optional(),
 });
 
 /** Read a replay file. Throws with a readable message if it is malformed. */
@@ -170,7 +180,7 @@ export function parseReplay(data: unknown): Replay {
   const parsed = replaySchema.safeParse(data);
   if (!parsed.success) {
     const details = parsed.error.issues.slice(0, 5).map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`);
-    throw new Error(`This is not a valid replay file:\n${details.join("\n")}`);
+    throw new Error(`This is not a valid game file:\n${details.join("\n")}`);
   }
   return parsed.data as Replay;
 }

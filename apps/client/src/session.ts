@@ -13,6 +13,7 @@ import {
   type RulesContext,
 } from "@aoh/rules";
 import { useSyncExternalStore } from "react";
+import { summarize, type SaveSummary } from "./saves";
 
 /**
  * The game being played. A local (hot-seat) session runs the rules engine in
@@ -54,10 +55,13 @@ function save(): void {
   if (session?.kind === "online") return; // online games live on the server
   try {
     if (session) {
-      localStorage.setItem(
-        SAVE_KEY,
-        JSON.stringify({ setup: session.setup, map: session.map, commands: session.commands }),
-      );
+      const saved: SavedGame = {
+        setup: session.setup,
+        map: session.map,
+        commands: [...session.commands],
+        summary: summarize(session.state, session.map),
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(saved));
     } else {
       localStorage.removeItem(SAVE_KEY);
     }
@@ -219,9 +223,11 @@ interface SavedGame {
   setup: GameSetup;
   map: MapDefinition;
   commands: Command[];
+  /** Absent in saves from before named saves existed. */
+  summary?: SaveSummary;
 }
 
-/** A saved game from an earlier visit, if there is one. */
+/** The unfinished hot-seat game from an earlier visit (kept automatically), if there is one. */
 export function savedGame(): SavedGame | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -231,34 +237,57 @@ export function savedGame(): SavedGame | null {
   }
 }
 
+/** Continue the game kept automatically from an earlier visit. */
 export function resumeSavedGame(): boolean {
   const saved = savedGame();
   if (!saved) return false;
+  if (loadGame(saved) === null) return true;
+  // It no longer replays (made by an older version of the rules): drop it.
   try {
-    const ctx = contextFor(saved.map).ctx;
-    const { state, events } = replayGame(saved.setup, saved.commands, ctx);
+    localStorage.removeItem(SAVE_KEY);
+  } catch {
+    // ignore
+  }
+  emit();
+  return false;
+}
+
+/**
+ * Start playing a game from its record (a named save, a save file or a
+ * replay): every command is replayed, so it picks up exactly where it was.
+ * The loaded game becomes the one kept automatically. Returns an error
+ * message, or null when it worked.
+ */
+export function loadGame(record: { setup: GameSetup; map: MapDefinition; commands: readonly Command[] }): string | null {
+  try {
+    const ctx = contextFor(record.map).ctx;
+    const { state, events } = replayGame(record.setup, record.commands, ctx);
     session = {
       kind: "local",
       me: null,
       replay: null,
-      setup: saved.setup,
-      map: saved.map,
+      setup: record.setup,
+      map: record.map,
       ctx,
       state,
-      commands: saved.commands,
+      commands: [...record.commands],
       events,
       lastEvents: [],
       error: null,
       pending: false,
     };
-    emit();
-    return true;
-  } catch {
-    session = null;
     save();
     emit();
-    return false;
+    return null;
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : String(e);
+    return `This game could not be loaded. It may come from an older version of the rules. (${detail})`;
   }
+}
+
+/** Can this game be saved on this device? Online games are kept by the server instead. */
+export function canSave(s: Session): boolean {
+  return s.kind === "local";
 }
 
 function subscribe(listener: () => void): () => void {

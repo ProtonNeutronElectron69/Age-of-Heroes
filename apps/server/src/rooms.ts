@@ -12,6 +12,7 @@ import {
   applyCommand,
   createGame,
   eventsFor,
+  replayGame,
   viewFor,
   type Command,
   type GameEvent,
@@ -20,6 +21,7 @@ import {
   type RulesContext,
 } from "@aoh/rules";
 import { randomBytes, randomInt } from "node:crypto";
+import type { RoomStore, StoredRoom } from "./store";
 
 /** One connected browser. The transport (WebSocket) sits behind this. */
 export interface Connection {
@@ -62,6 +64,8 @@ export interface RoomManagerOptions {
   /** Rooms with nobody connected are removed after this long (default 2 hours). */
   readonly idleMs?: number;
   readonly now?: () => number;
+  /** Keeps rooms through a restart. Without one, rooms live only in memory. */
+  readonly store?: RoomStore;
 }
 
 // Letters only, without ones that are easy to confuse (I, O).
@@ -78,15 +82,70 @@ export class RoomManager {
   private readonly maxRooms: number;
   private readonly idleMs: number;
   private readonly now: () => number;
+  private readonly store: RoomStore | null;
 
   constructor(options: RoomManagerOptions = {}) {
     this.maxRooms = options.maxRooms ?? 500;
     this.idleMs = options.idleMs ?? 2 * 60 * 60 * 1000;
     this.now = options.now ?? Date.now;
+    this.store = options.store ?? null;
+    if (this.store) for (const stored of this.store.loadAll()) this.restore(stored);
   }
 
   get roomCount(): number {
     return this.rooms.size;
+  }
+
+  /** Write any room changes still waiting to be stored. */
+  flush(): void {
+    this.store?.flush();
+  }
+
+  /** Rebuild a stored room: same code, seats and tokens; the game is replayed from its commands. */
+  private restore(stored: StoredRoom): void {
+    try {
+      const { ctx } = contextFor(stored.settings.map);
+      const state = stored.setup ? replayGame(stored.setup, stored.commands, ctx).state : null;
+      this.rooms.set(stored.code, {
+        code: stored.code,
+        settings: stored.settings,
+        ctx,
+        playerCounts: ctx.board.playerCounts(),
+        members: stored.members.map((m) => ({ playerId: m.playerId, name: m.name, token: m.token, conn: null })),
+        hostId: stored.hostId,
+        spectators: new Set(),
+        nextPlayer: stored.nextPlayer,
+        setup: stored.setup,
+        state,
+        commands: [...stored.commands],
+        lastActive: stored.lastActive,
+      });
+    } catch (err) {
+      // Made by an older version of the rules, most likely: it can no longer be replayed.
+      console.warn(`Dropping stored room ${stored.code}: ${(err as Error).message}`);
+      this.store?.remove(stored.code);
+    }
+  }
+
+  /** Remember the room's current state, if rooms are being stored. */
+  private persist(room: Room): void {
+    if (!this.store || !this.rooms.has(room.code)) return;
+    this.store.save({
+      version: 1,
+      code: room.code,
+      settings: room.settings,
+      members: room.members.map((m) => ({ playerId: m.playerId, name: m.name, token: m.token })),
+      hostId: room.hostId,
+      nextPlayer: room.nextPlayer,
+      setup: room.setup,
+      commands: [...room.commands],
+      lastActive: room.lastActive,
+    });
+  }
+
+  private dropRoom(code: string): void {
+    this.rooms.delete(code);
+    this.store?.remove(code);
   }
 
   /** Handle one raw message from a connection. Never throws. */
@@ -116,6 +175,7 @@ export class RoomManager {
     const member = room.members.find((m) => m.conn === conn);
     if (member) member.conn = null;
     room.lastActive = this.now();
+    this.persist(room);
     this.broadcastRoom(room);
   }
 
@@ -124,7 +184,7 @@ export class RoomManager {
     const now = this.now();
     for (const [code, room] of this.rooms) {
       const anyone = room.members.some((m) => m.conn) || room.spectators.size > 0;
-      if (!anyone && now - room.lastActive > this.idleMs) this.rooms.delete(code);
+      if (!anyone && now - room.lastActive > this.idleMs) this.dropRoom(code);
     }
   }
 
@@ -173,6 +233,7 @@ export class RoomManager {
     this.rooms.set(room.code, room);
     const member = this.addMember(room, conn, name);
     room.hostId = member.playerId;
+    this.persist(room);
     this.welcome(conn, room, member);
   }
 
@@ -182,6 +243,7 @@ export class RoomManager {
     if (room.state) throw new Error("That game has already started; you can watch it instead");
     if (room.members.length >= Math.max(...room.playerCounts)) throw new Error("That room is full");
     const member = this.addMember(room, conn, name);
+    this.persist(room);
     this.welcome(conn, room, member);
     this.broadcastRoom(room);
   }
@@ -200,6 +262,7 @@ export class RoomManager {
     member.conn = conn;
     this.seats.set(conn, { room, playerId: member.playerId });
     room.lastActive = this.now();
+    this.persist(room);
     this.welcome(conn, room, member);
     this.broadcastRoom(room);
   }
@@ -236,6 +299,7 @@ export class RoomManager {
     room.setup = setup;
     room.state = state;
     room.lastActive = this.now();
+    this.persist(room);
     this.broadcastRoom(room);
     this.broadcastGame(room, events, true);
   }
@@ -250,6 +314,7 @@ export class RoomManager {
     room.state = result.state;
     room.commands.push(command);
     room.lastActive = this.now();
+    this.persist(room);
     this.broadcastGame(room, result.events, false);
     if (result.state.phase === "gameOver") this.broadcastReplay(room);
   }
@@ -263,7 +328,7 @@ export class RoomManager {
         // Before the game: give up the seat.
         room.members = room.members.filter((m) => m.playerId !== playerId);
         if (room.members.length === 0) {
-          this.rooms.delete(room.code);
+          this.dropRoom(room.code);
           return;
         }
         if (room.hostId === playerId) room.hostId = room.members[0]!.playerId;
@@ -277,12 +342,14 @@ export class RoomManager {
           if (result.ok) {
             room.state = result.state;
             room.commands.push({ type: "concede", player: playerId });
+            room.lastActive = this.now();
             this.broadcastGame(room, result.events, false);
             if (result.state.phase === "gameOver") this.broadcastReplay(room);
           }
         }
       }
     }
+    this.persist(room);
     this.broadcastRoom(room);
   }
 

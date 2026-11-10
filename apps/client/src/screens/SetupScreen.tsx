@@ -15,7 +15,8 @@ import {
   useOnline,
 } from "../online";
 import { SEAT_COLORS, SEAT_COLOR_NAMES } from "../scene/scale";
-import { resumeSavedGame, savedGame, startGame } from "../session";
+import { deleteSave, describeSummary, downloadGameFile, formatSavedAt, listSaves, type SaveSlot } from "../saves";
+import { loadGame, resumeSavedGame, savedGame, startGame } from "../session";
 
 const ROUND_LIMITS = [null, 5, 8, 12] as const;
 const BUDGETS = [300, 400, 500, 600] as const;
@@ -39,6 +40,9 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
   const [code, setCode] = useState("");
   const [replayError, setReplayError] = useState<string | null>(null);
   const replayInput = useRef<HTMLInputElement>(null);
+  const saveInput = useRef<HTMLInputElement>(null);
+  const [saves, setSaves] = useState(() => listSaves());
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [mode, setMode] = useState<RulesMode>("basic");
   const [count, setCount] = useState(2);
   const [names, setNames] = useState<string[]>(SEAT_COLOR_NAMES.map((c) => `${c} Player`));
@@ -68,12 +72,46 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
     createRoom(serverUrl, myName.trim(), settings);
   };
 
+  const readGameFile = async (file: File): Promise<Replay> => {
+    try {
+      return parseReplay(JSON.parse(await file.text()));
+    } catch (e) {
+      throw new Error(e instanceof SyntaxError ? "That file is not an Age of Heroes game file." : (e as Error).message);
+    }
+  };
+
   const openReplay = async (file: File) => {
     try {
-      onOpenReplay(parseReplay(JSON.parse(await file.text())));
+      onOpenReplay(await readGameFile(file));
     } catch (e) {
-      setReplayError(e instanceof SyntaxError ? "That file is not a replay." : (e as Error).message);
+      setReplayError((e as Error).message);
     }
+  };
+
+  /** Loading replaces the unfinished game kept from last time, so check first. */
+  const mayReplaceCurrent = () =>
+    !saved ||
+    window.confirm(
+      `Loading replaces your unfinished game${saved.summary ? ` (${describeSummary(saved.summary)})` : ""}. Save it first if you want to keep it. Load anyway?`,
+    );
+
+  const openSave = async (file: File) => {
+    setLoadError(null);
+    try {
+      const record = await readGameFile(file);
+      if (!mayReplaceCurrent()) return;
+      const problem = loadGame(record);
+      if (problem) setLoadError(problem);
+    } catch (e) {
+      setLoadError((e as Error).message);
+    }
+  };
+
+  const loadSlot = (slot: SaveSlot) => {
+    setLoadError(null);
+    if (!mayReplaceCurrent()) return;
+    const problem = loadGame(slot.record);
+    if (problem) setLoadError(problem);
   };
 
   const start = () => {
@@ -117,6 +155,71 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
             ? "Hot-seat for 2 to 6 players on one device."
             : "Each player on their own device, connected through a game server."}
         </p>
+
+        {where === "local" && (saved || saves.length > 0 || loadError) && (
+          <fieldset>
+            <legend>Saved games</legend>
+            {saved && (
+              <div className="save-row current">
+                <div className="save-info">
+                  <strong>Last game</strong>
+                  <span className="muted small">
+                    {saved.summary ? describeSummary(saved.summary) : "Kept automatically"}
+                  </span>
+                </div>
+                <div className="save-actions">
+                  <button type="button" className="primary" onClick={() => resumeSavedGame()}>
+                    Continue
+                  </button>
+                </div>
+              </div>
+            )}
+            {saves.length > 0 && (
+              <ul className="save-list" aria-label="Saved games">
+                {saves.map((slot) => (
+                  <li key={slot.id} className="save-row">
+                    <div className="save-info">
+                      <strong>{slot.name}</strong>
+                      <span className="muted small">
+                        {describeSummary(slot.summary)}
+                        {formatSavedAt(slot.savedAt) ? `, saved ${formatSavedAt(slot.savedAt)}` : ""}
+                      </span>
+                    </div>
+                    <div className="save-actions">
+                      <button type="button" onClick={() => loadSlot(slot)} aria-label={`Load ${slot.name}`}>
+                        Load
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => downloadGameFile(slot.record, slot.name)}
+                        aria-label={`Download ${slot.name}`}
+                        title="Download as a file"
+                      >
+                        File
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Delete ${slot.name}`}
+                        onClick={() => {
+                          if (!window.confirm(`Delete the save "${slot.name}"?`)) return;
+                          deleteSave(slot.id);
+                          setSaves(listSaves());
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {loadError && (
+              <p className="issues" role="alert">
+                {loadError}
+              </p>
+            )}
+          </fieldset>
+        )}
 
         {where === "online" && (
           <fieldset>
@@ -365,9 +468,9 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
               Create room
             </button>
           )}
-          {saved && where === "local" && (
-            <button type="button" onClick={() => resumeSavedGame()}>
-              Continue saved game
+          {where === "local" && (
+            <button type="button" onClick={() => saveInput.current?.click()}>
+              Load a save file
             </button>
           )}
           <button type="button" onClick={() => onOpenEditor(null)}>
@@ -387,6 +490,18 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
               e.target.value = "";
               setReplayError(null);
               if (file) void openReplay(file);
+            }}
+          />
+          <input
+            ref={saveInput}
+            type="file"
+            accept=".json,application/json"
+            hidden
+            aria-label="Save file"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) void openSave(file);
             }}
           />
         </div>

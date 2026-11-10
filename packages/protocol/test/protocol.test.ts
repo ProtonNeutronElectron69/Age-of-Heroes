@@ -83,7 +83,7 @@ describe("views and replays", () => {
   it("reads replay files and rejects broken ones", () => {
     const replay = parseReplay({ formatVersion: 1, setup, map, commands: [{ type: "concede", player: "p2" }] });
     expect(replayGame(replay.setup, replay.commands, ctx).state.phase).toBe("gameOver");
-    expect(() => parseReplay({ formatVersion: 2, setup, map, commands: [] })).toThrow(/not a valid replay/);
+    expect(() => parseReplay({ formatVersion: 2, setup, map, commands: [] })).toThrow(/not a valid game file/);
     expect(() => parseReplay({ formatVersion: 1, setup: { ...setup, players: [] }, map, commands: [] })).toThrow();
   });
 });

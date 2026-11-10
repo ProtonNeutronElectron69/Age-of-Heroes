@@ -1,16 +1,30 @@
+import { useEffect, useState } from "react";
 import { leaveOnline, startRoom, useOnline } from "../online";
 
 /** Waiting room for an online game: share the code, see who is here, and start. */
 export function LobbyScreen() {
   const online = useOnline();
   const room = online.room;
+  const waiting = online.status === "connecting" || online.status === "playing" || !room;
+  // After a few seconds without an answer, explain that the server may be waking up.
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!waiting) return setSlow(false);
+    const t = window.setTimeout(() => setSlow(true), 5000);
+    return () => window.clearTimeout(t);
+  }, [waiting]);
 
-  if (online.status === "connecting" || online.status === "playing" || !room) {
+  if (waiting) {
     return (
       <div className="screen setup">
         <section className="panel setup-panel" aria-label="Connecting">
           <h1>{online.status === "playing" ? "Joining the game..." : "Connecting..."}</h1>
           <p className="muted">Reaching the game server at {online.serverUrl || "the server"}.</p>
+          {slow && (
+            <p className="muted small">
+              Still trying. A server that has been idle can take up to a minute to wake up.
+            </p>
+          )}
           <div className="actions">
             <button type="button" onClick={leaveOnline}>
               Cancel

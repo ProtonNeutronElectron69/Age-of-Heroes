@@ -11,6 +11,9 @@ import {
   type GameState,
   type PlayerView,
 } from "@aoh/rules";
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { WebSocket } from "ws";
 import { startGameServer, type GameServer } from "../src/server";
@@ -44,8 +47,8 @@ class Client {
     });
   }
 
-  static async connect(): Promise<Client> {
-    const socket = new WebSocket(`ws://127.0.0.1:${server.port}/ws`);
+  static async connect(port = server.port): Promise<Client> {
+    const socket = new WebSocket(`ws://127.0.0.1:${port}/ws`);
     await new Promise((resolve, reject) => {
       socket.once("open", resolve);
       socket.once("error", reject);
@@ -277,5 +280,88 @@ describe("a full online game", () => {
     late.send({ t: "join", code, name: "Late" });
     expect((await e).message).toMatch(/already started/);
     for (const c of [late, host.client, others[0]!.client]) await c.close();
+  });
+});
+
+describe("keeping rooms through a restart", () => {
+  it("brings back the room, the seats and the game after the server restarts", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "aoh-rooms-"));
+    try {
+      const first = await startGameServer({ port: 0, host: "127.0.0.1", dataDir: dir });
+      const host = await Client.connect(first.port);
+      const hw = host.next("welcome");
+      host.send({ t: "create", name: "Ana", settings: settings() });
+      const hostSeat = await hw;
+      const guest = await Client.connect(first.port);
+      const gw = guest.next("welcome");
+      guest.send({ t: "join", code: hostSeat.code, name: "Bo" });
+      const guestSeat = await gw;
+      const started = host.next("game");
+      host.send({ t: "start" });
+      let state = stateFromView((await started).view);
+
+      // One pick before the restart.
+      const clients = new Map([
+        [hostSeat.playerId!, host],
+        [guestSeat.playerId!, guest],
+      ]);
+      const firstPicker = currentDrafter(state)!;
+      const picked = draftableCards(state, ctx, firstPicker)[0]!;
+      await act(clients, { type: "draftPick", player: firstPicker, cardId: picked });
+      await first.close();
+      expect(readdirSync(dir)).toEqual([`${hostSeat.code}.json`]);
+      // A damaged file is skipped, not fatal.
+      writeFileSync(join(dir, "QQQQQ.json"), "{ not json");
+
+      const second = await startGameServer({ port: 0, host: "127.0.0.1", dataDir: dir });
+      try {
+        expect(second.rooms.roomCount).toBe(1);
+        // A wrong token still gets nowhere.
+        const stranger = await Client.connect(second.port);
+        const refused = stranger.next("error");
+        stranger.send({ t: "rejoin", code: hostSeat.code, token: "not-a-real-token" });
+        expect((await refused).message).toMatch(/not yours/);
+
+        const back = new Map<string, Client>();
+        for (const seat of [hostSeat, guestSeat]) {
+          const c = await Client.connect(second.port);
+          const snapshot = c.next("game", (m) => m.snapshot);
+          c.send({ t: "rejoin", code: seat.code, token: seat.token });
+          const view = (await snapshot).view;
+          expect(view.viewer).toBe(seat.playerId);
+          expect(view.config.seed).toBe(0);
+          back.set(seat.playerId!, c);
+          state = stateFromView(view);
+        }
+        expect(state.phase).toBe("draft");
+        expect(state.units.map((u) => u.cardId)).toEqual([picked]);
+
+        // The game carries on from where it was.
+        const nextPicker = currentDrafter(state)!;
+        expect(nextPicker).not.toBeNull();
+        await act(back, { type: "draftPick", player: nextPicker, cardId: draftableCards(state, ctx, nextPicker)[0]! });
+        state = stateFromView(back.get(nextPicker)!.lastView()!);
+        expect(state.units).toHaveLength(2);
+        for (const c of [stranger, ...back.values()]) await c.close();
+      } finally {
+        await second.close();
+      }
+
+      // Rooms everyone has left are removed from the folder too.
+      const third = await startGameServer({ port: 0, host: "127.0.0.1", dataDir: dir });
+      const solo = await Client.connect(third.port);
+      const sw = solo.next("welcome");
+      solo.send({ t: "create", name: "Cy", settings: settings() });
+      const soloRoom = (await sw).code;
+      solo.send({ t: "leave" });
+      await new Promise((r) => setTimeout(r, 50));
+      await solo.close();
+      await third.close();
+      expect(readdirSync(dir)).not.toContain(`${soloRoom}.json`);
+      expect(third.rooms.roomCount).toBe(1);
+      expect(readdirSync(dir)).toContain(`${hostSeat.code}.json`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
