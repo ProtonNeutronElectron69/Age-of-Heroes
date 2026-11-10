@@ -37,7 +37,7 @@ const RING: Record<FigureView["status"], string | null> = {
 };
 
 /** Gap between the top of a token and the tip of its selection arrow, leaving room for the name tag. */
-const ARROW_GAP = 0.75;
+const ARROW_GAP = 0.8;
 
 /** A red arrow that bobs and spins above a figure, pointing down at it. */
 function SelectionArrow({ top }: { top: number }) {
@@ -46,10 +46,10 @@ function SelectionArrow({ top }: { top: number }) {
     if (!arrow.current) return;
     const t = clock.elapsedTime;
     arrow.current.rotation.y = t * 2;
-    arrow.current.position.y = top + ARROW_GAP + 0.12 * Math.sin(t * 3);
+    arrow.current.position.y = top + ARROW_GAP + 0.18 * Math.sin(t * 3);
   });
   return (
-    <group ref={arrow} position={[0, top + ARROW_GAP, 0]}>
+    <group ref={arrow} position={[0, top + ARROW_GAP, 0]} scale={1.8}>
       {/* Head: a four-sided point, so the spin shows */}
       <mesh position={[0, 0.2, 0]} rotation={[Math.PI, 0, 0]} raycast={() => null}>
         <coneGeometry args={[0.32, 0.4, 4]} />
