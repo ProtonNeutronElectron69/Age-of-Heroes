@@ -145,7 +145,10 @@ export type ServerMessage =
       readonly t: "game";
       readonly view: PlayerView;
       readonly events: GameEvent[];
-      /** True when this is a full catch-up (after joining or reconnecting) rather than one move. */
+      /**
+       * True for a full catch-up (after joining or reconnecting): `events` is then the whole
+       * log so far rather than what one move did.
+       */
       readonly snapshot: boolean;
     }
   | { readonly t: "replay"; readonly replay: Replay }

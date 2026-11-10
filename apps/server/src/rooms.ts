@@ -49,6 +49,8 @@ interface Room {
   setup: GameSetup | null;
   state: GameState | null;
   commands: Command[];
+  /** Everything that has happened, so a player who comes back sees the whole log. */
+  events: GameEvent[];
   lastActive: number;
 }
 
@@ -105,7 +107,7 @@ export class RoomManager {
   private restore(stored: StoredRoom): void {
     try {
       const { ctx } = contextFor(stored.settings.map);
-      const state = stored.setup ? replayGame(stored.setup, stored.commands, ctx).state : null;
+      const replayed = stored.setup ? replayGame(stored.setup, stored.commands, ctx) : null;
       this.rooms.set(stored.code, {
         code: stored.code,
         settings: stored.settings,
@@ -116,8 +118,9 @@ export class RoomManager {
         spectators: new Set(),
         nextPlayer: stored.nextPlayer,
         setup: stored.setup,
-        state,
+        state: replayed?.state ?? null,
         commands: [...stored.commands],
+        events: replayed?.events ?? [],
         lastActive: stored.lastActive,
       });
     } catch (err) {
@@ -228,6 +231,7 @@ export class RoomManager {
       setup: null,
       state: null,
       commands: [],
+      events: [],
       lastActive: this.now(),
     };
     this.rooms.set(room.code, room);
@@ -298,6 +302,7 @@ export class RoomManager {
     const { state, events } = createGame(setup, room.ctx);
     room.setup = setup;
     room.state = state;
+    room.events = [...events];
     room.lastActive = this.now();
     this.persist(room);
     this.broadcastRoom(room);
@@ -313,6 +318,7 @@ export class RoomManager {
     if (!result.ok) throw new Error(result.error);
     room.state = result.state;
     room.commands.push(command);
+    room.events.push(...result.events);
     room.lastActive = this.now();
     this.persist(room);
     this.broadcastGame(room, result.events, false);
@@ -342,6 +348,7 @@ export class RoomManager {
           if (result.ok) {
             room.state = result.state;
             room.commands.push({ type: "concede", player: playerId });
+            room.events.push(...result.events);
             room.lastActive = this.now();
             this.broadcastGame(room, result.events, false);
             if (result.state.phase === "gameOver") this.broadcastReplay(room);
@@ -430,7 +437,9 @@ export class RoomManager {
       map: room.settings.map,
     });
     if (room.state) {
-      conn.send({ t: "game", view: viewFor(room.state, member?.playerId ?? null), events: [], snapshot: true });
+      // A catch-up: the game as this person may see it, and the log so far.
+      const viewer = member?.playerId ?? null;
+      conn.send({ t: "game", view: viewFor(room.state, viewer), events: eventsFor(room.events, viewer), snapshot: true });
       if (room.state.phase === "gameOver") conn.send({ t: "replay", replay: this.replay(room) });
     }
   }

@@ -269,6 +269,8 @@ try {
         phase("reloading Bob's page");
         await bob.page.reload();
         await bob.page.getByText("Playing as Bob").waitFor({ timeout: 15000 });
+        // The catch-up brings the whole log back, not just the board.
+        await bob.page.locator(".log-lines li").filter({ hasText: "drafts" }).first().waitFor({ timeout: 5000 });
       }
     }
     if (did) idle = 0;

@@ -101,8 +101,17 @@ export function connectRemote(send: (command: Command) => boolean): void {
   remoteSend = send;
 }
 
-/** Apply a game update from the server. */
-export function applyServerGame(map: MapDefinition, me: string | null, view: PlayerView, events: GameEvent[]): void {
+/**
+ * Apply a game update from the server: one move's events, or (for a snapshot after
+ * joining or reconnecting) the whole log so far, which replaces the one shown.
+ */
+export function applyServerGame(
+  map: MapDefinition,
+  me: string | null,
+  view: PlayerView,
+  events: GameEvent[],
+  snapshot = false,
+): void {
   const state = stateFromView(view);
   if (!session || session.kind !== "online") {
     const ctx = contextFor(map).ctx;
@@ -123,7 +132,8 @@ export function applyServerGame(map: MapDefinition, me: string | null, view: Pla
       state,
       commands: [],
       events,
-      lastEvents: events,
+      // A catch-up is history: do not replay its dice.
+      lastEvents: snapshot ? [] : events,
       error: null,
       pending: false,
     };
@@ -132,8 +142,8 @@ export function applyServerGame(map: MapDefinition, me: string | null, view: Pla
       ...session,
       me,
       state,
-      events: [...session.events, ...events],
-      lastEvents: events,
+      events: snapshot ? events : [...session.events, ...events],
+      lastEvents: snapshot ? [] : events,
       error: null,
       pending: false,
     };

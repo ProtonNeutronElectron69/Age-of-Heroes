@@ -327,8 +327,11 @@ describe("keeping rooms through a restart", () => {
           const c = await Client.connect(second.port);
           const snapshot = c.next("game", (m) => m.snapshot);
           c.send({ t: "rejoin", code: seat.code, token: seat.token });
-          const view = (await snapshot).view;
+          const caughtUp = await snapshot;
+          const view = caughtUp.view;
           expect(view.viewer).toBe(seat.playerId);
+          // The catch-up carries the log so far, including the pick made before the restart.
+          expect(caughtUp.events.some((e) => e.type === "cardDrafted")).toBe(true);
           expect(view.config.seed).toBe(0);
           back.set(seat.playerId!, c);
           state = stateFromView(view);

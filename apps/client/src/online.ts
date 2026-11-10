@@ -213,7 +213,7 @@ function receive(msg: ServerMessage): void {
       set({ room: msg.room });
       return;
     case "game":
-      if (state.map) applyServerGame(state.map, state.me, msg.view, msg.events);
+      if (state.map) applyServerGame(state.map, state.me, msg.view, msg.events, msg.snapshot);
       set({ status: "playing" });
       return;
     case "replay":
