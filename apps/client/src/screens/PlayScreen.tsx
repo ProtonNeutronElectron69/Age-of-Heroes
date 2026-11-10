@@ -130,6 +130,8 @@ export function PlayScreen({ session }: { session: Session }) {
 
   // Pick the first figure that can still act when a turn starts or a figure finishes.
   const turnKey = active ? `${state.round}:${active.token}:${active.player}` : "";
+  // Eye view belongs to one figure's turn; a new turn (or the end of the round) starts outside it.
+  useEffect(() => setEyeView(false), [turnKey]);
   useEffect(() => {
     if (!active || !activeUnit) {
       setSelected(null);
@@ -185,9 +187,10 @@ export function PlayScreen({ session }: { session: Session }) {
 
   // ---- Spots and engagement ---------------------------------------------
   const spotsOf = (unitId: string, figureId: string): Step[] => {
-    const unit = state.units.find((u) => u.id === unitId)!;
+    const unit = state.units.find((u) => u.id === unitId);
+    const f = unit?.figures.find((x) => x.id === figureId);
+    if (!unit || !f) return [];
     const card = ctx.cards.get(unit.cardId)!;
-    const f = unit.figures.find((x) => x.id === figureId)!;
     return figureSpots(f, card.footprint, card.height, ctx);
   };
   const engagedCount = (figureId: string): number => {
@@ -216,13 +219,14 @@ export function PlayScreen({ session }: { session: Session }) {
     const mySpots = spotsOf(activeUnit.id, selected);
     if (mySpots.length === 0) return null;
     const from = eyePoint({ ...mySpots[0]!, height: activeCard.height });
-    // Look at the hovered enemy, else a target, else the nearest enemy.
+    // Look at the clicked (pinned) enemy, else a target, else the nearest enemy. Not the hovered one:
+    // turning toward it moves it out from under the pointer, and the camera swings back and forth.
     const enemies = state.units
       .filter((u) => u.owner !== activeUnit.owner)
       .flatMap((u) => u.figures.filter((f) => !f.destroyed && f.position).map((f) => ({ u, f })));
     const near = (id: string) => enemies.find((x) => x.f.id === id);
     const pick =
-      (hoveredFigure ? near(hoveredFigure) : undefined) ??
+      (pinnedFigure ? near(pinnedFigure) : undefined) ??
       [...targets].map(near).find(Boolean) ??
       [...enemies].sort(
         (a, b) => hexDistance(a.f.position!.hex, mySpots[0]!.hex) - hexDistance(b.f.position!.hex, mySpots[0]!.hex),
@@ -237,7 +241,7 @@ export function PlayScreen({ session }: { session: Session }) {
       look = { x: from.x + 1, y: from.y, z: from.z };
     }
     return { eye: from, look };
-  }, [eyeView, selected, activeUnit, activeCard, hoveredFigure, targets, state, ctx]);
+  }, [eyeView, selected, activeUnit, activeCard, pinnedFigure, targets, state, ctx]);
 
   // ---- Board contents ------------------------------------------------------
   const figures: FigureView[] = [];
@@ -263,6 +267,7 @@ export function PlayScreen({ session }: { session: Session }) {
         label: names.tokenLabel(f.id),
         hero: card.figureCount === 1,
         status,
+        ...(status === "selected" ? { arrow: true } : {}),
         ...(mode === "advanced" && life > 1 ? { lifeLeft: life - f.wounds } : {}),
       });
     }
@@ -502,13 +507,15 @@ export function PlayScreen({ session }: { session: Session }) {
                 : "This unit has finished."}
               {moveBig ? " Press R to turn." : ""}
               {hoverOption ? ` Move cost ${hoverOption.cost}.` : ""}
+              {eyeView && myTurn ? " Eye view faces the enemy you last clicked (clicking a red-ringed one attacks it). Exit eye view to end the turn." : ""}
             </p>
             <div className="actions">
               {myTurn && (
                 <button
                   type="button"
                   className="primary"
-                  disabled={busy}
+                  disabled={busy || eyeView}
+                  title={eyeView ? "Exit eye view before ending the turn" : undefined}
                   onClick={() => dispatch({ type: "endTurn", player: active.player })}
                 >
                   End turn
@@ -519,7 +526,7 @@ export function PlayScreen({ session }: { session: Session }) {
                   type="button"
                   aria-pressed={eyeView}
                   onClick={() => setEyeView(!eyeView)}
-                  disabled={!selected}
+                  disabled={!selected && !eyeView}
                   title="See the battlefield from the selected figure's eyes"
                 >
                   {eyeView ? "Exit eye view" : "Eye view"}

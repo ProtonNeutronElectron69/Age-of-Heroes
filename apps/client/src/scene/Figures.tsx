@@ -16,6 +16,8 @@ export interface FigureView {
   readonly status: "idle" | "ready" | "selected" | "spent" | "target";
   /** Advanced game: life left, shown for figures with more than 1 Life. */
   readonly lifeLeft?: number;
+  /** Show a floating, spinning arrow above the figure (the figure chosen to act). */
+  readonly arrow?: boolean;
 }
 
 interface Props {
@@ -33,6 +35,34 @@ const RING: Record<FigureView["status"], string | null> = {
   spent: null,
   target: "#ff3b30",
 };
+
+/** Gap between the top of a token and the tip of its selection arrow, leaving room for the name tag. */
+const ARROW_GAP = 0.75;
+
+/** A red arrow that bobs and spins above a figure, pointing down at it. */
+function SelectionArrow({ top }: { top: number }) {
+  const arrow = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    if (!arrow.current) return;
+    const t = clock.elapsedTime;
+    arrow.current.rotation.y = t * 2;
+    arrow.current.position.y = top + ARROW_GAP + 0.12 * Math.sin(t * 3);
+  });
+  return (
+    <group ref={arrow} position={[0, top + ARROW_GAP, 0]}>
+      {/* Head: a four-sided point, so the spin shows */}
+      <mesh position={[0, 0.2, 0]} rotation={[Math.PI, 0, 0]} raycast={() => null}>
+        <coneGeometry args={[0.32, 0.4, 4]} />
+        <meshStandardMaterial color="#e53935" emissive="#7f0000" flatShading />
+      </mesh>
+      {/* Shaft */}
+      <mesh position={[0, 0.6, 0]} raycast={() => null}>
+        <boxGeometry args={[0.14, 0.42, 0.14]} />
+        <meshStandardMaterial color="#e53935" emissive="#7f0000" flatShading />
+      </mesh>
+    </group>
+  );
+}
 
 function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClick"]; onHover?: Props["onHover"] }) {
   const ring = useRef<Mesh>(null);
@@ -102,6 +132,7 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
             <meshBasicMaterial color={ringColor} transparent opacity={0.9} depthWrite={false} />
           </mesh>
         )}
+        {f.arrow && <SelectionArrow top={f.height * LEVEL_HEIGHT} />}
       </group>
     </>
   );

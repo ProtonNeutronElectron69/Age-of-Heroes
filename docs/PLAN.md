@@ -28,7 +28,7 @@ Each phase or drop is one pull request from a working branch, with CI green befo
 | Play modes | Hot-seat and online (done); computer opponent on hold |
 | Online hosting | Game server in a Docker image; Render recommended (free tier, deploys from `render.yaml`). The server keeps rooms in memory only; the host saves a game to a file to resume it later. See [HOSTING.md](HOSTING.md) |
 | Line of sight | Advanced: automatic check from eye point to hit band, plus a figure's-eye camera. Basic: forgiving |
-| Art | None for now: units are tokens as tall as their Height, terrain is flat colour, hovering or clicking a token shows its card. Sound, models and art come after the core game (Phase 7) |
+| Art | None for now: units are tokens as tall as their Height, terrain is flat colour, hovering or clicking a token shows its card, and a red arrow marks the figure chosen to act. Sound, models and art come after the core game (Phase 7) |
 | Unit roster | Original units only, across all eras and myths. Squads have 1 special ability and heroes 2 (Flying not counted); heroes have 2 to 8 Life, most squads 1 (tough squads of 2 or 3 figures up to 3). Point costs set with the balance model |
 | Involvement | Hands-off: work arrives as pull requests with a playable build; the owner decides when to merge |
 
@@ -135,6 +135,11 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
   - [x] Tests: host-only saving, resuming and claiming armies on the server; browser tests that save, quit, reload and load a hot-seat game three ways, and save an online game mid-battle and resume it in a new room with both players
 - [ ] Computer opponent (on hold)
 - [ ] Tutorial built on the Basic game (on hold)
+
+### Playtest fixes
+- [x] Eye view must be closed before ending a turn, and it closes itself when a turn ends any other way. Ending a turn in eye view used to crash the play screen to a grey page
+- [x] Eye view faces the enemy last clicked, else a target, else the nearest enemy. It no longer follows the pointer, which made the camera swing back and forth
+- [x] A red arrow floats and spins above the figure chosen to act
 
 ### Phase 7: Sound, models and art (on hold until the core game is complete)
 - [ ] Sound effects and music
