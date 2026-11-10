@@ -161,6 +161,21 @@ describe("cards", () => {
     for (const c of CARDS) for (const a of c.advanced.abilities) expect(implemented.has(a.id), `${c.id} ${a.id}`).toBe(true);
   });
 
+  it("gives heroes 2 to 8 Life, and most squads 1 (tough squads of 2 or 3 figures up to 3)", () => {
+    const squads = CARDS.filter((c) => c.figureCount > 1);
+    for (const c of CARDS) {
+      const life = c.advanced.life;
+      if (c.figureCount === 1) {
+        expect(life, c.id).toBeGreaterThanOrEqual(2);
+        expect(life, c.id).toBeLessThanOrEqual(8);
+      } else if (life > 1) {
+        expect(c.figureCount, `${c.id}: only squads of 2 or 3 may have more than 1 Life`).toBeLessThanOrEqual(3);
+        expect(life, c.id).toBeLessThanOrEqual(3);
+      }
+    }
+    expect(squads.filter((c) => c.advanced.life === 1).length).toBeGreaterThan(squads.length / 2);
+  });
+
   it("gives every squad 1 special ability and every hero 2, not counting Flying", () => {
     for (const c of CARDS) {
       const special = c.advanced.abilities.filter((a) => a.id !== "flying");

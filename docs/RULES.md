@@ -45,7 +45,7 @@ Left panel (identity and synergy tags):
 - **Footprint**: the hexes the figure occupies: 1 hex, 2x1, 3x1 or 2x2.
 
 Right panel (stats):
-- **Life**: wounds the figure can take; it is destroyed when its wounds reach its Life. Heroes usually have 4 to 8 Life; squad figures almost always have 1.
+- **Life**: wounds the figure can take; it is destroyed when its wounds reach its Life. Heroes have 2 to 8 Life. Most squad figures have 1; a few tough squads of only 2 or 3 figures have up to 3 Life per figure.
 - **Move**, **Range**, **Attack**, **Defense**: as on the front, possibly with different values.
 - **Points**: drafting cost.
 - **Abilities**: special powers that change or break the core rules.

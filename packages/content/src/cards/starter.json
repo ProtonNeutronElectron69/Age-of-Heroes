@@ -637,12 +637,12 @@
       "defense": 5
     },
     "advanced": {
-      "life": 9,
+      "life": 8,
       "move": 3,
       "range": 6,
       "attack": 4,
       "defense": 5,
-      "points": 235,
+      "points": 220,
       "abilities": [
         {
           "id": "mortar-barrage",

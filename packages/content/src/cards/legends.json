@@ -92,15 +92,15 @@
       "move": 7,
       "range": 1,
       "attack": 3,
-      "defense": 2
+      "defense": 3
     },
     "advanced": {
-      "life": 1,
+      "life": 2,
       "move": 7,
       "range": 1,
       "attack": 3,
       "defense": 2,
-      "points": 90,
+      "points": 125,
       "abilities": [
         {
           "id": "pack-hunt",
@@ -119,7 +119,7 @@
     "tokenLabel": "HH",
     "faction": "Nexus Collective",
     "unitType": "commonSquad",
-    "figureCount": 3,
+    "figureCount": 2,
     "species": "Robot",
     "unitClass": "Hunter",
     "personality": "Relentless",
@@ -130,15 +130,15 @@
       "move": 5,
       "range": 1,
       "attack": 3,
-      "defense": 3
+      "defense": 4
     },
     "advanced": {
-      "life": 1,
+      "life": 3,
       "move": 5,
       "range": 1,
       "attack": 3,
       "defense": 3,
-      "points": 95,
+      "points": 110,
       "abilities": [
         {
           "id": "reboot",
@@ -386,15 +386,15 @@
       "move": 5,
       "range": 1,
       "attack": 3,
-      "defense": 3
+      "defense": 4
     },
     "advanced": {
-      "life": 1,
+      "life": 2,
       "move": 5,
       "range": 1,
       "attack": 3,
       "defense": 3,
-      "points": 100,
+      "points": 140,
       "abilities": [
         {
           "id": "charge",
