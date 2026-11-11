@@ -125,7 +125,10 @@ export interface GameConfig {
   readonly roundLimit: number | null;
   /** Draft by card count: cards per player. */
   readonly armySize: number | null;
-  /** Draft by points (Advanced): each player's budget. */
+  /**
+   * Draft by points (Advanced): each player's budget. A points draft with no
+   * limit has a null budget and a null army size.
+   */
   readonly budget: number | null;
   /** Every unit in an army must share the faction of its first pick. */
   readonly factionPure: boolean;
@@ -177,8 +180,12 @@ export interface GameSetup {
   readonly armies?: Readonly<Record<PlayerId, readonly string[]>>;
   /** Draft by card count: cards per player (default 4). */
   readonly armySize?: number;
-  /** Advanced only: draft by points with this budget per player instead of by card count. */
-  readonly budget?: number;
+  /**
+   * Advanced only: draft by points with this budget per player instead of by
+   * card count. null drafts by points with no limit: players pick until they
+   * stop or their start zone is full.
+   */
+  readonly budget?: number | null;
   /** Every unit in an army must share the faction of its first pick. */
   readonly factionPure?: boolean;
 }

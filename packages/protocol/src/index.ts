@@ -1,4 +1,5 @@
 import {
+  MAX_BUDGET,
   hexSchema,
   mapSchema,
   type Command,
@@ -60,7 +61,8 @@ export const roomSettingsSchema = z.object({
   mode: z.enum(["basic", "advanced"]),
   roundLimit: z.number().int().min(1).max(50).nullable(),
   armySize: z.number().int().min(1).max(4).optional(),
-  budget: z.number().int().min(50).max(2000).optional(),
+  /** Advanced points budget; null means no limit. */
+  budget: z.number().int().min(50).max(MAX_BUDGET).nullable().optional(),
   factionPure: z.boolean().optional(),
   map: mapSchema,
 });
@@ -77,7 +79,7 @@ const setupSchema = z.object({
   players: z.array(z.object({ id, name: z.string().min(1), color: z.string().min(1) })).min(2).max(6),
   armies: z.record(z.string(), z.array(z.string())).optional(),
   armySize: z.number().int().optional(),
-  budget: z.number().int().optional(),
+  budget: z.number().int().nullable().optional(),
   factionPure: z.boolean().optional(),
 });
 

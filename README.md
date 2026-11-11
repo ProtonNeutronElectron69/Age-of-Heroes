@@ -15,7 +15,7 @@ A turn-based 3D tactics game for 2 to 6 players in the browser. Heroes and squad
 - **30 original units** in 6 factions: 15 heroes and 15 squads, 15 ranged and 15 melee. Some figures cover 2 to 4 hexes.
 - **Turns driven by secret tokens:** each player hides activation tokens on their units, rolls for initiative, then takes three turns a round.
 - **3D battlefields** with ten terrain types, bridges, overhangs and scenery, a figure's-eye camera, and four premade maps.
-- **Map editor:** build, save, export and import your own maps, and play on them.
+- **Map editor:** build, save, export and import your own maps, and play on them. It finds and removes problem pieces, erases with a dragged box, joins pieces side by side into bridges (Shift+click) and can scatter terrain and scenery at random.
 - **Hot-seat play** on one device, with a pass-the-device screen for the secret tokens.
 - **Online play:** room codes, each device sees only what its player may see, reconnecting, spectators, and an authoritative server.
 - **Saved games and replays:** named saves, save files, and online games the host can save and resume later. Finished games can be watched move by move.

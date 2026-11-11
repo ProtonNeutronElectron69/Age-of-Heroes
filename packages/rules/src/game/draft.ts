@@ -143,7 +143,7 @@ export function draftPick(
 /** Points draft only: a player stops drafting for the rest of the draft. */
 export function draftPass(state: GameState, player: PlayerId, events: GameEvent[], ctx: RulesContext): void {
   if (state.phase !== "draft" || !state.draft) fail("The draft is over");
-  if (state.config.budget === null) fail("Every player drafts the same number of cards; there is no passing");
+  if (state.config.armySize !== null) fail("Every player drafts the same number of cards; there is no passing");
   if (currentDrafter(state) !== player) fail("It is not your pick");
   state.draft.passed.push(player);
   events.push({ type: "draftPassed", player });

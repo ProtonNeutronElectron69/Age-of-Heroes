@@ -36,6 +36,8 @@ import {
  */
 
 export const DEFAULT_ARMY_SIZE = 4;
+/** The largest points budget a game can set. */
+export const MAX_BUDGET = 9999;
 
 export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameState; events: GameEvent[] } {
   const n = setup.players.length;
@@ -51,10 +53,11 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
     }
   }
 
-  // The Advanced game drafts by points when a budget is given; otherwise by card count.
+  // The Advanced game drafts by points when a budget is given (null: no limit); otherwise by card count.
   const pointsDraft = !setup.armies && setup.mode === "advanced" && setup.budget !== undefined;
-  if (pointsDraft && (!Number.isInteger(setup.budget) || setup.budget! < 1)) {
-    throw new RulesError("The points budget must be a positive whole number");
+  const budget = pointsDraft ? (setup.budget ?? null) : null;
+  if (budget !== null && (!Number.isInteger(budget) || budget < 1 || budget > MAX_BUDGET)) {
+    throw new RulesError(`The points budget must be a whole number from 1 to ${MAX_BUDGET}`);
   }
   const state: GameState = {
     formatVersion: 1,
@@ -64,7 +67,7 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
       mapId: setup.mapId,
       roundLimit: setup.roundLimit ?? null,
       armySize: setup.armies || pointsDraft ? null : (setup.armySize ?? DEFAULT_ARMY_SIZE),
-      budget: pointsDraft ? setup.budget! : null,
+      budget,
       factionPure: setup.factionPure ?? false,
     },
     rng: setup.seed >>> 0,
