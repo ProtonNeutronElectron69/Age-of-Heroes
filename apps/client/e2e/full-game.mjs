@@ -6,6 +6,8 @@ import { preview } from "vite";
 const MODE = process.argv[2] === "advanced" ? "advanced" : "basic";
 const ROUNDS = MODE === "advanced" ? 8 : 5;
 const shotsDir = process.env.E2E_SCREENSHOTS; // optional folder for screenshots
+/** Draw calls allowed for the board during deployment. */
+const MAX_DRAW_CALLS = 300;
 
 function fail(message) {
   throw new Error(message);
@@ -69,6 +71,9 @@ try {
   await page.getByRole("region", { name: "Deployment" }).waitFor();
   await page.waitForTimeout(800);
   await shot("3-deploy");
+  // The board draws each terrain as one instanced mesh; one mesh per hex took over 1000 draw calls.
+  const { calls } = await page.evaluate(() => window.__aoh.stats());
+  if (calls > MAX_DRAW_CALLS) fail(`The board took ${calls} draw calls (limit ${MAX_DRAW_CALLS})`);
   while (await page.getByRole("region", { name: "Deployment" }).count()) {
     await page.getByRole("button", { name: "Auto place" }).click();
     await page.getByRole("button", { name: "Confirm" }).click();
@@ -160,6 +165,20 @@ try {
         await eye.click();
         await page.getByRole("button", { name: "Exit eye view" }).waitFor();
         if (await endTurn.isEnabled()) fail("End turn is allowed while in eye view");
+        // Eye view turns all the way around: a drag and the arrow keys both move where a hex is drawn.
+        const probe = () => page.evaluate(() => JSON.stringify(window.__aoh?.project(0, 0, 0)));
+        const turned = (before) =>
+          page.waitForFunction((b) => JSON.stringify(window.__aoh?.project(0, 0, 0)) !== b, before, { timeout: 5000 });
+        let before = await probe();
+        await page.mouse.move(800, 500);
+        await page.mouse.down();
+        await page.mouse.move(1000, 520, { steps: 8 });
+        await page.mouse.up();
+        await turned(before).catch(() => fail("Dragging in eye view did not turn the camera"));
+        before = await probe();
+        await page.keyboard.down("ArrowLeft");
+        await turned(before).catch(() => fail("The arrow keys did not turn the eye view camera"));
+        await page.keyboard.up("ArrowLeft");
         await page.getByRole("button", { name: "Exit eye view" }).click();
         await page.getByRole("button", { name: "Eye view" }).waitFor();
       }

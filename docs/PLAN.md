@@ -140,6 +140,8 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 - [x] Eye view must be closed before ending a turn, and it closes itself when a turn ends any other way. Ending a turn in eye view used to crash the play screen to a grey page
 - [x] Eye view faces the enemy last clicked, else a target, else the nearest enemy. It no longer follows the pointer, which made the camera swing back and forth
 - [x] A red arrow floats and spins above the figure chosen to act
+- [x] Eye view looks all the way around: drag, or hold the arrow keys. It still starts facing the enemy last clicked, else a target
+- [x] Smoother camera: the board draws each terrain type as one instanced mesh with one set of outlines (about 130 draw calls instead of over 1000), hovering skips work while the camera is dragged, and the camera follows the pointer more closely
 
 ### Faster checks
 - [x] CI runs only the checks a change affects: docs run nothing, unit card data runs the content tests, and each browser test runs only for the code it covers, in parallel. Pushes to `main` still run everything. `pnpm check:affected` does the same locally. See [TESTING.md](TESTING.md)

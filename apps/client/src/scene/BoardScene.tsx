@@ -1,4 +1,4 @@
-import { Edges, OrbitControls } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import {
   HEX_SIZE,
@@ -14,8 +14,18 @@ import {
   type TerrainTable,
   type Vec3,
 } from "@aoh/rules";
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
-import { BufferGeometry, CylinderGeometry, Float32BufferAttribute, MeshStandardMaterial, Vector3 } from "three";
+import { useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
+import {
+  BufferGeometry,
+  CylinderGeometry,
+  EdgesGeometry,
+  Float32BufferAttribute,
+  Matrix4,
+  MeshStandardMaterial,
+  Vector3,
+  type InstancedMesh,
+  type Material,
+} from "three";
 import { HEX_GAP } from "./scale";
 
 export interface Marker {
@@ -46,22 +56,106 @@ interface Props {
   children?: ReactNode;
 }
 
-/** Drives the camera from a figure's eye point, and puts it back afterwards. */
+/** Eye view look speed: radians per pixel dragged, and per second with the arrow keys. */
+const LOOK_DRAG = 0.005;
+const LOOK_KEYS = 1.6;
+/** How far eye view can look up or down, short of straight up or down. */
+const LOOK_PITCH_LIMIT = Math.PI / 2 - 0.05;
+
+/**
+ * Drives the camera from a figure's eye point, and puts it back afterwards.
+ * It starts facing `look`; dragging or the arrow keys turn it all the way around.
+ */
 function EyeCamera({ view, center }: { view: { eye: Vec3; look: Vec3 }; center: { x: number; z: number } }) {
   const camera = useThree((s) => s.camera);
+  const dom = useThree((s) => s.gl.domElement);
   const saved = useRef<{ position: Vector3; fov: number } | null>(null);
+  const angles = useRef({ yaw: 0, pitch: 0 });
+  const keys = useRef(new Set<string>());
   useEffect(() => {
     saved.current = { position: camera.position.clone(), fov: (camera as { fov?: number }).fov ?? 45 };
     return () => {
       if (saved.current) camera.position.copy(saved.current.position);
     };
   }, [camera]);
-  useFrame(() => {
-    camera.position.set(view.eye.x - center.x, view.eye.y, view.eye.z - center.z);
-    camera.lookAt(view.look.x - center.x, view.look.y, view.look.z - center.z);
+
+  // Face the target whenever the eye or the target changes.
+  const { eye, look } = view;
+  useEffect(() => {
+    const dx = look.x - eye.x;
+    const dy = look.y - eye.y;
+    const dz = look.z - eye.z;
+    angles.current = { yaw: Math.atan2(dx, dz), pitch: Math.atan2(dy, Math.hypot(dx, dz)) };
+  }, [eye.x, eye.y, eye.z, look.x, look.y, look.z]);
+
+  // Drag anywhere on the board, or hold the arrow keys, to look around.
+  useEffect(() => {
+    let last: { x: number; y: number } | null = null;
+    const turn = (dYaw: number, dPitch: number) => {
+      const a = angles.current;
+      a.yaw += dYaw;
+      a.pitch = Math.max(-LOOK_PITCH_LIMIT, Math.min(LOOK_PITCH_LIMIT, a.pitch + dPitch));
+    };
+    const down = (e: PointerEvent) => {
+      last = { x: e.clientX, y: e.clientY };
+    };
+    const move = (e: PointerEvent) => {
+      if (!last || e.buttons === 0) {
+        last = null;
+        return;
+      }
+      // Drag the scene: moving the pointer right turns the view left, like grabbing the world.
+      turn((e.clientX - last.x) * LOOK_DRAG, (e.clientY - last.y) * LOOK_DRAG);
+      last = { x: e.clientX, y: e.clientY };
+    };
+    const up = () => {
+      last = null;
+    };
+    const ARROWS = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
+    const keyDown = (e: KeyboardEvent) => {
+      if (!ARROWS.includes(e.key) || e.target instanceof HTMLInputElement) return;
+      e.preventDefault();
+      keys.current.add(e.key);
+    };
+    const keyUp = (e: KeyboardEvent) => keys.current.delete(e.key);
+    const held = keys.current;
+    dom.addEventListener("pointerdown", down);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("keydown", keyDown);
+    window.addEventListener("keyup", keyUp);
+    return () => {
+      dom.removeEventListener("pointerdown", down);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("keydown", keyDown);
+      window.removeEventListener("keyup", keyUp);
+      held.clear();
+    };
+  }, [dom]);
+
+  const target = useMemo(() => new Vector3(), []);
+  useFrame((_, delta) => {
+    const k = keys.current;
+    const a = angles.current;
+    const step = LOOK_KEYS * Math.min(delta, 0.1);
+    if (k.has("ArrowLeft")) a.yaw += step;
+    if (k.has("ArrowRight")) a.yaw -= step;
+    if (k.has("ArrowUp")) a.pitch = Math.min(LOOK_PITCH_LIMIT, a.pitch + step);
+    if (k.has("ArrowDown")) a.pitch = Math.max(-LOOK_PITCH_LIMIT, a.pitch - step);
+    const x = eye.x - center.x;
+    const z = eye.z - center.z;
+    camera.position.set(x, eye.y, z);
+    const flat = Math.cos(a.pitch);
+    target.set(x + Math.sin(a.yaw) * flat, eye.y + Math.sin(a.pitch), z + Math.cos(a.yaw) * flat);
+    camera.lookAt(target);
   });
   return null;
 }
+
+/** Camera smoothing: the share of the remaining movement applied each frame (1 means none). */
+const CAMERA_DAMPING = 0.25;
+const CAMERA_ZOOM_SPEED = 1.4;
 
 /** Pointer travel (pixels) beyond which a click is treated as a camera drag. */
 const DRAG_PIXELS = 5;
@@ -131,6 +225,95 @@ export function SceneryMesh({ spot, onClick }: { spot: ScenerySpot; onClick?: (s
   );
 }
 
+interface CellHandlers {
+  onSurfaceClick?: Props["onSurfaceClick"];
+  onSurfaceHover?: Props["onSurfaceHover"];
+}
+
+/**
+ * Every cell of one terrain as a single instanced mesh: one draw call instead of
+ * one per hex, and one React element instead of hundreds to reconcile.
+ */
+function TerrainCells({
+  board,
+  cells,
+  geometry,
+  material,
+  onSurfaceClick,
+  onSurfaceHover,
+}: CellHandlers & { board: Board; cells: readonly Cell[]; geometry: BufferGeometry; material: Material }) {
+  const mesh = useRef<InstancedMesh>(null);
+  const hovered = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const m = mesh.current;
+    if (!m) return;
+    const matrix = new Matrix4();
+    cells.forEach((cell, i) => {
+      const { x, z } = hexToWorld(cell.hex, HEX_SIZE);
+      m.setMatrixAt(i, matrix.makeTranslation(x, cell.layer * LEVEL_HEIGHT + LEVEL_HEIGHT / 2, z));
+    });
+    m.instanceMatrix.needsUpdate = true;
+    m.computeBoundingSphere();
+    m.computeBoundingBox();
+  }, [cells]);
+  const cellAt = (e: ThreeEvent<PointerEvent | MouseEvent>) => (e.instanceId === undefined ? undefined : cells[e.instanceId]);
+  return (
+    <instancedMesh
+      ref={mesh}
+      args={[geometry, material, cells.length]}
+      onClick={(e: ThreeEvent<MouseEvent>) => {
+        if (e.delta > DRAG_PIXELS) return;
+        const cell = cellAt(e);
+        if (!cell) return;
+        e.stopPropagation();
+        const s = surfaceForCell(board, cell);
+        if (s) onSurfaceClick?.(s, cell);
+      }}
+      onPointerMove={(e: ThreeEvent<PointerEvent>) => {
+        e.stopPropagation();
+        // While a button is held the camera is being dragged: skip hover work until it stops.
+        if (e.buttons !== 0 || e.instanceId === hovered.current) return;
+        hovered.current = e.instanceId ?? null;
+        const cell = cellAt(e);
+        if (cell) onSurfaceHover?.(surfaceForCell(board, cell), cell);
+      }}
+      onPointerOut={() => {
+        hovered.current = null;
+        onSurfaceHover?.(null, null);
+      }}
+    />
+  );
+}
+
+/** The outline of every cell, as one set of line segments. */
+function CellEdges({ cells, geometry }: { cells: readonly Cell[]; geometry: BufferGeometry }) {
+  const lines = useMemo(() => {
+    const edges = new EdgesGeometry(geometry, 20);
+    const src = edges.getAttribute("position").array;
+    const out = new Float32Array(src.length * cells.length);
+    cells.forEach((cell, i) => {
+      const { x, z } = hexToWorld(cell.hex, HEX_SIZE);
+      const y = cell.layer * LEVEL_HEIGHT + LEVEL_HEIGHT / 2;
+      const o = i * src.length;
+      for (let k = 0; k < src.length; k += 3) {
+        out[o + k] = src[k]! + x;
+        out[o + k + 1] = src[k + 1]! + y;
+        out[o + k + 2] = src[k + 2]! + z;
+      }
+    });
+    edges.dispose();
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(out, 3));
+    return g;
+  }, [cells, geometry]);
+  useEffect(() => () => lines.dispose(), [lines]);
+  return (
+    <lineSegments geometry={lines} raycast={() => null}>
+      <lineBasicMaterial color="#141414" />
+    </lineSegments>
+  );
+}
+
 /** Hex outlines on the table around the map, so the editor shows where pieces can go. */
 function HexGrid({ center }: { center: { x: number; z: number } }) {
   const geometry = useMemo(() => {
@@ -174,6 +357,15 @@ export function BoardScene({
   children,
 }: Props) {
   const cells = useMemo(() => board.cells(), [board]);
+  const cellsByTerrain = useMemo(() => {
+    const groups = new Map<string, Cell[]>();
+    for (const cell of cells) {
+      const list = groups.get(cell.terrain);
+      if (list) list.push(cell);
+      else groups.set(cell.terrain, [cell]);
+    }
+    return [...groups];
+  }, [cells]);
   const scenery = useMemo(() => board.scenery(), [board]);
   const geometry = useMemo(
     () => new CylinderGeometry(HEX_SIZE * HEX_GAP, HEX_SIZE * HEX_GAP, LEVEL_HEIGHT, 6),
@@ -219,30 +411,19 @@ export function BoardScene({
             </mesh>
           </>
         )}
-        {cells.map((cell) => {
-          const { x, z } = hexToWorld(cell.hex, HEX_SIZE);
-          return (
-            <mesh
-              key={`${hexKey(cell.hex)}@${cell.layer}`}
-              geometry={geometry}
-              material={materials.get(cell.terrain) ?? fallback}
-              position={[x, cell.layer * LEVEL_HEIGHT + LEVEL_HEIGHT / 2, z]}
-              onClick={(e: ThreeEvent<MouseEvent>) => {
-                if (e.delta > DRAG_PIXELS) return;
-                e.stopPropagation();
-                const s = surfaceForCell(board, cell);
-                if (s) onSurfaceClick?.(s, cell);
-              }}
-              onPointerOver={(e: ThreeEvent<PointerEvent>) => {
-                e.stopPropagation();
-                onSurfaceHover?.(surfaceForCell(board, cell), cell);
-              }}
-              onPointerOut={() => onSurfaceHover?.(null, null)}
-            >
-              <Edges threshold={20} color="#141414" />
-            </mesh>
-          );
-        })}
+        {cellsByTerrain.map(([terrainId, list]) => (
+          <TerrainCells
+            // A new key when the count changes, since an instanced mesh cannot grow.
+            key={`${terrainId}:${list.length}`}
+            board={board}
+            cells={list}
+            geometry={geometry}
+            material={materials.get(terrainId) ?? fallback}
+            onSurfaceClick={onSurfaceClick}
+            onSurfaceHover={onSurfaceHover}
+          />
+        ))}
+        <CellEdges cells={cells} geometry={geometry} />
         {scenery.map((spot) => (
           <SceneryMesh key={spot.placement.id} spot={spot} onClick={onSceneryClick} />
         ))}
@@ -265,6 +446,9 @@ export function BoardScene({
       <OrbitControls
         makeDefault
         enabled={!eyeView}
+        // The default damping (0.05) lets the camera trail the pointer and drift after release.
+        dampingFactor={CAMERA_DAMPING}
+        zoomSpeed={CAMERA_ZOOM_SPEED}
         target={origin ? [0, 0, 0] : [-fitted.span * 0.1, 0, 0]}
         maxPolarAngle={Math.PI / 2.15}
         minDistance={6}
