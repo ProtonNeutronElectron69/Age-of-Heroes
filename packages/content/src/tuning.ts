@@ -6,4 +6,7 @@ export const TUNING: Tuning = {
   passingStrikeDice: 1,
   elevationBonus: { higher: 1, extreme: 1 },
   maxStraddle: 1,
+  // Maps whose start zones grow: the most hexes of figures one army may draft (a 600-point army of
+  // 4-figure squads needs 32).
+  grownZoneSize: 40,
 };

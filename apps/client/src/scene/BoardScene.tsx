@@ -25,6 +25,7 @@ import {
   Vector3,
   type InstancedMesh,
   type Material,
+  type PerspectiveCamera,
 } from "three";
 import { HEX_GAP } from "./scale";
 
@@ -61,6 +62,11 @@ const LOOK_DRAG = 0.005;
 const LOOK_KEYS = 1.6;
 /** How far eye view can look up or down, short of straight up or down. */
 const LOOK_PITCH_LIMIT = Math.PI / 2 - 0.05;
+/**
+ * Eye view's vertical field of view, in degrees. The map camera's 45 is a long lens:
+ * from a figure's eyes it made the battlefield look squashed together.
+ */
+const EYE_FOV = 70;
 
 /**
  * Drives the camera from a figure's eye point, and puts it back afterwards.
@@ -73,9 +79,19 @@ function EyeCamera({ view, center }: { view: { eye: Vec3; look: Vec3 }; center: 
   const angles = useRef({ yaw: 0, pitch: 0 });
   const keys = useRef(new Set<string>());
   useEffect(() => {
-    saved.current = { position: camera.position.clone(), fov: (camera as { fov?: number }).fov ?? 45 };
+    const lens = camera as PerspectiveCamera;
+    saved.current = { position: camera.position.clone(), fov: lens.fov ?? 45 };
+    if (lens.isPerspectiveCamera) {
+      lens.fov = EYE_FOV;
+      lens.updateProjectionMatrix();
+    }
     return () => {
-      if (saved.current) camera.position.copy(saved.current.position);
+      if (!saved.current) return;
+      camera.position.copy(saved.current.position);
+      if (lens.isPerspectiveCamera) {
+        lens.fov = saved.current.fov;
+        lens.updateProjectionMatrix();
+      }
     };
   }, [camera]);
 
@@ -149,6 +165,60 @@ function EyeCamera({ view, center }: { view: { eye: Vec3; look: Vec3 }; center: 
     const flat = Math.cos(a.pitch);
     target.set(x + Math.sin(a.yaw) * flat, eye.y + Math.sin(a.pitch), z + Math.cos(a.yaw) * flat);
     camera.lookAt(target);
+  });
+  return null;
+}
+
+/** WASD pan speed, as a share of the camera's distance from its target per second. */
+const PAN_SPEED = 0.9;
+const PAN_KEYS: Record<string, [number, number]> = { w: [0, 1], s: [0, -1], a: [-1, 0], d: [1, 0] };
+
+/** Pans the map camera with W, A, S and D, relative to where the camera faces. */
+function KeyboardPan() {
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls) as unknown as { target: Vector3; update: () => void } | null;
+  const held = useRef(new Set<string>());
+  useEffect(() => {
+    const typing = (e: KeyboardEvent) =>
+      e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement;
+    const down = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      if (!(k in PAN_KEYS) || typing(e) || e.ctrlKey || e.metaKey || e.altKey) return;
+      held.current.add(k);
+    };
+    const up = (e: KeyboardEvent) => held.current.delete(e.key.toLowerCase());
+    const clear = () => held.current.clear();
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    window.addEventListener("blur", clear);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+      window.removeEventListener("blur", clear);
+    };
+  }, []);
+  const forward = useMemo(() => new Vector3(), []);
+  const right = useMemo(() => new Vector3(), []);
+  const move = useMemo(() => new Vector3(), []);
+  useFrame((_, delta) => {
+    if (!controls || held.current.size === 0) return;
+    let ahead = 0;
+    let side = 0;
+    for (const k of held.current) {
+      ahead += PAN_KEYS[k]![1];
+      side += PAN_KEYS[k]![0];
+    }
+    if (ahead === 0 && side === 0) return;
+    camera.getWorldDirection(forward);
+    forward.y = 0;
+    if (forward.lengthSq() < 1e-6) return;
+    forward.normalize();
+    right.set(-forward.z, 0, forward.x);
+    const speed = camera.position.distanceTo(controls.target) * PAN_SPEED * Math.min(delta, 0.1);
+    move.copy(forward).multiplyScalar(ahead).addScaledVector(right, side).normalize().multiplyScalar(speed);
+    camera.position.add(move);
+    controls.target.add(move);
+    controls.update();
   });
   return null;
 }
@@ -442,7 +512,7 @@ export function BoardScene({
         })}
         {children}
       </group>
-      {eyeView && <EyeCamera view={eyeView} center={center} />}
+      {eyeView ? <EyeCamera view={eyeView} center={center} /> : <KeyboardPan />}
       <OrbitControls
         makeDefault
         enabled={!eyeView}

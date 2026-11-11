@@ -162,20 +162,48 @@ function Die({ face, kind }: { face: DieFace; kind: "attack" | "defense" }) {
   );
 }
 
-/** Shows the dice from the latest command (attacks, swamp, lava and ice rolls). */
+/**
+ * Shows the dice from the latest command: attacks, swamp, lava and ice rolls,
+ * ability rolls and the initiative roll. It stays up until it is closed or the
+ * next command replaces it.
+ */
 export function DiceOverlay({ events, names, stamp }: { events: readonly GameEvent[]; names: Names; stamp: number }) {
-  const rolls = events.filter((e) => e.type === "attackRolled" || e.type === "terrainRoll" || e.type === "abilityRoll");
+  const rolls = events.filter(
+    (e) => e.type === "attackRolled" || e.type === "terrainRoll" || e.type === "abilityRoll" || e.type === "initiativeRolled",
+  );
   const [dismissed, setDismissed] = useState<number | null>(null);
-  useEffect(() => {
-    if (rolls.length === 0) return;
-    const t = window.setTimeout(() => setDismissed(stamp), 4500);
-    return () => window.clearTimeout(t);
-  }, [stamp, rolls.length]);
   if (rolls.length === 0 || dismissed === stamp) return null;
 
   return (
-    <div className="panel dice-overlay" role="status" onClick={() => setDismissed(stamp)}>
+    <div className="panel dice-overlay" role="status" aria-label="Dice">
+      <button type="button" className="dice-close" aria-label="Close dice" onClick={() => setDismissed(stamp)}>
+        ×
+      </button>
       {rolls.map((e, i) => {
+        if (e.type === "initiativeRolled") {
+          return (
+            <div key={i} className="roll initiative-roll">
+              <div className="roll-title">Initiative</div>
+              <div className="initiative-dice">
+                {e.rolls.map((r) => (
+                  <span key={r.player} className="initiative-entry">
+                    <span className="swatch" style={{ background: names.playerColor(r.player) }} />
+                    {names.player(r.player)}
+                    {r.values.map((v, j) => (
+                      <span key={j} className={`d20 ${j < r.values.length - 1 ? "d20-reroll" : ""}`} title={j < r.values.length - 1 ? "Tied: rolled again" : undefined}>
+                        {v}
+                      </span>
+                    ))}
+                  </span>
+                ))}
+              </div>
+              <div className="roll-result">
+                <strong>{names.player(e.order[0]!)}</strong> goes first
+                {e.order.length > 2 ? `, then ${e.order.slice(1).map((p) => names.player(p)).join(", then ")}` : ""}.
+              </div>
+            </div>
+          );
+        }
         if (e.type === "abilityRoll") {
           return (
             <div key={i} className="roll">

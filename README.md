@@ -20,6 +20,8 @@ A turn-based 3D tactics game for 2 to 6 players in the browser. Heroes and squad
 - **Online play:** room codes, each device sees only what its player may see, reconnecting, spectators, and an authoritative server.
 - **Saved games and replays:** named saves, save files, and online games the host can save and resume later. Finished games can be watched move by move.
 
+**Keys in play:** WASD pans the map, 1 to 4 pick a squad's figures, E opens and closes eye view, Space ends the turn, R turns a multi-hex figure, C shows or hides the unit card.
+
 The rules are in [docs/RULES.md](docs/RULES.md). Progress and what's next are in [docs/PLAN.md](docs/PLAN.md).
 
 ## Documentation

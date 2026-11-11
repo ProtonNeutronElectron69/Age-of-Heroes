@@ -128,6 +128,9 @@ async function tryAct(p) {
     p.turnKey = key;
     p.handled.clear();
   }
+  // The dice stay up until closed (or the next action): close them so they do not cover the board.
+  const closeDice = page.getByRole("button", { name: "Close dice" });
+  if (await closeDice.count()) await closeDice.click(QUICK);
   const ui = await page.evaluate(() => window.__aohUi);
   if (ui?.selected && ui.targets.length > 0 && !p.handled.has(`attack:${ui.selected}`)) {
     const t = ui.targets[0];
@@ -140,8 +143,8 @@ async function tryAct(p) {
       return "attack";
     }
   }
-  if (ui?.selected && !p.handled.has(ui.selected) && ui.moves.length > 0) {
-    p.handled.add(ui.selected);
+  if (ui?.selected && !p.handled.has(`move:${ui.selected}`) && ui.moves.length > 0) {
+    p.handled.add(`move:${ui.selected}`);
     const score = (m) => Math.min(...ui.enemies.map((e) => hexDistance(m.hex, e.hex)));
     for (const m of [...ui.moves].sort((a, b) => score(a) - score(b)).slice(0, 8)) {
       const pt = await screenPoint(page, m.hex.q, m.hex.r, m.elevation);
@@ -152,12 +155,18 @@ async function tryAct(p) {
       return "move";
     }
   }
-  if (ui?.selected) p.handled.add(ui.selected);
+  if (ui?.selected) {
+    p.handled.add(`attack:${ui.selected}`);
+    p.handled.add(`move:${ui.selected}`);
+  }
   const buttons = turn.locator(".figure-button:not([disabled])");
   for (let i = 0; i < (await buttons.count()); i++) {
     await buttons.nth(i).click(QUICK);
-    const sel = await page.evaluate(() => window.__aohUi?.selected);
-    if (sel && !p.handled.has(sel)) return "switch";
+    const now = await page.evaluate(() => window.__aohUi);
+    const sel = now?.selected;
+    if (sel && ((now.targets.length > 0 && !p.handled.has(`attack:${sel}`)) || (now.moves.length > 0 && !p.handled.has(`move:${sel}`)))) {
+      return "switch";
+    }
   }
   await endTurn.click(QUICK);
   await page.waitForTimeout(150);

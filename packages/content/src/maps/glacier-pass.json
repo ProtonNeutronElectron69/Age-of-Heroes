@@ -3372,5 +3372,6 @@
       ]
     }
   ],
-  "layouts": {}
+  "layouts": {},
+  "growZones": true
 }

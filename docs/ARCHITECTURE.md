@@ -35,7 +35,7 @@ Dependencies only point downwards: `client` and `server` use `protocol`, `conten
 | `editor.ts` | Pure map-editing operations used by the map editor |
 | `game/types.ts` | `GameState`, `Command`, `GameEvent`, `PlayerView` and friends |
 | `game/engine.ts` | `createGame`, `applyCommand`, `replayGame`, `waitingOn` and the turn flow |
-| `game/draft.ts`, `game/deploy.ts` | Snake draft (card count or points budget, faction-pure) and deployment |
+| `game/draft.ts`, `game/deploy.ts` | Snake draft (card count or points budget, faction-pure) and deployment. Zones that grow to fit an army are stored in `GameState.zones`; read a player's zone with `playerZone` |
 | `game/rounds.ts` | Token placement, initiative, turn order, wounds, elimination and game over |
 | `game/placement.ts`, `game/movement.ts` | Multi-hex footprints, reachable placements (Dijkstra with hazard tie-breaks), moving, falling, passing strikes, flying, trample |
 | `game/engagement.ts`, `game/combat.ts` | Engagement, attack legality, dice, height bonuses, special actions, mind control |
@@ -73,7 +73,7 @@ State lives in small stores read with `useSyncExternalStore`:
 
 Screens (`screens/`): `SetupScreen` (hot-seat or online setup, saved games, resume), `LobbyScreen`, `DraftScreen`, `PlayScreen` (deployment, tokens, turns, game over), `EditorScreen`, `ReplayScreen`. `App.tsx` picks the screen from the session and online state.
 
-Scene (`scene/`): `BoardScene` (terrain as one instanced mesh per terrain type plus one set of outlines, scenery, markers, camera, and eye view with drag and arrow-key look-around), `Figures` (tokens, plus a single DOM label layer positioned each frame; per-figure React roots caused unmount errors), `TestHook` (projection helper and draw call stats for browser tests).
+Scene (`scene/`): `BoardScene` (terrain as one instanced mesh per terrain type plus one set of outlines, scenery, markers, camera with WASD panning, and eye view with drag and arrow-key look-around), `Figures` (tokens, with multi-hex figures drawn as one rounded piece over their footprint, plus a single DOM label layer positioned each frame; per-figure React roots caused unmount errors), `TestHook` (projection helper and draw call stats for browser tests).
 
 UI (`ui/`): unit cards, dice overlay, log, round bar, token panel, game menu and save dialog.
 
@@ -86,6 +86,7 @@ Browser storage keys (all `localStorage`, each wrapped so the game works without
 | `age-of-heroes:maps:v1` | Custom maps |
 | `age-of-heroes:online:v1` | The online seat (server, room code, rejoin token) |
 | `age-of-heroes:server:v1`, `age-of-heroes:name:v1` | Last server address and player name |
+| `age-of-heroes:show-card:v1` | Whether the selected unit's card stays on screen |
 
 ## Testing
 

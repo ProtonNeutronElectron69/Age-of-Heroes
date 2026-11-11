@@ -149,6 +149,11 @@ export interface GameState {
   revealed: Record<PlayerId, TokenId[]>;
   /** Turn order for this round, set by the initiative roll. */
   initiative: PlayerId[] | null;
+  /**
+   * Start zones grown at deployment to fit each army (maps with `growZones`).
+   * A player missing here uses the map's zone as drawn.
+   */
+  zones?: Record<PlayerId, Hex[]>;
   pointer: TurnPointer | null;
   active: ActiveTurn | null;
   result: GameResult | null;
@@ -226,6 +231,10 @@ export type GameEvent =
       readonly placements: FigurePlacement[];
     }
   | { readonly type: "deploymentEnded" }
+  /** A start zone grew by `added` hexes so the army fits (maps with `growZones`). */
+  | { readonly type: "startZoneGrown"; readonly player: PlayerId; readonly added: number }
+  /** Not even a grown start zone had room for the unit, so it sits this game out. */
+  | { readonly type: "unitNotDeployed"; readonly player: PlayerId; readonly unitId: string }
   | { readonly type: "roundStarted"; readonly round: number }
   | { readonly type: "tokensPlaced"; readonly player: PlayerId }
   | { readonly type: "initiativeRolled"; readonly rolls: RollOff[]; readonly order: PlayerId[] }

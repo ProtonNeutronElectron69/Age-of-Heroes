@@ -142,6 +142,14 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 - [x] A red arrow floats and spins above the figure chosen to act
 - [x] Eye view looks all the way around: drag, or hold the arrow keys. It still starts facing the enemy last clicked, else a target
 - [x] Smoother camera: the board draws each terrain type as one instanced mesh with one set of outlines (about 130 draw calls instead of over 1000), hovering skips work while the camera is dragged, and the camera follows the pointer more closely
+- [x] Start zones on premade maps grow at deployment to fit the drafted army. Custom maps keep the zones painted in the editor, which can also turn growing on. A unit with no room at all sits the game out instead of stalling the game
+- [x] Multi-hex figures are one larger piece instead of one token per hex
+- [x] The selected unit's card stays on screen, with a button (or C) to hide it
+- [x] The dice panel is larger, sits at the bottom of the screen and stays up until closed or the next action
+- [x] The initiative roll shows its d20s in the dice panel
+- [x] Keys: WASD pans the map, 1 to 4 pick a squad's figures, E opens and closes eye view, Space ends the turn, R turns a multi-hex figure, C shows or hides the unit card
+- [x] Eye view uses a wider lens, so distances look true to the hex count
+- [x] After a squad figure moves or attacks, the next figure that has not acted is selected
 
 ### Faster checks
 - [x] CI runs only the checks a change affects: docs run nothing, unit card data runs the content tests, and each browser test runs only for the code it covers, in parallel. Pushes to `main` still run everything. `pnpm check:affected` does the same locally. See [TESTING.md](TESTING.md)

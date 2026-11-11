@@ -630,16 +630,79 @@ legend {
 
 .dice-overlay {
   position: absolute;
-  bottom: 20px;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
-  max-width: min(640px, calc(100% - 32px));
+  justify-content: center;
+  gap: 22px 28px;
+  min-width: min(420px, calc(100% - 32px));
+  /* Leave the side panels (log on the left, card and menu on the right) uncovered where there is room. */
+  max-width: max(360px, min(860px, calc(100% - 660px)));
+  padding: 16px 44px 16px 22px;
   z-index: 12;
-  cursor: pointer;
   background: var(--panel-solid);
+  border: 2px solid var(--accent);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.55);
+  font-size: 15px;
+}
+
+.dice-overlay .roll {
+  font-size: 15px;
+}
+
+.dice-overlay .roll-title {
+  font-size: 16px;
+}
+
+.dice-overlay .die {
+  width: 38px;
+  height: 38px;
+  border-radius: 7px;
+}
+
+.dice-overlay .die svg {
+  width: 26px;
+  height: 26px;
+}
+
+.dice-overlay .d20 {
+  width: 44px;
+  height: 44px;
+  font-size: 17px;
+}
+
+.dice-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 6px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.initiative-dice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+}
+
+.initiative-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.initiative-entry .d20 {
+  margin-right: 0;
+}
+
+.d20.d20-reroll {
+  opacity: 0.45;
 }
 
 .roll {
@@ -1159,4 +1222,12 @@ legend {
 
 .lobby-players .army-name {
   flex: 1;
+}
+
+/* The selected unit's card can be hidden; the toggle sits above it. */
+.hud-right .card-toggle {
+  pointer-events: auto;
+  align-self: flex-end;
+  padding: 5px 10px;
+  font-size: 13px;
 }

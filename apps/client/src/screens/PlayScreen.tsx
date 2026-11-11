@@ -42,6 +42,25 @@ interface Pending {
   readonly spots: Step[];
 }
 
+const CARD_KEY = "age-of-heroes:show-card:v1";
+
+function readFlag(key: string, fallback: boolean): boolean {
+  try {
+    const v = localStorage.getItem(key);
+    return v === null ? fallback : v === "1";
+  } catch {
+    return fallback;
+  }
+}
+
+function writeFlag(key: string, value: boolean): void {
+  try {
+    localStorage.setItem(key, value ? "1" : "0");
+  } catch {
+    // Storage unavailable: the choice just lasts for this visit.
+  }
+}
+
 export function PlayScreen({ session }: { session: Session }) {
   const { state, ctx } = session;
   const isOnline = session.kind === "online";
@@ -67,6 +86,13 @@ export function PlayScreen({ session }: { session: Session }) {
   const [attackMode, setAttackMode] = useState<string | null>(null);
   const [revealedFor, setRevealedFor] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(true);
+  /** Keep the selected figure's unit card on screen (a viewer preference, kept in the browser). */
+  const [showCard, setShowCard] = useState(() => readFlag(CARD_KEY, true));
+  const toggleCard = () =>
+    setShowCard((v) => {
+      writeFlag(CARD_KEY, !v);
+      return !v;
+    });
   const labelLayer = useRef<HTMLDivElement>(null);
 
   // ---- Deployment -------------------------------------------------------
@@ -141,6 +167,28 @@ export function PlayScreen({ session }: { session: Session }) {
     if (selected && canAct(selected)) return;
     setSelected(activeUnit.figures.find((f) => canAct(f.id))?.id ?? null);
   }, [turnKey, state]);
+  // Squads: after a figure moves or attacks, move the selection on to the next figure that can act.
+  useEffect(() => {
+    if (!active || !activeUnit || !myTurn || activeUnit.figures.length < 2) return;
+    const ids = new Set(activeUnit.figures.map((f) => f.id));
+    let actor: { id: string; attacked: boolean } | null = null;
+    for (const e of session.lastEvents) {
+      if (e.type === "figureMoved" && ids.has(e.figureId)) actor = { id: e.figureId, attacked: false };
+      if (e.type === "attackRolled" && e.source === "attack" && e.attackerId && ids.has(e.attackerId)) {
+        actor = { id: e.attackerId, attacked: true };
+      }
+      if (e.type === "abilityRoll" && ids.has(e.figureId) && e.figureId !== e.targetId) actor = { id: e.figureId, attacked: true };
+    }
+    if (!actor) return;
+    // A figure that may still move after attacking (Smoke Step) keeps the selection for that move.
+    if (actor.attacked && (active.bonusMoves[actor.id] ?? 0) > 0 && mayAct(actor.id)) return setSelected(actor.id);
+    const living = activeUnit.figures.filter((f) => !f.destroyed && f.position).map((f) => f.id);
+    const start = living.indexOf(actor.id);
+    const after = [...living.slice(start + 1), ...living.slice(0, Math.max(start, 0))];
+    const fresh = after.find((id) => canAct(id) && !active.moved.includes(id) && !active.attacked.includes(id));
+    const next = fresh ?? after.find((id) => canAct(id)) ?? (canAct(actor.id) ? actor.id : null);
+    if (next) setSelected(next);
+  }, [session.lastEvents]);
   useEffect(() => {
     const f = activeUnit?.figures.find((x) => x.id === selected);
     setRotation(f?.position?.rotation ?? 0);
@@ -175,12 +223,35 @@ export function PlayScreen({ session }: { session: Session }) {
   };
   const hoverOption = optionAt(hoverStep);
 
-  // R turns the figure being deployed or moved.
+  // Keys: R turns a big figure, 1-4 pick a squad figure, E toggles eye view, C the unit card,
+  // Space ends the turn. WASD pans the map (in BoardScene).
+  const keys = useRef<(e: KeyboardEvent) => void>(() => {});
+  keys.current = (e: KeyboardEvent) => {
+    const t = e.target;
+    if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (document.querySelector(".page-overlay, .pass-screen")) return; // a dialog is open
+    const key = e.key.toLowerCase();
+    if (key === "r") {
+      setRotation((r) => (r + (e.shiftKey ? 5 : 1)) % 6);
+    } else if (key === "c") {
+      toggleCard();
+    } else if (key === "e" && active && myTurn && (selected || eyeView)) {
+      setEyeView(!eyeView);
+    } else if (/^[1-4]$/.test(key) && active && activeUnit && myTurn) {
+      const figure = activeUnit.figures.filter((f) => !f.destroyed)[Number(key) - 1];
+      if (figure && canAct(figure.id)) setSelected(figure.id);
+    } else if (key === " " && active && myTurn && !busy) {
+      e.preventDefault();
+      // A focused button would also take the Space press as a click.
+      if (document.activeElement instanceof HTMLButtonElement) document.activeElement.blur();
+      // Eye view has to close before a turn ends: the first press closes it.
+      if (eyeView) setEyeView(false);
+      else dispatch({ type: "endTurn", player: active.player });
+    }
+  };
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement) return;
-      if (e.key === "r" || e.key === "R") setRotation((r) => (r + (e.shiftKey ? 5 : 1)) % 6);
-    };
+    const onKey = (e: KeyboardEvent) => keys.current(e);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
@@ -359,7 +430,8 @@ export function PlayScreen({ session }: { session: Session }) {
 
   const replay = state.phase === "gameOver" ? replayOf(session) : null;
 
-  const cardFigure = hoveredFigure ?? pinnedFigure;
+  const ownFigure = selected ?? (deployUnit ? deployUnit.figures[0]?.id : null) ?? null;
+  const cardFigure = hoveredFigure ?? pinnedFigure ?? (showCard ? ownFigure : null);
   const found = cardFigure ? findFigure(state, cardFigure) : undefined;
   const cardUnit = found?.unit;
   const cardFigureState = found?.figure;
@@ -506,6 +578,7 @@ export function PlayScreen({ session }: { session: Session }) {
                 ? `Green hexes: move there. ${targets.size > 0 ? "Red rings: attack." : "No enemy in range and sight."} Orange hexes are risky (lava, ice${mode === "advanced" ? ", falls or passing strikes" : ""}).`
                 : "This unit has finished."}
               {moveBig ? " Press R to turn." : ""}
+              {myTurn ? ` Keys: ${activeUnit.figures.length > 1 ? "1-4 pick a figure, " : ""}E eye view, Space ends the turn, WASD moves the map.` : ""}
               {hoverOption ? ` Move cost ${hoverOption.cost}.` : ""}
               {eyeView && myTurn ? " Drag or use the arrow keys to look around. Clicking an enemy faces it (a red-ringed one is attacked). Exit eye view to end the turn." : ""}
             </p>
@@ -553,6 +626,11 @@ export function PlayScreen({ session }: { session: Session }) {
       </aside>
 
       <aside className="hud-right">
+        {ownFigure && (
+          <button type="button" className="card-toggle" aria-pressed={showCard} onClick={toggleCard} title="Show or hide the selected unit's card (C)">
+            {showCard ? "Hide unit card" : "Show unit card"}
+          </button>
+        )}
         {cardUnit && (
           <UnitCardView
             key={cardUnit.id}

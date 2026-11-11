@@ -47,6 +47,8 @@ async function screenPoint(q, r, elevation) {
 let moves = 0;
 let attacks = 0;
 let eyeChecked = false;
+let squadMoves = 0;
+let cycled = 0;
 
 try {
   await page.goto(url);
@@ -109,9 +111,15 @@ try {
       handled.clear();
     }
 
+    // The dice stay up until closed (or the next action): close them so they do not cover the board.
+    const closeDice = page.getByRole("button", { name: "Close dice" });
+    if (await closeDice.count()) await closeDice.click();
+
     const ui = await page.evaluate(() => window.__aohUi);
+    const squad = (await turn.locator(".figure-button").count()) > 1;
     // Attack whenever the selected figure has a target.
-    if (ui?.selected && ui.targets.length > 0) {
+    if (ui?.selected && ui.targets.length > 0 && !handled.has(`a:${ui.selected}`)) {
+      handled.add(`a:${ui.selected}`);
       const t = ui.targets[0];
       const p = await screenPoint(t.hex.q, t.hex.r, t.elevation + t.height / 2);
       if (p) {
@@ -119,14 +127,18 @@ try {
         await page.waitForTimeout(150);
         const after = await page.evaluate(() => window.__aohUi);
         if (after.selected !== ui.selected || after.targets.length === 0) attacks++;
-        if (attacks === 1) await shot("6-attack");
-        handled.add(ui.selected);
+        if (attacks === 1) {
+          await shot("6-attack");
+          // The roll stays on screen: it no longer clears itself after a few seconds.
+          await page.waitForTimeout(5500);
+          if (!(await page.getByRole("status", { name: "Dice" }).count())) fail("The dice cleared themselves");
+        }
         continue;
       }
     }
     // Move the selected figure toward the nearest enemy, once.
-    if (ui?.selected && !handled.has(ui.selected) && ui.moves.length > 0) {
-      handled.add(ui.selected);
+    if (ui?.selected && !handled.has(`m:${ui.selected}`) && ui.moves.length > 0) {
+      handled.add(`m:${ui.selected}`);
       const score = (m) => Math.min(...ui.enemies.map((e) => hexDistance(m.hex, e.hex)));
       const ranked = [...ui.moves].sort((a, b) => score(a) - score(b));
       for (const m of ranked.slice(0, 8)) {
@@ -138,20 +150,26 @@ try {
         if (after.moves.length === 0 || JSON.stringify(after.moves) !== JSON.stringify(ui.moves)) {
           moves++;
           if (moves === 1) await shot("5-moved");
+          // Squads hand the selection to the next figure after a move.
+          if (squad) squadMoves++;
+          if (squad && after.selected && after.selected !== ui.selected) cycled++;
           break;
         }
       }
       continue;
     }
-    if (ui?.selected) handled.add(ui.selected);
-    // Switch to a squad figure that has not acted yet, or end the turn.
+    if (ui?.selected) {
+      handled.add(`a:${ui.selected}`);
+      handled.add(`m:${ui.selected}`);
+    }
+    // Switch to a squad figure that can still do something, or end the turn.
     const buttons = turn.locator(".figure-button:not([disabled])");
     let switched = false;
     for (let i = 0; i < (await buttons.count()); i++) {
-      const b = buttons.nth(i);
-      await b.click();
-      const sel = await page.evaluate(() => window.__aohUi?.selected);
-      if (sel && !handled.has(sel)) {
+      await buttons.nth(i).click();
+      const now = await page.evaluate(() => window.__aohUi);
+      const sel = now?.selected;
+      if (sel && ((now.targets.length > 0 && !handled.has(`a:${sel}`)) || (now.moves.length > 0 && !handled.has(`m:${sel}`)))) {
         switched = true;
         break;
       }
@@ -182,7 +200,9 @@ try {
         await page.getByRole("button", { name: "Exit eye view" }).click();
         await page.getByRole("button", { name: "Eye view" }).waitFor();
       }
-      await endTurn.click();
+      // Space ends the turn (the button does the same).
+      if (step % 2 === 0) await page.keyboard.press(" ");
+      else await endTurn.click();
     }
   }
 
@@ -193,6 +213,7 @@ try {
   if (!/wins|share the win|Nobody/.test(heading)) fail(`Unexpected result: ${heading}`);
   if (moves === 0) fail("No figure moved during the game");
   if (!eyeChecked) fail("Eye view was never tried");
+  if (squadMoves > 0 && cycled === 0) fail("Squads never moved on to their next figure after a move");
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(`Full ${MODE} game played: ${moves} moves, ${attacks} attacks. Result: ${heading}`);
 } catch (err) {

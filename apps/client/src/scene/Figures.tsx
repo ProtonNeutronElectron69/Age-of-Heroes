@@ -1,8 +1,8 @@
 import type { ThreeEvent } from "@react-three/fiber";
 import { useFrame } from "@react-three/fiber";
 import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS, hexKey, hexToWorld, type Step } from "@aoh/rules";
-import { useMemo, useRef, type RefObject } from "react";
-import { Vector3, type Group, type Mesh } from "three";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { ExtrudeGeometry, Shape, ShapeGeometry, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
 
 export interface FigureView {
   readonly id: string;
@@ -64,6 +64,133 @@ function SelectionArrow({ top }: { top: number }) {
   );
 }
 
+interface Point {
+  readonly x: number;
+  readonly y: number;
+}
+
+/** Convex hull (counter-clockwise) of a few points; collinear points collapse to the two ends. */
+function hull(points: readonly Point[]): Point[] {
+  const pts = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+  if (pts.length < 3) return pts;
+  const cross = (o: Point, a: Point, b: Point) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const build = (list: Point[]) => {
+    const out: Point[] = [];
+    for (const p of list) {
+      while (out.length >= 2 && cross(out[out.length - 2]!, out[out.length - 1]!, p) <= 1e-9) out.pop();
+      out.push(p);
+    }
+    return out;
+  };
+  const lower = build(pts);
+  const upper = build([...pts].reverse());
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)];
+}
+
+/** The outline of every point grown by `radius`: a stadium for a line of hexes, a rounded shape otherwise. */
+function roundedOutline(points: readonly Point[], radius: number, target: Shape): void {
+  const h = hull(points);
+  if (h.length === 1) {
+    target.absarc(h[0]!.x, h[0]!.y, radius, 0, Math.PI * 2, false);
+    return;
+  }
+  const normal = (a: Point, b: Point) => Math.atan2(-(b.x - a.x), b.y - a.y);
+  for (let i = 0; i < h.length; i++) {
+    const prev = h[(i - 1 + h.length) % h.length]!;
+    const cur = h[i]!;
+    const next = h[(i + 1) % h.length]!;
+    const from = normal(prev, cur);
+    let to = normal(cur, next);
+    while (to < from) to += Math.PI * 2;
+    target.absarc(cur.x, cur.y, radius, from, to, false);
+  }
+  target.closePath();
+}
+
+/**
+ * A multi-hex figure as one solid piece: a rounded slab covering all its hexes,
+ * coloured below the hit band and white across it, with a cap on its front hex.
+ * It stands on the highest of its hexes (a figure may straddle one level).
+ */
+function BigToken({ f, handlers }: { f: FigureView; handlers: object }) {
+  const ring = useRef<MeshBasicMaterial>(null);
+  const h = f.height * LEVEL_HEIGHT;
+  const bandStart = h * HIT_BAND_FROM;
+  const front = hexToWorld(f.spots[0]!.hex, HEX_SIZE);
+  const base = Math.max(...f.spots.map((s) => s.elevation)) * LEVEL_HEIGHT;
+  // Shape coordinates are relative to the front hex; shape y runs opposite to world z.
+  const points = useMemo(
+    () =>
+      f.spots.map((s) => {
+        const { x, z } = hexToWorld(s.hex, HEX_SIZE);
+        return { x: x - front.x, y: -(z - front.z) };
+      }),
+    [f.spots, front.x, front.z],
+  );
+  const geometries = useMemo(() => {
+    const outline = new Shape();
+    roundedOutline(points, TOKEN_RADIUS, outline);
+    const body = new ExtrudeGeometry(outline, { depth: bandStart, bevelEnabled: false, curveSegments: 10 });
+    const band = new ExtrudeGeometry(outline, { depth: h - bandStart, bevelEnabled: false, curveSegments: 10 });
+    const ringShape = new Shape();
+    roundedOutline(points, TOKEN_RADIUS * 1.4, ringShape);
+    const hole = new Shape();
+    roundedOutline(points, TOKEN_RADIUS * 1.12, hole);
+    ringShape.holes.push(hole);
+    const ringGeo = new ShapeGeometry(ringShape, 10);
+    return { body, band, ringGeo };
+  }, [points, bandStart, h]);
+  useEffect(
+    () => () => {
+      geometries.body.dispose();
+      geometries.band.dispose();
+      geometries.ringGeo.dispose();
+    },
+    [geometries],
+  );
+  const ringColor = RING[f.status];
+  useFrame(({ clock }) => {
+    if (ring.current && (f.status === "ready" || f.status === "target")) {
+      ring.current.opacity = 0.55 + 0.35 * Math.sin(clock.elapsedTime * 4);
+    }
+  });
+  const centre = points.reduce((c, p) => ({ x: c.x + p.x / points.length, y: c.y + p.y / points.length }), { x: 0, y: 0 });
+  return (
+    <group position={[front.x, base, front.z]}>
+      {/* Extrusions run along the shape's z axis; turn them so they stand up. */}
+      <mesh geometry={geometries.body} rotation={[-Math.PI / 2, 0, 0]} {...handlers}>
+        <meshStandardMaterial
+          color={f.color}
+          roughness={0.6}
+          transparent={f.status === "spent"}
+          opacity={f.status === "spent" ? 0.6 : 1}
+        />
+      </mesh>
+      <mesh geometry={geometries.band} rotation={[-Math.PI / 2, 0, 0]} position={[0, bandStart, 0]} {...handlers}>
+        <meshStandardMaterial color="#f4f1ea" roughness={0.5} />
+      </mesh>
+      <mesh position={[0, h + 0.03, 0]} raycast={() => null}>
+        <cylinderGeometry args={[TOKEN_RADIUS * 0.7, TOKEN_RADIUS * 0.7, 0.06, 24]} />
+        <meshStandardMaterial
+          color={f.hero ? "#e8b730" : f.color}
+          metalness={f.hero ? 0.6 : 0}
+          roughness={0.4}
+        />
+      </mesh>
+      {ringColor && (
+        <mesh geometry={geometries.ringGeo} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} raycast={() => null}>
+          <meshBasicMaterial ref={ring} color={ringColor} transparent opacity={0.9} depthWrite={false} />
+        </mesh>
+      )}
+      {f.arrow && (
+        <group position={[centre.x, 0, -centre.y]}>
+          <SelectionArrow top={h} />
+        </group>
+      )}
+    </group>
+  );
+}
+
 function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClick"]; onHover?: Props["onHover"] }) {
   const ring = useRef<Mesh>(null);
   const h = f.height * LEVEL_HEIGHT;
@@ -91,6 +218,8 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
     },
     onPointerOut: () => onHover?.(null),
   };
+
+  if (f.spots.length > 1) return <BigToken f={f} handlers={handlers} />;
 
   return (
     <>
@@ -149,11 +278,13 @@ export function Figures({ figures, onClick, onHover, labels }: Props) {
   );
 }
 
-/** Where a figure's name tag floats: just above its front hex. */
+/** Where a figure's name tag floats: just above it (the middle of a multi-hex piece). */
 function labelAnchor(f: FigureView): Vector3 {
-  const front = f.spots[0]!;
-  const { x, z } = hexToWorld(front.hex, HEX_SIZE);
-  return new Vector3(x, (front.elevation + f.height) * LEVEL_HEIGHT + 0.35, z);
+  const at = f.spots.map((s) => hexToWorld(s.hex, HEX_SIZE));
+  const x = at.reduce((n, p) => n + p.x, 0) / at.length;
+  const z = at.reduce((n, p) => n + p.z, 0) / at.length;
+  const top = Math.max(...f.spots.map((s) => s.elevation)) + f.height;
+  return new Vector3(x, top * LEVEL_HEIGHT + 0.35, z);
 }
 
 /** Moves the DOM name tags to follow their figures on screen, every frame. */
