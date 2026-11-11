@@ -39,7 +39,7 @@ export type MapIssueCode =
   | "unknownTerrain"
   | "startZoneOffBoard"
   | "startZoneOverlap"
-  | "startZoneTerrain"
+  | "startZoneScenery"
   | "duplicateSeat"
   | "tooManyStartZones"
   | "badLayout"
@@ -81,7 +81,6 @@ export class Board {
   private readonly sceneryByHex = new Map<string, ScenerySpot[]>();
   private readonly spanPieces = new Set<string>();
   private sealed: Gap[] = [];
-  private terrainTable: TerrainTable | undefined;
 
   private constructor(readonly definition: MapDefinition) {}
 
@@ -95,7 +94,6 @@ export class Board {
     scenery?: SceneryTable,
   ): { board: Board; issues: MapIssue[] } {
     const board = new Board(def);
-    board.terrainTable = terrain;
     const issues: MapIssue[] = [];
 
     for (const piece of def.pieces) {
@@ -453,17 +451,10 @@ export class Board {
     return this.sealed;
   }
 
-  /**
-   * Can this hex be part of a start zone? It needs terrain, only standard
-   * terrain on every surface in it (when the terrain table is known), and no
-   * scenery.
-   */
+  /** Can this hex be part of a start zone? It needs terrain and no scenery. */
   zoneProblem(h: Hex): string | null {
-    const surfaces = this.surfaces(h);
-    if (surfaces.length === 0) return "has no terrain";
+    if (this.surfaces(h).length === 0) return "has no terrain";
     if (this.sceneryIn(h).length > 0) return "has scenery";
-    const special = surfaces.find((s) => this.terrainTable?.get(s.terrain)?.category === "special");
-    if (special) return `has ${this.terrainTable!.get(special.terrain)!.name.toLowerCase()}, a special terrain`;
     return null;
   }
 
@@ -502,7 +493,7 @@ export class Board {
         if (problem) {
           issues.push({
             severity: "error",
-            code: "startZoneTerrain",
+            code: "startZoneScenery",
             message: `Start zone ${zone.seat + 1} includes ${key}, which ${problem}`,
             hex: h,
           });

@@ -62,7 +62,7 @@ export function playerZone(state: GameState, player: PlayerId, ctx: RulesContext
   return ctx.board.startZone(state.players.find((p) => p.id === player)?.zone ?? -1);
 }
 
-/** A hex a zone may grow into: fit for a start zone (standard terrain, no scenery) with room to stand. */
+/** A hex a zone may grow into: fit for a start zone (no scenery) with room to stand. */
 function standable(h: Hex, ctx: RulesContext): boolean {
   return ctx.board.zoneProblem(h) === null && ctx.board.surfaces(h).some((s) => s.clearance >= 1);
 }

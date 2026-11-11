@@ -119,21 +119,14 @@ describe("pieces held up by balance", () => {
     expect(issues(joined).filter((i) => i.code === "detached")).toEqual([]);
   });
 
-  it("keeps start zones off special terrain and scenery", () => {
+  it("keeps start zones off scenery, but allows special terrain", () => {
     let m = build([at(0, 0, "line3", "grass"), at(3, 0, "single", "lava")]);
     m = { ...m, startZones: [{ seat: 0, hexes: [hex(0, 0), hex(3, 0)] }, { seat: 1, hexes: [hex(1, 0), hex(2, 0)] }] };
     m = addScenery(m, "boulder", hex(2, 0), 1);
-    expect(
-      issues(m)
-        .map((i) => [i.code, hexKey(i.hex!)])
-        .sort(),
-    ).toEqual([
-      ["startZoneTerrain", "2,0"],
-      ["startZoneTerrain", "3,0"],
-    ]);
+    expect(issues(m).map((i) => [i.code, hexKey(i.hex!)])).toEqual([["startZoneScenery", "2,0"]]);
     const board = Board.fromMap(m, terrain, scenery).board;
-    expect(board.zoneProblem(hex(0, 0))).toBeNull();
-    expect(board.zoneProblem(hex(3, 0))).toMatch(/lava/);
+    expect(board.zoneProblem(hex(3, 0))).toBeNull();
+    expect(board.zoneProblem(hex(2, 0))).toMatch(/scenery/);
   });
 });
 
@@ -151,7 +144,8 @@ describe("fixing problems", () => {
   it("fills sealed spaces and drops start zone hexes that cannot be used", () => {
     const ring = [hex(1, 0), hex(1, -1), hex(0, -1), hex(-1, 0), hex(-1, 1), hex(0, 1)];
     let m = build([at(0, 0, "flower7"), ...ring.map((h) => ({ ...at(0, 1), origin: h })), at(0, 2, "flower7")]);
-    m = addPiece(m, { ...at(2, 0, "single", "lava"), origin: hex(2, -1) }).map;
+    m = addPiece(m, { ...at(2, 0, "single", "grass"), origin: hex(2, -1) }).map;
+    m = addScenery(m, "boulder", hex(2, -1), 1);
     m = { ...m, startZones: [{ seat: 0, hexes: [hex(2, -1), hex(0, 0)] }, { seat: 1, hexes: [hex(2, -1)] }], layouts: { "2": [0, 1] } };
     const result = removeProblems(m, terrain, scenery);
     expect(result).toMatchObject({ pieces: 0, filled: 1, zoneHexes: 1 });

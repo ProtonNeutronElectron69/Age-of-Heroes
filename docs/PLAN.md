@@ -163,7 +163,7 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 ### Map rules
 - [x] Pieces stand by balance: a piece's middle must sit between at least 2 points it rests on or touches (1 for a single hex). Bridges and caves stand; a slab held at one edge does not. The editor shows a piece that would not be held up in orange before it is placed
 - [x] No sealed empty spaces inside the terrain, and no pieces off on their own
-- [x] Start zones only on standard terrain without scenery; The Mesa's zone 5 swaps a lava hex for grass
+- [x] No scenery in start zones
 - [x] "Fix problems" removes loose and detached pieces and problem scenery, fills sealed spaces and takes bad hexes out of start zones
 
 ### Faster checks

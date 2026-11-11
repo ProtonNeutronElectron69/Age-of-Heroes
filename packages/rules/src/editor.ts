@@ -68,14 +68,14 @@ export function removeItems(
 /** Problems that removing the piece (or scenery) fixes. Duplicate ids are left for the person to sort out. */
 const PIECE_PROBLEMS = new Set(["unsupported", "detached", "overlap", "unknownTerrain"]);
 const SCENERY_PROBLEMS = new Set(["unknownScenery", "sceneryOffBoard", "sceneryOverlap", "sceneryTooTall"]);
-const ZONE_PROBLEMS = new Set(["startZoneOffBoard", "startZoneTerrain"]);
+const ZONE_PROBLEMS = new Set(["startZoneOffBoard", "startZoneScenery"]);
 
 export interface FixResult {
   readonly map: MapDefinition;
   /** Pieces removed: not held up, detached, overlapping or of unknown terrain. */
   readonly pieces: number;
   readonly scenery: number;
-  /** Start zone hexes dropped: off the board, on special terrain or under scenery. */
+  /** Start zone hexes dropped: off the board or under scenery. */
   readonly zoneHexes: number;
   /** Sealed empty spaces filled, in hexes. */
   readonly filled: number;

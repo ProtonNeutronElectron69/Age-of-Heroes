@@ -72,7 +72,7 @@ The easiest way is the in-game map editor. Hold Shift to place a piece beside an
 4. Update the map list expected in `content.test.ts`.
 
 The tests check that every bundled map:
-- builds without problems (every piece held up and joined to the rest, no sealed spaces, start zones on standard terrain without scenery);
+- builds without problems (every piece held up and joined to the rest, no sealed spaces, no scenery in start zones);
 - hosts at least 2 players;
 - keeps two players' zones at least 12 hexes apart;
 - has room in every start zone for a full army.

@@ -87,9 +87,11 @@ try {
   for (const [q, r] of [[-6, -4], [-5, -4], [-6, -3], [-3, -3]]) await clickHex(q, r, 1);
   await page.getByRole("button", { name: /^Zone 2/ }).click();
   for (const [q, r] of [[5, 2], [6, 2], [5, 3], [6, 3]]) await clickHex(q, r, 1);
-  // Start zones stay off special terrain: the pond is refused.
-  await clickHex(0, 1, 2);
-  if (!(await status()).startsWith("A start zone cannot go on hex 0,1")) fail(`Zone on water: ${await status()}`);
+  // Start zones stay off scenery: the hex with a tree is refused.
+  await clickHex(-5, -3, 1);
+  if (!(await status()).startsWith("A start zone cannot go on hex -5,-3: it has scenery")) {
+    fail(`Zone on a tree: ${await status()}`);
+  }
   await page.mouse.move(700, 820);
   if ((await problems()) !== "NO PROBLEMS") fail(`Problems: ${await problems()}`);
   if (!(await stats()).includes("Playable by 2 to 2 players")) fail(`Not playable: ${await stats()}`);

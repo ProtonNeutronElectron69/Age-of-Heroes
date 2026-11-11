@@ -103,7 +103,7 @@ Scenery stands on a single hex, on top of the terrain there:
 - Flying figures fly over scenery but cannot land on it (see Flying in section 7).
 
 ### Start zones
-Each map has up to 6 start zones. The map says which zones are used for each player count, so that, for example, two players start in opposite corners. Turn order still goes round the table in seat order. Players set up their figures only in their own zone. Start zones may only cover standard terrain, with no scenery; a zone that grows at deployment grows only into such hexes. A map can be played by any number of players it has a separate start zone for.
+Each map has up to 6 start zones. The map says which zones are used for each player count, so that, for example, two players start in opposite corners. Turn order still goes round the table in seat order. Players set up their figures only in their own zone. Start zones may not hold scenery, and a zone that grows at deployment never grows onto scenery. A map can be played by any number of players it has a separate start zone for.
 
 ## 4. Setting up a game
 

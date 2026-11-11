@@ -346,7 +346,7 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
     () => new Set(issues.filter((i) => i.severity === "error" && i.pieceId).map((i) => i.pieceId!)),
     [issues],
   );
-  const FIXABLE = ["unsupported", "detached", "overlap", "unknownTerrain", "void", "startZoneTerrain", "startZoneOffBoard"];
+  const FIXABLE = ["unsupported", "detached", "overlap", "unknownTerrain", "void", "startZoneScenery", "startZoneOffBoard"];
   const fixable = issues.some((i) => i.severity === "error" && (FIXABLE.includes(i.code) || i.sceneryId));
   const stats = mapStats(map, board);
   const playerCounts = board.playerCounts();
