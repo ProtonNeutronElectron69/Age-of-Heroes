@@ -19,6 +19,7 @@ export function DraftScreen({ session }: { session: Session }) {
   const names = new Names(state, ctx);
   const drafter = currentDrafter(state);
   const budget = state.config.budget;
+  const pointsDraft = state.config.armySize === null;
   const total = state.draft?.order.length ?? 0;
   const pickNumber = Math.min((state.draft?.index ?? 0) + 1, total);
   const left = drafter && budget !== null ? budget - pointsSpent(state, drafter, ctx) : null;
@@ -31,9 +32,11 @@ export function DraftScreen({ session }: { session: Session }) {
         <div>
           <h1>Draft</h1>
           <p className="muted">
-            {budget === null
+            {!pointsDraft
               ? `Pick ${pickNumber} of ${total}. `
-              : `Each player has ${budget} points. Pick until you are out of points or choose to stop. `}
+              : budget === null
+                ? "There is no points limit. Pick until your start zone is full or choose to stop. "
+                : `Each player has ${budget} points. Pick until you are out of points or choose to stop. `}
             The order snakes: it reverses every round of picks.
           </p>
         </div>
@@ -54,7 +57,7 @@ export function DraftScreen({ session }: { session: Session }) {
               {left !== null && <span className="muted"> {left} points left.</span>}
               {faction && <span className="muted"> {faction} only.</span>}
             </span>
-            {budget !== null && myPick && (
+            {pointsDraft && myPick && (
               <button type="button" disabled={session.pending} onClick={() => dispatch({ type: "draftPass", player: drafter })}>
                 Done drafting
               </button>

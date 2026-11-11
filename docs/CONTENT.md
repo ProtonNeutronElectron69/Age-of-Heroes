@@ -65,7 +65,7 @@ An ability is engine code named by an id. To add one:
 
 ## Maps
 
-The easiest way is the in-game map editor:
+The easiest way is the in-game map editor. Hold Shift to place a piece beside another at the same level, drag a box in the Erase tool to clear an area, and use Random fill to roughen terrain or scatter scenery. "Show next problem" finds floating pieces, and "Remove problem pieces" deletes them. To publish a map:
 1. Build the map and export it as a file.
 2. Copy it into `packages/content/src/maps/`.
 3. Add it to `MAPS` in `maps/index.ts`.

@@ -1,34 +1,48 @@
-import { MAPS, SCENERY, TERRAIN, TERRAIN_TABLE, buildBoard } from "@aoh/content";
+import { MAPS, SCENERY, SCENERY_TABLE, TERRAIN, TERRAIN_TABLE, buildBoard } from "@aoh/content";
 import {
   HEX_SIZE,
   LEVEL_HEIGHT,
+  MAX_LAYER,
   MAX_PLAYERS,
   MIN_PLAYERS,
+  Rng,
   SHAPES,
   SHAPE_IDS,
   addPiece,
   addScenery,
   blankMap,
+  clearStartZones,
   hexKey,
   hexToWorld,
   landingLayer,
   mapStats,
   overlappingCells,
+  populateScenery,
+  populateTerrain,
+  removeItems,
   removePiece,
+  removeProblems,
   removeScenery,
   setLayout,
   shapeCells,
+  sidePlacement,
   toggleZoneHex,
+  type Board,
   type Cell,
   type Hex,
   type MapDefinition,
+  type MapIssue,
   type ScenerySpot,
   type ShapeId,
   type Step,
+  type TerrainRules,
+  type Vec3,
 } from "@aoh/rules";
-import { Canvas } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { CylinderGeometry } from "three";
+import { Canvas, useThree } from "@react-three/fiber";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { CylinderGeometry, Matrix4, Vector3, type InstancedMesh } from "three";
+import { terrainEffect } from "../describe";
 import { customMaps, downloadMap, isPremade, newMapId, readMapFile, saveCustomMap } from "../maps";
 import { BoardScene, boardCenter, type Marker } from "../scene/BoardScene";
 import { HEX_GAP, SEAT_COLORS } from "../scene/scale";
@@ -81,29 +95,223 @@ function ShapeIcon({ shape }: { shape: ShapeId }) {
   );
 }
 
-function Ghost({ cells, layer, color }: { cells: Hex[]; layer: number; color: string }) {
+/** Translucent hex blocks over cells: the piece being placed, the box being erased, problem pieces. */
+function CellBoxes({
+  cells,
+  color,
+  opacity = 0.6,
+  overlay = false,
+}: {
+  cells: readonly { hex: Hex; layer: number }[];
+  color: string;
+  opacity?: number;
+  /** Draw through other terrain, so buried or hidden cells show. */
+  overlay?: boolean;
+}) {
   const geometry = useMemo(
-    () => new CylinderGeometry(HEX_SIZE * HEX_GAP, HEX_SIZE * HEX_GAP, LEVEL_HEIGHT, 6),
+    () => new CylinderGeometry(HEX_SIZE * HEX_GAP * 1.01, HEX_SIZE * HEX_GAP * 1.01, LEVEL_HEIGHT * 1.02, 6),
     [],
   );
+  const mesh = useRef<InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const m = mesh.current;
+    if (!m) return;
+    const matrix = new Matrix4();
+    cells.forEach((c, i) => {
+      const { x, z } = hexToWorld(c.hex, HEX_SIZE);
+      m.setMatrixAt(i, matrix.makeTranslation(x, c.layer * LEVEL_HEIGHT + LEVEL_HEIGHT / 2, z));
+    });
+    m.instanceMatrix.needsUpdate = true;
+    m.computeBoundingSphere();
+  }, [cells]);
+  if (cells.length === 0) return null;
+  return (
+    <instancedMesh
+      key={cells.length}
+      ref={mesh}
+      args={[geometry, undefined, cells.length]}
+      raycast={() => null}
+      renderOrder={overlay ? 10 : 0}
+    >
+      <meshStandardMaterial color={color} transparent opacity={opacity} depthWrite={false} depthTest={!overlay} />
+    </instancedMesh>
+  );
+}
+
+/** Every cell of the given pieces. */
+function pieceCells(board: Board, ids: Iterable<string>): { hex: Hex; layer: number }[] {
+  const out: { hex: Hex; layer: number }[] = [];
+  for (const id of ids) {
+    const p = board.piece(id);
+    if (p) for (const h of shapeCells(p.shape, p.origin, p.rotation)) out.push({ hex: h, layer: p.layer });
+  }
+  return out;
+}
+
+/** Where the camera should look to show a problem, or null if it has no place on the board. */
+function problemPoint(board: Board, issue: MapIssue): Vec3 | null {
+  if (issue.pieceId) {
+    const cells = pieceCells(board, [issue.pieceId]);
+    if (cells.length === 0) return null;
+    let x = 0;
+    let z = 0;
+    for (const c of cells) {
+      const w = hexToWorld(c.hex, HEX_SIZE);
+      x += w.x;
+      z += w.z;
+    }
+    return { x: x / cells.length, y: (cells[0]!.layer + 1) * LEVEL_HEIGHT, z: z / cells.length };
+  }
+  if (issue.hex) {
+    const w = hexToWorld(issue.hex, HEX_SIZE);
+    const top = board.topSurface(issue.hex);
+    return { x: w.x, y: (top?.elevation ?? 0) * LEVEL_HEIGHT, z: w.z };
+  }
+  return null;
+}
+
+/** A tip that opens after the pointer rests on its button for a second. */
+function DelayedTip({ tip, children }: { tip: ReactNode | null; children: (props: TipHandlers) => ReactNode }) {
+  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
+  const timer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const handlers: TipHandlers = {
+    onMouseEnter: (e) => {
+      if (!tip) return;
+      const r = e.currentTarget.getBoundingClientRect();
+      window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => setAt({ left: r.left, top: r.bottom + 6 }), 1000);
+    },
+    onMouseLeave: () => {
+      window.clearTimeout(timer.current);
+      setAt(null);
+    },
+  };
   return (
     <>
-      {cells.map((h) => {
-        const { x, z } = hexToWorld(h, HEX_SIZE);
-        return (
-          <mesh
-            key={hexKey(h)}
-            geometry={geometry}
-            position={[x, layer * LEVEL_HEIGHT + LEVEL_HEIGHT / 2, z]}
-            raycast={() => null}
-          >
-            <meshStandardMaterial color={color} transparent opacity={0.6} depthWrite={false} />
-          </mesh>
-        );
-      })}
+      {children(handlers)}
+      {at &&
+        tip &&
+        createPortal(
+          <div className="delayed-tip" role="tooltip" style={{ left: at.left, top: at.top }}>
+            {tip}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
+
+interface TipHandlers {
+  onMouseEnter: (e: React.MouseEvent<HTMLElement>) => void;
+  onMouseLeave: () => void;
+}
+
+function terrainTip(t: TerrainRules): ReactNode | null {
+  const effect = terrainEffect(t);
+  return effect ? (
+    <>
+      <strong>{t.name}</strong>
+      {effect}
+    </>
+  ) : null;
+}
+
+interface Box {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/** Pointer travel (pixels) before a press in the erase tool becomes a box. */
+const BOX_PIXELS = 6;
+
+/**
+ * Erase tool: drag with the left button to draw a box. Every piece with a hex
+ * inside the box (at any level) and every piece of scenery inside it is picked.
+ */
+function BoxSelect({
+  board,
+  origin,
+  onBox,
+  onPick,
+}: {
+  board: Board;
+  origin: { x: number; z: number };
+  onBox: (box: Box | null) => void;
+  onPick: (pieces: Set<string>, scenery: Set<string>, done: boolean) => void;
+}) {
+  const camera = useThree((s) => s.camera);
+  const dom = useThree((s) => s.gl.domElement);
+  const latest = useRef({ board, origin, onBox, onPick });
+  latest.current = { board, origin, onBox, onPick };
+  useEffect(() => {
+    let start: { x: number; y: number } | null = null;
+    let dragging = false;
+    let points: { id: string; scenery: boolean; at: Vector3 }[] = [];
+    const v = new Vector3();
+    const pick = (x: number, y: number) => {
+      const r = dom.getBoundingClientRect();
+      const [x0, x1] = [Math.min(start!.x, x), Math.max(start!.x, x)];
+      const [y0, y1] = [Math.min(start!.y, y), Math.max(start!.y, y)];
+      const pieces = new Set<string>();
+      const scenery = new Set<string>();
+      for (const p of points) {
+        v.copy(p.at).project(camera);
+        if (v.z > 1) continue;
+        const sx = r.left + ((v.x + 1) / 2) * r.width;
+        const sy = r.top + ((1 - v.y) / 2) * r.height;
+        if (sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1) (p.scenery ? scenery : pieces).add(p.id);
+      }
+      return { pieces, scenery, box: { left: x0, top: y0, width: x1 - x0, height: y1 - y0 } };
+    };
+    const down = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      start = { x: e.clientX, y: e.clientY };
+      dragging = false;
+      const { board, origin } = latest.current;
+      points = board.cells().map((c) => {
+        const { x, z } = hexToWorld(c.hex, HEX_SIZE);
+        return { id: c.pieceId, scenery: false, at: new Vector3(x - origin.x, (c.layer + 1) * LEVEL_HEIGHT, z - origin.z) };
+      });
+      for (const spot of board.scenery()) {
+        const { x, z } = hexToWorld(spot.placement.hex, HEX_SIZE);
+        const y = (spot.placement.elevation + 0.5) * LEVEL_HEIGHT;
+        points.push({ id: spot.placement.id, scenery: true, at: new Vector3(x - origin.x, y, z - origin.z) });
+      }
+    };
+    const move = (e: PointerEvent) => {
+      if (!start) return;
+      if (!dragging && Math.hypot(e.clientX - start.x, e.clientY - start.y) < BOX_PIXELS) return;
+      dragging = true;
+      const { pieces, scenery, box } = pick(e.clientX, e.clientY);
+      latest.current.onBox(box);
+      latest.current.onPick(pieces, scenery, false);
+    };
+    const up = (e: PointerEvent) => {
+      if (start && dragging) {
+        const { pieces, scenery } = pick(e.clientX, e.clientY);
+        latest.current.onPick(pieces, scenery, true);
+        latest.current.onBox(null);
+      }
+      start = null;
+      dragging = false;
+    };
+    dom.addEventListener("pointerdown", down);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    return () => {
+      dom.removeEventListener("pointerdown", down);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+  }, [camera, dom]);
+  return null;
+}
+
+/** A fresh seed for each random fill. Randomness here only shapes the map being drawn. */
+const fillRng = () => new Rng(Math.floor(Math.random() * 2 ** 32));
 
 export function EditorScreen({ initial, onDone }: { initial: MapDefinition | null; onDone: (mapId?: string) => void }) {
   const [history, setHistory] = useState<History>(() => ({ past: [], present: editable(initial), future: [] }));
@@ -121,10 +329,25 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
   const [hoverHex, setHoverHex] = useState<Hex | null>(null);
   const [hoverCell, setHoverCell] = useState<Cell | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [shiftHeld, setShiftHeld] = useState(false);
+  /** The cell under the pointer and the side of it nearest the pointer, for Shift placement. */
+  const [side, setSide] = useState<{ cell: Cell; origin: Hex; direction: number } | null>(null);
+  const [fillLevel, setFillLevel] = useState(2);
+  const [problemIndex, setProblemIndex] = useState(-1);
+  const [focus, setFocus] = useState<{ point: Vec3; key: number } | null>(null);
+  const [box, setBox] = useState<Box | null>(null);
+  const [boxPick, setBoxPick] = useState<{ pieces: Set<string>; scenery: Set<string> } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const { board, issues } = useMemo(() => buildBoard(map), [map]);
   const errors = issues.filter((i) => i.severity === "error");
+  const problemPieces = useMemo(
+    () => new Set(issues.filter((i) => i.severity === "error" && i.pieceId).map((i) => i.pieceId!)),
+    [issues],
+  );
+  const removable = issues.some(
+    (i) => i.severity === "error" && (i.code === "unsupported" || i.code === "overlap" || i.code === "unknownTerrain" || i.sceneryId),
+  );
   const stats = mapStats(map, board);
   const playerCounts = board.playerCounts();
   const unsaved = saved !== map;
@@ -155,31 +378,50 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
         redo();
       } else if (e.key === "r" || e.key === "R") {
         setRotation((r) => (r + (e.shiftKey ? 5 : 1)) % 6);
+      } else if (e.key === "Shift") {
+        setShiftHeld(true);
       }
     };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setShiftHeld(false);
+    };
+    const onBlur = () => setShiftHeld(false);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+    };
   }, []);
 
   // ---- Piece placement preview -----------------------------------------
-  const ghostCells = tool === "piece" && hoverHex ? shapeCells(shape, hoverHex, rotation) : [];
-  const ghostLayer = autoLayer ? landingLayer(board, ghostCells) : manualLayer;
+  // With Shift held over a piece, the new piece goes beside it at the same level, pointing away from it.
+  const sideways = tool === "piece" && shiftHeld && side !== null && hoverCell !== null;
+  const ghostRotation = sideways ? (rotation + side!.direction) % 6 : rotation;
+  const ghostCells =
+    tool === "piece" && hoverHex
+      ? shapeCells(shape, sideways ? side!.origin : hoverHex, ghostRotation)
+      : [];
+  const ghostLayer = sideways ? side!.cell.layer : autoLayer ? landingLayer(board, ghostCells) : manualLayer;
   const ghostBlocked = overlappingCells(board, ghostCells, ghostLayer).length > 0;
 
-  const placePiece = (origin: Hex) => {
-    const cells = shapeCells(shape, origin, rotation);
-    const layer = autoLayer ? landingLayer(board, cells) : manualLayer;
+  const placePiece = (origin: Hex, rot = rotation, fixedLayer?: number) => {
+    const cells = shapeCells(shape, origin, rot);
+    const layer = fixedLayer ?? (autoLayer ? landingLayer(board, cells) : manualLayer);
     if (overlappingCells(board, cells, layer).length > 0) {
       setStatus("That space is already filled at this level.");
       return;
     }
-    commit(addPiece(map, { shape, terrain, origin, rotation, layer }).map);
+    commit(addPiece(map, { shape, terrain, origin, rotation: rot, layer }).map);
   };
 
   const onSurfaceClick = (step: Step, cell: Cell) => {
     switch (tool) {
       case "piece":
-        placePiece(cell.hex);
+        if (shiftHeld && side && side.cell === cell) placePiece(side.origin, (rotation + side.direction) % 6, cell.layer);
+        else placePiece(cell.hex);
         break;
       case "scenery":
         if (board.sceneryAt(step.hex, step.elevation)) setStatus("There is already scenery there.");
@@ -202,7 +444,7 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
       if (top) markers.push({ step: { hex: h, elevation: top.elevation }, color: SEAT_COLORS[zone.seat]!, opacity: 0.5 });
     }
   }
-  if (hoverCell && tool === "erase") {
+  if (hoverCell && tool === "erase" && !box) {
     const piece = board.piece(hoverCell.pieceId);
     if (piece) {
       for (const h of shapeCells(piece.shape, piece.origin, piece.rotation)) {
@@ -214,6 +456,87 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
     const top = board.surfaces(hoverCell.hex).find((s) => s.elevation > hoverCell.layer);
     if (top) markers.push({ step: { hex: hoverCell.hex, elevation: top.elevation }, color: "#ffffff", opacity: 0.6 });
   }
+
+  // ---- Problems, fills and box erase -------------------------------------
+  const located = errors.map((i) => ({ issue: i, point: problemPoint(board, i) })).filter((p) => p.point !== null);
+  const focusedIssue = problemIndex >= 0 ? located[problemIndex % Math.max(located.length, 1)]?.issue : undefined;
+  const showNextProblem = () => {
+    if (located.length === 0) return;
+    const next = (problemIndex + 1) % located.length;
+    setProblemIndex(next);
+    setFocus({ point: located[next]!.point!, key: Date.now() });
+    setStatus(`Problem ${next + 1} of ${located.length}: ${located[next]!.issue.message}`);
+  };
+  const removeAllProblems = () => {
+    const result = removeProblems(map, TERRAIN_TABLE, SCENERY_TABLE);
+    if (result.map === map) return;
+    commit(result.map);
+    setProblemIndex(-1);
+    setStatus(
+      `Removed ${result.pieces} ${result.pieces === 1 ? "piece" : "pieces"}` +
+        (result.scenery > 0 ? ` and ${result.scenery} scenery.` : "."),
+    );
+  };
+  const fillTerrain = () => {
+    const result = populateTerrain(map, fillLevel, fillRng(), TERRAIN_TABLE);
+    if (result.added === 0) {
+      setStatus(
+        fillLevel < 2
+          ? "Level 1 is the table: lay it out by hand, then fill level 2 and up."
+          : `There is no open standard terrain at level ${fillLevel - 1} to build on.`,
+      );
+      return;
+    }
+    commit(result.map);
+    setStatus(`Added ${result.added} ${result.added === 1 ? "piece" : "pieces"} on level ${fillLevel}.`);
+  };
+  const fillScenery = () => {
+    const result = populateScenery(map, fillLevel, fillRng(), TERRAIN_TABLE, SCENERY_TABLE);
+    if (result.added === 0) {
+      setStatus(`There is no free standard terrain on level ${fillLevel} with room for scenery.`);
+      return;
+    }
+    commit(result.map);
+    setStatus(`Added ${result.added} scenery on level ${fillLevel}.`);
+  };
+  const onBoxPick = (pieces: Set<string>, scenery: Set<string>, done: boolean) => {
+    if (!done) {
+      setBoxPick({ pieces, scenery });
+      return;
+    }
+    setBoxPick(null);
+    if (pieces.size === 0 && scenery.size === 0) return;
+    commit(removeItems(map, pieces, scenery));
+    setStatus(
+      `Erased ${pieces.size} ${pieces.size === 1 ? "piece" : "pieces"}` +
+        (scenery.size > 0 ? ` and ${scenery.size} scenery.` : "."),
+    );
+  };
+  if (boxPick) {
+    for (const spot of board.scenery()) {
+      if (boxPick.scenery.has(spot.placement.id)) {
+        markers.push({ step: { hex: spot.placement.hex, elevation: spot.placement.elevation }, color: "#ff3b30", opacity: 0.8 });
+      }
+    }
+  }
+  const fillLevelControl = (
+    <div className="control-row">
+      <span>Level</span>
+      <button type="button" aria-label="Fill level down" onClick={() => setFillLevel((l) => Math.max(1, l - 1))}>
+        −
+      </button>
+      <span aria-live="polite" data-testid="fill-level">
+        {fillLevel}
+      </span>
+      <button
+        type="button"
+        aria-label="Fill level up"
+        onClick={() => setFillLevel((l) => Math.min(MAX_LAYER + 1, l + 1))}
+      >
+        +
+      </button>
+    </div>
+  );
 
   // ---- Files -------------------------------------------------------------
   const save = (): boolean => {
@@ -266,7 +589,15 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
           onSurfaceHover={(_, cell) => {
             setHoverCell(cell);
             if (cell) setHoverHex(cell.hex);
+            else setSide(null);
           }}
+          onCellPointer={(cell, point) => {
+            const next = sidePlacement(cell.hex, point);
+            if (side && side.cell === cell && side.direction === next.direction) return;
+            setSide({ cell, ...next });
+          }}
+          leftButton={tool === "erase" ? "select" : "camera"}
+          focus={focus}
           onSceneryClick={tool === "erase" ? (spot: ScenerySpot) => commit(removeScenery(map, spot.placement.id)) : undefined}
           ground={{
             onHover: (h) => {
@@ -279,15 +610,23 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
           }}
         >
           {ghostCells.length > 0 && (
-            <Ghost
-              cells={ghostCells}
-              layer={ghostLayer}
+            <CellBoxes
+              cells={ghostCells.map((h) => ({ hex: h, layer: ghostLayer }))}
               color={ghostBlocked ? "#ff3b30" : (TERRAIN_TABLE.get(terrain)?.color ?? "#ffffff")}
             />
           )}
+          <CellBoxes cells={pieceCells(board, problemPieces)} color="#ff9f1c" opacity={0.3} overlay />
+          {focusedIssue?.pieceId && (
+            <CellBoxes cells={pieceCells(board, [focusedIssue.pieceId])} color="#ff9f1c" opacity={0.75} overlay />
+          )}
+          {boxPick && <CellBoxes cells={pieceCells(board, boxPick.pieces)} color="#ff3b30" opacity={0.55} overlay />}
         </BoardScene>
+        {tool === "erase" && <BoxSelect board={board} origin={origin} onBox={setBox} onPick={onBoxPick} />}
         <TestHook offset={origin} />
       </Canvas>
+      {box && (
+        <div className="erase-box" style={{ left: box.left, top: box.top, width: box.width, height: box.height }} />
+      )}
 
       <aside className="hud-left editor-tools">
         <section className="panel" aria-label="Tools">
@@ -327,16 +666,20 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
               <h2>Terrain</h2>
               <div className="terrain-grid">
                 {TERRAIN.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className={`terrain-button ${terrain === t.id ? "on" : ""}`}
-                    aria-pressed={terrain === t.id}
-                    onClick={() => setTerrain(t.id)}
-                  >
-                    <span className="swatch" style={{ background: t.color }} />
-                    {t.name}
-                  </button>
+                  <DelayedTip key={t.id} tip={terrainTip(t)}>
+                    {(tip) => (
+                      <button
+                        type="button"
+                        className={`terrain-button ${terrain === t.id ? "on" : ""}`}
+                        aria-pressed={terrain === t.id}
+                        onClick={() => setTerrain(t.id)}
+                        {...tip}
+                      >
+                        <span className="swatch" style={{ background: t.color }} />
+                        {t.name}
+                      </button>
+                    )}
+                  </DelayedTip>
                 ))}
               </div>
               <div className="control-row">
@@ -367,7 +710,18 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
                 )}
               </div>
               <p className="muted small">
-                Pieces land on top of whatever is under them. Lay a piece across two pillars to make a bridge.
+                Pieces land on top of whatever is under them. Hold Shift to put a piece beside another at the same
+                level; join pieces from one pillar to another to make a bridge.
+              </p>
+              <h2>Random fill</h2>
+              {fillLevelControl}
+              <div className="actions">
+                <button type="button" onClick={fillTerrain}>
+                  Add terrain to level {fillLevel}
+                </button>
+              </div>
+              <p className="muted small">
+                Scatters small pieces on standard terrain, matching the terrain under them. Click again for more.
               </p>
             </>
           )}
@@ -390,6 +744,16 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
                 ))}
               </div>
               <p className="muted small">Click terrain to place. Scenery blocks movement and line of sight.</p>
+              <h2>Random fill</h2>
+              {fillLevelControl}
+              <div className="actions">
+                <button type="button" onClick={fillScenery}>
+                  Add scenery on level {fillLevel}
+                </button>
+              </div>
+              <p className="muted small">
+                Scatters scenery on standard terrain at that level, away from start zones and other scenery.
+              </p>
             </>
           )}
 
@@ -426,6 +790,18 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
                 />
                 Grow each zone at deployment to fit the army drafted
               </label>
+              <div className="actions">
+                <button
+                  type="button"
+                  disabled={map.startZones.length === 0}
+                  onClick={() => {
+                    commit(clearStartZones(map));
+                    setStatus("Start zones cleared.");
+                  }}
+                >
+                  Reset start zones
+                </button>
+              </div>
               <p className="muted small">
                 {map.growZones
                   ? "Zones you draw are the starting point; each one grows into nearby free hexes when its army needs more room."
@@ -434,7 +810,12 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
             </>
           )}
 
-          {tool === "erase" && <p className="muted small">Click a piece or a piece of scenery to remove it.</p>}
+          {tool === "erase" && (
+            <p className="muted small">
+              Click a piece or a piece of scenery to remove it, or drag a box to remove everything in it at every
+              level. In this tool the right button turns the camera.
+            </p>
+          )}
 
           <div className="actions">
             <button type="button" onClick={undo} disabled={history.past.length === 0}>
@@ -447,7 +828,11 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
           <p className="muted small hover-info">
             {hoverHex ? `Hex ${hexKey(hoverHex)}` : "Point at the table"}
             {hoverSurface ? `, level ${hoverSurface.elevation} ${TERRAIN_TABLE.get(hoverSurface.terrain)?.name.toLowerCase()}` : ""}
-            {tool === "piece" && ghostCells.length > 0 ? `. Lands on level ${ghostLayer + 1}` : ""}
+            {tool === "piece" && ghostCells.length > 0
+              ? sideways
+                ? `. Beside it on level ${ghostLayer + 1}`
+                : `. Lands on level ${ghostLayer + 1}`
+              : ""}
           </p>
         </section>
       </aside>
@@ -489,6 +874,16 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
               ))}
               {errors.length > 6 && <li>and {errors.length - 6} more</li>}
             </ul>
+          )}
+          {errors.length > 0 && (
+            <div className="actions">
+              <button type="button" onClick={showNextProblem} disabled={located.length === 0}>
+                Show next problem
+              </button>
+              <button type="button" onClick={removeAllProblems} disabled={!removable}>
+                Remove problem pieces
+              </button>
+            </div>
           )}
         </section>
 

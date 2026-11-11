@@ -151,6 +151,15 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 - [x] Eye view uses a wider lens, so distances look true to the hex count
 - [x] After a squad figure moves or attacks, the next figure that has not acted is selected
 
+### Editor tools and custom points
+- [x] Advanced games take any points budget from 50 to 9999, or no limit
+- [x] Editor: "Show next problem" moves the camera to each problem in turn, and "Remove problem pieces" deletes every floating piece and every piece of scenery with a problem
+- [x] Editor: drag a box in the Erase tool to remove everything in it, at every level
+- [x] Editor: the grid is about 10 times larger and square; special terrain buttons explain their effect after a second
+- [x] Editor: "Reset start zones"
+- [x] Editor: random fill adds a light scatter of small pieces on a chosen level, matching the terrain under them, or scenery; click again for more
+- [x] Editor: Shift+click puts a piece beside another at the same level. Bridges count as held up when they touch held-up pieces on two opposite sides, and a bridge of 1, 2 and 3-hex line pieces is drawn as one span with its hex outlines
+
 ### Faster checks
 - [x] CI runs only the checks a change affects: docs run nothing, unit card data runs the content tests, and each browser test runs only for the code it covers, in parallel. Pushes to `main` still run everything. `pnpm check:affected` does the same locally. See [TESTING.md](TESTING.md)
 

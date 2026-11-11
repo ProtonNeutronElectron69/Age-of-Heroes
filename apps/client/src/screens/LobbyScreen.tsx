@@ -139,7 +139,9 @@ export function LobbyScreen() {
           {room.mapName}, {room.mode === "basic" ? "Basic" : "Advanced"} rules,{" "}
           {room.budget !== null
             ? `${room.budget} points`
-            : `${room.armySize} ${room.armySize === 1 ? "card" : "cards"} each`}
+            : room.armySize === null
+              ? "No points limit"
+              : `${room.armySize} ${room.armySize === 1 ? "card" : "cards"} each`}
           {room.factionPure ? ", faction-pure" : ""}, {room.roundLimit === null ? "no round limit" : `${room.roundLimit} rounds`}.
         </p>
 

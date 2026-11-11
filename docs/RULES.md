@@ -55,7 +55,10 @@ Right panel (stats):
 ### Hexes, levels and pieces
 - The battlefield is built from hex **pieces** in these shapes: 1-hex, 2-hex, 3-hex line, 3-hex triangle, 2x2 (4-hex), 7-hex and 24-hex. Pieces are unlimited in the editor.
 - Pieces stack. Each piece is one **level** thick. A piece placed directly on the table is at layer 0; a figure standing on top of it is at **elevation 1**. A figure standing on a stack three pieces tall is at elevation 3.
-- A piece must rest on the table or on another piece (an overhang is fine as long as at least one of its hexes is supported, directly or through a chain of supported pieces).
+- A piece must be held up:
+  - it rests on the table, or at least one of its hexes rests on a piece that is held up (an overhang);
+  - or, with nothing under it, it is part of a **bridge**: a run of pieces joined side by side at one level that touches held-up pieces on two opposite sides. Opposite means two sides facing at least 120 degrees apart, so a piece touching one pillar, or lying along one wall, is not held up. **Assumption.**
+- Pieces that are not held up are problems: a map with any cannot be played.
 - Gaps are allowed, so pieces can form **bridges and overhangs**. A hex can have more than one standing surface, for example the water under a bridge and the road on top of it. A figure fits under an overhang only if the room above the surface is at least its Height. **Assumption.**
 
 ### Terrain types
@@ -104,7 +107,7 @@ Game options:
 - **Rule set**: Basic or Advanced.
 - **Players**: 2 to 6, each in a seat. Seat order is also the "to the left" order.
 - **Map**.
-- **Army size**: Basic: number of cards per player, 1 to 4 (default 3). Advanced: a points budget of 300, 400, 500 or 600 points (default 400).
+- **Army size**: Basic: number of cards per player, 1 to 4 (default 3). Advanced: a points budget per player (default 400), any whole number from 50 to 9999, or **no limit**. With no limit, players draft until they choose to stop or their start zone is full.
 - **Faction-pure mode** (Advanced, optional): every unit in an army must share the faction of that player's first pick. There is no extra reward; it is a theme restriction. **Assumption.**
 - **Round limit**: none, or a number of rounds.
 

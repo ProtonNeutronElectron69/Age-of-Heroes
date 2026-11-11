@@ -69,6 +69,23 @@ describe("points draft", () => {
     expect(s.units.filter((u) => u.owner === s.draft!.passed[0])).toHaveLength(0);
   });
 
+  it("drafts with no points limit until each start zone is full", () => {
+    let s = createGame(setup(2, { mode: "advanced", armies: undefined, budget: null }), ctx).state;
+    expect(s.config).toMatchObject({ budget: null, armySize: null });
+    expect(pickProblem(s, ctx, "red-a", currentDrafter(s)!)).toBeNull();
+    while (s.phase === "draft") s = pick(s, draftableCards(s, ctx, currentDrafter(s)!)[0]!);
+    // The test field's start zones hold 4 single-hex figures each.
+    for (const p of s.players) expect(s.units.filter((u) => u.owner === p.id)).toHaveLength(4);
+    expect(pointsGame(200).config.budget).toBe(200);
+    const open = createGame(setup(2, { mode: "advanced", armies: undefined, budget: null }), ctx).state;
+    expect(applyCommand(open, { type: "draftPass", player: currentDrafter(open)! }, ctx).ok).toBe(true);
+  });
+
+  it("accepts budgets up to 9999", () => {
+    expect(pointsGame(9999).config.budget).toBe(9999);
+    expect(() => pointsGame(10000)).toThrow(/1 to 9999/);
+  });
+
   it("has no passing in a card-count draft", () => {
     const s = createGame(setup(2, { mode: "basic", armies: undefined, armySize: 2 }), ctx).state;
     expect(applyCommand(s, { type: "draftPass", player: currentDrafter(s)! }, ctx).error).toMatch(/no passing/);

@@ -1,4 +1,4 @@
-import { findFigure, type GameEvent, type GameState, type RulesContext, type UnitCard } from "@aoh/rules";
+import { findFigure, type GameEvent, type GameState, type RulesContext, type TerrainRules, type UnitCard } from "@aoh/rules";
 
 /** Human-readable names for players, units and figures. */
 export class Names {
@@ -157,4 +157,30 @@ export function describeEvent(e: GameEvent, names: Names): string | null {
       return winners ? `${winners} ${e.result.winners.length > 1 ? "share the win" : "wins"}!` : "Nobody wins.";
     }
   }
+}
+
+/** What a special terrain does, in plain words, from its rules data. Null for standard terrain. */
+export function terrainEffect(t: TerrainRules): string | null {
+  if (t.category !== "special") return null;
+  const parts: string[] = [];
+  if (t.stopGroup) parts.push("Stepping in from dry ground ends the figure's move.");
+  if (t.moveCost && t.moveCost > 1) parts.push(`Each hex costs ${t.moveCost} move.`);
+  if (t.endTurnSelfAttack) {
+    const { attackDice, defenseDice } = t.endTurnSelfAttack;
+    parts.push(
+      `A figure that ends its turn here rolls ${attackDice} attack ${attackDice === 1 ? "die" : "dice"} against itself, with ${defenseDice} defense.`,
+    );
+  }
+  if (t.entryDestroyOnOrBelow) {
+    parts.push(`Each time a figure enters, roll a d20: on 1 to ${t.entryDestroyOnOrBelow} it is destroyed.`);
+  }
+  if (t.slip) {
+    parts.push(
+      `Each time a figure enters, roll a d20: on 1 to ${t.slip.onOrBelow} it slides ${t.slip.slideHexes} more ${t.slip.slideHexes === 1 ? "hex" : "hexes"} and stops.`,
+    );
+  }
+  if (t.stayOnBonusMove) {
+    parts.push(`A figure that starts, moves and ends its turn only on this terrain gets +${t.stayOnBonusMove} move.`);
+  }
+  return parts.length > 0 ? parts.join(" ") : null;
 }

@@ -1,6 +1,6 @@
 import { MAPS, buildBoard, contextFor } from "@aoh/content";
 import { MAX_NAME_LENGTH, parseReplay, type Replay, type RoomSettings } from "@aoh/protocol";
-import { MAX_PLAYERS, MIN_PLAYERS, replayGame, seedFromString, type MapDefinition, type RulesMode } from "@aoh/rules";
+import { MAX_BUDGET, MAX_PLAYERS, MIN_PLAYERS, replayGame, seedFromString, type MapDefinition, type RulesMode } from "@aoh/rules";
 import { useMemo, useRef, useState } from "react";
 import { customMaps, deleteCustomMap, findMap } from "../maps";
 import {
@@ -21,6 +21,7 @@ import { loadGame, resumeSavedGame, savedGame, startGame } from "../session";
 
 const ROUND_LIMITS = [null, 5, 8, 12] as const;
 const BUDGETS = [300, 400, 500, 600] as const;
+const MIN_POINTS = 50;
 
 interface ResumeChoice {
   readonly record: Replay;
@@ -58,6 +59,8 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
   const [names, setNames] = useState<string[]>(SEAT_COLOR_NAMES.map((c) => `${c} Player`));
   const [armySize, setArmySize] = useState(3);
   const [budget, setBudget] = useState(400);
+  const [budgetText, setBudgetText] = useState("400");
+  const [noLimit, setNoLimit] = useState(false);
   const [factionPure, setFactionPure] = useState(false);
   const [roundLimit, setRoundLimit] = useState<number | null>(8);
   const [mine, setMine] = useState(() => customMaps());
@@ -70,13 +73,18 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
   const isCustom = mine.some((m) => m.id === map.id);
   const nameOk = myName.trim().length > 0;
   const codeOk = /^[A-Za-z]{4,8}$/.test(code.trim());
+  const budgetOk = mode !== "advanced" || noLimit || (budget >= MIN_POINTS && budget <= MAX_BUDGET);
+  const pickBudget = (n: number) => {
+    setBudget(n);
+    setBudgetText(String(n));
+  };
   const serverOk = serverUrl.trim().length > 0;
 
   const create = () => {
     const settings: RoomSettings = {
       mode,
       roundLimit,
-      ...(mode === "advanced" ? { budget, factionPure } : { armySize }),
+      ...(mode === "advanced" ? { budget: noLimit ? null : budget, factionPure } : { armySize }),
       map,
     };
     createRoom(serverUrl, myName.trim(), settings);
@@ -160,7 +168,7 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
         seed: seedFromString(`${Date.now()}:${Math.random()}`),
         mapId: map.id,
         roundLimit,
-        ...(mode === "advanced" ? { budget, factionPure } : { armySize }),
+        ...(mode === "advanced" ? { budget: noLimit ? null : budget, factionPure } : { armySize }),
         players: Array.from({ length: players }, (_, i) => ({
           id: `p${i + 1}`,
           name: names[i]!.trim() || `Player ${i + 1}`,
@@ -512,14 +520,48 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
                   key={n}
                   type="button"
                   role="radio"
-                  aria-checked={budget === n}
-                  className={budget === n ? "on" : ""}
-                  onClick={() => setBudget(n)}
+                  aria-checked={!noLimit && budget === n}
+                  className={!noLimit && budget === n ? "on" : ""}
+                  disabled={noLimit}
+                  onClick={() => pickBudget(n)}
                 >
                   {n} points
                 </button>
               ))}
             </div>
+            <div className="control-row">
+              <label className="inline-field">
+                Points
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  aria-label="Points per player"
+                  min={MIN_POINTS}
+                  max={MAX_BUDGET}
+                  step={25}
+                  value={budgetText}
+                  disabled={noLimit}
+                  onChange={(e) => {
+                    setBudgetText(e.target.value);
+                    const n = Number(e.target.value);
+                    setBudget(Number.isInteger(n) ? n : NaN);
+                  }}
+                  onBlur={() => {
+                    if (Number.isInteger(budget)) pickBudget(Math.min(MAX_BUDGET, Math.max(MIN_POINTS, budget)));
+                    else pickBudget(400);
+                  }}
+                />
+              </label>
+              <label className="check">
+                <input type="checkbox" checked={noLimit} onChange={(e) => setNoLimit(e.target.checked)} />
+                No limit
+              </label>
+            </div>
+            <p className={`muted small ${budgetOk ? "" : "bad"}`}>
+              {noLimit
+                ? "Players draft until they choose to stop or their start zone is full."
+                : `Any whole number from ${MIN_POINTS} to ${MAX_BUDGET}.`}
+            </p>
             <label className="check">
               <input type="checkbox" checked={factionPure} onChange={(e) => setFactionPure(e.target.checked)} />
               Faction-pure armies (every unit shares the faction of your first pick)
@@ -565,7 +607,7 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
 
         <div className="actions">
           {where === "local" ? (
-            <button type="button" className="primary" onClick={start} disabled={counts.length === 0}>
+            <button type="button" className="primary" onClick={start} disabled={counts.length === 0 || !budgetOk}>
               Start draft
             </button>
           ) : (
@@ -573,7 +615,7 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
               type="button"
               className="primary"
               onClick={create}
-              disabled={counts.length === 0 || !nameOk || !serverOk}
+              disabled={counts.length === 0 || !nameOk || !serverOk || !budgetOk}
               title={!nameOk ? "Enter your name first" : !serverOk ? "Enter the game server address first" : undefined}
             >
               Create room

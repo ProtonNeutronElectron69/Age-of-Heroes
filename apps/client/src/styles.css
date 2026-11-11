@@ -1231,3 +1231,56 @@ legend {
   padding: 5px 10px;
   font-size: 13px;
 }
+
+.inline-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inline-field input[type="number"] {
+  width: 6.5em;
+}
+
+p.bad {
+  color: #ffb4ab;
+}
+
+/* Editor: a tip that opens after the pointer rests on a button for a second. */
+.delayed-tip {
+  position: fixed;
+  z-index: 50;
+  width: 240px;
+  padding: 8px 10px;
+  border: 1px solid var(--accent, #c9a23f);
+  border-radius: 8px;
+  background: rgba(14, 18, 26, 0.97);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+  pointer-events: none;
+}
+
+.delayed-tip strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* Editor: the box dragged out to erase. */
+.erase-box {
+  position: fixed;
+  z-index: 5;
+  border: 1.5px dashed #ff6b5e;
+  background: rgba(255, 59, 48, 0.12);
+  pointer-events: none;
+}
+
+.fill-row {
+  flex-wrap: wrap;
+}
+
+.control-row .check {
+  margin-top: 0;
+}

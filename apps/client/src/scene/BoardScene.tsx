@@ -20,8 +20,10 @@ import {
   CylinderGeometry,
   EdgesGeometry,
   Float32BufferAttribute,
+  MOUSE,
   Matrix4,
   MeshStandardMaterial,
+  Quaternion,
   Vector3,
   type InstancedMesh,
   type Material,
@@ -50,8 +52,14 @@ interface Props {
   onSurfaceClick?: (step: Step, cell: Cell) => void;
   onSurfaceHover?: (step: Step | null, cell: Cell | null) => void;
   onSceneryClick?: (spot: ScenerySpot) => void;
+  /** Every pointer move over a cell, with the point under the pointer (board coordinates). */
+  onCellPointer?: (cell: Cell, point: { x: number; z: number }) => void;
   /** Editor only: an invisible table top with a hex grid, for placing pieces on empty space. */
   ground?: GroundHandlers;
+  /** "select": the left button is left free (for dragging out a box) and the right button turns the camera. */
+  leftButton?: "camera" | "select";
+  /** Move the camera to look at this point (board coordinates) whenever `key` changes. */
+  focus?: { point: Vec3; key: number } | null;
   /** Figure's-eye view: put the camera at `eye` looking at `look` (board coordinates). */
   eyeView?: { eye: Vec3; look: Vec3 } | null;
   children?: ReactNode;
@@ -223,6 +231,36 @@ function KeyboardPan() {
   return null;
 }
 
+/** How close the camera comes when it jumps to a point, and how fast it gets there. */
+const FOCUS_DISTANCE = 16;
+const FOCUS_EASE = 0.18;
+
+/** Glides the map camera to look at a point, keeping its angle. */
+function CameraFocus({ focus, center }: { focus: { point: Vec3; key: number }; center: { x: number; z: number } }) {
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls) as unknown as { target: Vector3; update: () => void } | null;
+  const goal = useRef<Vector3 | null>(null);
+  const { point, key } = focus;
+  useEffect(() => {
+    goal.current = new Vector3(point.x - center.x, point.y, point.z - center.z);
+    // Only a new key starts a move; the point is read when it does.
+  }, [key]);
+  const offset = useMemo(() => new Vector3(), []);
+  useFrame(() => {
+    const g = goal.current;
+    if (!g || !controls) return;
+    offset.copy(camera.position).sub(controls.target);
+    const distance = offset.length();
+    const wanted = Math.min(distance, FOCUS_DISTANCE);
+    controls.target.lerp(g, FOCUS_EASE);
+    offset.setLength(distance + (wanted - distance) * FOCUS_EASE);
+    camera.position.copy(controls.target).add(offset);
+    controls.update();
+    if (controls.target.distanceTo(g) < 0.01 && Math.abs(distance - wanted) < 0.01) goal.current = null;
+  });
+  return null;
+}
+
 /** Camera smoothing: the share of the remaining movement applied each frame (1 means none). */
 const CAMERA_DAMPING = 0.25;
 const CAMERA_ZOOM_SPEED = 1.4;
@@ -298,7 +336,13 @@ export function SceneryMesh({ spot, onClick }: { spot: ScenerySpot; onClick?: (s
 interface CellHandlers {
   onSurfaceClick?: Props["onSurfaceClick"];
   onSurfaceHover?: Props["onSurfaceHover"];
+  onCellPointer?: Props["onCellPointer"];
 }
+
+/** Hexes of a bridge span are drawn full width, so the span reads as one piece; its outlines stay. */
+const SPAN_SCALE = new Vector3(1 / HEX_GAP, 1, 1 / HEX_GAP);
+const NO_SCALE = new Vector3(1, 1, 1);
+const NO_TURN = new Quaternion();
 
 /**
  * Every cell of one terrain as a single instanced mesh: one draw call instead of
@@ -311,21 +355,31 @@ function TerrainCells({
   material,
   onSurfaceClick,
   onSurfaceHover,
-}: CellHandlers & { board: Board; cells: readonly Cell[]; geometry: BufferGeometry; material: Material }) {
+  onCellPointer,
+  center,
+}: CellHandlers & {
+  board: Board;
+  cells: readonly Cell[];
+  geometry: BufferGeometry;
+  material: Material;
+  center: { x: number; z: number };
+}) {
   const mesh = useRef<InstancedMesh>(null);
   const hovered = useRef<number | null>(null);
   useLayoutEffect(() => {
     const m = mesh.current;
     if (!m) return;
     const matrix = new Matrix4();
+    const at = new Vector3();
     cells.forEach((cell, i) => {
       const { x, z } = hexToWorld(cell.hex, HEX_SIZE);
-      m.setMatrixAt(i, matrix.makeTranslation(x, cell.layer * LEVEL_HEIGHT + LEVEL_HEIGHT / 2, z));
+      at.set(x, cell.layer * LEVEL_HEIGHT + LEVEL_HEIGHT / 2, z);
+      m.setMatrixAt(i, matrix.compose(at, NO_TURN, board.isSpanPiece(cell.pieceId) ? SPAN_SCALE : NO_SCALE));
     });
     m.instanceMatrix.needsUpdate = true;
     m.computeBoundingSphere();
     m.computeBoundingBox();
-  }, [cells]);
+  }, [cells, board]);
   const cellAt = (e: ThreeEvent<PointerEvent | MouseEvent>) => (e.instanceId === undefined ? undefined : cells[e.instanceId]);
   return (
     <instancedMesh
@@ -342,7 +396,12 @@ function TerrainCells({
       onPointerMove={(e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
         // While a button is held the camera is being dragged: skip hover work until it stops.
-        if (e.buttons !== 0 || e.instanceId === hovered.current) return;
+        if (e.buttons !== 0) return;
+        if (onCellPointer) {
+          const cell = cellAt(e);
+          if (cell) onCellPointer(cell, { x: e.point.x + center.x, z: e.point.z + center.z });
+        }
+        if (e.instanceId === hovered.current) return;
         hovered.current = e.instanceId ?? null;
         const cell = cellAt(e);
         if (cell) onSurfaceHover?.(surfaceForCell(board, cell), cell);
@@ -384,6 +443,10 @@ function CellEdges({ cells, geometry }: { cells: readonly Cell[]; geometry: Buff
   );
 }
 
+/** Half the editor grid's size in hexes: about 200 x 200 world units, a square around the map. */
+const GRID_COLUMNS = 57;
+const GRID_ROWS = 66;
+
 /** Hex outlines on the table around the map, so the editor shows where pieces can go. */
 function HexGrid({ center }: { center: { x: number; z: number } }) {
   const geometry = useMemo(() => {
@@ -393,8 +456,8 @@ function HexGrid({ center }: { center: { x: number; z: number } }) {
       const a = (Math.PI / 3) * k + Math.PI / 6;
       return [Math.cos(a) * HEX_SIZE * 0.98, Math.sin(a) * HEX_SIZE * 0.98] as const;
     });
-    for (let dr = -16; dr <= 16; dr++) {
-      for (let dq = -22 - Math.ceil(dr / 2); dq <= 22 - Math.floor(dr / 2); dq++) {
+    for (let dr = -GRID_ROWS; dr <= GRID_ROWS; dr++) {
+      for (let dq = -GRID_COLUMNS - Math.ceil(dr / 2); dq <= GRID_COLUMNS - Math.floor(dr / 2); dq++) {
         const { x, z } = hexToWorld({ q: c.q + dq, r: c.r + dr }, HEX_SIZE);
         for (let k = 0; k < 6; k++) {
           const [ax, az] = corners[k]!;
@@ -422,7 +485,10 @@ export function BoardScene({
   onSurfaceClick,
   onSurfaceHover,
   onSceneryClick,
+  onCellPointer,
   ground,
+  leftButton = "camera",
+  focus,
   eyeView,
   children,
 }: Props) {
@@ -476,7 +542,7 @@ export function BoardScene({
                 ground.onClick(worldToHex(e.point.x + center.x, e.point.z + center.z, HEX_SIZE));
               }}
             >
-              <planeGeometry args={[200, 200]} />
+              <planeGeometry args={[600, 600]} />
               <meshBasicMaterial transparent opacity={0} depthWrite={false} />
             </mesh>
           </>
@@ -491,6 +557,8 @@ export function BoardScene({
             material={materials.get(terrainId) ?? fallback}
             onSurfaceClick={onSurfaceClick}
             onSurfaceHover={onSurfaceHover}
+            onCellPointer={onCellPointer}
+            center={center}
           />
         ))}
         <CellEdges cells={cells} geometry={geometry} />
@@ -513,6 +581,7 @@ export function BoardScene({
         {children}
       </group>
       {eyeView ? <EyeCamera view={eyeView} center={center} /> : <KeyboardPan />}
+      {focus && !eyeView && <CameraFocus focus={focus} center={center} />}
       <OrbitControls
         makeDefault
         enabled={!eyeView}
@@ -522,7 +591,13 @@ export function BoardScene({
         target={origin ? [0, 0, 0] : [-fitted.span * 0.1, 0, 0]}
         maxPolarAngle={Math.PI / 2.15}
         minDistance={6}
-        maxDistance={Math.max(fitted.span * 2, 60)}
+        // The editor can pull back far enough to see its whole grid.
+        maxDistance={ground ? 260 : Math.max(fitted.span * 2, 60)}
+        mouseButtons={
+          leftButton === "select"
+            ? { LEFT: -1 as MOUSE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE }
+            : { LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN }
+        }
       />
     </>
   );
