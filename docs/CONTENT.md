@@ -65,14 +65,14 @@ An ability is engine code named by an id. To add one:
 
 ## Maps
 
-The easiest way is the in-game map editor. Hold Shift to place a piece beside another at the same level, drag a box in the Erase tool to clear an area, and use Random fill to roughen terrain or scatter scenery. "Show next problem" finds floating pieces, and "Remove problem pieces" deletes them. To publish a map:
+The easiest way is the in-game map editor. Hold Shift to place a piece beside another at the same level, drag a box in the Erase tool to clear an area, and use Random fill to roughen terrain or scatter scenery. "Show next problem" finds each problem, and "Fix problems" fixes what it can (see the map rules in RULES.md, section 3). To publish a map:
 1. Build the map and export it as a file.
 2. Copy it into `packages/content/src/maps/`.
 3. Add it to `MAPS` in `maps/index.ts`.
 4. Update the map list expected in `content.test.ts`.
 
 The tests check that every bundled map:
-- builds without issues;
+- builds without problems (every piece held up and joined to the rest, no sealed spaces, start zones on standard terrain without scenery);
 - hosts at least 2 players;
 - keeps two players' zones at least 12 hexes apart;
 - has room in every start zone for a full army.

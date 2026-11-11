@@ -27,12 +27,13 @@ Dependencies only point downwards: `client` and `server` use `protocol`, `conten
 | File | What it holds |
 |---|---|
 | `hex.ts` | Axial hex coordinates (pointy-top): distance, neighbours, rotation, lines, rings, world positions |
-| `shapes.ts`, `board.ts`, `world.ts` | Map pieces (1, 2, 3-line, 3-triangle, 2x2, 7, 24 hexes), the stacked board with bridges, overhangs, scenery and start zones (including which pieces are held up and which form one bridge span), and board-to-world conversion |
+| `support.ts` | The balance check that decides whether a piece is held up (centre of mass over its contact points) |
+| `shapes.ts`, `board.ts`, `world.ts` | Map pieces (1, 2, 3-line, 3-triangle, 2x2, 7, 24 hexes), the stacked board with bridges, overhangs, scenery and start zones (including which pieces are held up, detached pieces, sealed spaces, start zone hexes that cannot be used, and which pieces form one bridge span), and board-to-world conversion |
 | `schema.ts` | Zod schemas for maps and unit cards, and engine-wide limits |
 | `terrain.ts`, `tuning.ts` | The shape of terrain rules and tunable numbers (the values live in `content`) |
 | `dice.ts`, `rng.ts` | Attack and defense dice, and the seeded RNG (mulberry32) |
 | `los.ts` | Line of sight (Basic forgiving check, Advanced strict check to the hit band) |
-| `editor.ts` | Pure map-editing operations used by the map editor: placing and removing pieces, side placement, start zones, removing problems, and seeded random fills |
+| `editor.ts` | Pure map-editing operations used by the map editor: placing and removing pieces, side placement, start zones, fixing problems, and seeded random fills |
 | `game/types.ts` | `GameState`, `Command`, `GameEvent`, `PlayerView` and friends |
 | `game/engine.ts` | `createGame`, `applyCommand`, `replayGame`, `waitingOn` and the turn flow |
 | `game/draft.ts`, `game/deploy.ts` | Snake draft (card count or points budget, faction-pure) and deployment. Zones that grow to fit an army are stored in `GameState.zones`; read a player's zone with `playerZone` |

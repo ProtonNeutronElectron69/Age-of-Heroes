@@ -1,7 +1,8 @@
-import { DIRECTIONS, hexAdd, hexKey, parseHexKey, type Hex } from "./hex";
+import { DIRECTIONS, hexAdd, hexKey, hexNeighbors, hexToWorld, parseHexKey, type Hex } from "./hex";
 import type { MapDefinition, PlacedPiece, SceneryPlacement } from "./schema";
 import { MAX_PLAYERS, MIN_PLAYERS } from "./schema";
 import { shapeCells } from "./shapes";
+import { isBalanced, type Point2 } from "./support";
 import { DEFAULT_SCENERY, type SceneryRules, type SceneryTable, type TerrainTable } from "./terrain";
 
 /** One solid block of terrain: a single hex of a piece, one layer thick. */
@@ -33,9 +34,12 @@ export type MapIssueCode =
   | "duplicatePieceId"
   | "overlap"
   | "unsupported"
+  | "detached"
+  | "void"
   | "unknownTerrain"
   | "startZoneOffBoard"
   | "startZoneOverlap"
+  | "startZoneTerrain"
   | "duplicateSeat"
   | "tooManyStartZones"
   | "badLayout"
@@ -52,6 +56,14 @@ export interface MapIssue {
   readonly pieceId?: string;
   readonly sceneryId?: string;
   readonly hex?: Hex;
+  /** For a sealed empty space: the layer of its first cell. */
+  readonly layer?: number;
+}
+
+/** One empty cell (a hex at a layer) inside the terrain. */
+export interface Gap {
+  readonly hex: Hex;
+  readonly layer: number;
 }
 
 /** Piece shapes that join into one span when they bridge a gap together. */
@@ -68,6 +80,8 @@ export class Board {
   private readonly sceneryBySpot = new Map<string, ScenerySpot>();
   private readonly sceneryByHex = new Map<string, ScenerySpot[]>();
   private readonly spanPieces = new Set<string>();
+  private sealed: Gap[] = [];
+  private terrainTable: TerrainTable | undefined;
 
   private constructor(readonly definition: MapDefinition) {}
 
@@ -81,6 +95,7 @@ export class Board {
     scenery?: SceneryTable,
   ): { board: Board; issues: MapIssue[] } {
     const board = new Board(def);
+    board.terrainTable = terrain;
     const issues: MapIssue[] = [];
 
     for (const piece of def.pieces) {
@@ -118,7 +133,11 @@ export class Board {
       }
     }
 
-    issues.push(...board.supportIssues());
+    const support = board.supportIssues();
+    issues.push(...support);
+    // Pieces already reported (overlapping or not held up) are not reported as detached too.
+    issues.push(...board.detachedIssues(new Set(issues.filter((i) => i.pieceId).map((i) => i.pieceId!))));
+    issues.push(...board.voidIssues());
     issues.push(...board.placeScenery(scenery));
     issues.push(...board.startZoneIssues());
     issues.push(...board.layoutIssues());
@@ -194,12 +213,15 @@ export class Board {
   }
 
   /**
-   * Pieces must be held up. A piece is held up when it rests on the table, or
-   * any of its hexes rests on a piece that is held up (an overhang). A run of
-   * pieces with nothing under them (a bridge) is held up when, at its own
-   * level, it touches held-up pieces on two opposite sides: two of its sides
-   * that face at least 120 degrees apart. Touching on one side only, or along
-   * one wall, does not count.
+   * Pieces must be held up, the way real blocks would be. A piece rests on
+   * contact points: the centre of each of its hexes that sits on held-up
+   * terrain (or the table), and the middle of each side where it touches a
+   * held-up piece at its own level. It is held up when its centre of mass
+   * sits over the area, or the line, between its contact points; a piece of
+   * more than one hex needs at least 2 of them. A run of pieces joined side
+   * by side (a bridge) that cannot stand piece by piece is checked as one
+   * body. So a bridge between two pillars and a roof over a cave stand, but a
+   * slab held at one edge, or a piece hanging off a single pillar, does not.
    */
   private supportIssues(): MapIssue[] {
     const cellsByPiece = new Map<string, Cell[]>();
@@ -210,48 +232,63 @@ export class Board {
         cellsByPiece.set(cell.pieceId, list);
       }
     }
-    const supported = new Set<string>();
-    const queue: string[] = [];
-    const hold = (id: string) => {
-      if (supported.has(id)) return;
-      supported.add(id);
-      queue.push(id);
-    };
-    const spread = () => {
-      while (queue.length > 0) {
-        for (const cell of cellsByPiece.get(queue.shift()!) ?? []) {
-          const above = this.cellAt(cell.hex, cell.layer + 1);
-          if (above) hold(above.pieceId);
+    const held = new Set<string>();
+    const centre = (h: Hex): Point2 => hexToWorld(h);
+    const contacts = (cells: readonly Cell[], own: ReadonlySet<string>): Point2[] => {
+      const points: Point2[] = [];
+      for (const cell of cells) {
+        const below = cell.layer === 0 ? null : this.cellAt(cell.hex, cell.layer - 1);
+        if (cell.layer === 0 || (below && held.has(below.pieceId))) points.push(centre(cell.hex));
+        for (const d of DIRECTIONS) {
+          const next = this.cellAt(hexAdd(cell.hex, d), cell.layer);
+          if (!next || own.has(next.pieceId) || !held.has(next.pieceId)) continue;
+          const a = centre(cell.hex);
+          const b = centre(next.hex);
+          points.push({ x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 });
         }
       }
+      return points;
     };
-    for (const [id, cells] of cellsByPiece) {
-      if (cells.some((c) => c.layer === 0)) hold(id);
-    }
-    spread();
+    const stands = (ids: readonly string[]) => {
+      const own = new Set(ids);
+      const cells = ids.flatMap((id) => cellsByPiece.get(id) ?? []);
+      return isBalanced(
+        cells.map((c) => centre(c.hex)),
+        contacts(cells, own),
+      );
+    };
 
-    // Bridges: keep anchoring runs of floating pieces until nothing changes.
-    for (;;) {
-      let grew = false;
-      for (const span of this.floatingSpans(cellsByPiece, supported)) {
-        if (!span.anchored) continue;
-        grew = true;
-        for (const id of span.pieces) hold(id);
-        if (span.pieces.length > 1 && span.pieces.every((id) => SPAN_SHAPES.has(this.piecesById.get(id)?.shape ?? ""))) {
-          for (const id of span.pieces) this.spanPieces.add(id);
+    for (let grew = true; grew; ) {
+      grew = false;
+      // Piece by piece first, bottom up, so each piece sees what holds it.
+      const loose = [...cellsByPiece.keys()]
+        .filter((id) => !held.has(id))
+        .sort((a, b) => cellsByPiece.get(a)![0]!.layer - cellsByPiece.get(b)![0]!.layer);
+      for (const id of loose) {
+        if (stands([id])) {
+          held.add(id);
+          grew = true;
         }
       }
-      if (!grew) break;
-      spread();
+      if (grew) continue;
+      // Then runs of loose pieces joined side by side, as one body.
+      for (const span of this.looseSpans(cellsByPiece, held)) {
+        if (!stands(span)) continue;
+        for (const id of span) held.add(id);
+        grew = true;
+        if (span.length > 1 && span.every((id) => SPAN_SHAPES.has(this.piecesById.get(id)?.shape ?? ""))) {
+          for (const id of span) this.spanPieces.add(id);
+        }
+      }
     }
 
     const issues: MapIssue[] = [];
     for (const id of cellsByPiece.keys()) {
-      if (!supported.has(id)) {
+      if (!held.has(id)) {
         issues.push({
           severity: "error",
           code: "unsupported",
-          message: `Piece "${id}" is floating; rest it on the table or another piece, or join it to pieces on two opposite sides`,
+          message: `Piece "${id}" is not held up; its middle must sit between at least 2 points it rests on or touches`,
           pieceId: id,
         });
       }
@@ -259,42 +296,175 @@ export class Board {
     return issues;
   }
 
-  /**
-   * Groups of floating pieces joined side by side at one level, and whether
-   * each group touches held-up pieces on two opposite sides.
-   */
-  private floatingSpans(
-    cellsByPiece: ReadonlyMap<string, Cell[]>,
-    supported: ReadonlySet<string>,
-  ): { pieces: string[]; anchored: boolean }[] {
+  /** Groups of pieces that are not held up, joined side by side at one level. */
+  private looseSpans(cellsByPiece: ReadonlyMap<string, Cell[]>, held: ReadonlySet<string>): string[][] {
     const seen = new Set<string>();
-    const spans: { pieces: string[]; anchored: boolean }[] = [];
+    const spans: string[][] = [];
     for (const start of cellsByPiece.keys()) {
-      if (supported.has(start) || seen.has(start)) continue;
-      const pieces: string[] = [];
-      const sides = new Set<number>();
+      if (held.has(start) || seen.has(start)) continue;
+      const span: string[] = [];
       const stack = [start];
       seen.add(start);
       while (stack.length > 0) {
         const id = stack.pop()!;
-        pieces.push(id);
+        span.push(id);
         for (const cell of cellsByPiece.get(id) ?? []) {
-          DIRECTIONS.forEach((d, dir) => {
+          for (const d of DIRECTIONS) {
             const next = this.cellAt(hexAdd(cell.hex, d), cell.layer);
-            if (!next || next.pieceId === id) return;
-            if (supported.has(next.pieceId)) sides.add(dir);
-            else if (!seen.has(next.pieceId)) {
-              seen.add(next.pieceId);
-              stack.push(next.pieceId);
-            }
-          });
+            if (!next || held.has(next.pieceId) || seen.has(next.pieceId)) continue;
+            seen.add(next.pieceId);
+            stack.push(next.pieceId);
+          }
         }
       }
-      const list = [...sides];
-      const anchored = list.some((a) => list.some((b) => Math.min((a - b + 6) % 6, (b - a + 6) % 6) >= 2));
-      spans.push({ pieces, anchored });
+      spans.push(span);
     }
     return spans;
+  }
+
+  /**
+   * Every piece must join the rest of the map: pieces touching face to face
+   * (side by side at one level, or one on another) form groups, and pieces
+   * outside the largest group are detached. Pieces already reported as not
+   * held up are not reported twice.
+   */
+  private detachedIssues(alreadyReported: ReadonlySet<string>): MapIssue[] {
+    const ids = [...this.piecesById.keys()];
+    const group = new Map<string, number>();
+    const sizes: number[] = [];
+    for (const start of ids) {
+      if (group.has(start)) continue;
+      const n = sizes.length;
+      let size = 0;
+      const stack = [start];
+      group.set(start, n);
+      while (stack.length > 0) {
+        const id = stack.pop()!;
+        const piece = this.piecesById.get(id)!;
+        const cells = shapeCells(piece.shape, piece.origin, piece.rotation);
+        size += cells.length;
+        for (const h of cells) {
+          const touching = [
+            ...hexNeighbors(h).map((nb) => this.cellAt(nb, piece.layer)),
+            this.cellAt(h, piece.layer - 1),
+            this.cellAt(h, piece.layer + 1),
+          ];
+          for (const c of touching) {
+            if (!c || group.has(c.pieceId)) continue;
+            group.set(c.pieceId, n);
+            stack.push(c.pieceId);
+          }
+        }
+      }
+      sizes.push(size);
+    }
+    let main = 0;
+    sizes.forEach((size, i) => {
+      if (size > sizes[main]!) main = i;
+    });
+    return ids
+      .filter((id) => group.get(id) !== main && !alreadyReported.has(id))
+      .map((id) => ({
+        severity: "error" as const,
+        code: "detached" as const,
+        message: `Piece "${id}" does not touch the rest of the map`,
+        pieceId: id,
+      }));
+  }
+
+  /**
+   * Empty spaces sealed inside the terrain, with no way out to the open air:
+   * up, down or sideways. Caves and the space under bridges are open, so they
+   * are fine.
+   */
+  private voidIssues(): MapIssue[] {
+    const top = this.maxElevation();
+    if (top === 0) return [];
+    const area = new Set<string>();
+    for (const key of this.columns.keys()) {
+      area.add(key);
+      for (const nb of hexNeighbors(parseHexKey(key))) area.add(hexKey(nb));
+    }
+    const filled = (key: string, layer: number) => this.cellAt(parseHexKey(key), layer) !== undefined;
+    const open = new Set<string>();
+    const queue: [string, number][] = [];
+    const visit = (key: string, layer: number) => {
+      if (layer < 0 || layer > top || !area.has(key) || filled(key, layer)) return;
+      const id = `${key}@${layer}`;
+      if (open.has(id)) return;
+      open.add(id);
+      queue.push([key, layer]);
+    };
+    // The air above the highest piece, and every column around the map, are open.
+    for (const key of area) {
+      visit(key, top);
+      if (!this.columns.has(key)) for (let l = 0; l <= top; l++) visit(key, l);
+    }
+    while (queue.length > 0) {
+      const [key, layer] = queue.pop()!;
+      visit(key, layer + 1);
+      visit(key, layer - 1);
+      for (const nb of hexNeighbors(parseHexKey(key))) visit(hexKey(nb), layer);
+    }
+    this.sealed = [];
+    for (const key of this.columns.keys()) {
+      for (let l = 0; l < top; l++) {
+        if (!filled(key, l) && !open.has(`${key}@${l}`)) this.sealed.push({ hex: parseHexKey(key), layer: l });
+      }
+    }
+    // One issue per sealed pocket.
+    const issues: MapIssue[] = [];
+    const reported = new Set<string>();
+    const inPocket = new Set(this.sealed.map((g) => `${hexKey(g.hex)}@${g.layer}`));
+    for (const g of this.sealed) {
+      const id = `${hexKey(g.hex)}@${g.layer}`;
+      if (reported.has(id)) continue;
+      let size = 0;
+      const stack = [g];
+      reported.add(id);
+      while (stack.length > 0) {
+        const c = stack.pop()!;
+        size += 1;
+        const around = [
+          { hex: c.hex, layer: c.layer + 1 },
+          { hex: c.hex, layer: c.layer - 1 },
+          ...hexNeighbors(c.hex).map((h) => ({ hex: h, layer: c.layer })),
+        ];
+        for (const n of around) {
+          const nid = `${hexKey(n.hex)}@${n.layer}`;
+          if (!inPocket.has(nid) || reported.has(nid)) continue;
+          reported.add(nid);
+          stack.push(n);
+        }
+      }
+      issues.push({
+        severity: "error",
+        code: "void",
+        message: `A sealed empty space (${size} ${size === 1 ? "hex" : "hexes"}) at ${hexKey(g.hex)} level ${g.layer + 1}; fill it or open it up`,
+        hex: g.hex,
+        layer: g.layer,
+      });
+    }
+    return issues;
+  }
+
+  /** Empty cells sealed inside the terrain (see the "void" problem). */
+  sealedGaps(): readonly Gap[] {
+    return this.sealed;
+  }
+
+  /**
+   * Can this hex be part of a start zone? It needs terrain, only standard
+   * terrain on every surface in it (when the terrain table is known), and no
+   * scenery.
+   */
+  zoneProblem(h: Hex): string | null {
+    const surfaces = this.surfaces(h);
+    if (surfaces.length === 0) return "has no terrain";
+    if (this.sceneryIn(h).length > 0) return "has scenery";
+    const special = surfaces.find((s) => this.terrainTable?.get(s.terrain)?.category === "special");
+    if (special) return `has ${this.terrainTable!.get(special.terrain)!.name.toLowerCase()}, a special terrain`;
+    return null;
   }
 
   private startZoneIssues(): MapIssue[] {
@@ -325,6 +495,15 @@ export class Board {
             severity: "error",
             code: "startZoneOffBoard",
             message: `Start zone for seat ${zone.seat + 1} includes ${key}, which has no terrain`,
+            hex: h,
+          });
+        }
+        const problem = this.columns.has(key) ? this.zoneProblem(h) : null;
+        if (problem) {
+          issues.push({
+            severity: "error",
+            code: "startZoneTerrain",
+            message: `Start zone ${zone.seat + 1} includes ${key}, which ${problem}`,
             hex: h,
           });
         }

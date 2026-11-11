@@ -160,6 +160,12 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 - [x] Editor: random fill adds a light scatter of small pieces on a chosen level, matching the terrain under them, or scenery; click again for more
 - [x] Editor: Shift+click puts a piece beside another at the same level. Bridges count as held up when they touch held-up pieces on two opposite sides, and a bridge of 1, 2 and 3-hex line pieces is drawn as one span with its hex outlines
 
+### Map rules
+- [x] Pieces stand by balance: a piece's middle must sit between at least 2 points it rests on or touches (1 for a single hex). Bridges and caves stand; a slab held at one edge does not. The editor shows a piece that would not be held up in orange before it is placed
+- [x] No sealed empty spaces inside the terrain, and no pieces off on their own
+- [x] Start zones only on standard terrain without scenery; The Mesa's zone 5 swaps a lava hex for grass
+- [x] "Fix problems" removes loose and detached pieces and problem scenery, fills sealed spaces and takes bad hexes out of start zones
+
 ### Faster checks
 - [x] CI runs only the checks a change affects: docs run nothing, unit card data runs the content tests, and each browser test runs only for the code it covers, in parallel. Pushes to `main` still run everything. `pnpm check:affected` does the same locally. See [TESTING.md](TESTING.md)
 

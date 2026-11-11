@@ -10,6 +10,7 @@ export * from "./world";
 export * from "./tuning";
 export * from "./los";
 export * from "./editor";
+export * from "./support";
 export * from "./game/types";
 export * from "./game/errors";
 export * from "./game/queries";

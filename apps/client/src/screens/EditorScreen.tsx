@@ -164,6 +164,7 @@ function problemPoint(board: Board, issue: MapIssue): Vec3 | null {
   }
   if (issue.hex) {
     const w = hexToWorld(issue.hex, HEX_SIZE);
+    if (issue.layer !== undefined) return { x: w.x, y: (issue.layer + 0.5) * LEVEL_HEIGHT, z: w.z };
     const top = board.topSurface(issue.hex);
     return { x: w.x, y: (top?.elevation ?? 0) * LEVEL_HEIGHT, z: w.z };
   }
@@ -345,9 +346,8 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
     () => new Set(issues.filter((i) => i.severity === "error" && i.pieceId).map((i) => i.pieceId!)),
     [issues],
   );
-  const removable = issues.some(
-    (i) => i.severity === "error" && (i.code === "unsupported" || i.code === "overlap" || i.code === "unknownTerrain" || i.sceneryId),
-  );
+  const FIXABLE = ["unsupported", "detached", "overlap", "unknownTerrain", "void", "startZoneTerrain", "startZoneOffBoard"];
+  const fixable = issues.some((i) => i.severity === "error" && (FIXABLE.includes(i.code) || i.sceneryId));
   const stats = mapStats(map, board);
   const playerCounts = board.playerCounts();
   const unsaved = saved !== map;
@@ -406,6 +406,13 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
       : [];
   const ghostLayer = sideways ? side!.cell.layer : autoLayer ? landingLayer(board, ghostCells) : manualLayer;
   const ghostBlocked = overlappingCells(board, ghostCells, ghostLayer).length > 0;
+  const ghostOrigin = tool === "piece" && hoverHex ? (sideways ? side!.origin : hoverHex) : null;
+  // Would the piece be held up where it is about to go? Shown by an orange preview.
+  const ghostLoose = useMemo(() => {
+    if (!ghostOrigin || ghostBlocked) return false;
+    const { map: next, id } = addPiece(map, { shape, terrain, origin: ghostOrigin, rotation: ghostRotation, layer: ghostLayer });
+    return buildBoard(next).issues.some((i) => i.pieceId === id && i.code === "unsupported");
+  }, [map, shape, terrain, ghostOrigin?.q, ghostOrigin?.r, ghostRotation, ghostLayer, ghostBlocked]);
 
   const placePiece = (origin: Hex, rot = rotation, fixedLayer?: number) => {
     const cells = shapeCells(shape, origin, rot);
@@ -414,7 +421,12 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
       setStatus("That space is already filled at this level.");
       return;
     }
-    commit(addPiece(map, { shape, terrain, origin, rotation: rot, layer }).map);
+    const next = addPiece(map, { shape, terrain, origin, rotation: rot, layer }).map;
+    if (buildBoard(next).board.sealedGaps().length > board.sealedGaps().length) {
+      setStatus("That would seal off an empty space inside the terrain. Fill the space first, or leave a way out.");
+      return;
+    }
+    commit(next);
   };
 
   const onSurfaceClick = (step: Step, cell: Cell) => {
@@ -425,11 +437,17 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
         break;
       case "scenery":
         if (board.sceneryAt(step.hex, step.elevation)) setStatus("There is already scenery there.");
-        else commit(addScenery(map, sceneryKind, step.hex, step.elevation));
+        else if (map.startZones.some((z) => z.hexes.some((h) => hexKey(h) === hexKey(step.hex)))) {
+          setStatus("Scenery cannot go in a start zone.");
+        } else commit(addScenery(map, sceneryKind, step.hex, step.elevation));
         break;
-      case "zone":
-        commit(toggleZoneHex(map, seat, cell.hex));
+      case "zone": {
+        const inZone = map.startZones.find((z) => z.seat === seat)?.hexes.some((h) => hexKey(h) === hexKey(cell.hex));
+        const problem = inZone ? null : board.zoneProblem(cell.hex);
+        if (problem) setStatus(`A start zone cannot go on hex ${hexKey(cell.hex)}: it ${problem}.`);
+        else commit(toggleZoneHex(map, seat, cell.hex));
         break;
+      }
       case "erase":
         commit(removePiece(map, cell.pieceId));
         break;
@@ -467,15 +485,18 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
     setFocus({ point: located[next]!.point!, key: Date.now() });
     setStatus(`Problem ${next + 1} of ${located.length}: ${located[next]!.issue.message}`);
   };
-  const removeAllProblems = () => {
+  const fixProblems = () => {
     const result = removeProblems(map, TERRAIN_TABLE, SCENERY_TABLE);
     if (result.map === map) return;
     commit(result.map);
     setProblemIndex(-1);
-    setStatus(
-      `Removed ${result.pieces} ${result.pieces === 1 ? "piece" : "pieces"}` +
-        (result.scenery > 0 ? ` and ${result.scenery} scenery.` : "."),
-    );
+    const done = [
+      result.pieces > 0 && `removed ${result.pieces} ${result.pieces === 1 ? "piece" : "pieces"}`,
+      result.scenery > 0 && `removed ${result.scenery} scenery`,
+      result.filled > 0 && `filled ${result.filled} sealed ${result.filled === 1 ? "hex" : "hexes"}`,
+      result.zoneHexes > 0 && `took ${result.zoneHexes} ${result.zoneHexes === 1 ? "hex" : "hexes"} out of start zones`,
+    ].filter(Boolean);
+    setStatus(done.length > 0 ? `Fixed: ${done.join(", ")}.` : "Nothing could be fixed automatically.");
   };
   const fillTerrain = () => {
     const result = populateTerrain(map, fillLevel, fillRng(), TERRAIN_TABLE);
@@ -612,9 +633,10 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
           {ghostCells.length > 0 && (
             <CellBoxes
               cells={ghostCells.map((h) => ({ hex: h, layer: ghostLayer }))}
-              color={ghostBlocked ? "#ff3b30" : (TERRAIN_TABLE.get(terrain)?.color ?? "#ffffff")}
+              color={ghostBlocked ? "#ff3b30" : ghostLoose ? "#ff9f1c" : (TERRAIN_TABLE.get(terrain)?.color ?? "#ffffff")}
             />
           )}
+          <CellBoxes cells={board.sealedGaps()} color="#b45cff" opacity={0.5} overlay />
           <CellBoxes cells={pieceCells(board, problemPieces)} color="#ff9f1c" opacity={0.3} overlay />
           {focusedIssue?.pieceId && (
             <CellBoxes cells={pieceCells(board, [focusedIssue.pieceId])} color="#ff9f1c" opacity={0.75} overlay />
@@ -830,8 +852,8 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
             {hoverSurface ? `, level ${hoverSurface.elevation} ${TERRAIN_TABLE.get(hoverSurface.terrain)?.name.toLowerCase()}` : ""}
             {tool === "piece" && ghostCells.length > 0
               ? sideways
-                ? `. Beside it on level ${ghostLayer + 1}`
-                : `. Lands on level ${ghostLayer + 1}`
+                ? `. Beside it on level ${ghostLayer + 1}${ghostLoose ? " (not held up)" : ""}`
+                : `. Lands on level ${ghostLayer + 1}${ghostLoose ? " (not held up)" : ""}`
               : ""}
           </p>
         </section>
@@ -880,8 +902,8 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
               <button type="button" onClick={showNextProblem} disabled={located.length === 0}>
                 Show next problem
               </button>
-              <button type="button" onClick={removeAllProblems} disabled={!removable}>
-                Remove problem pieces
+              <button type="button" onClick={fixProblems} disabled={!fixable}>
+                Fix problems
               </button>
             </div>
           )}

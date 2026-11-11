@@ -143,7 +143,9 @@ export function rowMap(columns: [string, number][], extra: PlacedPiece[] = []): 
 export function makeCtx(map: MapDefinition = fieldMap(), cards: UnitCard[] = CARDS): RulesContext {
   const terrain = terrainTable(TERRAIN);
   const { board, issues } = Board.fromMap(map, terrain);
-  if (issues.length > 0) throw new Error(issues.map((i) => i.message).join("\n"));
+  // Test maps keep start zones on a separate strip, out of reach, so detached pieces are fine here.
+  const problems = issues.filter((i) => i.code !== "detached");
+  if (problems.length > 0) throw new Error(problems.map((i) => i.message).join("\n"));
   return { cards: new Map(cards.map((c) => [c.id, c])), board, terrain };
 }
 
