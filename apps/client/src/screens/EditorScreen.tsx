@@ -415,7 +415,21 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
                 })}
               </div>
               <p className="muted small">
-                Click hexes to add them to the zone, or click again to remove. A 4-card army can need 16 hexes.
+                Click hexes to add them to the zone, or click again to remove. A Basic army of 4 cards can need 16
+                hexes; an Advanced army of 600 points up to 32.
+              </p>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={map.growZones === true}
+                  onChange={(e) => commit({ ...map, growZones: e.target.checked })}
+                />
+                Grow each zone at deployment to fit the army drafted
+              </label>
+              <p className="muted small">
+                {map.growZones
+                  ? "Zones you draw are the starting point; each one grows into nearby free hexes when its army needs more room."
+                  : "Zones are used exactly as drawn, and the draft stops each player at what fits in their zone."}
               </p>
             </>
           )}

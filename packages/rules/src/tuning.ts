@@ -11,6 +11,11 @@ export interface Tuning {
   readonly elevationBonus: { readonly higher: number; readonly extreme: number };
   /** How many levels the hexes of a multi-hex figure may differ by. */
   readonly maxStraddle: number;
+  /**
+   * Maps whose start zones grow: the most hexes of figures an army may draft. Zones
+   * grow at deployment to fit what was drafted (default 40).
+   */
+  readonly grownZoneSize?: number;
 }
 
 export const DEFAULT_TUNING: Tuning = {
@@ -18,4 +23,5 @@ export const DEFAULT_TUNING: Tuning = {
   passingStrikeDice: 1,
   elevationBonus: { higher: 1, extreme: 1 },
   maxStraddle: 1,
+  grownZoneSize: 40,
 };

@@ -2,7 +2,7 @@ import { Rng } from "../rng";
 import { isUnique } from "../schema";
 import { fail } from "./errors";
 import { deploymentSpots, startDeployment } from "./deploy";
-import { footprintSize } from "./placement";
+import { footprintSize, tuningOf } from "./placement";
 import { rollOff } from "./rounds";
 import type { UnitCard } from "../schema";
 import type { GameEvent, GameState, PlayerId, RulesContext, UnitState } from "./types";
@@ -52,9 +52,13 @@ export function currentDrafter(state: GameState): PlayerId | null {
   return d.order[d.index] ?? null;
 }
 
-/** How many hexes a player's start zone has room on. */
+/**
+ * How many hexes of figures a player may draft. On maps whose start zones grow
+ * to fit each army, that is the tuning limit (or the zone, if bigger).
+ */
 export function zoneCapacity(state: GameState, player: PlayerId, ctx: RulesContext): number {
-  return deploymentSpots(state, player, 1, ctx).length;
+  const drawn = deploymentSpots(state, player, 1, ctx).length;
+  return ctx.board.growsZones() ? Math.max(drawn, tuningOf(ctx).grownZoneSize ?? 40) : drawn;
 }
 
 /** Hexes a card's figures take up: figure count times footprint size. */

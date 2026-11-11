@@ -2,7 +2,7 @@ import { deepClone } from "../clone";
 import { MAX_PLAYERS, MIN_PLAYERS } from "../schema";
 import { endOfTurnAbilities } from "./abilities";
 import { attack, endOfTurnTerrain } from "./combat";
-import { currentDeployment, deployUnit, skipDepartedDeployers, startDeployment } from "./deploy";
+import { advanceDeployment, currentDeployment, deployUnit, startDeployment } from "./deploy";
 import {
   continueDraft,
   createUnit,
@@ -248,11 +248,7 @@ function concede(state: GameState, player: PlayerId, events: GameEvent[], ctx: R
       continueDraft(state, events, ctx);
       break;
     case "deploy":
-      skipDepartedDeployers(state);
-      if (!currentDeployment(state)) {
-        events.push({ type: "deploymentEnded" });
-        startRound(state, events);
-      }
+      advanceDeployment(state, events, ctx);
       break;
     case "placeTokens":
       maybeStartTurns(state, events, ctx);

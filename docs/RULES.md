@@ -113,10 +113,12 @@ Armies are drafted from a shared pool in a **snake draft**: the pick order rever
 - **Advanced**: each pick must fit within the player's remaining points. A player may press "Done drafting" to stop; a player who cannot afford anything that fits is skipped. The draft ends when nobody can or will pick.
 - **Basic**: each player picks cards until they have the agreed number.
 - **Uniques**: a unique unit can be drafted by only one player. Common units can be drafted any number of times by anyone. **Assumption.**
-- **Room to deploy**: an army can never need more hexes than its start zone has (a multi-hex figure needs one hex per footprint hex). The draft does not allow a card that would not fit, and a player with no room left skips their remaining picks.
+- **Room to deploy**: an army can never need more hexes than its start zone has (a multi-hex figure needs one hex per footprint hex). The draft does not allow a card that would not fit, and a player with no room left skips their remaining picks. On a map whose zones grow (all premade maps), a zone counts as 40 hexes here, since it grows at deployment.
 
 ### Deployment
 After the draft, units are deployed one at a time in the order they were drafted. (With preset armies, players take turns round the table, one unit each.) Each figure goes on a free spot in its owner's start zone where it fits.
+- **Growing zones**: on maps that allow it (all premade maps; custom maps choose in the editor), each start zone grows before deployment until it has a little more room than the army needs: the hexes the army covers, plus a quarter more, plus 2. Players take turns adding one hex at a time, in seat order. A zone grows into free, standable neighbouring hexes, keeping close to its own centre and away from other zones, and never takes another player's hexes. If a unit still has no spot where it fits when its turn to deploy comes, the zone grows again, up to 40 more hexes. **Assumption.**
+- **No room**: if a unit cannot be placed at all (a map whose zones do not grow, or a board with no space left), it sits the game out and counts as destroyed. **Assumption.**
 
 ### Playing online
 Online, the host picks the options above and shares a room code. Seats and colors follow the order players join, and the host can start once the room holds a player count the map supports. The rules are the same, with these differences:

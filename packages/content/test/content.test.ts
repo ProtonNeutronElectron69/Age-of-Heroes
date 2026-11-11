@@ -1,4 +1,4 @@
-import { createGame, deploymentPlacements, hexDistance } from "@aoh/rules";
+import { applyCommand, createGame, currentDeployment, deploymentPlacements, hexDistance, playerZone, type Step } from "@aoh/rules";
 import { describe, expect, it } from "vitest";
 import {
   CARDS,
@@ -216,5 +216,71 @@ describe("cards", () => {
         expect(spots.length, `${m.id} seat ${z.seat}`).toBeGreaterThanOrEqual(4 * biggest);
       }
     }
+  });
+});
+
+describe("start zones that grow to fit the army", () => {
+  /** Deploy every unit with the first free placement for each figure, as Auto place does. */
+  function deployAll(setup: Parameters<typeof createGame>[0], ctx: ReturnType<typeof contextFor>["ctx"]) {
+    let { state, events } = createGame(setup, ctx);
+    const all = [...events];
+    for (let guard = 0; state.phase === "deploy" && guard < 200; guard++) {
+      const { player, unitId } = currentDeployment(state)!;
+      const unit = state.units.find((u) => u.id === unitId)!;
+      const card = ctx.cards.get(unit.cardId)!;
+      const taken: Step[] = [];
+      const placements = unit.figures.map((f) => {
+        const choice = deploymentPlacements(state, player, card, ctx, taken)[0];
+        if (!choice) throw new Error(`no room for ${unit.cardId} of ${player}`);
+        taken.push(...choice.spots);
+        return { figureId: f.id, ...choice.placement };
+      });
+      const r = applyCommand(state, { type: "deployUnit", player, unitId, placements }, ctx);
+      if (!r.ok) throw new Error(r.error);
+      state = r.state;
+      all.push(...r.events);
+    }
+    return { state, events: all };
+  }
+
+  it("fits the largest armies the draft allows, for every player count of every premade map", () => {
+    // 600 points of 4-figure squads is the most figures a draft can produce; add the big figures too.
+    const swarm = Array.from({ length: 8 }, () => "barrow-legion");
+    const giants = ["siege-walker-atlas", "marrowcoil", "old-rootback", "barrow-legion", "barrow-legion", "barrow-legion"];
+    for (const m of MAPS) {
+      expect(m.growZones, m.id).toBe(true);
+      const { ctx } = contextFor(m);
+      for (const n of ctx.board.playerCounts()) {
+        for (const army of [swarm, giants]) {
+          const players = Array.from({ length: n }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}`, color: "#fff" }));
+          const armies = Object.fromEntries(players.map((p) => [p.id, army]));
+          const { state, events } = deployAll({ mode: "advanced", seed: 1, mapId: m.id, players, armies }, ctx);
+          const where = `${m.id}, ${n} players, ${army === swarm ? "swarm" : "giants"}`;
+          expect(events.filter((e) => e.type === "unitNotDeployed"), where).toEqual([]);
+          expect(state.phase, where).toBe("placeTokens");
+          // Grown zones never overlap.
+          const seen = new Set<string>();
+          for (const p of state.players) {
+            for (const h of playerZone(state, p.id, ctx)) {
+              const key = `${h.q},${h.r}`;
+              expect(seen.has(key), `${where}: ${key} in two zones`).toBe(false);
+              seen.add(key);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it("leaves zones as drawn on maps that do not grow them", () => {
+    const m = { ...MAPS[0]!, growZones: false };
+    const { ctx } = contextFor(m);
+    const players = [
+      { id: "p1", name: "A", color: "#fff" },
+      { id: "p2", name: "B", color: "#fff" },
+    ];
+    const state = createGame({ mode: "advanced", seed: 1, mapId: m.id, players, armies: { p1: ["barrow-legion"], p2: ["barrow-legion"] } }, ctx).state;
+    expect(state.zones).toBeUndefined();
+    expect(playerZone(state, "p1", ctx)).toEqual(ctx.board.startZone(state.players[0]!.zone));
   });
 });

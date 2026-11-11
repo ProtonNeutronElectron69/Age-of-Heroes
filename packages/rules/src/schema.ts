@@ -60,6 +60,11 @@ export const mapSchema = z.object({
    * round the table. Player counts not listed use zones 0, 1, 2...
    */
   layouts: z.record(z.string(), z.array(z.number().int().min(0).max(MAX_PLAYERS - 1))).default({}),
+  /**
+   * Grow each player's start zone at deployment until it fits their drafted army
+   * (the premade maps do). Without it, the zones are used exactly as drawn.
+   */
+  growZones: z.boolean().optional(),
 });
 
 export type PlacedPiece = z.infer<typeof placedPieceSchema>;

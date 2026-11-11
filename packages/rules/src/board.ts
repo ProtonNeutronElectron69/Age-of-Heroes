@@ -383,6 +383,11 @@ export class Board {
     return max;
   }
 
+  /** Do start zones grow to fit each army (see `growZones` on the map)? */
+  growsZones(): boolean {
+    return this.definition.growZones === true;
+  }
+
   startZone(seat: number): Hex[] {
     return this.definition.startZones.find((z) => z.seat === seat)?.hexes ?? [];
   }

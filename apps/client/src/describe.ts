@@ -75,6 +75,10 @@ export function describeEvent(e: GameEvent, names: Names): string | null {
       return "Deploy your armies in your start zones.";
     case "unitDeployed":
       return `${names.player(e.player)} deploys ${names.unit(e.unitId)}.`;
+    case "startZoneGrown":
+      return `${names.player(e.player)}'s start zone grows by ${e.added} ${e.added === 1 ? "hex" : "hexes"} to fit the army.`;
+    case "unitNotDeployed":
+      return `${names.unit(e.unitId)} cannot fit in ${names.player(e.player)}'s start zone and sits this game out.`;
     case "deploymentEnded":
       return "All armies are on the battlefield.";
     case "roundStarted":

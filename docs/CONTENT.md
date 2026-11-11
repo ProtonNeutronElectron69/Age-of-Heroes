@@ -77,7 +77,7 @@ The tests check that every bundled map:
 - keeps two players' zones at least 12 hexes apart;
 - has room in every start zone for a full army.
 
-Start zones and the zones used for each player count live in the map's `startZones` and `layouts`.
+Start zones and the zones used for each player count live in the map's `startZones` and `layouts`. Set `"growZones": true` to let each zone grow at deployment to fit the drafted army (all premade maps do; see RULES.md, Deployment). The editor's zone tool has the same option as a checkbox.
 
 ## Tunable numbers
 
