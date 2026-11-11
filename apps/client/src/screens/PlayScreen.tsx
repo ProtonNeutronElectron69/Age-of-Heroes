@@ -507,7 +507,7 @@ export function PlayScreen({ session }: { session: Session }) {
                 : "This unit has finished."}
               {moveBig ? " Press R to turn." : ""}
               {hoverOption ? ` Move cost ${hoverOption.cost}.` : ""}
-              {eyeView && myTurn ? " Eye view faces the enemy you last clicked (clicking a red-ringed one attacks it). Exit eye view to end the turn." : ""}
+              {eyeView && myTurn ? " Drag or use the arrow keys to look around. Clicking an enemy faces it (a red-ringed one is attacked). Exit eye view to end the turn." : ""}
             </p>
             <div className="actions">
               {myTurn && (

@@ -73,7 +73,7 @@ State lives in small stores read with `useSyncExternalStore`:
 
 Screens (`screens/`): `SetupScreen` (hot-seat or online setup, saved games, resume), `LobbyScreen`, `DraftScreen`, `PlayScreen` (deployment, tokens, turns, game over), `EditorScreen`, `ReplayScreen`. `App.tsx` picks the screen from the session and online state.
 
-Scene (`scene/`): `BoardScene` (terrain, scenery, markers, camera, eye view), `Figures` (tokens, plus a single DOM label layer positioned each frame; per-figure React roots caused unmount errors), `TestHook` (projection helper for browser tests).
+Scene (`scene/`): `BoardScene` (terrain as one instanced mesh per terrain type plus one set of outlines, scenery, markers, camera, and eye view with drag and arrow-key look-around), `Figures` (tokens, plus a single DOM label layer positioned each frame; per-figure React roots caused unmount errors), `TestHook` (projection helper and draw call stats for browser tests).
 
 UI (`ui/`): unit cards, dice overlay, log, round bar, token panel, game menu and save dialog.
 
