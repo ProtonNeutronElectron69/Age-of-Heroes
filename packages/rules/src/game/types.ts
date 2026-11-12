@@ -157,6 +157,11 @@ export interface GameState {
    * A player missing here uses the map's zone as drawn.
    */
   zones?: Record<PlayerId, Hex[]>;
+  /**
+   * Figures that cannot move on their unit's next turn (Pinning Shot and the
+   * like). Cleared when that unit's turn ends.
+   */
+  pinned?: string[];
   pointer: TurnPointer | null;
   active: ActiveTurn | null;
   result: GameResult | null;

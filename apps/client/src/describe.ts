@@ -140,8 +140,13 @@ export function describeEvent(e: GameEvent, names: Names): string | null {
       return `${names.player(e.player)} is out of the game.`;
     case "draftPassed":
       return `${names.player(e.player)} is done drafting.`;
-    case "abilityUsed":
-      return `${names.figure(e.figureId)}: ${e.detail.replace(e.ability, names.ability(e.figureId, e.ability))}.`;
+    case "abilityUsed": {
+      // Details normally start with the ability's name; an older one may start with its id.
+      const detail = e.detail.startsWith(`${e.ability}:`)
+        ? names.ability(e.figureId, e.ability) + e.detail.slice(e.ability.length)
+        : e.detail;
+      return `${names.figure(e.figureId)}: ${detail}.`;
+    }
     case "abilityRoll":
       return e.targetId === e.figureId
         ? `${names.figure(e.figureId)} rolls for ${names.ability(e.figureId, e.ability)}: ${e.roll}, needs ${e.needed}. ${e.success ? "Success!" : "No effect."}`

@@ -4,7 +4,7 @@ import { Rng } from "../rng";
 import type { UnitCard } from "../schema";
 import type { Footprint } from "../shapes";
 import { moveCostOf, type TerrainRules } from "../terrain";
-import { canTrample, hasAbility, trampleRoll } from "./abilities";
+import { canTrample, combatant, hasAbility, isPinned, moveBonus, trampleRoll } from "./abilities";
 import { spotsEngaged } from "./engagement";
 import { fail } from "./errors";
 import { figureSpots, placementKey, placementSpots, standingElevation, tuningOf, type Placement } from "./placement";
@@ -89,6 +89,7 @@ function moverFor(state: GameState, figureId: string, ctx: RulesContext): Mover 
   const start: Placement = { hex: pos.hex, elevation: pos.elevation, rotation: card.footprint === "1" ? 0 : pos.rotation };
   const active = state.active;
   const bonus = active && active.attacked.includes(figureId) ? active.bonusMoves[figureId] : undefined;
+  const drums = bonus === undefined ? moveBonus(state, ctx, combatant(unit, figure, ctx)).bonus : 0;
   return {
     unit,
     figure,
@@ -97,7 +98,7 @@ function moverFor(state: GameState, figureId: string, ctx: RulesContext): Mover 
     footprint: card.footprint,
     start,
     startSpots: figureSpots(figure, card.footprint, stats.height, ctx),
-    budget: bonus ?? stats.move,
+    budget: bonus ?? stats.move + drums,
     noStrikes: bonus !== undefined,
     flying: card.footprint === "1" && hasAbility(state, card, "flying"),
     trample: hasAbility(state, card, "trample"),
@@ -356,6 +357,7 @@ function flightOptions(state: GameState, mover: Mover, ctx: RulesContext): Map<s
 
 /** Every placement the figure could move to this turn, keyed by placementKey, with a suggested path. */
 export function moveOptions(state: GameState, figureId: string, ctx: RulesContext): Map<string, MoveOption> {
+  if (isPinned(state, figureId)) return new Map();
   const mover = moverFor(state, figureId, ctx);
   if (mover.flying) return flightOptions(state, mover, ctx);
   const options = search(state, mover, mover.budget, null, ctx);
@@ -378,6 +380,7 @@ function activeMover(state: GameState, player: PlayerId, figureId: string, ctx: 
   if (active.player !== player) fail("It is not your turn");
   const mover = moverFor(state, figureId, ctx);
   if (mover.unit.id !== active.unitId) fail("Only the activated unit can act this turn");
+  if (isPinned(state, figureId)) fail("That figure is pinned and cannot move this turn");
   if (active.attacked.includes(figureId)) {
     // Smoke Step allows one short move after attacking, even after moving before.
     if (!active.bonusMoves[figureId]) fail("A figure cannot move after attacking");
@@ -623,4 +626,59 @@ function slideTarget(mover: Mover, from: Step, at: Step, occ: Map<string, Occupa
   const occupant = occ.get(stepKey(step));
   if (occupant && occupant.figure.id !== mover.figure.id) return null;
   return step;
+}
+
+/**
+ * Put a single-hex figure somewhere it did not walk to (shoved or pulled by an
+ * ability). It falls if it drops far enough, and rolls for lava where it lands;
+ * there are no passing strikes and no slips.
+ */
+export function forcedMove(
+  state: GameState,
+  unit: UnitState,
+  figure: FigureState,
+  to: Step,
+  rng: Rng,
+  events: GameEvent[],
+  ctx: RulesContext,
+): void {
+  const card = cardOf(unit, ctx);
+  const stats = statsOf(card, state.config.mode);
+  const from = figure.position;
+  if (!from) return;
+  figure.position = { hex: to.hex, elevation: to.elevation, rotation: 0 };
+  const dice = fallDice(from.elevation - to.elevation, stats.height, state, ctx);
+  if (dice > 0) {
+    const attack = rollDice(rng, ATTACK_DIE, dice);
+    const hits = countFaces(attack, "skull");
+    events.push({
+      type: "attackRolled",
+      source: "fall",
+      attackerId: null,
+      targetId: figure.id,
+      attack,
+      defense: [],
+      hits,
+      blocks: 0,
+      wounds: hits,
+      attackBonus: 0,
+      defenseBonus: 0,
+    });
+    woundFigure(state, unit, figure, hits, stats.life, "fall", events);
+    if (figure.destroyed) return;
+  }
+  const t = terrainOf(to, ctx);
+  if (t?.entryDestroyOnOrBelow !== undefined) {
+    const roll = rng.d20();
+    const destroyed = roll <= t.entryDestroyOnOrBelow;
+    events.push({ type: "terrainRoll", figureId: figure.id, terrain: t.id, roll, outcome: destroyed ? "destroyed" : "safe" });
+    if (destroyed) destroyFigure(unit, figure, "lava", events);
+  }
+}
+
+/** Can a single-hex figure of this height stand at the spot, free of other figures? */
+export function freeSpotFor(state: GameState, spot: Step, height: number, ctx: RulesContext, ignore?: string): boolean {
+  if (!placementSpots("1", height, { ...spot, rotation: 0 }, ctx)) return false;
+  const o = occupancy(state, ctx).get(stepKey(spot));
+  return !o || o.figure.id === ignore;
 }

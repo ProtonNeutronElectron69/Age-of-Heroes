@@ -54,6 +54,20 @@ export const ABILITY_VALUE: Readonly<Record<string, number>> = {
   reassemble: 1.15,
   "arc-lightning": 1.2,
   fury: 1.08,
+  // Added with the 48-unit roster.
+  pin: 1.12,
+  shove: 1.1,
+  "grapple-line": 1.15,
+  "last-stand": 1.12,
+  "fae-step": 1.12,
+  "will-o-wisp": 1.15,
+  regrowth: 1.12,
+  "volatile-core": 1.1,
+  "war-drums": 1.25,
+  "corpse-feast": 1.08,
+  challenge: 1.15,
+  piercing: 1.15,
+  "mending-hymn": 1.3,
 };
 
 function binomial(n: number, k: number): number {

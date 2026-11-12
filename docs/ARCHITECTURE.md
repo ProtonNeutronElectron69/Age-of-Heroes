@@ -43,11 +43,11 @@ Dependencies only point downwards: `client` and `server` use `protocol`, `conten
 | `game/abilities.ts` | Every ability: attack and defense modifiers, reactions after an attack, end-of-turn effects, special action specs |
 | `game/queries.ts`, `game/view.ts` | Read-only helpers (stats, scores, figures) and per-player views |
 
-Abilities hook in at fixed points: `abilityModifiers` (extra dice), `reduceWounds`, `afterAttack` (reactions, with the RNG), `endOfTurnAbilities`, movement (`flying`, `trample`, `smoke-step`) and the special action specs (`AREA_IDS`, `MIND_IDS`). Abilities only exist in the Advanced game.
+Abilities hook in at fixed points: `abilityModifiers` (extra or fewer dice), `targetingProblem` (who may be targeted), `reduceWounds`, `afterAttack` (reactions, with the RNG), `endOfTurnAbilities` (healing, reassembling, and clearing pins), movement (`flying`, `trample`, `smoke-step`, `moveBonus`, pins), forced moves (`forcedMove` in `movement.ts`, used by shoves and pulls) and the special action specs (`AREA_IDS`, `MIND_IDS`, `PULL_IDS`, `SWAP_IDS`). Abilities only exist in the Advanced game.
 
 ## Content (`packages/content/src`)
 
-- `cards/starter.json` (the first 16 units) and `cards/legends.json` (14 more); `cards.ts` loads and validates both into `CARDS`, `CARD_CATALOG` and `FACTIONS`.
+- `cards/starter.json` (the first 16 units), `cards/legends.json` (14 more) and `cards/reinforcements.json` (18 more, for 48); `cards.ts` loads and validates them into `CARDS`, `CARD_CATALOG` and `FACTIONS`.
 - `maps/*.json` and `maps/index.ts` (`MAPS`): the premade map library.
 - `terrain.ts`, `scenery.ts`, `tuning.ts`, `players.ts` (seat colours).
 - `context.ts`: `contextFor(map)` builds the `RulesContext` (board, terrain, cards, tuning) the engine needs.

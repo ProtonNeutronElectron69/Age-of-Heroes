@@ -12,7 +12,7 @@ A turn-based 3D tactics game for 2 to 6 players in the browser. Heroes and squad
   - height bonuses, falling and engagement;
   - strict line of sight;
   - special abilities.
-- **30 original units** in 6 factions: 15 heroes and 15 squads, 15 ranged and 15 melee. Some figures cover 2 to 4 hexes.
+- **48 original units** in 6 factions of 8: 21 heroes and 27 squads, 24 ranged and 24 melee. Some figures cover 2 to 4 hexes.
 - **Turns driven by secret tokens:** each player hides activation tokens on their units, rolls for initiative, then takes three turns a round.
 - **3D battlefields** with ten terrain types, bridges, overhangs and scenery, a figure's-eye camera, and four premade maps.
 - **Map editor:** build, save, export and import your own maps, and play on them. It finds and removes problem pieces, erases with a dragged box, joins pieces side by side into bridges (Shift+click) and can scatter terrain and scenery at random.
@@ -62,7 +62,7 @@ Before pushing, run `pnpm check:affected`. CI runs the checks a pull request's c
 | Path | What it is |
 |---|---|
 | `packages/rules` | The rules engine: hex math, the stacked map model, dice, line of sight, draft, movement, combat and abilities. Pure, deterministic TypeScript, so it runs the same in the browser and on the server. |
-| `packages/content` | Game data: the 30 units, four premade maps, terrain, scenery, tunable rule numbers, and the balance model for point costs. |
+| `packages/content` | Game data: the 48 units, four premade maps, terrain, scenery, tunable rule numbers, and the balance model for point costs. |
 | `packages/protocol` | The online message format (checked with schemas) and the game record format used for saves and replays. |
 | `apps/client` | The browser game: setup, draft, battle, map editor, online lobby, saved games and replay viewer, built with React and Three.js. Browser tests live in `apps/client/e2e`. |
 | `apps/server` | The online game server: rooms, room codes, seats and reconnecting, spectators, and saving and resuming games. It runs the rules engine and sends each player only their own view. |

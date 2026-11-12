@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable: the Basic and Advanced rules, a 30-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. Over 200 unit and simulation tests and 5 browser tests run in CI, each pull request running only the ones its changes affect ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable: the Basic and Advanced rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. Over 200 unit and simulation tests and 5 browser tests run in CI, each pull request running only the ones its changes affect ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 - **Needs the repository owner:** create the online game server on Render and set the `GAME_SERVER_URL` repository variable (about 10 minutes; see [HOSTING.md](HOSTING.md)). Until then the published site can only play online against a server whose address is typed in.
@@ -29,7 +29,7 @@ Each phase or drop is one pull request from a working branch, with CI green befo
 | Online hosting | Game server in a Docker image; Render recommended (free tier, deploys from `render.yaml`). The server keeps rooms in memory only; the host saves a game to a file to resume it later. See [HOSTING.md](HOSTING.md) |
 | Line of sight | Advanced: automatic check from eye point to hit band, plus a figure's-eye camera. Basic: forgiving |
 | Art | None for now: units are tokens as tall as their Height, terrain is flat colour, hovering or clicking a token shows its card, and a red arrow marks the figure chosen to act. Sound, models and art come after the core game (Phase 7) |
-| Unit roster | Original units only, across all eras and myths. Squads have 1 special ability and heroes 2 (Flying not counted); heroes have 2 to 8 Life, most squads 1 (tough squads of 2 or 3 figures up to 3). Point costs set with the balance model |
+| Unit roster | Original units only, across all eras and myths. Squads have 1 special ability and heroes 2 (Flying not counted); heroes have 2 to 8 Life, most squads 1 (tough squads of 2 or 3 figures up to 3). Heroes and squads, and ranged and melee, stay within about 60/40. Point costs set with the balance model |
 | Involvement | Hands-off: work arrives as pull requests with a playable build; the owner decides when to merge |
 
 ## Phases
@@ -165,6 +165,11 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 - [x] No sealed empty spaces inside the terrain, and no pieces off on their own
 - [x] No scenery in start zones
 - [x] "Fix problems" removes loose and detached pieces and problem scenery, fills sealed spaces and takes bad hexes out of start zones
+
+### Roster: 48 units
+- [x] A hero and two squads for every faction (18 units), with points from the balance model
+- [x] 12 new rules: Pin, Shove, Grapple Line, Last Stand, Fae Step, Will-o'-the-Wisp, Regrowth, Volatile Core, War Drums, Corpse Feast, Challenge, Piercing and Mending Hymn
+- [x] Heroes and squads, and ranged and melee, kept within about 60/40 (now 21 heroes and 27 squads, 24 ranged and 24 melee)
 
 ### Faster checks
 - [x] CI runs only the checks a change affects: docs run nothing, unit card data runs the content tests, and each browser test runs only for the code it covers, in parallel. Pushes to `main` still run everything. `pnpm check:affected` does the same locally. See [TESTING.md](TESTING.md)
