@@ -278,6 +278,69 @@ const raiderHovering: Figure = (() => {
   };
 })();
 
+/** A Hollowsteel Hunter: a lean frame around an open chest, a blade for each forearm. `raise` lifts the leading blade. */
+const hunter = (raise: number): Figure => {
+  const shL: P = [96, 98];
+  const shR: P = [120, 94];
+  const handL: P = [56, 108 - raise];
+  const handR: P = [134, 136];
+  return {
+    top: 62,
+    bottom: 244,
+    gear: ["blade"],
+    parts: [
+      part("metal", `${limb(shR, [142, 114], 7, 6)} ${limb([142, 114], handR, 6, 5)}`),
+      part("blade", pts([130, 134], [138, 136], [124, 176])),
+      part("metal", `${limb([120, 152], [136, 188], 9, 7)} ${limb([136, 188], [124, 216], 7, 6)} ${limb([124, 216], [140, 240], 6, 5)}`),
+      part("armor", pts([132, 238], [150, 238], [154, 244], [128, 244])),
+      part("metal", `${limb([104, 152], [88, 186], 9, 7)} ${limb([88, 186], [100, 214], 7, 6)} ${limb([100, 214], [84, 240], 6, 5)}`),
+      part("armor", pts([72, 238], [92, 238], [92, 244], [66, 244])),
+      part("armor", pts([90, 92], [124, 88], [126, 122], [118, 156], [102, 156], [94, 124]), line([96, 126], [124, 122])),
+      part("boot", pts([100, 100], [118, 98], [118, 118], [102, 120])),
+      part("glow", disc([109, 109], 5)),
+      part("plate", pts([110, 84], [130, 86], [130, 102], [112, 100])),
+      part("metal", `${limb(shL, [76, 118 - raise * 0.4], 7, 6)} ${limb([76, 118 - raise * 0.4], handL, 6, 5)}`),
+      part("blade", pts([58, 104 - raise], [54, 112 - raise], [18, 92 - raise * 1.8])),
+      part("plate", pts([84, 90], [104, 88], [102, 104], [82, 106])),
+      part("metal", limb([104, 90], [98, 82], 5)),
+      part("helmet", "M80,74 Q84,60 100,62 Q112,66 110,78 Q106,88 92,86 Q82,84 80,74 Z"),
+      part("glow", pts([82, 73], [96, 70], [96, 76], [83, 78])),
+      part("plate", "M104,64 Q118,58 126,64 Q116,66 110,74 Z"),
+    ],
+  };
+};
+
+/** Siege Walker Atlas: a two-legged gun platform, mortar tilted skyward, a gun pod on each flank. */
+const atlas: Figure = {
+  top: 4,
+  bottom: 244,
+  gear: ["jewel"],
+  parts: [
+    part("metal", `${limb([62, 56], [58, 32], 9)} ${limb([82, 56], [80, 38], 8)}`),
+    part("jewel", "M52,30 q-8,-10 2,-16 q4,-10 16,-4 q10,-2 10,8 q6,8 -4,14 q-12,6 -24,-2 Z"),
+    part("metal", `${limb([70, 150], [52, 190], 24, 19)}`),
+    part("armor", `${limb([52, 190], [60, 230], 19, 24)}`),
+    part("metal", pts([38, 228], [82, 228], [88, 244], [32, 244]), line([48, 236], [78, 236])),
+    part("metal", `${limb([130, 150], [148, 190], 24, 19)}`),
+    part("armor", `${limb([148, 190], [140, 230], 19, 24)}`),
+    part("metal", pts([118, 228], [162, 228], [168, 244], [112, 244]), line([122, 236], [152, 236])),
+    part("metal", `${disc([52, 190], 9)} ${disc([148, 190], 9)}`),
+    part("metal", limb([110, 62], [150, 12], 22, 26)),
+    part("plate", limb([144, 20], [152, 9], 30, 30)),
+    part("boot", limb([150, 12], [152, 9.5], 20, 20)),
+    part("metal", pts([12, 94], [36, 90], [36, 126], [12, 122]), `${line([12, 104], [36, 101])} ${line([12, 113], [36, 112])}`),
+    part("boot", `${limb([12, 100], [2, 100], 4.4)} ${limb([12, 110], [2, 110], 4.4)} ${limb([12, 118], [2, 118], 4.4)}`),
+    part("metal", pts([164, 90], [188, 94], [188, 122], [164, 126]), `${line([164, 101], [188, 104])} ${line([164, 112], [188, 113])}`),
+    part("glow", `${disc([182, 100], 2.6)} ${disc([182, 108], 2.6)} ${disc([182, 116], 2.6)}`),
+    part("armor", pts([44, 70], [156, 70], [168, 110], [156, 154], [44, 154], [32, 110]), `${line([32, 110], [168, 110])} ${line([64, 112], [60, 152])} ${line([136, 112], [140, 152])} ${line([100, 112], [100, 152])}`),
+    part("plate", pts([52, 56], [148, 56], [156, 70], [44, 70])),
+    part("boot", pts([66, 82], [134, 82], [130, 102], [70, 102])),
+    part("glow", pts([70, 86], [130, 86], [127, 98], [73, 98]), `${line([90, 86], [90, 98])} ${line([110, 86], [110, 98])}`),
+    part("crest", pts([92, 120], [108, 120], [108, 140], [100, 146], [92, 140])),
+    part("metal", `${disc([70, 150], 10)} ${disc([130, 150], 10)}`),
+  ],
+};
+
 export const NEXUS: Record<string, Drawing> = {
   "sentinel-k7": solo(sentinelK7, [3, 196]),
   "nexus-breachers": squad([breacherReady, breacherCharging, breacherCharging]),
@@ -285,4 +348,12 @@ export const NEXUS: Record<string, Drawing> = {
   "swarmling-drones": squad([drone(0), drone(-7), drone(6), drone(-4)]),
   "nexus-reclaimers": squad([reclaimerAdvancing, reclaimerAiming, reclaimerAiming]),
   "skyhook-raiders": squad([raiderHovering, raiderSwooping, raiderSwooping]),
+  // Their blades reach far forward, so on the tall side they stand further right than the standard column.
+  "hollowsteel-hunters": squad([hunter(22), hunter(0)], {
+    tall: [
+      [102, 150, 0.66],
+      [134, 246, 0.76],
+    ],
+  }),
+  "siege-walker-atlas": solo(atlas, [2, 190]),
 };

@@ -389,10 +389,63 @@ const ghoulShrieking: Figure = (() => {
   };
 })();
 
+/** Marrowcoil, the Bone Wyrm: a serpent of vertebrae and plates, reared to strike with a horned skull. */
+const marrowcoil: Figure = (() => {
+  // The spine from the back of the skull to the tail tip, with its width at each joint.
+  const spine: readonly (readonly [number, number, number])[] = [
+    [66, 86, 15],
+    [72, 108, 17],
+    [88, 130, 19],
+    [112, 144, 20],
+    [134, 150, 20],
+    [150, 166, 19],
+    [154, 192, 17],
+    [142, 214, 15],
+    [122, 224, 13],
+    [90, 222, 11],
+    [60, 228, 8],
+    [34, 238, 4],
+  ];
+  const bones: Part[] = [];
+  const plates: Part[] = [];
+  const ribs: Part[] = [];
+  for (let i = 0; i < spine.length - 1; i++) {
+    const [ax, ay, aw] = spine[i]!;
+    const [bx, by, bw] = spine[i + 1]!;
+    bones.push(part("bone", limb([ax, ay], [bx, by], aw, bw)));
+    bones.push(part("bone", disc([bx, by], bw / 2 + 1.2)));
+    const len = Math.hypot(bx - ax, by - ay);
+    // The side of the spine that faces up and out carries a plate; the inside of the first coils carries ribs.
+    const nx = (by - ay) / len;
+    const ny = -(bx - ax) / len;
+    const mx = (ax + bx) / 2;
+    const my = (ay + by) / 2;
+    const h = aw * 0.9;
+    plates.push(part("armor", pts([mx - (bx - ax) * 0.3 + nx * aw * 0.4, my - (by - ay) * 0.3 + ny * aw * 0.4], [mx + nx * (aw * 0.5 + h), my + ny * (aw * 0.5 + h)], [mx + (bx - ax) * 0.3 + nx * aw * 0.4, my + (by - ay) * 0.3 + ny * aw * 0.4])));
+    if (i >= 1 && i <= 5) ribs.push(part("bone", limb([mx - nx * aw * 0.4, my - ny * aw * 0.4], [mx - nx * (aw * 0.5 + 16) - 5, my - ny * (aw * 0.5 + 16) + 4], 4.4, 1.8)));
+  }
+  return {
+    top: 32,
+    bottom: 244,
+    gear: [],
+    tint: { glow: "#a6f07c" },
+    parts: [
+      ...ribs,
+      ...plates,
+      ...bones,
+      part("bone", `${pts([60, 62], [80, 38], [68, 66])} ${pts([52, 60], [64, 34], [58, 62])}`),
+      part("bone", "M74,88 Q76,62 52,58 L14,70 L10,80 L40,84 L18,92 L22,101 L52,102 Q68,100 74,88 Z", `${line([22, 78], [22, 83])} ${line([30, 80], [30, 85])} ${line([28, 92], [28, 97])} ${line([38, 94], [38, 99])}`),
+      part("boot", pts([14, 72], [20, 70], [19, 74])),
+      part("glow", disc([52, 72], 3.8)),
+    ],
+  };
+})();
+
 export const ASHEN: Record<string, Drawing> = {
   vorhal: solo(vorhal),
   morvane: solo(morvane),
   grubnak: solo(grubnak),
+  marrowcoil: solo(marrowcoil, [8, 168]),
   "bonebow-archers": squad([bonebowNocking, bonebowLoosing, bonebowLoosing]),
   "ruinmaw-raiders": squad([orcBellowing, orcHurling, orcHurling]),
   "ghoul-pack": squad([ghoulShrieking, ghoulLoping, ghoulShrieking, ghoulLoping]),

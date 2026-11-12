@@ -274,6 +274,34 @@ const cinderjaw: Figure = {
   ],
 };
 
+/** Old Rootback: a hill of a beast, moss and saplings growing on its back, tusks low to the ground. */
+const oldRootback: Figure = {
+  top: 24,
+  bottom: 244,
+  gear: ["wood"],
+  tint: { leather: "#6f5d49", cloth: "#4f4234", wood: BARK, glow: "#f2c14e" },
+  parts: [
+    part("cloth", `${limb([86, 200], [84, 238], 22, 18)} ${limb([134, 200], [138, 238], 22, 18)}`),
+    part("leather", "M178,170 Q194,176 196,200 Q188,190 176,190 Z"),
+    part("leather", "M36,160 Q60,148 120,150 Q172,150 188,168 Q192,198 176,206 Q120,216 60,208 Q38,202 36,160 Z"),
+    part("wood", `${limb([120, 74], [124, 44], 5.5, 4)} ${limb([152, 84], [158, 60], 4.6, 3.4)} ${limb([84, 82], [78, 62], 4, 3)}`),
+    part("armor", "M40,152 Q44,84 104,70 Q168,66 184,130 Q190,160 182,178 Q110,170 44,178 Z", `${line([70, 100], [62, 168])} ${line([104, 78], [102, 168])} ${line([142, 84], [148, 170])} ${line([56, 130], [176, 124])}`),
+    part("plate", `${disc([124, 34], 13)} ${disc([112, 46], 9)} ${disc([136, 46], 9)}`),
+    part("plate", `${disc([160, 52], 10)} ${disc([76, 56], 8)}`),
+    part("plate", "M60,112 q10,-10 22,-4 q-4,12 -22,4 Z M120,104 q12,-8 24,0 q-8,10 -24,0 Z M150,140 q10,-8 20,0 q-8,8 -20,0 Z M84,146 q10,-8 20,0 q-8,8 -20,0 Z"),
+    part("crest", `${disc([98, 92], 3.6)} ${disc([166, 104], 3)}`),
+    part("leather", `${limb([62, 198], [56, 236], 24, 20)}`),
+    part("bone", `${pts([44, 236], [52, 236], [50, 244], [42, 244])} ${pts([56, 236], [64, 236], [62, 244], [54, 244])}`),
+    part("leather", `${limb([154, 200], [160, 236], 24, 20)}`),
+    part("bone", `${pts([150, 236], [158, 236], [156, 244], [148, 244])} ${pts([162, 236], [170, 236], [168, 244], [160, 244])}`),
+    part("leather", "M52,148 Q32,136 14,150 Q2,166 8,186 Q24,200 46,192 Q60,180 60,162 Z", `${line([18, 172], [40, 176])}`),
+    part("armor", "M50,146 Q36,134 22,142 Q34,146 44,158 Z"),
+    part("glow", disc([26, 160], 3.4)),
+    part("bone", `${pts([12, 182], [0, 160], [22, 178])} ${pts([26, 190], [16, 168], [36, 186])}`),
+    part("wood", `${limb([70, 176], [68, 196], 3, 1.6)} ${limb([112, 174], [114, 194], 3, 1.6)} ${limb([146, 174], [144, 190], 3, 1.6)}`),
+  ],
+};
+
 export const VERDANT: Record<string, Drawing> = {
   "glade-wardens": squad([wardenLoosing, wardenWatching, wardenLoosing]),
   sylvanne: solo(sylvanne),
@@ -289,4 +317,5 @@ export const VERDANT: Record<string, Drawing> = {
     ],
   }),
   cinderjaw: solo(cinderjaw, [2, 196]),
+  "old-rootback": solo(oldRootback, [0, 196]),
 };

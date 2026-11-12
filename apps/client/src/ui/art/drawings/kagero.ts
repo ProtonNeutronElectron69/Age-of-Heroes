@@ -301,6 +301,68 @@ const ashfangOni: Figure = (() => {
   };
 })();
 
+const SHINOBI = { armor: "#2d2f45", cloth: "#1f1d28", helmet: "#1f1d28", wood: "#9aa35a" };
+
+/** A shinobi's wrapped head: only the eyes show. `look` is -1 for a head turned left, 0 for facing us. */
+const wrappedHead = (x: number, y: number, look: number) => [
+  part("helmet", disc([x, y], 10.5)),
+  part("skin", look < 0 ? pts([x - 10, y - 3.5], [x + 2, y - 3.5], [x + 2, y + 1], [x - 10, y + 1]) : pts([x - 7, y - 3.5], [x + 7, y - 3.5], [x + 7, y + 1], [x - 7, y + 1]), look < 0 ? line([x - 7, y - 1.2], [x - 3, y - 1.2]) : `${line([x - 5, y - 1.2], [x - 1.5, y - 1.2])} ${line([x + 1.5, y - 1.2], [x + 5, y - 1.2])}`),
+  part("sash", `M${x + 8},${y + 4} Q${x + 24},${y + 4} ${x + 34},${y + 16} L${x + 30},${y + 19} Q${x + 20},${y + 10} ${x + 7},${y + 9} Z`),
+];
+
+/** A throwing star. */
+const star = (c: P, r: number) => part("blade", pts([c[0], c[1] - r], [c[0] + r * 0.3, c[1] - r * 0.3], [c[0] + r, c[1]], [c[0] + r * 0.3, c[1] + r * 0.3], [c[0], c[1] + r], [c[0] - r * 0.3, c[1] + r * 0.3], [c[0] - r, c[1]], [c[0] - r * 0.3, c[1] - r * 0.3]));
+
+/** A Shinobi crouched low, a star just loosed and a knife held back. */
+const shinobiThrowing: Figure = (() => {
+  const shL: P = [94, 130];
+  const shR: P = [116, 126];
+  const hipL: P = [102, 176];
+  const hipR: P = [118, 174];
+  return {
+    top: 94,
+    bottom: 244,
+    gear: ["blade", "sash"],
+    tint: SHINOBI,
+    parts: [
+      ...arm(shR, [136, 138], [150, 124], "armor", { hand: "cloth" }),
+      part("blade", pts([148, 122], [164, 104], [153, 126])),
+      ...leg(hipR, [134, 204], [146, 238], "cloth", "cloth", { toe: 1, w: 12, boot: "boot" }),
+      ...leg(hipL, [80, 200], [72, 238], "cloth", "cloth", { toe: -1, w: 12, boot: "boot" }),
+      torso(shL, shR, hipL, hipR, "armor", line([100, 130], [110, 150], [112, 128])),
+      belt(hipL, hipR),
+      ...arm(shL, [74, 122], [56, 110], "armor", { hand: "cloth" }),
+      star([34, 98], 8),
+      ...wrappedHead(102, 106, -1),
+    ],
+  };
+})();
+
+/** A Shinobi standing side-on with a reed blowpipe to her lips. */
+const shinobiBlowpipe: Figure = (() => {
+  const shL: P = [92, 108];
+  const shR: P = [116, 106];
+  const hipL: P = [94, 162];
+  const hipR: P = [114, 162];
+  return {
+    top: 72,
+    bottom: 244,
+    gear: ["wood", "sash", "blade"],
+    tint: { ...SHINOBI, skin: "#d9a97f" },
+    parts: [
+      ...leg(hipR, [118, 202], [122, 238], "cloth", "cloth", { toe: 1, w: 12, boot: "boot" }),
+      ...leg(hipL, [88, 202], [84, 238], "cloth", "cloth", { toe: -1, w: 12, boot: "boot" }),
+      torso(shL, shR, hipL, hipR, "armor", line([98, 108], [106, 130], [112, 106])),
+      belt(hipL, hipR),
+      part("hilt", limb([112, 160], [136, 186], 4)),
+      ...arm(shR, [118, 96], [98, 84], "armor", { hand: "cloth" }),
+      ...wrappedHead(104, 84, -1),
+      part("wood", limb([98, 85], [30, 66], 3.2)),
+      ...arm(shL, [80, 96], [78, 80], "armor", { hand: "cloth" }),
+    ],
+  };
+})();
+
 export const KAGERO: Record<string, Drawing> = {
   "lady-asagiri": solo(ladyAsagiri),
   "lady-suzume": solo(ladySuzume, [25, 153]),
@@ -309,4 +371,5 @@ export const KAGERO: Record<string, Drawing> = {
   "shirokage-ronin": squad([roninWaiting, roninDrawing, roninDrawing]),
   "teppo-gunners": squad([teppoGunner(STANDING_AIM), teppoGunner(KNEELING_AIM, "#d9a97f"), teppoGunner(KNEELING_AIM)]),
   "ashfang-oni": solo(ashfangOni),
+  "hollow-reed-shinobi": squad([shinobiBlowpipe, shinobiThrowing, shinobiThrowing]),
 };

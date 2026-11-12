@@ -322,6 +322,45 @@ const fusilier = (j: AimStance, skin?: string): Figure => ({
   ],
 });
 
+/** A Brass Hussar at the gallop, sabre raised. `hide` is the horse's colour. */
+const hussar = (hide: string, skin?: string): Figure => ({
+  top: 14,
+  bottom: 244,
+  gear: ["blade", "hilt", "crest"],
+  tint: { leather: hide, cloth: "#d9d5c8", ...(skin ? { skin } : {}) },
+  parts: [
+    // The horse.
+    part("hair", "M162,150 Q188,152 192,192 Q178,176 166,174 Z"),
+    part("leather", `${limb([140, 180], [142, 214], 13, 9)} ${limb([142, 214], [154, 238], 8, 6)}`),
+    part("leather", `${limb([90, 182], [84, 214], 11, 8)} ${limb([84, 214], [72, 238], 7, 6)}`),
+    part("boot", `${pts([148, 236], [160, 236], [162, 244], [148, 244])} ${pts([66, 236], [78, 236], [78, 244], [62, 244])}`),
+    part("leather", "M62,150 Q70,132 100,132 Q140,130 160,142 Q172,156 164,176 Q140,190 100,188 Q72,188 62,172 Z"),
+    part("leather", `${limb([148, 178], [162, 208], 14, 9)} ${limb([162, 208], [178, 232], 8, 6)}`),
+    part("leather", `${limb([82, 180], [60, 202], 12, 8)} ${limb([60, 202], [40, 218], 7, 6)}`),
+    part("boot", `${pts([172, 230], [184, 232], [184, 241], [170, 238])} ${pts([34, 214], [46, 220], [42, 228], [30, 222])}`),
+    part("leather", "M70,156 Q58,124 50,104 L74,98 Q84,124 98,140 Z"),
+    part("leather", "M76,100 Q68,84 52,86 L28,104 L30,114 L48,114 Q64,116 76,108 Z", `${line([40, 96], [44, 114])} ${line([44, 96], [72, 100])}`),
+    part("leather", pts([66, 88], [68, 74], [75, 90])),
+    part("boot", disc([58, 96], 2)),
+    part("hair", "M74,98 Q88,112 100,136 L89,138 Q79,118 66,104 Z"),
+    part("cape", pts([94, 130], [138, 130], [142, 162], [92, 162]), line([96, 156], [140, 156])),
+    // The rider.
+    ...arm([126, 84], [142, 74], [148, 54], "armor"),
+    part("blade", "M146,52 Q124,28 94,18 L95.5,14 Q128,24 150,49 Z", "M147,50 Q126,27 95,16"),
+    part("hilt", limb([142, 50], [154, 56], 4.2)),
+    part("armor", pts([101, 82], [129, 80], [128, 132], [104, 134]), `${line([108, 90], [122, 89])} ${line([108, 98], [122, 97])} ${line([108, 106], [122, 105])} ${line([115, 84], [115, 112])}`),
+    part("sash", pts([103, 124], [129, 122], [129, 131], [103, 133])),
+    part("cloth", limb([114, 130], [100, 156], 12, 10)),
+    part("boot", `${limb([100, 154], [102, 184], 9, 8)} ${pts([97, 182], [107, 182], [108, 190], [90, 190])}`),
+    ...arm([104, 84], [92, 104], [90, 120], "armor"),
+    part("hair", line([90, 120], [60, 104])),
+    head([114, 62], -1),
+    part("hair", pts([103, 38], [126, 38], [127, 56], [102, 56])),
+    part("crest", pts([102, 52], [127, 52], [127, 56.5], [102, 56.5])),
+    part("crest", "M114,38 Q118,22 131,19 Q125,30 121,40 Z"),
+  ],
+});
+
 export const CONCORD: Record<string, Drawing> = {
   "marisol-vance": solo(marisolVance, [18, 172]),
   "harrow-riflemen": squad([riflemanAiming, riflemanReady, riflemanAiming]),
@@ -329,5 +368,13 @@ export const CONCORD: Record<string, Drawing> = {
   "gatewarden-pikemen": squad([pikemanStanding, pikemanBraced, pikemanBraced]),
   brannock: solo(brannock),
   "concord-grenadiers": squad([grenadierLighting, grenadierLobbing, grenadierLobbing]),
+  // Horses are long: on the wide side the Hussars ride staggered, not in a row.
+  "brass-hussars": squad([hussar("#7a4a2a"), hussar("#9c9ca4", "#c99a72"), hussar("#3a2f2c")], {
+    wide: [
+      [44, 180, 0.62],
+      [132, 208, 0.64],
+      [72, 244, 0.76],
+    ],
+  }),
   "concord-fusiliers": squad([fusilier(STANDING_AIM), fusilier(STANDING_AIM, "#c99a72"), fusilier(KNEELING_AIM, "#c99a72"), fusilier(KNEELING_AIM)]),
 };
