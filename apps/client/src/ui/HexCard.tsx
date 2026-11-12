@@ -1,6 +1,8 @@
-import type { UnitCard } from "@aoh/rules";
+import { HIT_BAND_FROM, type UnitCard } from "@aoh/rules";
 import { type CSSProperties, type ReactNode, type RefObject, useId, useLayoutEffect, useRef } from "react";
 import { factionTheme, type FactionTheme } from "./factionThemes";
+import { castBounds, DRAWINGS } from "./art/drawings";
+import { HitZoneArt, UnitArt } from "./art/UnitArt";
 import { Emblem, StatIcon, type StatIconId } from "./hexCardArt";
 import "@fontsource/cinzel/latin-600.css";
 import "@fontsource/cinzel/latin-700.css";
@@ -254,6 +256,10 @@ export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
   const t = factionTheme(card.faction);
   const advanced = side === "advanced";
   const lifeLeft = Math.max(0, card.advanced.life - wounds);
+  // Units without a drawing yet show the faction emblem and dashed outlines instead.
+  const figure = DRAWINGS[card.id];
+  const hitBox = figure && castBounds(figure.tall);
+  const hitScale = hitBox ? Math.min(98 / hitBox.height, 96 / hitBox.width) : 1;
   const stats = advanced ? card.advanced : card.basic;
   const squad = card.figureCount > 1;
 
@@ -286,6 +292,12 @@ export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
         <defs>
           <clipPath id={id("inner")}>
             <path d={INNER_PATH} />
+          </clipPath>
+          <clipPath id={id("window")}>
+            <rect x={advanced ? SPINE_X : -PAD} y={-PAD} width={W} height={H + PAD * 2} />
+          </clipPath>
+          <clipPath id={id("hit")}>
+            <polygon points={poly(hexPoints(HIT_ZONE.cx, HIT_ZONE.cy, HIT_ZONE.r - 1))} />
           </clipPath>
           <linearGradient id={id("frame")} x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stopColor={t.primaryLight} />
@@ -334,9 +346,17 @@ export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
               <g className="hc-art">
                 <rect x={advanced ? SPINE_X : -PAD} y={-PAD} width={W} height={H + PAD * 2} fill={url("art")} />
                 <rect x={advanced ? SPINE_X : -PAD} y={-PAD} width={W} height={H + PAD * 2} fill={url("hexes")} />
-                <g transform={`translate(${artCentre[0]},${artCentre[1]}) scale(${advanced ? 4.2 : 5.6})`} opacity={0.13}>
-                  <Emblem id={t.emblem} ink="#fff" ground={t.art[1]} />
-                </g>
+                {figure ? (
+                  <g clipPath={url("window")}>
+                    <g transform={advanced ? "translate(232,46) scale(0.84)" : "translate(88,130) scale(1.12)"}>
+                      <UnitArt cast={advanced ? figure.tall : figure.wide} theme={t} id={id} />
+                    </g>
+                  </g>
+                ) : (
+                  <g transform={`translate(${artCentre[0]},${artCentre[1]}) scale(${advanced ? 4.2 : 5.6})`} opacity={0.13}>
+                    <Emblem id={t.emblem} ink="#fff" ground={t.art[1]} />
+                  </g>
+                )}
               </g>
 
               {!advanced && (
@@ -369,7 +389,14 @@ export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
                   ))}
 
                   {/* The hit zone window. */}
-                  <polygon points={poly(hexPoints(HIT_ZONE.cx, HIT_ZONE.cy, HIT_ZONE.r))} fill={t.deep} stroke={t.accent} strokeWidth={1.6} strokeLinejoin="round" />
+                  <polygon points={poly(hexPoints(HIT_ZONE.cx, HIT_ZONE.cy, HIT_ZONE.r))} fill={figure ? "#0c0c0e" : t.deep} stroke={t.accent} strokeWidth={1.6} strokeLinejoin="round" />
+                  {figure && hitBox && (
+                    <g clipPath={url("hit")}>
+                      <g transform={`translate(${HIT_ZONE.cx - (hitBox.x + hitBox.width / 2) * hitScale},${HIT_ZONE.cy - (hitBox.y + hitBox.height / 2) * hitScale}) scale(${hitScale})`}>
+                        <HitZoneArt cast={figure.tall} bandFrom={HIT_BAND_FROM} id={id} />
+                      </g>
+                    </g>
+                  )}
                 </>
               )}
 
@@ -422,7 +449,7 @@ export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
           {card.faction.toUpperCase()}
         </text>
 
-        <ArtNote x={artCentre[0]} y={artCentre[1] + (advanced ? 84 : 112)} text="Unit art" />
+        {!figure && <ArtNote x={artCentre[0]} y={artCentre[1] + (advanced ? 84 : 112)} text="Unit art" />}
 
         {advanced ? (
           <>
@@ -445,7 +472,7 @@ export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
               {`${SIZE_NAMES[card.size].toUpperCase()} ${card.height}`}
             </text>
 
-            <HitZoneNote theme={t} squad={squad} />
+            {!figure && <HitZoneNote theme={t} squad={squad} />}
 
             <text className="hc-display" x={LIFE_GEM.cx} y={LIFE_GEM.cy + 4.5} fontSize={19} fontWeight={800} textAnchor="middle" fill="#fff">
               {lifeLeft}

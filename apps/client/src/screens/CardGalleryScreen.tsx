@@ -1,18 +1,22 @@
 import { CARDS, FACTIONS } from "@aoh/content";
+import { DRAWINGS } from "../ui/art/drawings";
 import { HexCard } from "../ui/HexCard";
 
 /**
  * Every unit card, both sides, by faction. A page for judging card design and
  * art, opened with `?cards` in the address; add `=name` to show one faction or
- * unit, for example `?cards=kagero`.
+ * unit, for example `?cards=kagero`. `?cards&art` shows only the units that
+ * have a drawing.
  */
 export function CardGalleryScreen() {
-  const filter = (new URLSearchParams(window.location.search).get("cards") ?? "").toLowerCase();
-  const shown = CARDS.filter((c) => !filter || c.faction.toLowerCase().includes(filter) || c.id.includes(filter));
+  const params = new URLSearchParams(window.location.search);
+  const filter = (params.get("cards") ?? "").toLowerCase();
+  const drawnOnly = params.has("art");
+  const shown = CARDS.filter((c) => (!filter || c.faction.toLowerCase().includes(filter) || c.id.includes(filter)) && (!drawnOnly || DRAWINGS[c.id]));
 
   return (
     <main className="card-gallery">
-      <h1>Unit cards</h1>
+      <h1>{drawnOnly ? "Unit art" : "Unit cards"}</h1>
       <p className="muted">The Basic side is on the left and the Advanced side on the right.</p>
       {FACTIONS.map((faction) => {
         const cards = shown.filter((c) => c.faction === faction);
