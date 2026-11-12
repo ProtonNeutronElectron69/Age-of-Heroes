@@ -28,7 +28,7 @@ Each phase or drop is one pull request from a working branch, with CI green befo
 | Play modes | Hot-seat and online (done); computer opponent on hold |
 | Online hosting | Game server in a Docker image; Render recommended (free tier, deploys from `render.yaml`). The server keeps rooms in memory only; the host saves a game to a file to resume it later. See [HOSTING.md](HOSTING.md) |
 | Line of sight | Advanced: automatic check from eye point to hit band, plus a figure's-eye camera. Basic: forgiving |
-| Art | Unit cards are seven-hex cards in faction colours, with windows waiting for unit art and hit zone pictures. Otherwise none for now: units are tokens as tall as their Height, terrain is flat colour, hovering or clicking a token shows its card, and a red arrow marks the figure chosen to act. Sound, models and the rest of the art come in Phase 7 |
+| Art | Unit cards are seven-hex cards in faction colours. Unit art is drawn, not rendered from models, in an ink and colour style, and arrives in batches of 10 units; each drawn unit also gets a red and grey hit zone picture. Otherwise none for now: units are tokens as tall as their Height, terrain is flat colour, hovering or clicking a token shows its card, and a red arrow marks the figure chosen to act. Sound, models and the rest of the art come in Phase 7 |
 | Unit roster | Original units only, across all eras and myths. Squads have 1 special ability and heroes 2 (Flying not counted); heroes have 2 to 8 Life, most squads 1 (tough squads of 2 or 3 figures up to 3). Heroes and squads, and ranged and melee, stay within about 60/40. Point costs set with the balance model |
 | Involvement | Hands-off: work arrives as pull requests with a playable build; the owner decides when to merge |
 
@@ -176,7 +176,9 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 
 ### Phase 7: Sound, models and art (on hold until the core game is complete)
 - [x] Unit cards redrawn as seven-hex cards in faction colours, for the whole roster, on the draft, play and replay screens. Each faction has a colour theme and an emblem. The card shows the unit's token label in its owner's colour and counts down Life as wounds land; clicking a card shows it large. Open the game with `?cards` in the address to see every card
-- [ ] Unit art and hit zone pictures for the cards. In progress: a hero (Lady Asagiri) and a squad (Glade Wardens) are drawn, and the art style is being chosen from four mockups (open the game with `?cards&art` in the address). Drawings are flat shapes in code (`ui/art/figures.ts`), so one drawing serves every style and the hit zone picture; a squad's drawing places several figures, in a wide arrangement for the Basic side and a tall one for the Advanced side. The hit zone picture is grey with the hit band, the top 40% of the body, in red. Units without a drawing keep the stand-ins
+- [ ] Unit art and hit zone pictures for the cards, in batches of 10 units. The art style is ink and colour: dark outlines, flat natural colours and hatched shadows. The hit zone picture is the same drawing in greys, with the hit band (the top 40% of the body) in red and gear left grey. Units without a drawing keep the stand-ins. Open the game with `?cards&art` in the address to see the drawn units
+  - [x] Batch 1 (10 of 48): Captain Marisol Vance, Harrow Line Riflemen, Lady Asagiri, Glade Wardens, Sentinel K-7, Nexus Breachers, Vorhal, Barrow Legion, Dame Rowena Ashgrove, Stormwake Huscarls
+  - [ ] Batches 2 to 5: the other 38 units
 - [ ] Sound effects and music
 - [ ] 3D models for the figures in place of tokens
 - [ ] Terrain textures and scenery art

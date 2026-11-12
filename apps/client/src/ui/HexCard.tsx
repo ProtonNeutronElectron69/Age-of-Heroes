@@ -1,8 +1,8 @@
 import { HIT_BAND_FROM, type UnitCard } from "@aoh/rules";
 import { type CSSProperties, type ReactNode, type RefObject, useId, useLayoutEffect, useRef } from "react";
 import { factionTheme, type FactionTheme } from "./factionThemes";
-import { castBounds, DRAWINGS } from "./art/figures";
-import { type ArtStyle, HitZoneArt, UnitArt } from "./art/UnitArt";
+import { castBounds, DRAWINGS } from "./art/drawings";
+import { HitZoneArt, UnitArt } from "./art/UnitArt";
 import { Emblem, StatIcon, type StatIconId } from "./hexCardArt";
 import "@fontsource/cinzel/latin-600.css";
 import "@fontsource/cinzel/latin-700.css";
@@ -22,8 +22,6 @@ interface Props {
   ownerColor?: string;
   /** Wounds on the figure being shown; the Life gem then counts what is left. */
   wounds?: number;
-  /** The art style to paint the unit's drawing in, while the style is being chosen. */
-  artStyle?: ArtStyle;
 }
 
 const TYPE_NAMES: Record<UnitCard["unitType"], string> = {
@@ -251,7 +249,7 @@ const rulesFit = (el: HTMLElement) => el.scrollHeight <= el.clientHeight + 1;
  * Only the card's own shape takes clicks, so the corners of its box let the
  * board underneath be used.
  */
-export function HexCard({ card, side, ownerColor, wounds = 0, artStyle }: Props) {
+export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const id = (name: string) => `hc${uid}-${name}`;
   const url = (name: string) => `url(#${id(name)})`;
@@ -259,7 +257,7 @@ export function HexCard({ card, side, ownerColor, wounds = 0, artStyle }: Props)
   const advanced = side === "advanced";
   const lifeLeft = Math.max(0, card.advanced.life - wounds);
   // Units without a drawing yet show the faction emblem and dashed outlines instead.
-  const figure = artStyle ? DRAWINGS[card.id] : undefined;
+  const figure = DRAWINGS[card.id];
   const hitBox = figure && castBounds(figure.tall);
   const hitScale = hitBox ? Math.min(98 / hitBox.height, 96 / hitBox.width) : 1;
   const stats = advanced ? card.advanced : card.basic;
@@ -348,10 +346,10 @@ export function HexCard({ card, side, ownerColor, wounds = 0, artStyle }: Props)
               <g className="hc-art">
                 <rect x={advanced ? SPINE_X : -PAD} y={-PAD} width={W} height={H + PAD * 2} fill={url("art")} />
                 <rect x={advanced ? SPINE_X : -PAD} y={-PAD} width={W} height={H + PAD * 2} fill={url("hexes")} />
-                {figure && artStyle ? (
+                {figure ? (
                   <g clipPath={url("window")}>
                     <g transform={advanced ? "translate(232,46) scale(0.84)" : "translate(88,130) scale(1.12)"}>
-                      <UnitArt cast={advanced ? figure.tall : figure.wide} style={artStyle} theme={t} id={id} />
+                      <UnitArt cast={advanced ? figure.tall : figure.wide} theme={t} id={id} />
                     </g>
                   </g>
                 ) : (
