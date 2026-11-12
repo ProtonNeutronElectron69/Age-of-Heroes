@@ -2,6 +2,7 @@ import type { Replay } from "@aoh/protocol";
 import type { MapDefinition } from "@aoh/rules";
 import { useState } from "react";
 import { useOnline } from "./online";
+import { CardGalleryScreen } from "./screens/CardGalleryScreen";
 import { DraftScreen } from "./screens/DraftScreen";
 import { EditorScreen } from "./screens/EditorScreen";
 import { LobbyScreen } from "./screens/LobbyScreen";
@@ -20,6 +21,8 @@ export function App() {
   const online = useOnline();
   const [view, setView] = useState<View>({ name: "setup" });
 
+  // The card gallery is a design page, opened with ?cards in the address.
+  if (new URLSearchParams(window.location.search).has("cards")) return <CardGalleryScreen />;
   if (session) {
     if (session.state.phase === "draft") return <DraftScreen session={session} />;
     return <PlayScreen session={session} />;

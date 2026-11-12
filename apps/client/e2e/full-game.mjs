@@ -64,6 +64,19 @@ try {
 
   // Draft: take the first card that is still available each pick.
   await page.getByRole("heading", { name: "Draft" }).waitFor();
+  // Every unit shows its hex card, with the name and rules text fitted inside it.
+  await page.waitForFunction(() => {
+    const cards = document.querySelectorAll(".draft-card .hex-card");
+    const fitted = [...document.querySelectorAll(".draft-card .hc-name, .draft-card .hc-rules")];
+    return cards.length > 0 && fitted.every((el) => el.style.getPropertyValue("--fs"));
+  });
+  const cardFit = await page.evaluate(() => ({
+    cards: document.querySelectorAll(".draft-card .hex-card").length,
+    slots: document.querySelectorAll(".draft-card").length,
+    spilled: [...document.querySelectorAll(".draft-card .hc-rules")].filter((el) => el.scrollHeight > el.clientHeight + 1).length,
+  }));
+  if (cardFit.cards !== cardFit.slots) fail(`${cardFit.slots} units in the draft but ${cardFit.cards} hex cards`);
+  if (cardFit.spilled) fail(`${cardFit.spilled} cards have rules text that does not fit`);
   await shot("2-draft");
   while (await page.getByRole("heading", { name: "Draft" }).count()) {
     await page.locator(".draft-card button.primary:not([disabled])").first().click();
