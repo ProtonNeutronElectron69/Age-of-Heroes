@@ -88,9 +88,12 @@ describe("board", () => {
 
   it("treats a chain of support as supported", () => {
     const { issues } = Board.fromMap(
-      map([piece("a", "single", 0, 0, 0), piece("b", "double", 0, 0, 1), piece("c", "single", 1, 0, 2)]),
+      map([piece("a", "double", 0, 0, 0), piece("b", "double", 0, 0, 1), piece("c", "single", 1, 0, 2)]),
     );
     expect(issues).toEqual([]);
+    // A 2-hex piece needs both hexes held: on one single it tips over.
+    const tipped = Board.fromMap(map([piece("a", "single", 0, 0, 0), piece("b", "double", 0, 0, 1)])).issues;
+    expect(tipped.map((i) => [i.code, i.pieceId])).toEqual([["unsupported", "b"]]);
   });
 
   it("validates start zones", () => {

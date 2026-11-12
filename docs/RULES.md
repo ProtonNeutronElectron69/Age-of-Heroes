@@ -55,10 +55,14 @@ Right panel (stats):
 ### Hexes, levels and pieces
 - The battlefield is built from hex **pieces** in these shapes: 1-hex, 2-hex, 3-hex line, 3-hex triangle, 2x2 (4-hex), 7-hex and 24-hex. Pieces are unlimited in the editor.
 - Pieces stack. Each piece is one **level** thick. A piece placed directly on the table is at layer 0; a figure standing on top of it is at **elevation 1**. A figure standing on a stack three pieces tall is at elevation 3.
-- A piece must be held up:
-  - it rests on the table, or at least one of its hexes rests on a piece that is held up (an overhang);
-  - or, with nothing under it, it is part of a **bridge**: a run of pieces joined side by side at one level that touches held-up pieces on two opposite sides. Opposite means two sides facing at least 120 degrees apart, so a piece touching one pillar, or lying along one wall, is not held up. **Assumption.**
-- Pieces that are not held up are problems: a map with any cannot be played.
+- A piece must be **held up**, as a real block would be. **Assumption.**
+  - Its **contact points** are the middle of each of its hexes that rests on the table or on a held-up piece, and the middle of each side where it touches a held-up piece at its own level.
+  - Its middle (the average of its hex centres) must sit over the area, or the line, between its contact points. A piece of more than one hex needs at least 2 contact points.
+  - A run of pieces joined side by side that cannot stand piece by piece is checked as one body. That is how a **bridge** stands: held at both ends, with its middle on the line between them.
+  - So a bridge between two pillars and a roof over a cave stand, but a slab held by two points at one edge, a piece hanging off one pillar, or a 3-hex line balanced on its middle hex does not.
+- Every piece must touch the rest of the map, side by side or one on another. A piece off on its own is a problem.
+- No **sealed spaces**: an empty space inside the terrain must have a way out to the open air, sideways, up or down. Caves and the space under bridges are open, so they are fine.
+- Pieces that break these rules are problems, and a map with any problem cannot be played.
 - Gaps are allowed, so pieces can form **bridges and overhangs**. A hex can have more than one standing surface, for example the water under a bridge and the road on top of it. A figure fits under an overhang only if the room above the surface is at least its Height. **Assumption.**
 
 ### Terrain types
@@ -99,7 +103,7 @@ Scenery stands on a single hex, on top of the terrain there:
 - Flying figures fly over scenery but cannot land on it (see Flying in section 7).
 
 ### Start zones
-Each map has up to 6 start zones. The map says which zones are used for each player count, so that, for example, two players start in opposite corners. Turn order still goes round the table in seat order. Players set up their figures only in their own zone. A map can be played by any number of players it has a separate start zone for.
+Each map has up to 6 start zones. The map says which zones are used for each player count, so that, for example, two players start in opposite corners. Turn order still goes round the table in seat order. Players set up their figures only in their own zone. Start zones may not hold scenery, and a zone that grows at deployment never grows onto scenery. A map can be played by any number of players it has a separate start zone for.
 
 ## 4. Setting up a game
 

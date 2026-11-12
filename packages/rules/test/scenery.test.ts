@@ -23,10 +23,15 @@ const tree = (q: number, elevation = 1, id = `t${q}`): SceneryPlacement => ({ id
 const flat = (n: number): [string, number][] => Array.from({ length: n }, () => ["grass", 1]);
 const withScenery = (map: MapDefinition, scenery: SceneryPlacement[]): MapDefinition => ({ ...map, scenery });
 const token = (q: number, elevation = 1, height = 5): Token => ({ hex: hex(q, 0), elevation, height });
+/** Test rows keep their start zones on a strip apart from the row, so ignore detached pieces. */
+const placed = (map: MapDefinition) => {
+  const { board, issues } = Board.fromMap(map, undefined, SCENERY);
+  return { board, issues: issues.filter((i) => i.code !== "detached") };
+};
 
 describe("scenery on the board", () => {
   it("is found by spot and by hex", () => {
-    const { board, issues } = Board.fromMap(withScenery(rowMap(flat(3)), [tree(1)]), undefined, SCENERY);
+    const { board, issues } = placed(withScenery(rowMap(flat(3)), [tree(1)]));
     expect(issues).toEqual([]);
     expect(board.sceneryAt(hex(1, 0), 1)?.rules.name).toBe("Tree");
     expect(board.sceneryAt(hex(1, 0), 2)).toBeUndefined();
@@ -41,18 +46,21 @@ describe("scenery on the board", () => {
       { id: "pillar3", shape: "single", terrain: "rock", origin: hex(1, 0), rotation: 0, layer: 3 },
     ]);
     const codes = (scenery: SceneryPlacement[], map = rowMap(flat(3))) =>
-      Board.fromMap(withScenery(map, scenery), undefined, SCENERY).issues.map((i) => i.code).sort();
+      placed(withScenery(map, scenery)).issues.map((i) => i.code).sort();
     expect(codes([{ ...tree(0), kind: "statue" }])).toEqual(["unknownScenery"]);
     expect(codes([tree(0, 3)])).toEqual(["sceneryOffBoard"]);
     expect(codes([tree(0), tree(0, 1, "other")])).toEqual(["sceneryOverlap"]);
     expect(codes([tree(0), tree(2, 1, "t0")])).toEqual(["duplicateSceneryId"]);
-    // An overhang resting on a 2-level pillar leaves only 2 levels of room: too low for a 9-level tree.
+    // A ledge across two 2-level pillars leaves only 2 levels of room under it: too low for a 9-level tree.
     const lowGap = rowMap(flat(3), [
       { id: "pillar1", shape: "single", terrain: "rock", origin: hex(0, 0), rotation: 0, layer: 1 },
       { id: "pillar2", shape: "single", terrain: "rock", origin: hex(0, 0), rotation: 0, layer: 2 },
-      { id: "ledge", shape: "double", terrain: "rock", origin: hex(0, 0), rotation: 0, layer: 3 },
+      { id: "pillar1b", shape: "single", terrain: "rock", origin: hex(2, 0), rotation: 0, layer: 1 },
+      { id: "pillar2b", shape: "single", terrain: "rock", origin: hex(2, 0), rotation: 0, layer: 2 },
+      { id: "ledge", shape: "line3", terrain: "rock", origin: hex(0, 0), rotation: 0, layer: 3 },
     ]);
     expect(codes([], bridge)).toEqual([]);
+    expect(codes([], lowGap)).toEqual([]);
     expect(codes([tree(1, 1)], lowGap)).toEqual(["sceneryTooTall"]);
   });
 
@@ -71,8 +79,9 @@ describe("scenery on the board", () => {
   });
 
   it("cannot be entered or deployed on", () => {
+    // Scenery in a start zone is a map problem, but deployment must still skip it.
     const map = withScenery(rowMap(flat(5)), [tree(2), { id: "z", kind: "tree", hex: hex(0, 3), elevation: 1 }]);
-    const ctx = { ...makeCtx(map), board: Board.fromMap(map, undefined, SCENERY).board };
+    const ctx = { ...makeCtx(rowMap(flat(5))), board: Board.fromMap(map, undefined, SCENERY).board };
     const base = createGame(setup(2, { mapId: "test-row", mode: "basic", armies: { p1: ["hero"], p2: ["hero"] } }), ctx).state;
     expect(deploymentSpots(base, "p1", 5, ctx).map((s) => s.hex)).not.toContainEqual(hex(0, 3));
     const state = turnState(base, "p1:0", { "p1:0#1": { q: 0, r: 0, elevation: 1 } });

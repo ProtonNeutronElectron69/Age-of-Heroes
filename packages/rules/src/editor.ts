@@ -66,35 +66,72 @@ export function removeItems(
 }
 
 /** Problems that removing the piece (or scenery) fixes. Duplicate ids are left for the person to sort out. */
-const PIECE_PROBLEMS = new Set(["unsupported", "overlap", "unknownTerrain"]);
+const PIECE_PROBLEMS = new Set(["unsupported", "detached", "overlap", "unknownTerrain"]);
 const SCENERY_PROBLEMS = new Set(["unknownScenery", "sceneryOffBoard", "sceneryOverlap", "sceneryTooTall"]);
+const ZONE_PROBLEMS = new Set(["startZoneOffBoard", "startZoneScenery"]);
+
+export interface FixResult {
+  readonly map: MapDefinition;
+  /** Pieces removed: not held up, detached, overlapping or of unknown terrain. */
+  readonly pieces: number;
+  readonly scenery: number;
+  /** Start zone hexes dropped: off the board or under scenery. */
+  readonly zoneHexes: number;
+  /** Sealed empty spaces filled, in hexes. */
+  readonly filled: number;
+}
+
+/** Take hexes out of every start zone, dropping zones left empty and the layouts that used them. */
+export function removeZoneHexes(map: MapDefinition, keys: ReadonlySet<string>): MapDefinition {
+  const zones = map.startZones
+    .map((z) => ({ ...z, hexes: z.hexes.filter((h) => !keys.has(hexKey(h))) }))
+    .filter((z) => z.hexes.length > 0);
+  const seats = new Set(zones.map((z) => z.seat));
+  const layouts = Object.fromEntries(Object.entries(map.layouts).filter(([, list]) => list.every((x) => seats.has(x))));
+  return { ...map, startZones: zones, layouts };
+}
 
 /**
- * Remove every piece that is floating, overlaps another or has unknown
- * terrain, and every piece of scenery with a problem. Bridges and overhangs
- * that are held up stay.
+ * Fix what can be fixed without a person's choice: remove every piece that is
+ * not held up, does not touch the rest of the map, overlaps another or has
+ * unknown terrain; remove scenery with a problem; drop start zone hexes that
+ * cannot be used; and fill sealed empty spaces with the terrain under them.
+ * Bridges, overhangs and caves that stand stay.
  */
-export function removeProblems(
-  map: MapDefinition,
-  terrain?: TerrainTable,
-  scenery?: SceneryTable,
-): { map: MapDefinition; pieces: number; scenery: number } {
+export function removeProblems(map: MapDefinition, terrain?: TerrainTable, scenery?: SceneryTable): FixResult {
   let next = map;
   let pieces = 0;
   let removedScenery = 0;
-  for (let pass = 0; pass < 10; pass++) {
-    const { issues } = Board.fromMap(next, terrain, scenery);
+  let zoneHexes = 0;
+  let filled = 0;
+  for (let pass = 0; pass < 20; pass++) {
+    const { board, issues } = Board.fromMap(next, terrain, scenery);
     const pieceIds = new Set(issues.filter((i) => PIECE_PROBLEMS.has(i.code) && i.pieceId).map((i) => i.pieceId!));
     const sceneryIds = new Set(
       issues.filter((i) => SCENERY_PROBLEMS.has(i.code) && i.sceneryId).map((i) => i.sceneryId!),
     );
-    if (pieceIds.size === 0 && sceneryIds.size === 0) break;
-    const before = next.scenery.length;
-    next = removeItems(next, pieceIds, sceneryIds);
-    pieces += pieceIds.size;
-    removedScenery += before - next.scenery.length;
+    if (pieceIds.size > 0 || sceneryIds.size > 0) {
+      const before = next.scenery.length;
+      next = removeItems(next, pieceIds, sceneryIds);
+      pieces += pieceIds.size;
+      removedScenery += before - next.scenery.length;
+      continue;
+    }
+    const zoneKeys = new Set(issues.filter((i) => ZONE_PROBLEMS.has(i.code) && i.hex).map((i) => hexKey(i.hex!)));
+    const gaps = board.sealedGaps();
+    if (zoneKeys.size === 0 && gaps.length === 0) break;
+    if (zoneKeys.size > 0) {
+      next = removeZoneHexes(next, zoneKeys);
+      zoneHexes += zoneKeys.size;
+    }
+    // Fill sealed spaces bottom up, each hex with the terrain below it (or above it).
+    for (const g of [...gaps].sort((a, b) => a.layer - b.layer)) {
+      const kind = board.cellAt(g.hex, g.layer - 1)?.terrain ?? board.cellAt(g.hex, g.layer + 1)?.terrain ?? "rock";
+      next = addPiece(next, { shape: "single", terrain: kind, origin: g.hex, rotation: 0, layer: g.layer }).map;
+      filled += 1;
+    }
   }
-  return { map: next, pieces, scenery: removedScenery };
+  return { map: next, pieces, scenery: removedScenery, zoneHexes, filled };
 }
 
 /** Remove every start zone and the layouts that used them. */

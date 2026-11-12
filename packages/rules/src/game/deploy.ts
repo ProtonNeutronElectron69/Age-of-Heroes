@@ -62,9 +62,9 @@ export function playerZone(state: GameState, player: PlayerId, ctx: RulesContext
   return ctx.board.startZone(state.players.find((p) => p.id === player)?.zone ?? -1);
 }
 
-/** Can a figure stand on this hex at all (some surface with room and no scenery)? */
+/** A hex a zone may grow into: fit for a start zone (no scenery) with room to stand. */
 function standable(h: Hex, ctx: RulesContext): boolean {
-  return ctx.board.surfaces(h).some((s) => s.clearance >= 1 && !ctx.board.sceneryAt(h, s.elevation));
+  return ctx.board.zoneProblem(h) === null && ctx.board.surfaces(h).some((s) => s.clearance >= 1);
 }
 
 /** Hexes an army needs, with slack so multi-hex figures still find room for their shape. */

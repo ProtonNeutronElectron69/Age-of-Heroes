@@ -87,6 +87,11 @@ try {
   for (const [q, r] of [[-6, -4], [-5, -4], [-6, -3], [-3, -3]]) await clickHex(q, r, 1);
   await page.getByRole("button", { name: /^Zone 2/ }).click();
   for (const [q, r] of [[5, 2], [6, 2], [5, 3], [6, 3]]) await clickHex(q, r, 1);
+  // Start zones stay off scenery: the hex with a tree is refused.
+  await clickHex(-5, -3, 1);
+  if (!(await status()).startsWith("A start zone cannot go on hex -5,-3: it has scenery")) {
+    fail(`Zone on a tree: ${await status()}`);
+  }
   await page.mouse.move(700, 820);
   if ((await problems()) !== "NO PROBLEMS") fail(`Problems: ${await problems()}`);
   if (!(await stats()).includes("Playable by 2 to 2 players")) fail(`Not playable: ${await stats()}`);
@@ -108,8 +113,9 @@ try {
   if ((await problems()) !== "1 PROBLEM") fail(`The hanging piece should be a problem: ${await problems()}`);
   await page.getByRole("button", { name: "Show next problem" }).click();
   if (!(await status()).startsWith("Problem 1 of 1")) fail(`Show next problem: ${await status()}`);
-  await page.getByRole("button", { name: "Remove problem pieces" }).click();
-  if (!(await stats()).startsWith("13 pieces")) fail(`Remove problem pieces: ${await stats()}`);
+  await page.getByRole("button", { name: "Fix problems" }).click();
+  if (!(await status()).startsWith("Fixed: removed 1 piece")) fail(`Fix problems: ${await status()}`);
+  if (!(await stats()).startsWith("13 pieces")) fail(`Fix problems: ${await stats()}`);
   if ((await problems()) !== "NO PROBLEMS") fail(`Problems left: ${await problems()}`);
 
   // Three singles on the table away from the rest, erased with one dragged box.
