@@ -113,9 +113,81 @@ const huscarlResting: Figure = (() => {
   };
 })();
 
+/** A kettle helm with its wide brim. */
+const kettleHelm = (x: number, y: number) => [
+  part("metal", `M${x - 12},${y - 6} Q${x - 11},${y - 23} ${x},${y - 25} Q${x + 11},${y - 23} ${x + 12},${y - 6} Z`, line([x, y - 25], [x, y - 7])),
+  part("metal", pts([x - 19, y - 6], [x + 19, y - 6], [x + 22, y - 1.5], [x - 22, y - 1.5])),
+];
+
+const TABARD = "#b8322f";
+
+/** The red tabard with a sun, worn over mail. */
+const tabard = (x: number) => [
+  part("cape", pts([x - 11, 86], [x + 11, 86], [x + 15, 172], [x - 15, 172]), line([x, 150], [x, 170])),
+  part("crest", disc([x, 112], 6)),
+];
+
+/** A Crossbowman taking aim to the left. */
+const crossbowmanAiming: Figure = (() => {
+  const shL: P = [92, 88];
+  const shR: P = [118, 86];
+  const hipL: P = [92, 146];
+  const hipR: P = [114, 146];
+  return {
+    top: 37,
+    bottom: 244,
+    gear: ["wood", "blade", "leather"],
+    tint: { cape: TABARD },
+    parts: [
+      part("leather", pts([112, 140], [124, 138], [132, 172], [120, 175]), line([114, 148], [126, 146])),
+      ...leg(hipL, [84, 194], [76, 238], "cloth", "leather", { toe: -1 }),
+      ...leg(hipR, [118, 194], [126, 238], "cloth", "leather", { toe: 1 }),
+      torso(shL, shR, hipL, hipR, "metal", `${line([90, 100], [118, 98])} ${line([90, 114], [119, 112])} ${line([91, 128], [119, 126])}`),
+      ...tabard(105),
+      belt(hipL, hipR, "leather"),
+      ...arm(shR, [129, 105], [106, 87], "metal"),
+      part("wood", limb([128, 84], [62, 79], 6.4, 4.6)),
+      part("metal", "M62,56 Q50,79 62,102 L65.4,100.5 Q55,79 65.4,57.5 Z", "M63.5,57 L98,81 L63.5,101"),
+      part("blade", pts([48, 78.4], [63, 75], [63, 81.8])),
+      ...arm(shL, [78, 100], [74, 83], "metal"),
+      head([106, 62], -1),
+      ...kettleHelm(106, 61),
+    ],
+  };
+})();
+
+/** A Crossbowman marching, the crossbow resting on his shoulder. */
+const crossbowmanMarching: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [116, 88];
+  const hipL: P = [88, 146];
+  const hipR: P = [112, 146];
+  return {
+    top: 35,
+    bottom: 244,
+    gear: ["wood", "blade", "leather"],
+    tint: { cape: TABARD, skin: "#c99a72" },
+    parts: [
+      part("wood", limb([114, 120], [148, 50], 6.4, 4.6)),
+      part("metal", "M125,37 Q152,35 167,58 L163.6,60 Q150,40 126,40.5 Z", "M126,39 L148,50 L165,59"),
+      part("leather", pts([70, 140], [82, 138], [80, 174], [66, 172]), line([69, 148], [81, 146])),
+      ...leg(hipL, [85, 194], [80, 238], "cloth", "leather", { toe: -1 }),
+      ...leg(hipR, [115, 194], [120, 238], "cloth", "leather", { toe: 1 }),
+      torso(shL, shR, hipL, hipR, "metal", `${line([82, 100], [118, 100])} ${line([82, 114], [118, 114])} ${line([83, 128], [117, 128])}`),
+      ...tabard(100),
+      belt(hipL, hipR, "leather"),
+      ...arm(shR, [134, 108], [124, 96], "metal"),
+      ...arm(shL, [72, 112], [74, 136], "metal"),
+      head([100, 60]),
+      ...kettleHelm(100, 59),
+    ],
+  };
+})();
+
 const darkHaired = (figure: Figure): Figure => ({ ...figure, tint: { ...figure.tint, hair: "#3a2a20" } });
 
 export const DAWNHOLD: Record<string, Drawing> = {
   "dame-rowena": solo(dameRowena),
+  "covenant-crossbowmen": squad([crossbowmanMarching, crossbowmanAiming, crossbowmanAiming]),
   "stormwake-huscarls": squad([huscarlResting, huscarlStriking, darkHaired(huscarlResting), darkHaired(huscarlStriking)]),
 };

@@ -71,17 +71,25 @@ export function head(c: P, look = 0, r = 11): Part {
   return part("skin", disc(c, r), eyes);
 }
 
-/** A drawing of one figure. */
-export const solo = (figure: Figure): Drawing => {
-  const cast = [{ figure, dx: 0, dy: 0, scale: 1 }];
-  return { tall: cast, wide: cast };
+/**
+ * A drawing of one figure. A figure that reaches far to either side gives its
+ * `span`, the leftmost and rightmost x it draws to, so that it is moved or
+ * shrunk to fit the narrow window of the Advanced side (x from 42 to 198).
+ */
+export const solo = (figure: Figure, span?: readonly [number, number]): Drawing => {
+  const wide = [{ figure, dx: 0, dy: 0, scale: 1 }];
+  if (!span || (span[0] >= 42 && span[1] <= 198)) return { tall: wide, wide };
+  const room = 156;
+  const scale = Math.min(1, room / (span[1] - span[0]));
+  const dx = 42 - span[0] * scale + (room - (span[1] - span[0]) * scale) / 2;
+  return { tall: [{ figure, dx, dy: figure.bottom * (1 - scale), scale }], wide };
 };
 
 /** A figure standing with the middle of its box at `centre` and its feet at `feet`. */
 const stand = (figure: Figure, centre: number, feet: number, scale: number): Placed => ({
   figure,
   dx: centre - 100 * scale,
-  dy: feet - figure.bottom * scale,
+  dy: feet - (figure.bottom + (figure.hover ?? 0)) * scale,
   scale,
 });
 

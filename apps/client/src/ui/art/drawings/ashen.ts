@@ -10,6 +10,14 @@ const skull = (x: number, y: number, eyes: "glow" | "boot"): Part[] => [
   part("boot", pts([x, y + 2.5], [x - 1.8, y + 6.5], [x + 1.8, y + 6.5])),
 ];
 
+/** A small skull to top a staff. */
+const skullTop = (x: number, y: number): Part[] => [
+  part("bone", disc([x, y], 9)),
+  part("bone", pts([x - 6, y + 5], [x + 6, y + 5], [x + 4.5, y + 14], [x - 4.5, y + 14])),
+  part("glow", disc([x - 3.6, y - 0.5], 2.2)),
+  part("glow", disc([x + 3.6, y - 0.5], 2.2)),
+];
+
 /** Vorhal, the Unburied Lord: a crowned skull in old plate, both hands on a grounded greatsword. */
 const vorhal: Figure = (() => {
   const shL: P = [80, 86];
@@ -106,7 +114,37 @@ const legionThrust: Figure = (() => {
   };
 })();
 
+/** Morvane the Gravecaller: hooded and ragged, a skull-topped staff in one hand, grave-light in the other. */
+const morvane: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [116, 88];
+  return {
+    top: 32,
+    bottom: 244,
+    gear: ["wood", "glow", "bone"],
+    tint: { glow: "#a6f07c", skin: "#d6c7b2", hair: "#b9b3a6" },
+    parts: [
+      part("boot", pts([86, 232], [98, 232], [98, 244], [78, 244])),
+      part("boot", pts([102, 232], [114, 232], [122, 244], [102, 244])),
+      part("armor", pts([81, 85], [119, 85], [131, 236], [123, 227], [115, 239], [107, 228], [99, 240], [91, 228], [83, 239], [76, 228], [69, 236]), `${line([100, 150], [100, 226])} ${line([88, 150], [82, 226])} ${line([112, 150], [118, 226])}`),
+      part("bone", pts([86, 142], [114, 142], [115, 150], [85, 150])),
+      part("wood", limb([65, 241], [70, 40], 4.2)),
+      ...skullTop(70, 26),
+      ...arm(shL, [70, 110], [67, 130], "armor", { hand: "skin" }),
+      ...arm(shR, [134, 104], [146, 80], "armor", { hand: "skin" }),
+      part("glow", disc([152, 64], 9)),
+      part("glow", `${disc([166, 48], 3)} ${disc([140, 46], 2.4)} ${disc([170, 72], 2)}`),
+      part("cape", pts([74, 82], [126, 82], [132, 110], [118, 104], [100, 114], [82, 104], [68, 110])),
+      part("bone", disc([100, 100], 4.2)),
+      part("cape", "M82,74 Q79,36 100,32 Q121,36 118,74 L112,92 H88 Z"),
+      part("skin", "M91,58 Q100,50 109,58 V72 Q100,84 91,72 Z", `${line([93.5, 64], [98, 64])} ${line([102, 64], [106.5, 64])}`),
+      part("hair", pts([94, 74], [106, 74], [103, 92], [100, 96], [97, 92])),
+    ],
+  };
+})();
+
 export const ASHEN: Record<string, Drawing> = {
   vorhal: solo(vorhal),
+  morvane: solo(morvane),
   "barrow-legion": squad([legionGuard, legionThrust, legionGuard, legionThrust]),
 };

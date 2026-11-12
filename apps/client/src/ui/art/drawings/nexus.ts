@@ -100,8 +100,67 @@ const breacherReady: Figure = (() => {
   };
 })();
 
+/** Proxima, the Shard Duelist: a slim machine in a full lunge, a blade of light leading. */
+const proxima: Figure = (() => {
+  const shL: P = [94, 92];
+  const shR: P = [116, 90];
+  const hipL: P = [96, 146];
+  const hipR: P = [113, 146];
+  return {
+    top: 49,
+    bottom: 244,
+    gear: ["glow", "sash", "blade"],
+    parts: [
+      part("sash", "M112,82 Q140,78 168,96 Q150,92 134,96 Q150,104 160,120 Q140,104 114,94 Z"),
+      ...arm(shR, [137, 82], [147, 62], "metal", { hand: "metal", w: 8 }),
+      part("blade", pts([143, 60], [142, 46], [147, 54], [152, 46], [151, 60])),
+      ...leg(hipR, [131, 190], [153, 238], "metal", "armor", { toe: 1, w: 11 }),
+      ...leg(hipL, [75, 186], [67, 238], "metal", "armor", { toe: -1, w: 11 }),
+      part("armor", pts([90, 88], [119, 86], [116, 124], [106, 150], [98, 150], [93, 124]), `${line([92, 106], [118, 104])} ${line([105, 88], [105, 148])}`),
+      part("metal", pts([94, 142], [116, 142], [118, 152], [92, 152])),
+      part("plate", pts([108, 80], [126, 82], [126, 98], [110, 96])),
+      ...arm(shL, [73, 96], [54, 98], "metal", { hand: "metal", w: 8 }),
+      part("plate", pts([84, 84], [102, 82], [100, 98], [82, 100])),
+      part("metal", disc([52, 98], 6.5)),
+      part("glow", limb([48, 97.4], [2, 90], 4, 1.2)),
+      part("helmet", "M90,62 Q90,48 104,48 Q118,49 117,64 Q116,76 103,76 Q91,75 90,62 Z"),
+      part("glow", pts([90, 59], [106, 59], [106, 64.5], [90.5, 64.5])),
+      part("plate", "M110,50 Q124,40 134,44 Q124,48 116,58 Z"),
+    ],
+  };
+})();
+
+/** A Swarmling Drone: a ball of machinery on two rotors, its core lit. `eye` shifts the core to turn it. */
+const drone = (eye: number): Figure => {
+  const c: P = [100, 142];
+  const rotor = (x: number) => [
+    part("metal", limb([c[0] + (x < c[0] ? -14 : 14), c[1] - 16], [x, 110], 4.4)),
+    part("jewel", `M${x - 26},${106} Q${x},${96} ${x + 26},${106} Q${x},${114} ${x - 26},${106} Z`),
+    part("metal", disc([x, 107], 3)),
+  ];
+  return {
+    top: 118,
+    bottom: 188,
+    hover: 56,
+    gear: ["jewel"],
+    parts: [
+      ...rotor(66),
+      ...rotor(134),
+      part("metal", `${limb([88, 160], [80, 178], 4.4)} ${limb([80, 178], [88, 188], 3.4)}`),
+      part("metal", `${limb([112, 160], [120, 178], 4.4)} ${limb([120, 178], [112, 188], 3.4)}`),
+      part("armor", disc(c, 23), `M${c[0] - 22},${c[1] - 6} H${c[0] + 22} M${c[0] - 20},${c[1] + 11} H${c[0] + 20}`),
+      part("plate", `M${c[0] - 20},${c[1] - 11} A23,23 0 0 1 ${c[0] + 20},${c[1] - 11} Z`),
+      part("metal", disc([c[0] + eye, c[1] + 2], 11)),
+      part("glow", disc([c[0] + eye, c[1] + 2], 7)),
+      part("metal", limb([c[0], c[1] - 23], [c[0] + 3, c[1] - 36], 2.2)),
+      part("glow", disc([c[0] + 3.4, c[1] - 37], 2.4)),
+    ],
+  };
+};
+
 export const NEXUS: Record<string, Drawing> = {
-  // K-7 is broad: it stands smaller in the narrow window so its deflector and cannon both fit.
-  "sentinel-k7": { ...solo(sentinelK7), tall: [{ figure: sentinelK7, dx: 40, dy: 48.8, scale: 0.8 }] },
+  "sentinel-k7": solo(sentinelK7, [3, 196]),
   "nexus-breachers": squad([breacherReady, breacherCharging, breacherCharging]),
+  proxima: solo(proxima, [2, 168]),
+  "swarmling-drones": squad([drone(0), drone(-7), drone(6), drone(-4)]),
 };

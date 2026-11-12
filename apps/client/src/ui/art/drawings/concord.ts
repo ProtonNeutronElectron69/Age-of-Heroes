@@ -103,7 +103,100 @@ const riflemanReady: Figure = (() => {
   };
 })();
 
+/** Sister Maren Holloway: veil and apron over a field coat, a lantern raised, a pistol kept low. */
+const sisterMaren: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [116, 88];
+  const hipL: P = [88, 146];
+  const hipR: P = [112, 146];
+  return {
+    top: 36,
+    bottom: 244,
+    gear: ["leather", "blade", "wood"],
+    parts: [
+      part("bone", "M84,64 Q82,38 100,36 Q118,38 116,64 L123,96 H77 Z"),
+      part("boot", pts([84, 222], [98, 222], [98, 244], [76, 244])),
+      part("boot", pts([102, 222], [116, 222], [124, 244], [102, 244])),
+      part("armor", pts([81, 85], [119, 85], [130, 226], [70, 226]), `${line([78, 160], [72, 224])} ${line([122, 160], [128, 224])}`),
+      part("bone", pts([90, 100], [110, 100], [114, 216], [86, 216]), line([100, 150], [100, 214])),
+      belt(hipL, hipR, "leather"),
+      part("leather", limb([86, 88], [120, 150], 3.6)),
+      part("leather", pts([112, 146], [132, 144], [136, 172], [116, 174]), line([114, 154], [134, 152])),
+      part("jewel", disc([125, 161], 3.4)),
+      ...arm(shR, [132, 110], [142, 132], "armor"),
+      part("metal", pts([138, 130], [146, 128], [158, 152], [153, 155], [146, 140], [142, 141])),
+      ...arm(shL, [66, 100], [58, 76], "armor"),
+      part("metal", pts([52, 50], [64, 50], [66, 56], [50, 56])),
+      part("glow", pts([51, 56], [65, 56], [66, 74], [50, 74]), line([58, 57], [58, 73])),
+      part("metal", pts([49, 74], [67, 74], [66, 78], [50, 78])),
+      head([100, 60]),
+      part("bone", "M87,58 Q86,42 100,40 Q114,42 113,58 Q106,50 100,50 Q94,50 87,58 Z"),
+    ],
+  };
+})();
+
+/** A Pikeman's breastplate over the coat. */
+const breastplate = (shL: P, shR: P) =>
+  part("metal", pts([shL[0] - 1, shL[1] - 1], [shR[0] + 1, shR[1] - 1], [shR[0] + 3, shR[1] + 34], [(shL[0] + shR[0]) / 2, shR[1] + 42], [shL[0] - 3, shL[1] + 34]), line([(shL[0] + shR[0]) / 2, shL[1]], [(shL[0] + shR[0]) / 2, shR[1] + 40]));
+
+/** A Pikeman on guard, pike upright. */
+const pikemanStanding: Figure = (() => {
+  const shL: P = [84, 86];
+  const shR: P = [116, 86];
+  const hipL: P = [88, 146];
+  const hipR: P = [112, 146];
+  return {
+    top: 32,
+    bottom: 244,
+    gear: ["blade", "wood", "hilt"],
+    tint: { cloth: "#d9d5c8" },
+    parts: [
+      part("hilt", limb([88, 142], [58, 182], 4.4)),
+      ...leg(hipL, [86, 194], [84, 238], "cloth", "boot", { toe: -1 }),
+      ...leg(hipR, [114, 194], [116, 238], "cloth", "boot", { toe: 1 }),
+      torso(shL, shR, hipL, hipR, "armor"),
+      breastplate(shL, shR),
+      belt(hipL, hipR, "leather"),
+      part("wood", limb([131, 241], [131, 2], 3.6)),
+      part("blade", pts([131, -22], [136.5, 3], [125.5, 3])),
+      ...arm(shR, [132, 108], [131, 126], "armor"),
+      ...arm(shL, [70, 110], [82, 136], "armor"),
+      head([100, 58]),
+      ...shako(100, 56, 0),
+    ],
+  };
+})();
+
+/** A Pikeman braced low to receive a charge, pike slanting forward. */
+const pikemanBraced: Figure = (() => {
+  const shL: P = [92, 104];
+  const shR: P = [118, 102];
+  const hipL: P = [96, 158];
+  const hipR: P = [117, 158];
+  return {
+    top: 52,
+    bottom: 244,
+    gear: ["blade", "wood"],
+    tint: { cloth: "#d9d5c8", skin: "#c99a72" },
+    parts: [
+      ...leg(hipR, [130, 204], [140, 238], "cloth", "boot", { toe: 1 }),
+      ...leg(hipL, [78, 200], [68, 238], "cloth", "boot", { toe: -1 }),
+      torso(shL, shR, hipL, hipR, "armor"),
+      breastplate(shL, shR),
+      belt(hipL, hipR, "leather"),
+      ...arm(shR, [126, 144], [106, 181], "armor"),
+      part("wood", limb([148, 241], [8, 54], 3.6)),
+      part("blade", pts([-8, 32], [11.5, 51], [4.5, 57])),
+      ...arm(shL, [74, 120], [70, 137], "armor"),
+      head([106, 78], -1),
+      ...shako(107, 76, -1),
+    ],
+  };
+})();
+
 export const CONCORD: Record<string, Drawing> = {
-  "marisol-vance": solo(marisolVance),
+  "marisol-vance": solo(marisolVance, [18, 172]),
   "harrow-riflemen": squad([riflemanAiming, riflemanReady, riflemanAiming]),
+  "sister-maren": solo(sisterMaren),
+  "gatewarden-pikemen": squad([pikemanStanding, pikemanBraced, pikemanBraced]),
 };

@@ -1,4 +1,4 @@
-import { solo } from "../build";
+import { arm, belt, disc, head, leg, limb, line, type P, part, pts, solo, squad, torso } from "../build";
 import type { Drawing, Figure } from "../types";
 
 /** Lady Asagiri the Unbowed: a samurai in full armour, sword raised at her shoulder. */
@@ -45,6 +45,110 @@ const ladyAsagiri: Figure = {
   ],
 };
 
+/** Lady Suzume of the Long Bow: a tall bow at full draw, hair and headband streaming. */
+const ladySuzume: Figure = (() => {
+  const shL: P = [94, 88];
+  const shR: P = [118, 86];
+  const hipL: P = [93, 146];
+  const hipR: P = [115, 146];
+  return {
+    top: 47,
+    bottom: 244,
+    gear: ["wood", "blade", "leather", "sash"],
+    tint: { cloth: "#27304f" },
+    parts: [
+      part("hair", "M110,54 C134,58 150,84 152,124 C142,104 130,92 114,84 Z", "M118,64 C132,74 142,92 146,108"),
+      part("leather", pts([116, 118], [128, 114], [138, 150], [126, 154]), line([119, 126], [131, 122])),
+      part("wood", pts([118, 104], [121, 103], [126, 117], [122, 118])),
+      ...leg(hipR, [122, 194], [130, 238], "cloth", "cloth", { toe: 1, w: 17, boot: "boot" }),
+      ...leg(hipL, [86, 194], [78, 238], "cloth", "cloth", { toe: -1, w: 17, boot: "boot" }),
+      torso(shL, shR, hipL, hipR, "armor", `${line([98, 86], [108, 116], [114, 84])} ${line([108, 116], [107, 138])}`),
+      part("plate", pts([90, 90], [106, 92], [104, 122], [88, 118]), line([89, 104], [105, 107])),
+      belt(hipL, hipR),
+      ...arm(shR, [146, 86], [125, 93], "armor"),
+      part("wood", "M63,20 Q30,104 61,198 L64,196.5 Q38,104 66,22 Z", "M64.5,21 L125,93 L62.5,197"),
+      part("wood", limb([125, 92.4], [38, 98.6], 2.2)),
+      part("blade", pts([25, 99.6], [39, 94.6], [39, 102.6])),
+      ...arm(shL, [76, 96], [57, 99], "armor"),
+      head([104, 62], -1),
+      part("hair", "M94,56 Q98,46 108,48 Q117,51 115,64 Q110,56 102,56 Z"),
+      part("sash", limb([93.5, 57], [115, 59], 3.4)),
+      part("sash", "M114,58 Q128,60 136,72 L132,74 Q124,66 113,63 Z"),
+    ],
+  };
+})();
+
+/** A flat war hat with the house badge. */
+const warHat = (x: number, y: number) => [
+  part("helmet", pts([x - 22, y - 5], [x, y - 21], [x + 22, y - 5], [x + 18, y - 2], [x - 18, y - 2]), line([x - 11, y - 12], [x + 11, y - 12])),
+  part("jewel", disc([x, y - 10], 3)),
+];
+
+/** Shoulder guards and the skirt of plates, for a guard standing square. */
+const guardPlates = (shL: P, shR: P, hipL: P, hipR: P) => [
+  part("plate", pts([hipL[0] - 8, hipL[1]], [hipL[0] + 9, hipL[1]], [hipL[0] + 7, hipL[1] + 34], [hipL[0] - 14, hipL[1] + 30]), line([hipL[0] - 10, hipL[1] + 14], [hipL[0] + 8, hipL[1] + 16])),
+  part("plate", pts([hipR[0] - 9, hipR[1]], [hipR[0] + 8, hipR[1]], [hipR[0] + 14, hipR[1] + 30], [hipR[0] - 7, hipR[1] + 34]), line([hipR[0] - 8, hipR[1] + 16], [hipR[0] + 10, hipR[1] + 14])),
+  part("plate", pts([shL[0] - 20, shL[1] - 8], [shL[0] + 4, shL[1] - 10], [shL[0] + 2, shL[1] + 16], [shL[0] - 24, shL[1] + 20]), line([shL[0] - 22, shL[1] + 4], [shL[0] + 3, shL[1] + 1])),
+  part("plate", pts([shR[0] - 4, shR[1] - 10], [shR[0] + 20, shR[1] - 8], [shR[0] + 24, shR[1] + 20], [shR[0] - 2, shR[1] + 16]), line([shR[0] - 3, shR[1] + 1], [shR[0] + 22, shR[1] + 4])),
+];
+
+/** A Lotus Guard on watch: spear grounded, a hand on the sword at her hip. */
+const lotusGuardWatching: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [116, 88];
+  const hipL: P = [88, 146];
+  const hipR: P = [112, 146];
+  return {
+    top: 39,
+    bottom: 244,
+    gear: ["wood", "blade", "hilt"],
+    parts: [
+      part("hilt", limb([86, 142], [50, 178], 4.6)),
+      ...leg(hipL, [86, 194], [83, 238], "cloth", "plate", { toe: -1, boot: "boot" }),
+      ...leg(hipR, [114, 194], [117, 238], "cloth", "plate", { toe: 1, boot: "boot" }),
+      torso(shL, shR, hipL, hipR, "armor", `${line([92, 88], [91, 138])} ${line([100, 88], [100, 138])} ${line([108, 88], [109, 138])} ${line([81, 104], [119, 104])} ${line([80, 120], [120, 120])}`),
+      belt(hipL, hipR),
+      part("wood", limb([133, 240], [118, 26], 3.6)),
+      part("blade", pts([117, 4], [123.5, 27], [112.5, 27.8])),
+      ...arm(shR, [132, 108], [126, 128], "cloth"),
+      ...arm(shL, [70, 112], [84, 138], "cloth"),
+      part("hilt", limb([92, 136], [78, 150], 4.2)),
+      ...guardPlates(shL, shR, hipL, hipR),
+      head([100, 60]),
+      ...warHat(100, 58),
+    ],
+  };
+})();
+
+/** A Lotus Guard striking: sword high in both hands, stepping in to the left. */
+const lotusGuardStriking: Figure = (() => {
+  const shL: P = [90, 90];
+  const shR: P = [116, 88];
+  const hipL: P = [93, 146];
+  const hipR: P = [114, 146];
+  return {
+    top: 41,
+    bottom: 244,
+    gear: ["blade", "hilt"],
+    tint: { skin: "#d9a97f" },
+    parts: [
+      ...arm(shR, [128, 60], [112, 38], "cloth"),
+      ...leg(hipR, [123, 192], [133, 238], "cloth", "plate", { toe: 1, boot: "boot" }),
+      ...leg(hipL, [81, 194], [69, 238], "cloth", "plate", { toe: -1, boot: "boot" }),
+      torso(shL, shR, hipL, hipR, "armor", `${line([98, 90], [98, 138])} ${line([107, 89], [108, 138])} ${line([88, 106], [119, 104])} ${line([88, 122], [119, 120])}`),
+      belt(hipL, hipR),
+      ...guardPlates(shL, shR, hipL, hipR),
+      head([103, 63], -1),
+      ...warHat(103, 61),
+      part("blade", "M108,34 Q134,14 164,6 L165,10 Q136,19 111,38 Z", "M110,35 Q136,16 164,8"),
+      part("hilt", limb([104, 30], [114, 42], 4.2)),
+      ...arm(shL, [82, 62], [106, 38], "cloth"),
+    ],
+  };
+})();
+
 export const KAGERO: Record<string, Drawing> = {
   "lady-asagiri": solo(ladyAsagiri),
+  "lady-suzume": solo(ladySuzume, [25, 153]),
+  "crimson-lotus-guard": squad([lotusGuardWatching, lotusGuardStriking, lotusGuardWatching]),
 };

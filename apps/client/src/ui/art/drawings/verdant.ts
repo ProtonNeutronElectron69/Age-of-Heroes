@@ -1,4 +1,4 @@
-import { squad } from "../build";
+import { arm, belt, disc, head, limb, line, type P, part, pts, solo, squad } from "../build";
 import type { Drawing, Figure } from "../types";
 
 /** A Glade Warden loosing an arrow to the left: hood down, cloak streaming behind. */
@@ -59,6 +59,103 @@ const wardenWatching: Figure = {
   ],
 };
 
+/** Sylvanne, Voice of the Grove: antlered and robed, a living staff in one hand and a mote of light in the other. */
+const sylvanne: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [116, 88];
+  return {
+    top: 20,
+    bottom: 244,
+    gear: ["wood", "bone", "cape", "glow"],
+    tint: { hair: "#d8c58a" },
+    parts: [
+      part("cape", pts([78, 84], [122, 84], [142, 238], [58, 238]), line([68, 150], [62, 234]) + line([132, 150], [138, 234])),
+      part("hair", pts([88, 50], [112, 50], [120, 108], [80, 108])),
+      part("boot", pts([84, 236], [98, 236], [98, 244], [78, 244])),
+      part("boot", pts([102, 236], [116, 236], [122, 244], [102, 244])),
+      part("armor", pts([81, 85], [119, 85], [129, 238], [71, 238]), `${line([100, 150], [100, 236])} ${line([88, 150], [82, 236])} ${line([112, 150], [118, 236])} ${line([92, 86], [100, 106], [108, 86])}`),
+      belt([88, 146], [112, 146]),
+      part("sash", pts([98, 148], [104, 148], [106, 190], [96, 190])),
+      part("wood", limb([139, 241], [131, 34], 4.2)),
+      part("wood", "M128.5,36 Q112,5 139,5 Q160,10 149,31 Q142,40 135,31 L137.5,28 Q142,32 145.5,28 Q153,13 139,9.5 Q119,9 132.5,34 Z"),
+      part("plate", "M150,16 q9,-9 15,-2 q-7,8 -15,2 Z M122,14 q-9,-8 -14,-1 q7,8 14,1 Z"),
+      ...arm(shR, [131, 110], [135, 128], "armor"),
+      ...arm(shL, [66, 104], [57, 82], "armor"),
+      part("glow", disc([52, 68], 7.5)),
+      part("glow", `${disc([40, 52], 2.6)} ${disc([62, 50], 2)} ${disc([46, 84], 1.8)}`),
+      part("skin", pts([90, 56], [77, 44], [89, 65])),
+      part("skin", pts([110, 56], [123, 44], [111, 65])),
+      head([100, 60]),
+      part("hair", "M88,58 Q88,46 100,46 Q112,46 112,58 Q106,52 100,54 Q94,52 88,58 Z"),
+      part("bone", `${limb([92, 48], [82, 22], 3.2)} ${limb([86, 33], [74, 28], 2.6)} ${limb([89, 41], [80, 42], 2.4)}`),
+      part("bone", `${limb([108, 48], [118, 22], 3.2)} ${limb([114, 33], [126, 28], 2.6)} ${limb([111, 41], [120, 42], 2.4)}`),
+      part("jewel", disc([100, 50], 2.8)),
+    ],
+  };
+})();
+
+/** Wings and body shared by the Briar Sprites: tiny, and always in the air. */
+const spriteBody = (headAt: P): Figure["parts"] => {
+  const [x, y] = headAt;
+  return [
+    part("jewel", `M${x},${y + 14} Q${x - 44},${y - 34} ${x - 52},${y - 8} Q${x - 46},${y + 18} ${x},${y + 20} Z`, `M${x - 4},${y + 14} Q${x - 30},${y - 8} ${x - 46},${y - 6}`),
+    part("jewel", `M${x},${y + 14} Q${x + 44},${y - 34} ${x + 52},${y - 8} Q${x + 46},${y + 18} ${x},${y + 20} Z`, `M${x + 4},${y + 14} Q${x + 30},${y - 8} ${x + 46},${y - 6}`),
+    part("jewel", `M${x},${y + 20} Q${x - 34},${y + 28} ${x - 38},${y + 50} Q${x - 18},${y + 50} ${x},${y + 26} Z`),
+    part("jewel", `M${x},${y + 20} Q${x + 34},${y + 28} ${x + 38},${y + 50} Q${x + 18},${y + 50} ${x},${y + 26} Z`),
+    part("skin", limb([x - 4, y + 52], [x - 7, y + 80], 5, 3.6)),
+    part("skin", limb([x + 4, y + 52], [x + 8, y + 77], 5, 3.6)),
+    part("cape", pts([x - 8, y + 11], [x + 8, y + 11], [x + 17, y + 56], [x + 9, y + 49], [x, y + 60], [x - 9, y + 49], [x - 17, y + 56]), line([x, y + 16], [x, y + 46])),
+  ];
+};
+
+const SPRITE_TINT = { skin: "#d3e4b4", hair: "#3f7d38", cape: "#b53b6e", wood: "#6b4a2e" };
+
+/** A Briar Sprite winding up to throw a thorn. */
+const spriteThrowing: Figure = (() => {
+  const h: P = [100, 120];
+  return {
+    top: 104,
+    bottom: 201,
+    hover: 43,
+    gear: ["jewel", "wood"],
+    tint: SPRITE_TINT,
+    parts: [
+      ...spriteBody(h),
+      ...arm([93, 133], [80, 142], [74, 130], "skin", { w: 5.5 }),
+      ...arm([107, 133], [122, 126], [128, 110], "skin", { w: 5.5 }),
+      part("wood", pts([125, 112], [136, 86], [131, 113])),
+      head(h, -1, 9.5),
+      part("hair", `M${h[0] - 10},${h[1] - 2} Q${h[0] - 12},${h[1] - 16} ${h[0]},${h[1] - 15} Q${h[0] + 14},${h[1] - 15} ${h[0] + 11},${h[1] + 4} Q${h[0] + 6},${h[1] - 7} ${h[0] - 3},${h[1] - 7} Z`),
+      part("skin", pts([h[0] + 7, h[1] - 2], [h[0] + 19, h[1] - 10], [h[0] + 9, h[1] + 4])),
+    ],
+  };
+})();
+
+/** A Briar Sprite hovering, a thorn ready in each hand. */
+const spriteHovering: Figure = (() => {
+  const h: P = [100, 118];
+  return {
+    top: 102,
+    bottom: 199,
+    hover: 45,
+    gear: ["jewel", "wood"],
+    tint: { ...SPRITE_TINT, hair: "#7d5a26", cape: "#c9861a" },
+    parts: [
+      ...spriteBody(h),
+      ...arm([93, 131], [80, 140], [72, 150], "skin", { w: 5.5 }),
+      part("wood", pts([70, 147], [60, 170], [75, 151])),
+      ...arm([107, 131], [120, 140], [128, 150], "skin", { w: 5.5 }),
+      part("wood", pts([130, 147], [140, 170], [125, 151])),
+      head(h, 0, 9.5),
+      part("hair", `M${h[0] - 11},${h[1] + 2} Q${h[0] - 13},${h[1] - 15} ${h[0]},${h[1] - 15} Q${h[0] + 13},${h[1] - 15} ${h[0] + 11},${h[1] + 2} Q${h[0] + 6},${h[1] - 7} ${h[0]},${h[1] - 6} Q${h[0] - 6},${h[1] - 7} ${h[0] - 11},${h[1] + 2} Z`),
+      part("skin", pts([h[0] - 8, h[1] - 2], [h[0] - 20, h[1] - 10], [h[0] - 9, h[1] + 4])),
+      part("skin", pts([h[0] + 8, h[1] - 2], [h[0] + 20, h[1] - 10], [h[0] + 9, h[1] + 4])),
+    ],
+  };
+})();
+
 export const VERDANT: Record<string, Drawing> = {
   "glade-wardens": squad([wardenLoosing, wardenWatching, wardenLoosing]),
+  sylvanne: solo(sylvanne),
+  "briar-sprites": squad([spriteHovering, spriteThrowing, spriteHovering, spriteThrowing]),
 };

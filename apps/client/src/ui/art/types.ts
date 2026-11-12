@@ -40,6 +40,8 @@ export interface Figure {
   bottom: number;
   /** Roles that are gear, not body: never part of the hit zone. */
   gear: readonly Role[];
+  /** How far a flying figure hovers above the ground. */
+  hover?: number;
   /** Colours for this figure in place of the palette's: a hair colour, a skin tone, a painted shield. */
   tint?: Partial<Record<Role, string>>;
 }
