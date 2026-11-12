@@ -82,7 +82,7 @@ export const solo = (figure: Figure, span?: readonly [number, number]): Drawing 
   const room = 156;
   const scale = Math.min(1, room / (span[1] - span[0]));
   const dx = 42 - span[0] * scale + (room - (span[1] - span[0]) * scale) / 2;
-  return { tall: [{ figure, dx, dy: figure.bottom * (1 - scale), scale }], wide };
+  return { tall: [{ figure, dx, dy: 244 * (1 - scale), scale }], wide };
 };
 
 /** A figure standing with the middle of its box at `centre` and its feet at `feet`. */

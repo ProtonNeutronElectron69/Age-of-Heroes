@@ -154,8 +154,73 @@ const spriteHovering: Figure = (() => {
   };
 })();
 
+/** Queen Ilyth of the Thorns: small and winged like her sprites, crowned in briar, a burst of thorns at her hand. */
+const queenIlyth: Figure = (() => {
+  const h: P = [100, 96];
+  return {
+    top: 70,
+    bottom: 218,
+    hover: 26,
+    gear: ["jewel", "wood", "glow", "crest"],
+    tint: { skin: "#d3e4b4", hair: "#2f5f2c", cape: "#8a2756", wood: "#6b4a2e" },
+    parts: [
+      part("jewel", "M100,112 Q40,40 26,84 Q30,122 100,124 Z", "M94,112 Q56,70 32,84"),
+      part("jewel", "M100,112 Q160,40 174,84 Q170,122 100,124 Z", "M106,112 Q144,70 168,84"),
+      part("jewel", "M100,122 Q52,134 46,170 Q76,168 100,132 Z"),
+      part("jewel", "M100,122 Q148,134 154,170 Q124,168 100,132 Z"),
+      part("hair", pts([90, 90], [110, 90], [118, 136], [82, 136])),
+      part("cape", pts([90, 108], [110, 108], [124, 196], [114, 188], [107, 212], [100, 196], [93, 218], [86, 190], [76, 198]), `${line([100, 130], [100, 192])} ${line([94, 130], [88, 186])} ${line([106, 130], [112, 184])}`),
+      part("sash", pts([89, 132], [111, 132], [112, 139], [88, 139])),
+      part("wood", limb([70, 176], [64, 96], 3)),
+      part("crest", pts([64, 78], [70, 94], [58, 94])),
+      part("crest", `${pts([60, 104], [50, 100], [61, 110])} ${pts([68, 118], [78, 114], [67, 124])}`),
+      ...arm([92, 110], [76, 124], [68, 138], "skin", { w: 6 }),
+      ...arm([108, 110], [128, 104], [140, 88], "skin", { w: 6 }),
+      part("glow", disc([146, 76], 8)),
+      part("crest", `${pts([146, 62], [143, 52], [150, 53])} ${pts([158, 70], [168, 65], [166, 73])} ${pts([156, 86], [164, 93], [157, 95])} ${pts([134, 68], [126, 62], [133, 60])}`),
+      head(h, 0, 10.5),
+      part("hair", "M88,98 Q86,82 100,81 Q114,82 112,98 Q107,89 100,90 Q93,89 88,98 Z"),
+      part("skin", pts([91, 94], [78, 85], [90, 101])),
+      part("skin", pts([109, 94], [122, 85], [110, 101])),
+      part("crest", pts([89, 86], [87, 72], [94, 82], [100, 68], [106, 82], [113, 72], [111, 86])),
+    ],
+  };
+})();
+
+const BARK = "#7a5a3c";
+
+/** A Mossback Treefolk: a walking trunk under a crown of leaves. `reach` is how far its right bough lifts. */
+const treefolk = (reach: number): Figure => ({
+  top: 22,
+  bottom: 244,
+  gear: [],
+  tint: { wood: BARK, glow: "#f2c14e" },
+  parts: [
+    part("wood", `${limb([118, 110], [150, 96 - reach], 15, 11)} ${limb([150, 96 - reach], [170, 66 - reach * 1.6], 11, 6)}`),
+    part("wood", `${limb([170, 66 - reach * 1.6], [182, 52 - reach * 1.6], 4, 2)} ${limb([170, 66 - reach * 1.6], [160, 48 - reach * 1.6], 4, 2)}`),
+    part(
+      "wood",
+      "M80,92 Q76,150 68,200 L56,244 H97 L99,214 H103 L105,244 H146 L132,200 Q124,150 120,92 Z",
+      `${line([90, 130], [86, 200])} ${line([110, 130], [114, 200])} ${line([100, 140], [100, 206])} ${line([78, 170], [84, 178])} ${line([122, 168], [116, 176])}`,
+    ),
+    part("armor", "M80,150 Q92,144 98,156 Q90,166 78,162 Z"),
+    part("wood", `${limb([82, 110], [52, 92], 15, 11)} ${limb([52, 92], [36, 118], 11, 7)}`),
+    part("wood", `${limb([36, 118], [26, 130], 4, 2)} ${limb([36, 118], [38, 134], 4, 2)}`),
+    part("armor", "M66,90 Q84,80 96,92 Q86,104 68,102 Z"),
+    part("armor", disc([74, 62], 20)),
+    part("armor", disc([128, 62], 20)),
+    part("plate", disc([100, 50], 29), "M82,44 q8,-10 18,-4 M104,36 q10,-4 16,6 M88,62 q10,6 22,0"),
+    part("plate", disc([84, 76], 13)),
+    part("plate", disc([118, 76], 13)),
+    part("glow", `${disc([92, 106], 3.6)} ${disc([108, 106], 3.6)}`),
+    part("boot", pts([93, 118], [107, 118], [104, 123], [96, 123])),
+  ],
+});
+
 export const VERDANT: Record<string, Drawing> = {
   "glade-wardens": squad([wardenLoosing, wardenWatching, wardenLoosing]),
   sylvanne: solo(sylvanne),
   "briar-sprites": squad([spriteHovering, spriteThrowing, spriteHovering, spriteThrowing]),
+  "queen-ilyth": solo(queenIlyth, [26, 174]),
+  "mossback-treefolk": squad([treefolk(0), treefolk(14)]),
 };

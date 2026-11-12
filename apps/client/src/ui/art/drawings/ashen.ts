@@ -143,8 +143,105 @@ const morvane: Figure = (() => {
   };
 })();
 
+const ORC = "#7da35a";
+
+/** Grubnak Skullcaller: a hulking orc shaman under a skull headdress, a war drum at his hip and a hex in his fist. */
+const grubnak: Figure = (() => {
+  const shL: P = [78, 90];
+  const shR: P = [122, 90];
+  const hipL: P = [87, 148];
+  const hipR: P = [113, 148];
+  return {
+    top: 30,
+    bottom: 244,
+    gear: ["wood", "glow", "bone"],
+    tint: { skin: ORC, glow: "#a6f07c", cloth: "#3a2a22" },
+    parts: [
+      ...arm(shR, [142, 96], [150, 70], "skin", { w: 13 }),
+      part("glow", disc([154, 56], 9.5)),
+      part("glow", `${disc([168, 42], 3)} ${disc([142, 38], 2.4)} ${disc([172, 64], 2)}`),
+      ...leg(hipL, [82, 196], [76, 238], "cloth", "leather", { toe: -1, w: 16 }),
+      ...leg(hipR, [118, 196], [124, 238], "cloth", "leather", { toe: 1, w: 16 }),
+      part("skin", pts([75, 87], [125, 87], [119, 150], [81, 150]), `${line([100, 96], [100, 138])} ${line([86, 112], [100, 118], [114, 112])}`),
+      part("leather", pts([80, 142], [120, 142], [128, 180], [116, 172], [108, 184], [100, 172], [92, 184], [84, 172], [72, 180])),
+      part("bone", pts([82, 140], [118, 140], [119, 148], [81, 148])),
+      part("wood", pts([108, 150], [140, 146], [142, 186], [112, 190]), `${line([110, 160], [141, 156])} ${line([111, 180], [142, 176])}`),
+      part("bone", "M108,150 Q124,142 140,146 Q124,154 108,150 Z"),
+      part("leather", pts([70, 78], [130, 78], [136, 100], [118, 94], [100, 104], [82, 94], [64, 100]), `${line([82, 82], [80, 94])} ${line([100, 82], [100, 102])} ${line([118, 82], [120, 94])}`),
+      ...arm(shL, [62, 112], [70, 138], "skin", { w: 13 }),
+      part("bone", limb([70, 140], [96, 160], 5, 4)),
+      part("bone", disc([98, 162], 5)),
+      part("skin", disc([100, 62], 12.5), `${line([93, 60], [98, 61])} ${line([102, 61], [107, 60])}`),
+      part("skin", pts([90, 68], [110, 68], [107, 80], [93, 80])),
+      part("bone", `${pts([92, 76], [90, 64], [96, 74])} ${pts([108, 76], [110, 64], [104, 74])}`),
+      part("skin", `${pts([88, 58], [74, 52], [88, 66])} ${pts([112, 58], [126, 52], [112, 66])}`),
+      part("bone", "M86,56 Q85,36 100,34 Q115,36 114,56 Q107,48 100,49 Q93,48 86,56 Z", `${line([95, 40], [95, 46])} ${line([105, 40], [105, 46])}`),
+      part("bone", `${pts([88, 42], [78, 26], [94, 38])} ${pts([112, 42], [122, 26], [106, 38])}`),
+    ],
+  };
+})();
+
+/** A Bonebow Archer loosing to the left, under a rotted hood. */
+const bonebowLoosing: Figure = (() => {
+  const shL: P = [92, 90];
+  const shR: P = [116, 88];
+  const hipL: P = [96, 146];
+  const hipR: P = [112, 146];
+  return {
+    top: 46,
+    bottom: 244,
+    gear: ["blade", "wood", "cape", "leather"],
+    tint: { wood: "#6f5a45" },
+    parts: [
+      part("leather", pts([116, 84], [127, 80], [138, 116], [127, 120])),
+      ...leg(hipR, [116, 194], [122, 238], "bone", "bone", { toe: 1, w: 8 }),
+      ...leg(hipL, [90, 194], [84, 238], "bone", "bone", { toe: -1, w: 8 }),
+      part("cape", pts([88, 86], [120, 84], [120, 148], [113, 162], [107, 150], [100, 164], [95, 150], [89, 160])),
+      part("bone", pts([92, 94], [114, 92], [113, 118], [95, 120]), `${line([93, 100], [113, 98])} ${line([94, 106], [113, 104])} ${line([95, 112], [113, 110])}`),
+      ...arm(shR, [140, 92], [122, 96], "bone", { hand: "bone", w: 6.5 }),
+      part("wood", "M62,48 Q30,100 62,152 L65,150 Q38,100 65,50 Z", "M63.5,49 L122,96 L63.5,151"),
+      part("wood", limb([122, 95.4], [40, 100.6], 2.2)),
+      part("blade", pts([28, 101.4], [41, 96.6], [41, 104.6])),
+      ...arm(shL, [76, 98], [60, 101], "bone", { hand: "bone", w: 6.5 }),
+      ...skull(104, 64, "boot"),
+      part("cape", "M92,62 Q90,46 104,44 Q120,46 118,66 L124,88 L112,82 Q114,62 104,54 Q96,54 92,62 Z"),
+    ],
+  };
+})();
+
+/** A Bonebow Archer nocking the next arrow, bow held low. */
+const bonebowNocking: Figure = (() => {
+  const shL: P = [86, 88];
+  const shR: P = [114, 88];
+  const hipL: P = [92, 146];
+  const hipR: P = [108, 146];
+  return {
+    top: 42,
+    bottom: 244,
+    gear: ["blade", "wood", "cape", "leather"],
+    tint: { wood: "#6f5a45" },
+    parts: [
+      part("leather", pts([110, 82], [121, 78], [132, 114], [121, 118])),
+      part("wood", `${pts([112, 62], [116, 61], [120, 80], [116, 81])} ${pts([119, 60], [123, 59], [126, 77], [122, 78])}`),
+      ...leg(hipL, [90, 194], [88, 238], "bone", "bone", { toe: -1, w: 8 }),
+      ...leg(hipR, [110, 194], [112, 238], "bone", "bone", { toe: 1, w: 8 }),
+      part("cape", pts([82, 84], [118, 84], [117, 150], [110, 164], [105, 150], [98, 166], [93, 150], [86, 162], [83, 148])),
+      part("bone", pts([89, 92], [111, 92], [109, 118], [91, 118]), `${line([90, 98], [110, 98])} ${line([90, 104], [110, 104])} ${line([91, 110], [109, 110])}`),
+      part("wood", "M58,96 Q46,150 70,196 L72.8,194 Q52,150 61,97 Z", "M59.5,97 L71.5,195"),
+      ...arm(shL, [72, 112], [62, 140], "bone", { hand: "bone", w: 6.5 }),
+      part("wood", limb([66, 150], [124, 118], 2.2)),
+      part("blade", pts([54, 156.6], [66, 146], [69, 153])),
+      ...arm(shR, [128, 104], [122, 119], "bone", { hand: "bone", w: 6.5 }),
+      ...skull(100, 60, "boot"),
+      part("cape", "M88,58 Q86,42 100,40 Q114,42 112,58 L118,84 L108,78 Q110,58 100,50 Q92,50 88,58 Z"),
+    ],
+  };
+})();
+
 export const ASHEN: Record<string, Drawing> = {
   vorhal: solo(vorhal),
   morvane: solo(morvane),
+  grubnak: solo(grubnak),
+  "bonebow-archers": squad([bonebowNocking, bonebowLoosing, bonebowLoosing]),
   "barrow-legion": squad([legionGuard, legionThrust, legionGuard, legionThrust]),
 };

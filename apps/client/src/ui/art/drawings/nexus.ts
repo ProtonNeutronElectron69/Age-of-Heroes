@@ -158,9 +158,67 @@ const drone = (eye: number): Figure => {
   };
 };
 
+/** A Reclaimer's carbine from stock to muzzle, with its lit cell. */
+const carbine = (stock: P, muzzle: P) => [
+  part("metal", limb(stock, muzzle, 6.4, 4.4)),
+  part("glow", limb([stock[0] + (muzzle[0] - stock[0]) * 0.38, stock[1] + (muzzle[1] - stock[1]) * 0.38], [stock[0] + (muzzle[0] - stock[0]) * 0.62, stock[1] + (muzzle[1] - stock[1]) * 0.62], 2.6)),
+];
+
+/** A Reclaimer taking aim to the left. */
+const reclaimerAiming: Figure = (() => {
+  const shL: P = [92, 88];
+  const shR: P = [118, 86];
+  const hipL: P = [92, 146];
+  const hipR: P = [114, 146];
+  return {
+    top: 47,
+    bottom: 244,
+    gear: ["blade"],
+    parts: [
+      part("metal", pts([114, 86], [131, 84], [134, 120], [117, 122]), line([117, 98], [132, 96])),
+      ...leg(hipL, [84, 194], [76, 238], "cloth", "plate", { toe: -1, w: 13 }),
+      ...leg(hipR, [118, 194], [126, 238], "cloth", "plate", { toe: 1, w: 13 }),
+      torso(shL, shR, hipL, hipR, "armor", `${line([90, 104], [118, 102])} ${line([104, 88], [104, 138])}`),
+      belt(hipL, hipR, "metal"),
+      ...arm(shR, [129, 105], [106, 88], "armor", { hand: "metal" }),
+      ...carbine([128, 84], [40, 78]),
+      ...arm(shL, [78, 100], [68, 84], "armor", { hand: "metal" }),
+      part("plate", pts([82, 80], [100, 78], [100, 95], [80, 98])),
+      ...sealedHelmet(105, 61, -1),
+    ],
+  };
+})();
+
+/** A Reclaimer advancing, carbine low and a salvage claw for a hand. */
+const reclaimerAdvancing: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [116, 88];
+  const hipL: P = [88, 146];
+  const hipR: P = [112, 146];
+  return {
+    top: 45,
+    bottom: 244,
+    gear: ["blade"],
+    parts: [
+      ...leg(hipL, [84, 194], [78, 238], "cloth", "plate", { toe: -1, w: 13 }),
+      ...leg(hipR, [116, 194], [122, 238], "cloth", "plate", { toe: 1, w: 13 }),
+      torso(shL, shR, hipL, hipR, "armor", `${line([84, 104], [116, 104])} ${line([100, 88], [100, 138])}`),
+      belt(hipL, hipR, "metal"),
+      ...carbine([126, 122], [58, 140]),
+      ...arm(shR, [132, 110], [118, 124], "armor", { hand: "metal" }),
+      ...arm(shL, [70, 110], [66, 134], "metal", { hand: "metal" }),
+      part("blade", `${pts([62, 136], [52, 152], [60, 150], [64, 142])} ${pts([70, 136], [78, 152], [71, 150], [67, 142])}`),
+      part("plate", pts([72, 80], [94, 78], [94, 96], [70, 99])),
+      part("plate", pts([106, 78], [128, 80], [130, 99], [106, 96])),
+      ...sealedHelmet(100, 58, 0),
+    ],
+  };
+})();
+
 export const NEXUS: Record<string, Drawing> = {
   "sentinel-k7": solo(sentinelK7, [3, 196]),
   "nexus-breachers": squad([breacherReady, breacherCharging, breacherCharging]),
   proxima: solo(proxima, [2, 168]),
   "swarmling-drones": squad([drone(0), drone(-7), drone(6), drone(-4)]),
+  "nexus-reclaimers": squad([reclaimerAdvancing, reclaimerAiming, reclaimerAiming]),
 };

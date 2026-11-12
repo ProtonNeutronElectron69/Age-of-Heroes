@@ -194,9 +194,108 @@ const pikemanBraced: Figure = (() => {
   };
 })();
 
+/** Sergeant Brannock: a burly sapper winding up to throw a satchel charge, its fuse lit. */
+const brannock: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [118, 88];
+  const hipL: P = [89, 146];
+  const hipR: P = [113, 146];
+  return {
+    top: 38,
+    bottom: 244,
+    gear: ["leather", "wood", "blade", "glow"],
+    tint: { hair: "#5a3a1e", cloth: "#8b8f98" },
+    parts: [
+      ...arm(shR, [140, 80], [148, 58], "armor", { w: 11 }),
+      part("leather", pts([138, 32], [161, 35], [159, 59], [136, 56]), `${line([138, 44], [160, 47])} ${line([150, 34], [158, 22], [163, 27])}`),
+      part("glow", disc([164, 26], 3.4)),
+      part("wood", limb([120, 142], [136, 186], 3.8)),
+      part("blade", pts([129, 177], [148, 172], [147, 191], [133, 190])),
+      ...leg(hipL, [82, 194], [76, 238], "cloth", "boot", { toe: -1, w: 15 }),
+      ...leg(hipR, [120, 194], [126, 238], "cloth", "boot", { toe: 1, w: 15 }),
+      torso(shL, shR, hipL, hipR, "armor"),
+      part("leather", pts([89, 98], [111, 98], [116, 178], [84, 178]), line([100, 150], [100, 176])),
+      belt(hipL, hipR, "leather"),
+      ...arm(shL, [66, 104], [54, 116], "armor", { w: 11 }),
+      part("plate", pts([68, 77], [93, 75], [93, 97], [66, 101]), line([67, 89], [93, 86])),
+      head([100, 60]),
+      part("hair", pts([91, 65], [109, 65], [107, 80], [100, 85], [93, 80])),
+      part("helmet", "M88,50 Q89,37 101,37 Q113,37 113,50 Z"),
+      part("boot", pts([84, 50], [115, 49], [117, 54], [82, 56])),
+    ],
+  };
+})();
+
+/** A Grenadier's tall cap with its brass front. */
+const mitreCap = (x: number, y: number) => [
+  part("helmet", pts([x - 12, y - 5], [x - 10, y - 30], [x, y - 38], [x + 10, y - 30], [x + 12, y - 5])),
+  part("crest", pts([x - 8, y - 6], [x - 7, y - 26], [x, y - 32], [x + 7, y - 26], [x + 8, y - 6]), line([x, y - 28], [x, y - 8])),
+];
+
+/** A grenade with its fuse burning. */
+const grenade = (c: P) => [part("boot", disc(c, 7), line([c[0] + 3, c[1] - 6], [c[0] + 6, c[1] - 11])), part("glow", disc([c[0] + 6.6, c[1] - 12.4], 2.6))];
+
+/** A Grenadier lobbing a grenade to the left. */
+const grenadierLobbing: Figure = (() => {
+  const shL: P = [90, 90];
+  const shR: P = [116, 88];
+  const hipL: P = [93, 146];
+  const hipR: P = [114, 146];
+  return {
+    top: 25,
+    bottom: 244,
+    gear: ["boot", "glow", "leather"],
+    tint: { cloth: "#d9d5c8" },
+    parts: [
+      ...arm(shR, [135, 72], [140, 48], "armor"),
+      ...grenade([141, 38]),
+      part("leather", pts([112, 128], [130, 126], [134, 152], [116, 154]), line([114, 136], [132, 134])),
+      ...leg(hipR, [122, 194], [132, 238], "cloth", "boot", { toe: 1 }),
+      ...leg(hipL, [82, 194], [72, 238], "cloth", "boot", { toe: -1 }),
+      torso(shL, shR, hipL, hipR, "armor", line([103, 90], [103, 138])),
+      part("bone", limb([90, 89], [112, 142], 4.2)),
+      part("bone", limb([116, 88], [94, 142], 4.2)),
+      belt(hipL, hipR, "leather"),
+      ...arm(shL, [72, 98], [56, 92], "armor"),
+      head([103, 63], -1),
+      ...mitreCap(104, 61),
+    ],
+  };
+})();
+
+/** A Grenadier lighting a fuse from a slow match. */
+const grenadierLighting: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [116, 88];
+  const hipL: P = [88, 146];
+  const hipR: P = [112, 146];
+  return {
+    top: 20,
+    bottom: 244,
+    gear: ["boot", "glow", "leather", "wood"],
+    tint: { cloth: "#d9d5c8", skin: "#c99a72" },
+    parts: [
+      ...leg(hipL, [86, 194], [84, 238], "cloth", "boot", { toe: -1 }),
+      ...leg(hipR, [114, 194], [116, 238], "cloth", "boot", { toe: 1 }),
+      torso(shL, shR, hipL, hipR, "armor", line([100, 88], [100, 138])),
+      part("bone", limb([84, 88], [110, 142], 4.2)),
+      part("bone", limb([116, 88], [90, 142], 4.2)),
+      belt(hipL, hipR, "leather"),
+      ...arm(shL, [72, 112], [88, 122], "armor"),
+      ...grenade([90, 113]),
+      ...arm(shR, [130, 110], [112, 108], "armor"),
+      part("wood", limb([113, 108], [100, 100], 2.2)),
+      head([100, 58]),
+      ...mitreCap(100, 56),
+    ],
+  };
+})();
+
 export const CONCORD: Record<string, Drawing> = {
   "marisol-vance": solo(marisolVance, [18, 172]),
   "harrow-riflemen": squad([riflemanAiming, riflemanReady, riflemanAiming]),
   "sister-maren": solo(sisterMaren),
   "gatewarden-pikemen": squad([pikemanStanding, pikemanBraced, pikemanBraced]),
+  brannock: solo(brannock),
+  "concord-grenadiers": squad([grenadierLighting, grenadierLobbing, grenadierLobbing]),
 };

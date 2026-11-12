@@ -179,7 +179,8 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 - [ ] Unit art and hit zone pictures for the cards, in batches of 10 units. The art style is ink and colour: dark outlines, flat natural colours and hatched shadows. The hit zone picture is the same drawing in greys, with the hit band (the top 40% of the body) in red and gear left grey. Units without a drawing keep the stand-ins. Open the game with `?cards&art` in the address to see the drawn units
   - [x] Batch 1 (10 of 48): Captain Marisol Vance, Harrow Line Riflemen, Lady Asagiri, Glade Wardens, Sentinel K-7, Nexus Breachers, Vorhal, Barrow Legion, Dame Rowena Ashgrove, Stormwake Huscarls
   - [x] Batch 2 (20 of 48): Sister Maren Holloway, Gatewarden Pikemen, Lady Suzume, Crimson Lotus Guard, Sylvanne, Briar Sprites, Proxima, Swarmling Drones, Morvane, Covenant Crossbowmen
-  - [ ] Batches 3 to 5: the other 28 units
+  - [x] Batch 3 (30 of 48): Sergeant Brannock, Concord Grenadiers, Kenzo, Shirokage Ronin, Queen Ilyth, Mossback Treefolk, Nexus Reclaimers, Grubnak, Bonebow Archers, Solenne
+  - [ ] Batches 4 and 5: the other 18 units
 - [ ] Sound effects and music
 - [ ] 3D models for the figures in place of tokens
 - [ ] Terrain textures and scenery art

@@ -184,10 +184,59 @@ const crossbowmanMarching: Figure = (() => {
   };
 })();
 
+/** One of Solenne's wings: `side` is -1 for the left wing, 1 for the right. */
+const wing = (side: number) => {
+  const x = (v: number) => 100 + side * v;
+  return part(
+    "bone",
+    `M${x(8)},96 C${x(40)},44 ${x(72)},22 ${x(92)},40 C${x(78)},44 ${x(70)},54 ${x(68)},68 C${x(80)},66 ${x(88)},76 ${x(86)},92 C${x(74)},88 ${x(62)},96 ${x(58)},110 C${x(66)},112 ${x(68)},122 ${x(62)},134 C${x(46)},122 ${x(24)},122 ${x(8)},118 Z`,
+    `M${x(14)},100 C${x(40)},64 ${x(66)},42 ${x(84)},42 M${x(16)},108 C${x(40)},84 ${x(62)},74 ${x(80)},78 M${x(16)},114 C${x(34)},104 ${x(48)},106 ${x(58)},118`,
+  );
+};
+
+/** Solenne, Herald of Dawn: winged and haloed, aloft with a pennoned spear. */
+const solenne: Figure = (() => {
+  const shL: P = [86, 88];
+  const shR: P = [114, 88];
+  const hipL: P = [90, 144];
+  const hipR: P = [110, 144];
+  return {
+    top: 38,
+    bottom: 236,
+    hover: 8,
+    gear: ["bone", "blade", "wood", "glow", "cape", "crest"],
+    tint: { hair: "#e3c877", cape: "#b8322f", wood: "#c9861a" },
+    parts: [
+      wing(-1),
+      wing(1),
+      part("hair", pts([89, 52], [111, 52], [117, 92], [83, 92])),
+      part("wood", limb([136, 214], [152, 8], 3.6)),
+      part("blade", pts([153.4, -14], [157.4, 9.6], [146.8, 8.8])),
+      part("cape", "M150,22 L176,30 L166,40 L178,52 L148,48 Z"),
+      part("skin", limb([94, 196], [92, 228], 7, 5)),
+      part("skin", pts([88, 226], [96, 226], [94, 236], [86, 234])),
+      part("skin", limb([108, 190], [114, 216], 7, 5)),
+      part("skin", pts([110, 214], [118, 214], [120, 224], [112, 224])),
+      part("armor", pts([84, 140], [116, 140], [124, 200], [112, 194], [104, 206], [96, 196], [86, 206], [78, 198]), `${line([94, 150], [90, 196])} ${line([106, 150], [110, 196])}`),
+      torso(shL, shR, hipL, hipR, "armor", `${line([100, 88], [100, 138])} ${line([86, 104], [100, 112], [114, 104])}`),
+      belt(hipL, hipR),
+      part("plate", pts([74, 80], [94, 78], [94, 96], [72, 99])),
+      part("plate", pts([106, 78], [126, 80], [128, 99], [106, 96])),
+      ...arm(shR, [132, 108], [140, 128], "plate", { hand: "skin" }),
+      ...arm(shL, [70, 106], [60, 86], "plate", { hand: "skin" }),
+      part("glow", disc([56, 74], 7)),
+      head([100, 62]),
+      part("hair", "M88,60 Q88,48 100,48 Q112,48 112,60 Q106,54 100,56 Q94,54 88,60 Z"),
+      part("glow", "M80,40 Q100,26 120,40 Q100,33 80,40 Z"),
+    ],
+  };
+})();
+
 const darkHaired = (figure: Figure): Figure => ({ ...figure, tint: { ...figure.tint, hair: "#3a2a20" } });
 
 export const DAWNHOLD: Record<string, Drawing> = {
   "dame-rowena": solo(dameRowena),
+  solenne: solo(solenne, [8, 192]),
   "covenant-crossbowmen": squad([crossbowmanMarching, crossbowmanAiming, crossbowmanAiming]),
   "stormwake-huscarls": squad([huscarlResting, huscarlStriking, darkHaired(huscarlResting), darkHaired(huscarlStriking)]),
 };

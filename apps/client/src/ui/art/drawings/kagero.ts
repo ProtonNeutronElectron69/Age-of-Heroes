@@ -147,8 +147,101 @@ const lotusGuardStriking: Figure = (() => {
   };
 })();
 
+const STRAW = "#c9a55a";
+
+/** A wide straw hat. */
+const strawHat = (x: number, y: number) => part("wood", pts([x - 27, y - 3], [x, y - 23], [x + 27, y - 3], [x + 22, y], [x - 22, y]), `${line([x - 14, y - 12], [x + 14, y - 12])} ${line([x, y - 23], [x, y - 2])}`);
+
+/** Kenzo the Lantern Monk: robed and bead-hung, a paper lantern swinging from his staff. */
+const kenzo: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [116, 88];
+  return {
+    top: 37,
+    bottom: 244,
+    gear: ["wood", "glow", "boot"],
+    tint: { wood: STRAW, skin: "#d9a97f" },
+    parts: [
+      part("leather", pts([84, 236], [98, 236], [98, 244], [78, 244])),
+      part("leather", pts([102, 236], [116, 236], [122, 244], [102, 244])),
+      part("armor", pts([81, 85], [119, 85], [128, 238], [72, 238]), `${line([100, 150], [100, 236])} ${line([88, 150], [83, 236])} ${line([112, 150], [117, 236])}`),
+      part("cloth", pts([80, 86], [96, 85], [124, 150], [121, 164], [106, 150], [76, 100])),
+      belt([88, 146], [112, 146], "cloth"),
+      part("hilt", limb([135, 241], [130, 26], 3.8)),
+      part("hilt", limb([130, 28], [153, 30], 2.6)),
+      part("boot", pts([144, 32], [160, 32], [158, 37], [146, 37])),
+      part("glow", pts([144, 37], [160, 37], [163, 62], [141, 62]), `${line([143.5, 45], [160.5, 45])} ${line([142.5, 54], [161.5, 54])}`),
+      part("boot", pts([145, 62], [159, 62], [157, 67], [147, 67])),
+      ...arm(shR, [131, 110], [134, 128], "armor"),
+      ...arm(shL, [72, 110], [96, 108], "armor"),
+      part("skin", pts([93, 92], [99, 92], [99, 110], [93, 110])),
+      part("jewel", `${disc([88, 92], 2.6)} ${disc([92, 98], 2.6)} ${disc([98, 102], 2.6)} ${disc([104, 100], 2.6)} ${disc([109, 95], 2.6)} ${disc([112, 89], 2.6)}`),
+      head([100, 62]),
+      strawHat(100, 58),
+    ],
+  };
+})();
+
+const RONIN_TINT = { wood: STRAW, armor: "#3d4257", cloth: "#22202a" };
+
+/** A Ronin coiled to draw: low, a hand on the hilt. */
+const roninDrawing: Figure = (() => {
+  const shL: P = [92, 98];
+  const shR: P = [118, 96];
+  const hipL: P = [96, 154];
+  const hipR: P = [116, 154];
+  return {
+    top: 46,
+    bottom: 244,
+    gear: ["wood", "blade", "hilt"],
+    tint: RONIN_TINT,
+    parts: [
+      part("hilt", limb([100, 144], [146, 166], 4.6)),
+      ...leg(hipR, [128, 198], [140, 238], "cloth", "cloth", { toe: 1, w: 17, boot: "leather" }),
+      ...leg(hipL, [80, 196], [68, 238], "cloth", "cloth", { toe: -1, w: 17, boot: "leather" }),
+      torso(shL, shR, hipL, hipR, "armor", `${line([98, 96], [108, 124], [114, 94])} ${line([108, 124], [108, 146])}`),
+      belt(hipL, hipR),
+      ...arm(shL, [86, 122], [104, 146], "armor"),
+      part("hilt", limb([100, 144], [76, 132], 4)),
+      part("crest", limb([97, 139], [101, 149], 3.4)),
+      ...arm(shR, [114, 124], [84, 136], "armor"),
+      head([104, 72], -1),
+      strawHat(104, 69),
+    ],
+  };
+})();
+
+/** A Ronin waiting, blade loose at his side. */
+const roninWaiting: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [116, 88];
+  const hipL: P = [88, 146];
+  const hipR: P = [112, 146];
+  return {
+    top: 36,
+    bottom: 244,
+    gear: ["wood", "blade", "hilt"],
+    tint: { ...RONIN_TINT, skin: "#d9a97f", armor: "#4a3f3a" },
+    parts: [
+      part("hilt", limb([88, 144], [56, 176], 4.6)),
+      ...leg(hipL, [85, 194], [82, 238], "cloth", "cloth", { toe: -1, w: 17, boot: "leather" }),
+      ...leg(hipR, [115, 194], [118, 238], "cloth", "cloth", { toe: 1, w: 17, boot: "leather" }),
+      torso(shL, shR, hipL, hipR, "armor", `${line([90, 86], [102, 118], [110, 86])} ${line([102, 118], [101, 138])}`),
+      belt(hipL, hipR),
+      ...arm(shL, [72, 112], [84, 136], "armor"),
+      part("blade", "M127,141 L131.5,139 Q150,176 163,216 L158.5,216 Q146,178 127,141 Z", "M129.5,141 Q148,177 161,215"),
+      part("crest", limb([124, 138], [134, 143], 3.4)),
+      ...arm(shR, [130, 112], [128, 134], "armor"),
+      head([100, 60]),
+      strawHat(100, 57),
+    ],
+  };
+})();
+
 export const KAGERO: Record<string, Drawing> = {
   "lady-asagiri": solo(ladyAsagiri),
   "lady-suzume": solo(ladySuzume, [25, 153]),
   "crimson-lotus-guard": squad([lotusGuardWatching, lotusGuardStriking, lotusGuardWatching]),
+  kenzo: solo(kenzo),
+  "shirokage-ronin": squad([roninWaiting, roninDrawing, roninDrawing]),
 };
