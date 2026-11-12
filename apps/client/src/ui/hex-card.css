@@ -9,6 +9,8 @@
   width: 100%;
   aspect-ratio: 532 / 512;
   --u: calc(100cqw / 532);
+  /* The box is square but the card is not: only its painted shape takes clicks. */
+  pointer-events: none;
 }
 
 .hex-card > svg {
@@ -21,6 +23,7 @@
 
 .hex-card .hc-shadow {
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+  pointer-events: auto;
 }
 
 .hex-card .hc-display {

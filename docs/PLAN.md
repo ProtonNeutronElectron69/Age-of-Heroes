@@ -28,7 +28,7 @@ Each phase or drop is one pull request from a working branch, with CI green befo
 | Play modes | Hot-seat and online (done); computer opponent on hold |
 | Online hosting | Game server in a Docker image; Render recommended (free tier, deploys from `render.yaml`). The server keeps rooms in memory only; the host saves a game to a file to resume it later. See [HOSTING.md](HOSTING.md) |
 | Line of sight | Advanced: automatic check from eye point to hit band, plus a figure's-eye camera. Basic: forgiving |
-| Art | None for now: units are tokens as tall as their Height, terrain is flat colour, hovering or clicking a token shows its card, and a red arrow marks the figure chosen to act. Sound, models and art come after the core game (Phase 7) |
+| Art | Unit cards are seven-hex cards in faction colours, with windows waiting for unit art and hit zone pictures. Otherwise none for now: units are tokens as tall as their Height, terrain is flat colour, hovering or clicking a token shows its card, and a red arrow marks the figure chosen to act. Sound, models and the rest of the art come in Phase 7 |
 | Unit roster | Original units only, across all eras and myths. Squads have 1 special ability and heroes 2 (Flying not counted); heroes have 2 to 8 Life, most squads 1 (tough squads of 2 or 3 figures up to 3). Heroes and squads, and ranged and melee, stay within about 60/40. Point costs set with the balance model |
 | Involvement | Hands-off: work arrives as pull requests with a playable build; the owner decides when to merge |
 
@@ -175,7 +175,8 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 - [x] CI runs only the checks a change affects: docs run nothing, unit card data runs the content tests, and each browser test runs only for the code it covers, in parallel. Pushes to `main` still run everything. `pnpm check:affected` does the same locally. See [TESTING.md](TESTING.md)
 
 ### Phase 7: Sound, models and art (on hold until the core game is complete)
-- [ ] Unit cards redrawn as seven-hex cards in faction colours. In progress: the design is being chosen from mockups (open the game with `?cards` in the address), in a worn and a clean finish. The game screens still use the old cards. Unit art and hit zone pictures come later; the cards leave room for them
+- [x] Unit cards redrawn as seven-hex cards in faction colours, for the whole roster, on the draft, play and replay screens. Each faction has a colour theme and an emblem. The card shows the unit's token label in its owner's colour and counts down Life as wounds land; clicking a card shows it large. Open the game with `?cards` in the address to see every card
+- [ ] Unit art and hit zone pictures for the cards. The cards have windows for both, with stand-ins for now (the faint emblem in the art window goes when the art arrives)
 - [ ] Sound effects and music
 - [ ] 3D models for the figures in place of tokens
 - [ ] Terrain textures and scenery art

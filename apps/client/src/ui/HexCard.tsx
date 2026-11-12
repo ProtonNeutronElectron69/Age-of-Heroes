@@ -12,13 +12,14 @@ import "./hex-card.css";
 
 /** Which face of the card: the front is the Basic game, the back the Advanced game. */
 export type CardSide = "basic" | "advanced";
-/** How the frame is finished. Both use the same layout. */
-export type CardFinish = "worn" | "clean";
 
 interface Props {
   card: UnitCard;
   side: CardSide;
-  finish?: CardFinish;
+  /** The owning player's colour, for the token disc. Without it the disc is in the faction's colours. */
+  ownerColor?: string;
+  /** Wounds on the figure being shown; the Life gem then counts what is left. */
+  wounds?: number;
 }
 
 const TYPE_NAMES: Record<UnitCard["unitType"], string> = {
@@ -44,7 +45,7 @@ type Pt = readonly [number, number];
 
 const W = 520;
 const H = 500;
-/** Room around the outline for the frame's rounded and roughened edge. */
+/** Room around the outline for the frame's rounded edge and its shadow. */
 const PAD = 6;
 /** Half the width of one hex. */
 const A = 86.6025;
@@ -176,6 +177,9 @@ const PLATE_BASIC: readonly Pt[] = [
   [276, 422],
 ];
 const LIFE_GEM = { cx: 346, cy: 271, r: 20 };
+/** The faction seal sits at the top of the upper-left hex, the unit's token at the top of the upper-right. */
+const SEAL = { cx: 176, cy: 38, r: 18 };
+const TOKEN = { cx: X4, cy: 38, r: 16 };
 
 const STAT_ROWS: readonly { id: StatIconId; label: string }[] = [
   { id: "move", label: "Move" },
@@ -183,13 +187,6 @@ const STAT_ROWS: readonly { id: StatIconId; label: string }[] = [
   { id: "attack", label: "Attack" },
   { id: "defense", label: "Defense" },
 ];
-
-/** A small stable number from the card id, so each worn card is worn differently. */
-function seedOf(id: string): number {
-  let h = 7;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 9973;
-  return h;
-}
 
 // ---- Text fitting ------------------------------------------------------------
 
@@ -247,15 +244,16 @@ const rulesFit = (el: HTMLElement) => el.scrollHeight <= el.clientHeight + 1;
  * A unit card in the shape of seven hexes, painted in its faction's colours.
  * The front shows the Basic game; the back adds the traits, abilities, Life and
  * points of the Advanced game. The art and hit zone windows are placeholders.
+ * Only the card's own shape takes clicks, so the corners of its box let the
+ * board underneath be used.
  */
-export function HexCard({ card, side, finish = "clean" }: Props) {
+export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const id = (name: string) => `hc${uid}-${name}`;
   const url = (name: string) => `url(#${id(name)})`;
   const t = factionTheme(card.faction);
-  const worn = finish === "worn";
   const advanced = side === "advanced";
-  const seed = seedOf(card.id);
+  const lifeLeft = Math.max(0, card.advanced.life - wounds);
   const stats = advanced ? card.advanced : card.basic;
   const squad = card.figureCount > 1;
 
@@ -283,12 +281,9 @@ export function HexCard({ card, side, finish = "clean" }: Props) {
   const artCentre: Pt = advanced ? [346, 138] : [196, 286];
 
   return (
-    <div className={`hex-card hc-${finish} hc-${side}`} style={vars} data-card={card.id} data-side={side}>
+    <div className={`hex-card hc-${side}`} style={vars} data-card={card.id} data-side={side}>
       <svg viewBox={`${-PAD} ${-PAD} ${W + PAD * 2} ${H + PAD * 2}`} role="img" aria-label={`${card.name}, ${side} side`}>
         <defs>
-          <clipPath id={id("outer")}>
-            <path d={OUTER_PATH} />
-          </clipPath>
           <clipPath id={id("inner")}>
             <path d={INNER_PATH} />
           </clipPath>
@@ -322,20 +317,20 @@ export function HexCard({ card, side, finish = "clean" }: Props) {
               strokeWidth={1}
             />
           </pattern>
-          {worn && <WornFilters id={id} seed={seed} />}
         </defs>
 
         <g className="hc-shadow">
-          {/* Painted surfaces. On the worn finish their edges are roughened together. */}
-          <g filter={worn ? url("rough") : undefined}>
-            <path d={OUTER_PATH} fill={worn ? t.primary : url("frame")} />
-            {!worn && <path d={OUTER_PATH} fill="none" stroke={t.primaryDark} strokeWidth={1.2} />}
-            {!worn && <path d={BEVEL_PATH} fill="none" stroke={t.primaryLight} strokeOpacity={0.85} strokeWidth={1.4} />}
+          {/* The frame, then everything inside it. */}
+          <g>
+            <path d={OUTER_PATH} fill={url("frame")} />
+            <path d={OUTER_PATH} fill="none" stroke={t.primaryDark} strokeWidth={1.2} />
+            <path d={BEVEL_PATH} fill="none" stroke={t.primaryLight} strokeOpacity={0.85} strokeWidth={1.4} />
 
             <g clipPath={url("inner")}>
               <rect x={-PAD} y={-PAD} width={W + PAD * 2} height={H + PAD * 2} fill={url("base")} />
 
-              {/* The art window. Unit art will fill it; for now it shows the faction's backdrop. */}
+              {/* The art window. Unit art will fill it; for now it shows the faction's backdrop,
+                  and a faint emblem that goes when the art arrives. */}
               <g className="hc-art">
                 <rect x={advanced ? SPINE_X : -PAD} y={-PAD} width={W} height={H + PAD * 2} fill={url("art")} />
                 <rect x={advanced ? SPINE_X : -PAD} y={-PAD} width={W} height={H + PAD * 2} fill={url("hexes")} />
@@ -409,21 +404,19 @@ export function HexCard({ card, side, finish = "clean" }: Props) {
             <path d={PINLINE_PATH} fill="none" stroke={t.accent} strokeWidth={1.5} />
           </g>
 
-          {worn && (
-            <g clipPath={url("outer")} pointerEvents="none">
-              <path d={OUTER_PATH} fill="#000" filter={url("mottle")} opacity={0.26} />
-              <path d={roundedPath(inset(OUTLINE, 1.5), 4)} fill="none" stroke={t.paper} strokeWidth={5} filter={url("chips")} opacity={0.85} />
-              <path d={INNER_PATH} fill="none" stroke={t.paper} strokeWidth={2.4} filter={url("chips")} opacity={0.45} />
-              <path d={OUTER_PATH} fill="#fff" filter={url("grain")} opacity={0.3} />
-              <path d={OUTER_PATH} fill="#000" filter={url("grit")} opacity={0.28} />
-            </g>
-          )}
         </g>
 
-        {/* Crisp marks and lettering on top of the paint. */}
-        <g transform="translate(176,38)">
-          <circle r={18} fill={t.deep} stroke={t.accent} strokeWidth={1.6} />
+        {/* Marks and lettering. */}
+        <g transform={`translate(${SEAL.cx},${SEAL.cy})`}>
+          <circle r={SEAL.r} fill={t.deep} stroke={t.accent} strokeWidth={1.6} />
           <Emblem id={t.emblem} ink={t.accent} ground={t.deep} />
+        </g>
+        {/* The label on the unit's board tokens, in the owner's colour once it has one. */}
+        <g transform={`translate(${TOKEN.cx},${TOKEN.cy})`}>
+          <circle r={TOKEN.r} fill={ownerColor ?? t.deep} stroke={ownerColor ? "#fff" : t.accent} strokeOpacity={ownerColor ? 0.85 : 1} strokeWidth={1.8} />
+          <text className="hc-text" y={4.3} fontSize={card.tokenLabel.length > 2 ? 10.5 : 12.5} fontWeight={700} textAnchor="middle" fill="#fff" stroke="#000" strokeOpacity={0.45} strokeWidth={2} paintOrder="stroke">
+            {card.tokenLabel}
+          </text>
         </g>
         <text className="hc-display" x={176} y={131} fontSize={8} fontWeight={700} letterSpacing={1.1} textAnchor="middle" fill={bannerTrim(t)}>
           {card.faction.toUpperCase()}
@@ -455,10 +448,10 @@ export function HexCard({ card, side, finish = "clean" }: Props) {
             <HitZoneNote theme={t} squad={squad} />
 
             <text className="hc-display" x={LIFE_GEM.cx} y={LIFE_GEM.cy + 4.5} fontSize={19} fontWeight={800} textAnchor="middle" fill="#fff">
-              {card.advanced.life}
+              {lifeLeft}
             </text>
             <text className="hc-display" x={LIFE_GEM.cx} y={LIFE_GEM.cy + 13.5} fontSize={5.4} fontWeight={700} letterSpacing={0.9} textAnchor="middle" fill="#fff" fillOpacity={0.92}>
-              LIFE
+              {wounds > 0 ? `OF ${card.advanced.life}` : "LIFE"}
             </text>
 
             <text className="hc-display" x={346} y={457.5} fontSize={17.5} fontWeight={800} textAnchor="middle" fill={t.ink}>
@@ -574,37 +567,5 @@ function HitZoneNote({ theme, squad }: { theme: FactionTheme; squad: boolean }):
         HIT ZONE
       </text>
     </g>
-  );
-}
-
-/** Filters that make the worn finish: wobbly painted edges, blotchy paint, chipped rims and grain. */
-function WornFilters({ id, seed }: { id: (name: string) => string; seed: number }): ReactNode {
-  return (
-    <>
-      <filter id={id("rough")} x="-4%" y="-4%" width="108%" height="108%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves={3} seed={seed} result="noise" />
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale={4.5} xChannelSelector="R" yChannelSelector="G" />
-      </filter>
-      <filter id={id("mottle")}>
-        <feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves={4} seed={seed + 1} />
-        <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.6 0 0 0 -1.05" />
-        <feComposite in2="SourceGraphic" operator="in" />
-      </filter>
-      <filter id={id("chips")}>
-        <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves={4} seed={seed + 2} />
-        <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  14 0 0 0 -8.3" result="patches" />
-        <feComposite in="SourceGraphic" in2="patches" operator="in" />
-      </filter>
-      <filter id={id("grain")}>
-        <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves={2} seed={seed + 3} />
-        <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -10 0 0 0 3" result="specks" />
-        <feComposite in="SourceGraphic" in2="specks" operator="in" />
-      </filter>
-      <filter id={id("grit")}>
-        <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves={2} seed={seed + 4} />
-        <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  10 0 0 0 -7" result="specks" />
-        <feComposite in="SourceGraphic" in2="specks" operator="in" />
-      </filter>
-    </>
   );
 }
