@@ -176,7 +176,7 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 
 ### Phase 7: Sound, models and art (on hold until the core game is complete)
 - [x] Unit cards redrawn as seven-hex cards in faction colours, for the whole roster, on the draft, play and replay screens. Each faction has a colour theme and an emblem. The card shows the unit's token label in its owner's colour and counts down Life as wounds land; clicking a card shows it large. Open the game with `?cards` in the address to see every card
-- [ ] Unit art and hit zone pictures for the cards. The cards have windows for both, with stand-ins for now (the faint emblem in the art window goes when the art arrives)
+- [ ] Unit art and hit zone pictures for the cards. In progress: one unit (Lady Asagiri) is drawn, and the art style is being chosen from four mockups (open the game with `?cards&art` in the address). Drawings are flat shapes in code (`ui/art/figures.ts`), so one drawing serves every style and the hit zone picture. The hit zone picture is grey with the hit band, the top 40% of the body, in red. Units without a drawing keep the stand-ins
 - [ ] Sound effects and music
 - [ ] 3D models for the figures in place of tokens
 - [ ] Terrain textures and scenery art
