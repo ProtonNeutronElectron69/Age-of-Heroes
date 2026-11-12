@@ -175,6 +175,7 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 - [x] CI runs only the checks a change affects: docs run nothing, unit card data runs the content tests, and each browser test runs only for the code it covers, in parallel. Pushes to `main` still run everything. `pnpm check:affected` does the same locally. See [TESTING.md](TESTING.md)
 
 ### Phase 7: Sound, models and art (on hold until the core game is complete)
+- [ ] Unit cards redrawn as seven-hex cards in faction colours. In progress: the design is being chosen from mockups (open the game with `?cards` in the address), in a worn and a clean finish. The game screens still use the old cards. Unit art and hit zone pictures come later; the cards leave room for them
 - [ ] Sound effects and music
 - [ ] 3D models for the figures in place of tokens
 - [ ] Terrain textures and scenery art

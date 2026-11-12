@@ -1284,3 +1284,32 @@ p.bad {
 .control-row .check {
   margin-top: 0;
 }
+
+/* ---- Card gallery (a design page, opened with ?cards) --------------------- */
+
+.card-gallery {
+  height: 100%;
+  overflow: auto;
+  padding: 20px 24px 40px;
+}
+
+.card-gallery header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.card-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 900px), 1fr));
+  gap: 28px 36px;
+}
+
+.card-gallery-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}

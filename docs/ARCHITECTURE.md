@@ -76,7 +76,7 @@ Screens (`screens/`): `SetupScreen` (hot-seat or online setup, saved games, resu
 
 Scene (`scene/`): `BoardScene` (terrain as one instanced mesh per terrain type plus one set of outlines, scenery, markers, camera with WASD panning, and eye view with drag and arrow-key look-around), `Figures` (tokens, with multi-hex figures drawn as one rounded piece over their footprint, plus a single DOM label layer positioned each frame; per-figure React roots caused unmount errors), `TestHook` (projection helper and draw call stats for browser tests).
 
-UI (`ui/`): unit cards, dice overlay, log, round bar, token panel, game menu and save dialog.
+UI (`ui/`): unit cards, dice overlay, log, round bar, token panel, game menu and save dialog. The new hex card is `ui/HexCard.tsx`: an SVG drawing with the name and rules text laid over it, coloured from `ui/factionThemes.ts`, with emblems and stat icons in `ui/hexCardArt.tsx`. `screens/CardGalleryScreen.tsx` (`?cards`) shows it; the game screens still use `UnitCardView`.
 
 Browser storage keys (all `localStorage`, each wrapped so the game works without storage):
 
