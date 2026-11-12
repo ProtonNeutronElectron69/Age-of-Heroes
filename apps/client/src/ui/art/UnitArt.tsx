@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { FactionTheme } from "../factionThemes";
-import type { Figure, Part, Role } from "./figures";
+import type { Figure, Part, Placed, Role } from "./figures";
 
 /** The ways a unit drawing can be painted. */
 export type ArtStyle = "paper" | "ink" | "glass" | "brush";
@@ -13,7 +13,8 @@ export const ART_STYLES: readonly { id: ArtStyle; name: string; note: string }[]
 ];
 
 interface Props {
-  figure: Figure;
+  /** The unit's figures, back to front, each with its place in the drawing's box. */
+  cast: readonly Placed[];
   style: ArtStyle;
   theme: FactionTheme;
   /** Makes ids unique to the card. */
@@ -35,7 +36,9 @@ function naturalPalette(t: FactionTheme): Palette {
     armor: t.primary,
     plate: t.primaryLight,
     cloth: "#2b2630",
+    cape: t.primaryDark,
     sash: t.accent,
+    wood: "#9a6a3a",
     blade: "#e6ecef",
     hilt: "#3a2c2a",
     boot: "#191416",
@@ -53,7 +56,9 @@ function paperPalette(t: FactionTheme): Palette {
     armor: t.primary,
     plate: t.primaryLight,
     cloth: t.deep,
+    cape: t.primaryDark,
     sash: t.accent,
+    wood: t.accent,
     blade: t.paper,
     hilt: t.primaryDark,
     boot: t.deep,
@@ -64,19 +69,32 @@ const INK = "#17100f";
 
 /**
  * A unit drawing in one art style, with its backdrop. It is drawn in the
- * figure's own 200 by 250 box; the card places and scales it.
+ * drawing's own 200 by 250 box; the card places and scales it.
  */
-export function UnitArt({ figure, style, theme, id }: Props): ReactNode {
+export function UnitArt({ cast, style, theme, id }: Props): ReactNode {
   switch (style) {
     case "paper":
-      return <PaperArt figure={figure} theme={theme} id={id} />;
+      return <PaperArt cast={cast} theme={theme} id={id} />;
     case "ink":
-      return <InkArt figure={figure} theme={theme} id={id} />;
+      return <InkArt cast={cast} theme={theme} id={id} />;
     case "glass":
-      return <GlassArt figure={figure} theme={theme} id={id} />;
+      return <GlassArt cast={cast} theme={theme} id={id} />;
     case "brush":
-      return <BrushArt figure={figure} theme={theme} id={id} />;
+      return <BrushArt cast={cast} theme={theme} id={id} />;
   }
+}
+
+/** Each figure of a cast in its place, painted by `paint`. */
+function Cast({ cast, paint }: { cast: readonly Placed[]; paint: (figure: Figure, index: number) => ReactNode }): ReactNode {
+  return (
+    <>
+      {cast.map(({ figure, dx, dy, scale }, i) => (
+        <g key={i} transform={`translate(${dx},${dy}) scale(${scale})`}>
+          {paint(figure, i)}
+        </g>
+      ))}
+    </>
+  );
 }
 
 type StyleProps = Omit<Props, "style">;
@@ -90,7 +108,7 @@ function Shapes({ parts, paint }: { parts: readonly Part[]; paint: (part: Part, 
 
 // ---- Cut paper ----------------------------------------------------------------
 
-function PaperArt({ figure, theme: t, id }: StyleProps): ReactNode {
+function PaperArt({ cast, theme: t, id }: StyleProps): ReactNode {
   const palette = paperPalette(t);
   return (
     <g>
@@ -108,13 +126,18 @@ function PaperArt({ figure, theme: t, id }: StyleProps): ReactNode {
       <g filter={url(id("paper-shadow"))}>
         <path d="M-700,236 L-40,222 L60,238 L160,226 L260,240 L900,226 V900 H-700 Z" fill={t.deep} />
       </g>
-      <Shapes
-        parts={figure.parts}
-        paint={(part, i) => (
-          <g key={i} filter={url(id("paper-shadow"))}>
-            <path d={part.d} fill={palette[part.role]} />
-            {part.lines && <path d={part.lines} fill="none" stroke="#000" strokeOpacity={0.28} strokeWidth={0.9} strokeLinecap="round" />}
-          </g>
+      <Cast
+        cast={cast}
+        paint={(figure) => (
+          <Shapes
+            parts={figure.parts}
+            paint={(part, i) => (
+              <g key={i} filter={url(id("paper-shadow"))}>
+                <path d={part.d} fill={palette[part.role]} />
+                {part.lines && <path d={part.lines} fill="none" stroke="#000" strokeOpacity={0.28} strokeWidth={0.9} strokeLinecap="round" />}
+              </g>
+            )}
+          />
         )}
       />
     </g>
@@ -123,7 +146,7 @@ function PaperArt({ figure, theme: t, id }: StyleProps): ReactNode {
 
 // ---- Ink and colour -----------------------------------------------------------
 
-function InkArt({ figure, theme: t, id }: StyleProps): ReactNode {
+function InkArt({ cast, theme: t, id }: StyleProps): ReactNode {
   const palette = naturalPalette(t);
   return (
     <g>
@@ -131,11 +154,13 @@ function InkArt({ figure, theme: t, id }: StyleProps): ReactNode {
         <pattern id={id("hatch")} width={3.2} height={3.2} patternUnits="userSpaceOnUse" patternTransform="rotate(-42)">
           <path d="M0,1 H3.2" stroke={INK} strokeWidth={0.8} />
         </pattern>
-        <clipPath id={id("ink-body")}>
-          {figure.parts.map((part, i) => (
-            <path key={i} d={part.d} />
-          ))}
-        </clipPath>
+        {cast.map(({ figure }, n) => (
+          <clipPath key={n} id={id(`ink-body-${n}`)}>
+            {figure.parts.map((part, i) => (
+              <path key={i} d={part.d} />
+            ))}
+          </clipPath>
+        ))}
       </defs>
       {/* Bands of mist, outlined like the figure. */}
       <g fill={t.paper} fillOpacity={0.9} stroke={INK} strokeWidth={1.3} strokeLinejoin="round">
@@ -145,21 +170,28 @@ function InkArt({ figure, theme: t, id }: StyleProps): ReactNode {
       </g>
       <path d="M-700,244 H900" stroke={INK} strokeWidth={1.6} />
       <path d="M-700,244 H900 V900 H-700 Z" fill={t.primaryDark} fillOpacity={0.55} />
-      <ellipse cx={102} cy={245} rx={66} ry={5} fill={INK} fillOpacity={0.55} />
-      <Shapes
-        parts={figure.parts}
-        paint={(part, i) => (
-          <g key={i}>
-            <path d={part.d} fill={palette[part.role]} stroke={INK} strokeWidth={1.7} strokeLinejoin="round" />
-            {part.lines && <path d={part.lines} fill="none" stroke={INK} strokeWidth={0.9} strokeLinecap="round" />}
-          </g>
+      <Cast
+        cast={cast}
+        paint={(figure, n) => (
+          <>
+            <ellipse cx={102} cy={245} rx={62} ry={5} fill={INK} fillOpacity={0.55} />
+            <Shapes
+              parts={figure.parts}
+              paint={(part, i) => (
+                <g key={i}>
+                  <path d={part.d} fill={palette[part.role]} stroke={INK} strokeWidth={1.7} strokeLinejoin="round" />
+                  {part.lines && <path d={part.lines} fill="none" stroke={INK} strokeWidth={0.9} strokeLinecap="round" />}
+                </g>
+              )}
+            />
+            {/* Hatched shadow down the side away from the light. */}
+            <g clipPath={url(id(`ink-body-${n}`))}>
+              <path d="M112,20 L200,20 V250 H96 L108,150 Z" fill={url(id("hatch"))} opacity={0.55} />
+              <path d="M40,120 L78,116 L70,250 H40 Z" fill={url(id("hatch"))} opacity={0.3} />
+            </g>
+          </>
         )}
       />
-      {/* Hatched shadow down the side away from the light. */}
-      <g clipPath={url(id("ink-body"))}>
-        <path d="M112,20 L200,20 V250 H96 L108,150 Z" fill={url(id("hatch"))} opacity={0.55} />
-        <path d="M40,120 L78,116 L70,250 H40 Z" fill={url(id("hatch"))} opacity={0.3} />
-      </g>
     </g>
   );
 }
@@ -168,9 +200,9 @@ function InkArt({ figure, theme: t, id }: StyleProps): ReactNode {
 
 const LEAD = "#120d0c";
 
-function GlassArt({ figure, theme: t, id }: StyleProps): ReactNode {
+function GlassArt({ cast, theme: t, id }: StyleProps): ReactNode {
   const palette = naturalPalette(t);
-  const roles = [...new Set(figure.parts.map((p) => p.role))];
+  const roles = [...new Set(cast.flatMap(({ figure }) => figure.parts.map((p) => p.role)))];
   const sun = { x: 100, y: 78 };
   const rays = Array.from({ length: 16 }, (_, i) => (i * Math.PI * 2) / 16 + 0.2);
   const far = 1200;
@@ -206,14 +238,19 @@ function GlassArt({ figure, theme: t, id }: StyleProps): ReactNode {
       <circle cx={sun.x} cy={sun.y} r={64} fill={t.accentLight} stroke={LEAD} strokeWidth={2.6} />
       <rect {...WIDE} fill={url(id("glass-glow"))} />
       <path d="M-700,244 H900 V900 H-700 Z" fill={t.deep} stroke={LEAD} strokeWidth={2.6} />
-      <Shapes
-        parts={figure.parts}
-        paint={(part, i) => (
-          <g key={i}>
-            <path d={part.d} fill={palette[part.role]} />
-            <path d={part.d} fill={url(id(`glass-${part.role}`))} stroke={LEAD} strokeWidth={2.6} strokeLinejoin="round" />
-            {part.lines && <path d={part.lines} fill="none" stroke={LEAD} strokeWidth={1.5} strokeLinecap="round" />}
-          </g>
+      <Cast
+        cast={cast}
+        paint={(figure) => (
+          <Shapes
+            parts={figure.parts}
+            paint={(part, i) => (
+              <g key={i}>
+                <path d={part.d} fill={palette[part.role]} />
+                <path d={part.d} fill={url(id(`glass-${part.role}`))} stroke={LEAD} strokeWidth={2.6} strokeLinejoin="round" />
+                {part.lines && <path d={part.lines} fill="none" stroke={LEAD} strokeWidth={1.5} strokeLinecap="round" />}
+              </g>
+            )}
+          />
         )}
       />
     </g>
@@ -222,7 +259,7 @@ function GlassArt({ figure, theme: t, id }: StyleProps): ReactNode {
 
 // ---- Brush silhouette ----------------------------------------------------------
 
-function BrushArt({ figure, theme: t, id }: StyleProps): ReactNode {
+function BrushArt({ cast, theme: t, id }: StyleProps): ReactNode {
   const accents: Partial<Palette> = { sash: t.primary, jewel: t.primary, crest: t.accent, blade: "#ece6da" };
   return (
     <g>
@@ -249,17 +286,23 @@ function BrushArt({ figure, theme: t, id }: StyleProps): ReactNode {
         {/* The ground: one dry stroke. */}
         <path d="M-90,243 Q60,234 290,246 Q120,252 -90,251 Z" fill={INK} />
         <path d="M-150,246 H360 V252 H-150 Z" fill={INK} filter={url(id("dry"))} />
-        <Shapes
-          parts={figure.parts}
-          paint={(part, i) => {
-            const accent = accents[part.role];
-            return (
-              <g key={i}>
-                <path d={part.d} fill={accent ?? INK} stroke={accent ? "none" : INK} strokeWidth={2.2} strokeLinejoin="round" />
-                {part.lines && !accent && <path d={part.lines} fill="none" stroke="#efe6d4" strokeOpacity={0.5} strokeWidth={0.8} strokeLinecap="round" />}
-              </g>
-            );
-          }}
+        <Cast
+          cast={cast}
+          paint={(figure) => (
+            <Shapes
+              parts={figure.parts}
+              paint={(part, i) => {
+                const accent = accents[part.role];
+                return (
+                  <g key={i}>
+                    {/* A pale rim keeps overlapping figures apart. */}
+                    <path d={part.d} fill={accent ?? INK} stroke={accent ? "none" : "#efe6d4"} strokeOpacity={0.55} strokeWidth={1} strokeLinejoin="round" />
+                    {part.lines && !accent && <path d={part.lines} fill="none" stroke="#efe6d4" strokeOpacity={0.5} strokeWidth={0.8} strokeLinecap="round" />}
+                  </g>
+                );
+              }}
+            />
+          )}
         />
       </g>
     </g>
@@ -277,7 +320,9 @@ const GREY: Record<Role, string> = {
   armor: "#8d9299",
   plate: "#a0a5ab",
   cloth: "#6b7076",
+  cape: "#62666c",
   sash: "#b0b4b9",
+  wood: "#b4b8bd",
   blade: "#cfd3d7",
   hilt: "#73787e",
   boot: "#565a60",
@@ -292,51 +337,59 @@ const RED: Record<Role, string> = {
   armor: "#cf2532",
   plate: "#e23c47",
   cloth: "#a31622",
+  cape: "#8f1420",
   sash: "#ee5860",
+  wood: "#e23c47",
   blade: "#f0646a",
   hilt: "#a31622",
   boot: "#8f1420",
 };
 
 /**
- * The hit zone picture: the figure in greys, with the part an attacker must be
+ * The hit zone picture: each figure in greys, with the part an attacker must be
  * able to see in red. `bandFrom` is where the hit band starts, as a share of
  * the figure's height from the ground; gear such as weapons is never red.
  */
-export function HitZoneArt({ figure, bandFrom, id }: { figure: Figure; bandFrom: number; id: (name: string) => string }): ReactNode {
-  const bandBottom = figure.bottom - (figure.bottom - figure.top) * bandFrom;
+export function HitZoneArt({ cast, bandFrom, id }: { cast: readonly Placed[]; bandFrom: number; id: (name: string) => string }): ReactNode {
+  const outline = { stroke: "#24262a", strokeWidth: 1.6, strokeLinejoin: "round" as const };
   return (
-    <g>
-      <defs>
-        <clipPath id={id("band")}>
-          <rect x={-50} y={-50} width={300} height={bandBottom + 50} />
-        </clipPath>
-      </defs>
-      <Shapes
-        parts={figure.parts}
-        paint={(part, i) => (
-          <g key={i}>
-            <path d={part.d} fill={GREY[part.role]} stroke="#24262a" strokeWidth={1.6} strokeLinejoin="round" />
-            {part.lines && <path d={part.lines} fill="none" stroke="#24262a" strokeOpacity={0.55} strokeWidth={1} strokeLinecap="round" />}
-          </g>
-        )}
-      />
-      <g clipPath={url(id("band"))}>
-        <Shapes
-          parts={figure.parts}
-          paint={(part, i) =>
-            figure.gear.includes(part.role) ? (
-              // Gear in front of the body keeps its grey.
-              <path key={i} d={part.d} fill={GREY[part.role]} stroke="#24262a" strokeWidth={1.6} strokeLinejoin="round" />
-            ) : (
-              <g key={i}>
-                <path d={part.d} fill={RED[part.role]} stroke="#4a070d" strokeWidth={1.6} strokeLinejoin="round" />
-                {part.lines && <path d={part.lines} fill="none" stroke="#4a070d" strokeOpacity={0.6} strokeWidth={1} strokeLinecap="round" />}
-              </g>
-            )
-          }
-        />
-      </g>
-    </g>
+    <Cast
+      cast={cast}
+      paint={(figure, n) => {
+        const bandBottom = figure.bottom - (figure.bottom - figure.top) * bandFrom;
+        return (
+          <>
+            <clipPath id={id(`band-${n}`)}>
+              <rect x={-50} y={-50} width={300} height={bandBottom + 50} />
+            </clipPath>
+            <Shapes
+              parts={figure.parts}
+              paint={(part, i) => (
+                <g key={i}>
+                  <path d={part.d} fill={GREY[part.role]} {...outline} />
+                  {part.lines && <path d={part.lines} fill="none" stroke="#24262a" strokeOpacity={0.55} strokeWidth={1} strokeLinecap="round" />}
+                </g>
+              )}
+            />
+            <g clipPath={url(id(`band-${n}`))}>
+              <Shapes
+                parts={figure.parts}
+                paint={(part, i) =>
+                  figure.gear.includes(part.role) ? (
+                    // Gear in front of the body keeps its grey.
+                    <path key={i} d={part.d} fill={GREY[part.role]} {...outline} />
+                  ) : (
+                    <g key={i}>
+                      <path d={part.d} fill={RED[part.role]} stroke="#4a070d" strokeWidth={1.6} strokeLinejoin="round" />
+                      {part.lines && <path d={part.lines} fill="none" stroke="#4a070d" strokeOpacity={0.6} strokeWidth={1} strokeLinecap="round" />}
+                    </g>
+                  )
+                }
+              />
+            </g>
+          </>
+        );
+      }}
+    />
   );
 }

@@ -1,6 +1,6 @@
 import { CARDS, FACTIONS } from "@aoh/content";
 import { ART_STYLES } from "../ui/art/UnitArt";
-import { FIGURES } from "../ui/art/figures";
+import { DRAWINGS } from "../ui/art/figures";
 import { HexCard } from "../ui/HexCard";
 
 /**
@@ -42,11 +42,11 @@ export function CardGalleryScreen() {
 
 /** The drawn units in every art style, for choosing one. */
 function ArtStyles() {
-  const cards = CARDS.filter((c) => FIGURES[c.id]);
+  const cards = CARDS.filter((c) => DRAWINGS[c.id]);
   return (
     <main className="card-gallery">
       <h1>Art styles</h1>
-      <p className="muted">One drawing, painted four ways. The hit zone picture is the same in each.</p>
+      <p className="muted">Each drawing, painted four ways. The hit zone picture is the same in each.</p>
       {ART_STYLES.map((style) => (
         <section key={style.id} data-style={style.id}>
           <h2>{style.name}</h2>

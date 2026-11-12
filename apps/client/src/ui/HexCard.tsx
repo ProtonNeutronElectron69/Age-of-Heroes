@@ -1,7 +1,7 @@
 import { HIT_BAND_FROM, type UnitCard } from "@aoh/rules";
 import { type CSSProperties, type ReactNode, type RefObject, useId, useLayoutEffect, useRef } from "react";
 import { factionTheme, type FactionTheme } from "./factionThemes";
-import { FIGURES } from "./art/figures";
+import { castBounds, DRAWINGS } from "./art/figures";
 import { type ArtStyle, HitZoneArt, UnitArt } from "./art/UnitArt";
 import { Emblem, StatIcon, type StatIconId } from "./hexCardArt";
 import "@fontsource/cinzel/latin-600.css";
@@ -259,7 +259,9 @@ export function HexCard({ card, side, ownerColor, wounds = 0, artStyle }: Props)
   const advanced = side === "advanced";
   const lifeLeft = Math.max(0, card.advanced.life - wounds);
   // Units without a drawing yet show the faction emblem and dashed outlines instead.
-  const figure = artStyle ? FIGURES[card.id] : undefined;
+  const figure = artStyle ? DRAWINGS[card.id] : undefined;
+  const hitBox = figure && castBounds(figure.tall);
+  const hitScale = hitBox ? Math.min(98 / hitBox.height, 96 / hitBox.width) : 1;
   const stats = advanced ? card.advanced : card.basic;
   const squad = card.figureCount > 1;
 
@@ -349,7 +351,7 @@ export function HexCard({ card, side, ownerColor, wounds = 0, artStyle }: Props)
                 {figure && artStyle ? (
                   <g clipPath={url("window")}>
                     <g transform={advanced ? "translate(232,46) scale(0.84)" : "translate(88,130) scale(1.12)"}>
-                      <UnitArt figure={figure} style={artStyle} theme={t} id={id} />
+                      <UnitArt cast={advanced ? figure.tall : figure.wide} style={artStyle} theme={t} id={id} />
                     </g>
                   </g>
                 ) : (
@@ -390,10 +392,10 @@ export function HexCard({ card, side, ownerColor, wounds = 0, artStyle }: Props)
 
                   {/* The hit zone window. */}
                   <polygon points={poly(hexPoints(HIT_ZONE.cx, HIT_ZONE.cy, HIT_ZONE.r))} fill={figure ? "#0c0c0e" : t.deep} stroke={t.accent} strokeWidth={1.6} strokeLinejoin="round" />
-                  {figure && (
+                  {figure && hitBox && (
                     <g clipPath={url("hit")}>
-                      <g transform={`translate(${HIT_ZONE.cx - 107 * 0.4},${HIT_ZONE.cy - 122 * 0.4}) scale(0.4)`}>
-                        <HitZoneArt figure={figure} bandFrom={HIT_BAND_FROM} id={id} />
+                      <g transform={`translate(${HIT_ZONE.cx - (hitBox.x + hitBox.width / 2) * hitScale},${HIT_ZONE.cy - (hitBox.y + hitBox.height / 2) * hitScale}) scale(${hitScale})`}>
+                        <HitZoneArt cast={figure.tall} bandFrom={HIT_BAND_FROM} id={id} />
                       </g>
                     </g>
                   )}
