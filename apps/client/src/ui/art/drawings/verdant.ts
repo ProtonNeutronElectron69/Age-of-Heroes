@@ -154,8 +154,168 @@ const spriteHovering: Figure = (() => {
   };
 })();
 
+/** Queen Ilyth of the Thorns: small and winged like her sprites, crowned in briar, a burst of thorns at her hand. */
+const queenIlyth: Figure = (() => {
+  const h: P = [100, 96];
+  return {
+    top: 70,
+    bottom: 218,
+    hover: 26,
+    gear: ["jewel", "wood", "glow", "crest"],
+    tint: { skin: "#d3e4b4", hair: "#2f5f2c", cape: "#8a2756", wood: "#6b4a2e" },
+    parts: [
+      part("jewel", "M100,112 Q40,40 26,84 Q30,122 100,124 Z", "M94,112 Q56,70 32,84"),
+      part("jewel", "M100,112 Q160,40 174,84 Q170,122 100,124 Z", "M106,112 Q144,70 168,84"),
+      part("jewel", "M100,122 Q52,134 46,170 Q76,168 100,132 Z"),
+      part("jewel", "M100,122 Q148,134 154,170 Q124,168 100,132 Z"),
+      part("hair", pts([90, 90], [110, 90], [118, 136], [82, 136])),
+      part("cape", pts([90, 108], [110, 108], [124, 196], [114, 188], [107, 212], [100, 196], [93, 218], [86, 190], [76, 198]), `${line([100, 130], [100, 192])} ${line([94, 130], [88, 186])} ${line([106, 130], [112, 184])}`),
+      part("sash", pts([89, 132], [111, 132], [112, 139], [88, 139])),
+      part("wood", limb([70, 176], [64, 96], 3)),
+      part("crest", pts([64, 78], [70, 94], [58, 94])),
+      part("crest", `${pts([60, 104], [50, 100], [61, 110])} ${pts([68, 118], [78, 114], [67, 124])}`),
+      ...arm([92, 110], [76, 124], [68, 138], "skin", { w: 6 }),
+      ...arm([108, 110], [128, 104], [140, 88], "skin", { w: 6 }),
+      part("glow", disc([146, 76], 8)),
+      part("crest", `${pts([146, 62], [143, 52], [150, 53])} ${pts([158, 70], [168, 65], [166, 73])} ${pts([156, 86], [164, 93], [157, 95])} ${pts([134, 68], [126, 62], [133, 60])}`),
+      head(h, 0, 10.5),
+      part("hair", "M88,98 Q86,82 100,81 Q114,82 112,98 Q107,89 100,90 Q93,89 88,98 Z"),
+      part("skin", pts([91, 94], [78, 85], [90, 101])),
+      part("skin", pts([109, 94], [122, 85], [110, 101])),
+      part("crest", pts([89, 86], [87, 72], [94, 82], [100, 68], [106, 82], [113, 72], [111, 86])),
+    ],
+  };
+})();
+
+const BARK = "#7a5a3c";
+
+/** A Mossback Treefolk: a walking trunk under a crown of leaves. `reach` is how far its right bough lifts. */
+const treefolk = (reach: number): Figure => ({
+  top: 22,
+  bottom: 244,
+  gear: [],
+  tint: { wood: BARK, glow: "#f2c14e" },
+  parts: [
+    part("wood", `${limb([118, 110], [150, 96 - reach], 15, 11)} ${limb([150, 96 - reach], [170, 66 - reach * 1.6], 11, 6)}`),
+    part("wood", `${limb([170, 66 - reach * 1.6], [182, 52 - reach * 1.6], 4, 2)} ${limb([170, 66 - reach * 1.6], [160, 48 - reach * 1.6], 4, 2)}`),
+    part(
+      "wood",
+      "M80,92 Q76,150 68,200 L56,244 H97 L99,214 H103 L105,244 H146 L132,200 Q124,150 120,92 Z",
+      `${line([90, 130], [86, 200])} ${line([110, 130], [114, 200])} ${line([100, 140], [100, 206])} ${line([78, 170], [84, 178])} ${line([122, 168], [116, 176])}`,
+    ),
+    part("armor", "M80,150 Q92,144 98,156 Q90,166 78,162 Z"),
+    part("wood", `${limb([82, 110], [52, 92], 15, 11)} ${limb([52, 92], [36, 118], 11, 7)}`),
+    part("wood", `${limb([36, 118], [26, 130], 4, 2)} ${limb([36, 118], [38, 134], 4, 2)}`),
+    part("armor", "M66,90 Q84,80 96,92 Q86,104 68,102 Z"),
+    part("armor", disc([74, 62], 20)),
+    part("armor", disc([128, 62], 20)),
+    part("plate", disc([100, 50], 29), "M82,44 q8,-10 18,-4 M104,36 q10,-4 16,6 M88,62 q10,6 22,0"),
+    part("plate", disc([84, 76], 13)),
+    part("plate", disc([118, 76], 13)),
+    part("glow", `${disc([92, 106], 3.6)} ${disc([108, 106], 3.6)}`),
+    part("boot", pts([93, 118], [107, 118], [104, 123], [96, 123])),
+  ],
+});
+
+const FUR = { armor: "#565b76", plate: "#8f94ad", cloth: "#3c4058", glow: "#f2c14e" };
+
+/** A Duskfang Prowler, side on and stalking left. `drop` lowers its head; `lift` raises its tail. */
+const prowler = (drop: number, lift: number): Figure => {
+  const hy = 150 + drop;
+  return {
+    top: 122 + Math.min(drop, 0),
+    bottom: 244,
+    gear: [],
+    tint: FUR,
+    parts: [
+      part("armor", `M156,164 Q182,${154 - lift} 190,${130 - lift * 2} Q190,${154 - lift} 168,176 Z`),
+      part("cloth", `${limb([140, 180], [146, 214], 15, 9)} ${limb([146, 214], [138, 240], 8, 6.5)}`),
+      part("cloth", `${limb([96, 184], [92, 216], 12, 8)} ${limb([92, 216], [88, 240], 7.5, 6.5)}`),
+      part("armor", "M70,168 Q76,150 100,150 Q136,146 158,160 Q168,172 160,188 Q140,198 100,196 Q78,196 70,186 Z", `${line([104, 156], [100, 190])} ${line([126, 154], [124, 192])} ${line([146, 160], [146, 188])}`),
+      part("plate", "M74,184 Q100,200 150,192 Q120,202 96,200 Q80,198 74,184 Z"),
+      part("armor", `${limb([152, 178], [162, 212], 17, 10)} ${limb([162, 212], [154, 240], 9, 7)}`),
+      part("bone", pts([146, 240], [162, 240], [160, 244], [140, 244])),
+      part("armor", `${limb([84, 184], [78, 216], 14, 9)} ${limb([78, 216], [74, 240], 8, 7)}`),
+      part("bone", pts([66, 240], [82, 240], [82, 244], [60, 244])),
+      part("armor", `M74,${166} Q58,${hy - 12} 40,${hy - 4} L20,${hy + 8} L24,${hy + 16} L44,${hy + 18} Q58,${hy + 22} 74,188 Z`),
+      part("plate", `M76,160 Q62,${hy - 8} 58,${hy + 14} Q70,${hy + 18} 80,186 Z`, `${line([66, hy + 2], [72, hy + 20])}`),
+      part("armor", pts([52, hy - 10], [56, hy - 28], [66, hy - 8])),
+      part("glow", disc([42, hy + 2], 2.6)),
+      part("boot", pts([20, hy + 8], [26, hy + 6], [26, hy + 11])),
+      part("bone", `${pts([28, hy + 15], [31, hy + 23], [34, hy + 16])} ${pts([38, hy + 17], [41, hy + 24], [44, hy + 18])}`),
+    ],
+  };
+};
+
+/** Cinderjaw, Wyrmling of the Glade: a young dragon on the wing, embers at its jaws. */
+const cinderjaw: Figure = {
+  top: 22,
+  bottom: 204,
+  hover: 40,
+  gear: ["glow"],
+  tint: { glow: "#f28c28" },
+  parts: [
+    part("cape", "M100,124 Q96,74 62,32 Q70,62 52,72 Q70,80 66,98 Q82,96 92,122 Z", `${line([98, 120], [66, 40])} ${line([96, 120], [58, 74])}`),
+    part("armor", "M146,146 Q184,138 194,170 Q196,188 184,200 Q186,178 168,168 Q156,166 146,172 Z"),
+    part("bone", pts([184, 200], [178, 186], [192, 190])),
+    part("armor", `${limb([134, 166], [144, 192], 15, 9)}`),
+    part("bone", `${pts([138, 192], [136, 204], [142, 196])} ${pts([145, 192], [146, 204], [150, 195])}`),
+    part("armor", "M70,130 Q96,110 130,120 Q158,130 158,156 Q152,180 118,180 Q88,178 72,158 Z", `${line([96, 120], [92, 172])} ${line([116, 118], [114, 178])} ${line([136, 124], [136, 176])}`),
+    part("sash", "M74,152 Q96,176 132,176 Q110,186 90,176 Q78,168 74,152 Z"),
+    part("bone", `${pts([92, 116], [98, 104], [104, 116])} ${pts([110, 116], [118, 104], [124, 118])} ${pts([130, 120], [140, 110], [144, 124])}`),
+    part("armor", `${limb([90, 164], [80, 190], 12, 7)}`),
+    part("bone", `${pts([75, 190], [72, 202], [79, 194])} ${pts([82, 190], [83, 202], [87, 193])}`),
+    part("armor", "M76,140 Q60,114 60,92 L84,90 Q84,112 98,128 Z", `${line([66, 106], [86, 102])} ${line([72, 122], [90, 114])}`),
+    part("bone", `${pts([76, 80], [94, 58], [84, 84])} ${pts([66, 78], [78, 54], [74, 80])}`),
+    part("armor", "M86,96 Q80,74 58,74 L26,84 L24,91 L52,95 L30,100 L32,107 L60,108 Q76,110 86,96 Z"),
+    part("glow", disc([64, 84], 2.8)),
+    part("glow", `${disc([14, 97], 5.5)} ${disc([4, 106], 3)} ${disc([6, 88], 2.4)}`),
+    part("cape", "M104,126 Q110,70 152,22 Q150,54 172,62 Q156,74 166,92 Q146,92 142,112 Q124,108 112,130 Z", `${line([106, 124], [150, 28])} ${line([108, 126], [168, 64])} ${line([110, 128], [162, 90])}`),
+  ],
+};
+
+/** Old Rootback: a hill of a beast, moss and saplings growing on its back, tusks low to the ground. */
+const oldRootback: Figure = {
+  top: 24,
+  bottom: 244,
+  gear: ["wood"],
+  tint: { leather: "#6f5d49", cloth: "#4f4234", wood: BARK, glow: "#f2c14e" },
+  parts: [
+    part("cloth", `${limb([86, 200], [84, 238], 22, 18)} ${limb([134, 200], [138, 238], 22, 18)}`),
+    part("leather", "M178,170 Q194,176 196,200 Q188,190 176,190 Z"),
+    part("leather", "M36,160 Q60,148 120,150 Q172,150 188,168 Q192,198 176,206 Q120,216 60,208 Q38,202 36,160 Z"),
+    part("wood", `${limb([120, 74], [124, 44], 5.5, 4)} ${limb([152, 84], [158, 60], 4.6, 3.4)} ${limb([84, 82], [78, 62], 4, 3)}`),
+    part("armor", "M40,152 Q44,84 104,70 Q168,66 184,130 Q190,160 182,178 Q110,170 44,178 Z", `${line([70, 100], [62, 168])} ${line([104, 78], [102, 168])} ${line([142, 84], [148, 170])} ${line([56, 130], [176, 124])}`),
+    part("plate", `${disc([124, 34], 13)} ${disc([112, 46], 9)} ${disc([136, 46], 9)}`),
+    part("plate", `${disc([160, 52], 10)} ${disc([76, 56], 8)}`),
+    part("plate", "M60,112 q10,-10 22,-4 q-4,12 -22,4 Z M120,104 q12,-8 24,0 q-8,10 -24,0 Z M150,140 q10,-8 20,0 q-8,8 -20,0 Z M84,146 q10,-8 20,0 q-8,8 -20,0 Z"),
+    part("crest", `${disc([98, 92], 3.6)} ${disc([166, 104], 3)}`),
+    part("leather", `${limb([62, 198], [56, 236], 24, 20)}`),
+    part("bone", `${pts([44, 236], [52, 236], [50, 244], [42, 244])} ${pts([56, 236], [64, 236], [62, 244], [54, 244])}`),
+    part("leather", `${limb([154, 200], [160, 236], 24, 20)}`),
+    part("bone", `${pts([150, 236], [158, 236], [156, 244], [148, 244])} ${pts([162, 236], [170, 236], [168, 244], [160, 244])}`),
+    part("leather", "M52,148 Q32,136 14,150 Q2,166 8,186 Q24,200 46,192 Q60,180 60,162 Z", `${line([18, 172], [40, 176])}`),
+    part("armor", "M50,146 Q36,134 22,142 Q34,146 44,158 Z"),
+    part("glow", disc([26, 160], 3.4)),
+    part("bone", `${pts([12, 182], [0, 160], [22, 178])} ${pts([26, 190], [16, 168], [36, 186])}`),
+    part("wood", `${limb([70, 176], [68, 196], 3, 1.6)} ${limb([112, 174], [114, 194], 3, 1.6)} ${limb([146, 174], [144, 190], 3, 1.6)}`),
+  ],
+};
+
 export const VERDANT: Record<string, Drawing> = {
   "glade-wardens": squad([wardenLoosing, wardenWatching, wardenLoosing]),
   sylvanne: solo(sylvanne),
   "briar-sprites": squad([spriteHovering, spriteThrowing, spriteHovering, spriteThrowing]),
+  "queen-ilyth": solo(queenIlyth, [26, 174]),
+  "mossback-treefolk": squad([treefolk(0), treefolk(14)]),
+  // Prowlers are long and low: on the wide side they stand staggered, not in a row.
+  "duskfang-prowlers": squad([prowler(-10, 12), prowler(8, 0), prowler(0, 6)], {
+    wide: [
+      [46, 176, 0.72],
+      [128, 204, 0.72],
+      [66, 244, 0.84],
+    ],
+  }),
+  cinderjaw: solo(cinderjaw, [2, 196]),
+  "old-rootback": solo(oldRootback, [0, 196]),
 };

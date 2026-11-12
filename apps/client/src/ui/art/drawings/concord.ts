@@ -1,4 +1,4 @@
-import { arm, belt, disc, head, leg, limb, line, type P, part, pts, solo, squad, torso } from "../build";
+import { type AimStance, arm, belt, disc, head, KNEELING_AIM, leg, limb, line, type P, part, pts, solo, squad, STANDING_AIM, torso } from "../build";
 import type { Drawing, Figure } from "../types";
 
 /** Captain Marisol Vance: bicorne and long coat, pistol levelled, sabre raised. */
@@ -194,9 +194,187 @@ const pikemanBraced: Figure = (() => {
   };
 })();
 
+/** Sergeant Brannock: a burly sapper winding up to throw a satchel charge, its fuse lit. */
+const brannock: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [118, 88];
+  const hipL: P = [89, 146];
+  const hipR: P = [113, 146];
+  return {
+    top: 38,
+    bottom: 244,
+    gear: ["leather", "wood", "blade", "glow"],
+    tint: { hair: "#5a3a1e", cloth: "#8b8f98" },
+    parts: [
+      ...arm(shR, [140, 80], [148, 58], "armor", { w: 11 }),
+      part("leather", pts([138, 32], [161, 35], [159, 59], [136, 56]), `${line([138, 44], [160, 47])} ${line([150, 34], [158, 22], [163, 27])}`),
+      part("glow", disc([164, 26], 3.4)),
+      part("wood", limb([120, 142], [136, 186], 3.8)),
+      part("blade", pts([129, 177], [148, 172], [147, 191], [133, 190])),
+      ...leg(hipL, [82, 194], [76, 238], "cloth", "boot", { toe: -1, w: 15 }),
+      ...leg(hipR, [120, 194], [126, 238], "cloth", "boot", { toe: 1, w: 15 }),
+      torso(shL, shR, hipL, hipR, "armor"),
+      part("leather", pts([89, 98], [111, 98], [116, 178], [84, 178]), line([100, 150], [100, 176])),
+      belt(hipL, hipR, "leather"),
+      ...arm(shL, [66, 104], [54, 116], "armor", { w: 11 }),
+      part("plate", pts([68, 77], [93, 75], [93, 97], [66, 101]), line([67, 89], [93, 86])),
+      head([100, 60]),
+      part("hair", pts([91, 65], [109, 65], [107, 80], [100, 85], [93, 80])),
+      part("helmet", "M88,50 Q89,37 101,37 Q113,37 113,50 Z"),
+      part("boot", pts([84, 50], [115, 49], [117, 54], [82, 56])),
+    ],
+  };
+})();
+
+/** A Grenadier's tall cap with its brass front. */
+const mitreCap = (x: number, y: number) => [
+  part("helmet", pts([x - 12, y - 5], [x - 10, y - 30], [x, y - 38], [x + 10, y - 30], [x + 12, y - 5])),
+  part("crest", pts([x - 8, y - 6], [x - 7, y - 26], [x, y - 32], [x + 7, y - 26], [x + 8, y - 6]), line([x, y - 28], [x, y - 8])),
+];
+
+/** A grenade with its fuse burning. */
+const grenade = (c: P) => [part("boot", disc(c, 7), line([c[0] + 3, c[1] - 6], [c[0] + 6, c[1] - 11])), part("glow", disc([c[0] + 6.6, c[1] - 12.4], 2.6))];
+
+/** A Grenadier lobbing a grenade to the left. */
+const grenadierLobbing: Figure = (() => {
+  const shL: P = [90, 90];
+  const shR: P = [116, 88];
+  const hipL: P = [93, 146];
+  const hipR: P = [114, 146];
+  return {
+    top: 25,
+    bottom: 244,
+    gear: ["boot", "glow", "leather"],
+    tint: { cloth: "#d9d5c8" },
+    parts: [
+      ...arm(shR, [135, 72], [140, 48], "armor"),
+      ...grenade([141, 38]),
+      part("leather", pts([112, 128], [130, 126], [134, 152], [116, 154]), line([114, 136], [132, 134])),
+      ...leg(hipR, [122, 194], [132, 238], "cloth", "boot", { toe: 1 }),
+      ...leg(hipL, [82, 194], [72, 238], "cloth", "boot", { toe: -1 }),
+      torso(shL, shR, hipL, hipR, "armor", line([103, 90], [103, 138])),
+      part("bone", limb([90, 89], [112, 142], 4.2)),
+      part("bone", limb([116, 88], [94, 142], 4.2)),
+      belt(hipL, hipR, "leather"),
+      ...arm(shL, [72, 98], [56, 92], "armor"),
+      head([103, 63], -1),
+      ...mitreCap(104, 61),
+    ],
+  };
+})();
+
+/** A Grenadier lighting a fuse from a slow match. */
+const grenadierLighting: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [116, 88];
+  const hipL: P = [88, 146];
+  const hipR: P = [112, 146];
+  return {
+    top: 20,
+    bottom: 244,
+    gear: ["boot", "glow", "leather", "wood"],
+    tint: { cloth: "#d9d5c8", skin: "#c99a72" },
+    parts: [
+      ...leg(hipL, [86, 194], [84, 238], "cloth", "boot", { toe: -1 }),
+      ...leg(hipR, [114, 194], [116, 238], "cloth", "boot", { toe: 1 }),
+      torso(shL, shR, hipL, hipR, "armor", line([100, 88], [100, 138])),
+      part("bone", limb([84, 88], [110, 142], 4.2)),
+      part("bone", limb([116, 88], [90, 142], 4.2)),
+      belt(hipL, hipR, "leather"),
+      ...arm(shL, [72, 112], [88, 122], "armor"),
+      ...grenade([90, 113]),
+      ...arm(shR, [130, 110], [112, 108], "armor"),
+      part("wood", limb([113, 108], [100, 100], 2.2)),
+      head([100, 58]),
+      ...mitreCap(100, 56),
+    ],
+  };
+})();
+
+/** A cocked hat with its cockade. */
+const cockedHat = (x: number, y: number) => [
+  part("helmet", pts([x - 20, y - 5], [x - 7, y - 17], [x + 9, y - 18], [x + 19, y - 7], [x + 11, y - 2], [x - 13, y - 2]), line([x - 12, y - 8], [x + 12, y - 9])),
+  part("crest", disc([x + 3, y - 12], 3)),
+];
+
+/** A Fusilier firing from one of the aiming stances, a puff of smoke at the muzzle. */
+const fusilier = (j: AimStance, skin?: string): Figure => ({
+  top: j.head[1] - 26,
+  bottom: 244,
+  gear: ["blade", "wood", "leather", "jewel"],
+  tint: { cloth: "#d9d5c8", ...(skin ? { skin } : {}) },
+  parts: [
+    part("leather", pts([j.shR[0] - 6, j.shR[1] + 3], [j.shR[0] + 11, j.shR[1] + 1], [j.shR[0] + 15, j.shR[1] + 34], [j.shR[0] - 2, j.shR[1] + 36])),
+    ...leg(j.hipR, j.kneeR, j.footR, "cloth", "boot", { toe: 1 }),
+    ...leg(j.hipL, j.kneeL, j.footL, "cloth", "boot", { toe: -1 }),
+    torso(j.shL, j.shR, j.hipL, j.hipR, "armor"),
+    part("bone", limb([j.shL[0] - 1, j.shL[1] - 1], [j.hipR[0] - 1, j.hipR[1] - 4], 4.2)),
+    part("bone", limb([j.shR[0] - 1, j.shR[1]], [j.hipL[0] + 1, j.hipL[1] - 4], 4.2)),
+    belt(j.hipL, j.hipR, "leather"),
+    ...arm(j.shR, j.elbowR, j.handR, "armor"),
+    part("wood", limb(j.stock, j.grip, 6, 4.2)),
+    part("metal", limb(j.breech, j.muzzle, 2.8)),
+    part("blade", pts([j.muzzle[0], j.muzzle[1] - 1.5], [j.muzzle[0] - 20, j.muzzle[1] - 1], [j.muzzle[0], j.muzzle[1] + 2])),
+    part("jewel", `M${j.muzzle[0] - 4},${j.muzzle[1] - 8} q-10,-8 -18,-2 q-10,0 -8,8 q-4,8 6,10 q8,6 16,-2 q8,-4 4,-14 Z`),
+    ...arm(j.shL, j.elbowL, j.handL, "armor"),
+    head(j.head, -1),
+    ...cockedHat(j.head[0] + 1, j.head[1] - 3),
+  ],
+});
+
+/** A Brass Hussar at the gallop, sabre raised. `hide` is the horse's colour. */
+const hussar = (hide: string, skin?: string): Figure => ({
+  top: 14,
+  bottom: 244,
+  gear: ["blade", "hilt", "crest"],
+  tint: { leather: hide, cloth: "#d9d5c8", ...(skin ? { skin } : {}) },
+  parts: [
+    // The horse.
+    part("hair", "M162,150 Q188,152 192,192 Q178,176 166,174 Z"),
+    part("leather", `${limb([140, 180], [142, 214], 13, 9)} ${limb([142, 214], [154, 238], 8, 6)}`),
+    part("leather", `${limb([90, 182], [84, 214], 11, 8)} ${limb([84, 214], [72, 238], 7, 6)}`),
+    part("boot", `${pts([148, 236], [160, 236], [162, 244], [148, 244])} ${pts([66, 236], [78, 236], [78, 244], [62, 244])}`),
+    part("leather", "M62,150 Q70,132 100,132 Q140,130 160,142 Q172,156 164,176 Q140,190 100,188 Q72,188 62,172 Z"),
+    part("leather", `${limb([148, 178], [162, 208], 14, 9)} ${limb([162, 208], [178, 232], 8, 6)}`),
+    part("leather", `${limb([82, 180], [60, 202], 12, 8)} ${limb([60, 202], [40, 218], 7, 6)}`),
+    part("boot", `${pts([172, 230], [184, 232], [184, 241], [170, 238])} ${pts([34, 214], [46, 220], [42, 228], [30, 222])}`),
+    part("leather", "M70,156 Q58,124 50,104 L74,98 Q84,124 98,140 Z"),
+    part("leather", "M76,100 Q68,84 52,86 L28,104 L30,114 L48,114 Q64,116 76,108 Z", `${line([40, 96], [44, 114])} ${line([44, 96], [72, 100])}`),
+    part("leather", pts([66, 88], [68, 74], [75, 90])),
+    part("boot", disc([58, 96], 2)),
+    part("hair", "M74,98 Q88,112 100,136 L89,138 Q79,118 66,104 Z"),
+    part("cape", pts([94, 130], [138, 130], [142, 162], [92, 162]), line([96, 156], [140, 156])),
+    // The rider.
+    ...arm([126, 84], [142, 74], [148, 54], "armor"),
+    part("blade", "M146,52 Q124,28 94,18 L95.5,14 Q128,24 150,49 Z", "M147,50 Q126,27 95,16"),
+    part("hilt", limb([142, 50], [154, 56], 4.2)),
+    part("armor", pts([101, 82], [129, 80], [128, 132], [104, 134]), `${line([108, 90], [122, 89])} ${line([108, 98], [122, 97])} ${line([108, 106], [122, 105])} ${line([115, 84], [115, 112])}`),
+    part("sash", pts([103, 124], [129, 122], [129, 131], [103, 133])),
+    part("cloth", limb([114, 130], [100, 156], 12, 10)),
+    part("boot", `${limb([100, 154], [102, 184], 9, 8)} ${pts([97, 182], [107, 182], [108, 190], [90, 190])}`),
+    ...arm([104, 84], [92, 104], [90, 120], "armor"),
+    part("hair", line([90, 120], [60, 104])),
+    head([114, 62], -1),
+    part("hair", pts([103, 38], [126, 38], [127, 56], [102, 56])),
+    part("crest", pts([102, 52], [127, 52], [127, 56.5], [102, 56.5])),
+    part("crest", "M114,38 Q118,22 131,19 Q125,30 121,40 Z"),
+  ],
+});
+
 export const CONCORD: Record<string, Drawing> = {
   "marisol-vance": solo(marisolVance, [18, 172]),
   "harrow-riflemen": squad([riflemanAiming, riflemanReady, riflemanAiming]),
   "sister-maren": solo(sisterMaren),
   "gatewarden-pikemen": squad([pikemanStanding, pikemanBraced, pikemanBraced]),
+  brannock: solo(brannock),
+  "concord-grenadiers": squad([grenadierLighting, grenadierLobbing, grenadierLobbing]),
+  // Horses are long: on the wide side the Hussars ride staggered, not in a row.
+  "brass-hussars": squad([hussar("#7a4a2a"), hussar("#9c9ca4", "#c99a72"), hussar("#3a2f2c")], {
+    wide: [
+      [44, 180, 0.62],
+      [132, 208, 0.64],
+      [72, 244, 0.76],
+    ],
+  }),
+  "concord-fusiliers": squad([fusilier(STANDING_AIM), fusilier(STANDING_AIM, "#c99a72"), fusilier(KNEELING_AIM, "#c99a72"), fusilier(KNEELING_AIM)]),
 };

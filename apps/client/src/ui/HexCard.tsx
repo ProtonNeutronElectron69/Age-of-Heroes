@@ -256,7 +256,7 @@ export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
   const t = factionTheme(card.faction);
   const advanced = side === "advanced";
   const lifeLeft = Math.max(0, card.advanced.life - wounds);
-  // Units without a drawing yet show the faction emblem and dashed outlines instead.
+  // Every unit in the roster has a drawing. A new unit without one yet gets a plain backdrop and labelled stand-ins.
   const figure = DRAWINGS[card.id];
   const hitBox = figure && castBounds(figure.tall);
   const hitScale = hitBox ? Math.min(98 / hitBox.height, 96 / hitBox.width) : 1;
@@ -341,20 +341,15 @@ export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
             <g clipPath={url("inner")}>
               <rect x={-PAD} y={-PAD} width={W + PAD * 2} height={H + PAD * 2} fill={url("base")} />
 
-              {/* The art window. Unit art will fill it; for now it shows the faction's backdrop,
-                  and a faint emblem that goes when the art arrives. */}
+              {/* The art window: the unit's drawing over the faction's backdrop. */}
               <g className="hc-art">
                 <rect x={advanced ? SPINE_X : -PAD} y={-PAD} width={W} height={H + PAD * 2} fill={url("art")} />
                 <rect x={advanced ? SPINE_X : -PAD} y={-PAD} width={W} height={H + PAD * 2} fill={url("hexes")} />
-                {figure ? (
+                {figure && (
                   <g clipPath={url("window")}>
                     <g transform={advanced ? "translate(232,46) scale(0.84)" : "translate(88,130) scale(1.12)"}>
                       <UnitArt cast={advanced ? figure.tall : figure.wide} theme={t} id={id} />
                     </g>
-                  </g>
-                ) : (
-                  <g transform={`translate(${artCentre[0]},${artCentre[1]}) scale(${advanced ? 4.2 : 5.6})`} opacity={0.13}>
-                    <Emblem id={t.emblem} ink="#fff" ground={t.art[1]} />
                   </g>
                 )}
               </g>

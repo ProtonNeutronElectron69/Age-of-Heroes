@@ -1,5 +1,5 @@
 import { arm, belt, disc, head, leg, limb, line, type P, part, pts, solo, squad, torso } from "../build";
-import type { Drawing, Figure } from "../types";
+import type { Drawing, Figure, Part } from "../types";
 
 /** Dame Rowena Ashgrove: plate armour, sword raised, a sun on her shield. */
 const dameRowena: Figure = (() => {
@@ -184,10 +184,277 @@ const crossbowmanMarching: Figure = (() => {
   };
 })();
 
+/** One of Solenne's wings: `side` is -1 for the left wing, 1 for the right. */
+const wing = (side: number) => {
+  const x = (v: number) => 100 + side * v;
+  return part(
+    "bone",
+    `M${x(8)},96 C${x(40)},44 ${x(72)},22 ${x(92)},40 C${x(78)},44 ${x(70)},54 ${x(68)},68 C${x(80)},66 ${x(88)},76 ${x(86)},92 C${x(74)},88 ${x(62)},96 ${x(58)},110 C${x(66)},112 ${x(68)},122 ${x(62)},134 C${x(46)},122 ${x(24)},122 ${x(8)},118 Z`,
+    `M${x(14)},100 C${x(40)},64 ${x(66)},42 ${x(84)},42 M${x(16)},108 C${x(40)},84 ${x(62)},74 ${x(80)},78 M${x(16)},114 C${x(34)},104 ${x(48)},106 ${x(58)},118`,
+  );
+};
+
+/** Solenne, Herald of Dawn: winged and haloed, aloft with a pennoned spear. */
+const solenne: Figure = (() => {
+  const shL: P = [86, 88];
+  const shR: P = [114, 88];
+  const hipL: P = [90, 144];
+  const hipR: P = [110, 144];
+  return {
+    top: 38,
+    bottom: 236,
+    hover: 8,
+    gear: ["bone", "blade", "wood", "glow", "cape", "crest"],
+    tint: { hair: "#e3c877", cape: "#b8322f", wood: "#c9861a" },
+    parts: [
+      wing(-1),
+      wing(1),
+      part("hair", pts([89, 52], [111, 52], [117, 92], [83, 92])),
+      part("wood", limb([136, 214], [152, 8], 3.6)),
+      part("blade", pts([153.4, -14], [157.4, 9.6], [146.8, 8.8])),
+      part("cape", "M150,22 L176,30 L166,40 L178,52 L148,48 Z"),
+      part("skin", limb([94, 196], [92, 228], 7, 5)),
+      part("skin", pts([88, 226], [96, 226], [94, 236], [86, 234])),
+      part("skin", limb([108, 190], [114, 216], 7, 5)),
+      part("skin", pts([110, 214], [118, 214], [120, 224], [112, 224])),
+      part("armor", pts([84, 140], [116, 140], [124, 200], [112, 194], [104, 206], [96, 196], [86, 206], [78, 198]), `${line([94, 150], [90, 196])} ${line([106, 150], [110, 196])}`),
+      torso(shL, shR, hipL, hipR, "armor", `${line([100, 88], [100, 138])} ${line([86, 104], [100, 112], [114, 104])}`),
+      belt(hipL, hipR),
+      part("plate", pts([74, 80], [94, 78], [94, 96], [72, 99])),
+      part("plate", pts([106, 78], [126, 80], [128, 99], [106, 96])),
+      ...arm(shR, [132, 108], [140, 128], "plate", { hand: "skin" }),
+      ...arm(shL, [70, 106], [60, 86], "plate", { hand: "skin" }),
+      part("glow", disc([56, 74], 7)),
+      head([100, 62]),
+      part("hair", "M88,60 Q88,48 100,48 Q112,48 112,60 Q106,54 100,56 Q94,54 88,60 Z"),
+      part("glow", "M80,40 Q100,26 120,40 Q100,33 80,40 Z"),
+    ],
+  };
+})();
+
+/** Magister Orrin Vael: white-bearded in a scholar's robe, a book open in one hand and lightning leaping from the other. */
+const orrinVael: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [116, 88];
+  return {
+    top: 34,
+    bottom: 244,
+    gear: ["glow", "leather", "bone"],
+    tint: { hair: "#ece9e1", cape: "#2f4a7a" },
+    parts: [
+      part("boot", pts([84, 236], [98, 236], [98, 244], [78, 244])),
+      part("boot", pts([102, 236], [116, 236], [122, 244], [102, 244])),
+      part("armor", pts([81, 85], [119, 85], [130, 238], [70, 238]), `${line([100, 150], [100, 236])} ${line([88, 150], [82, 236])} ${line([112, 150], [118, 236])}`),
+      part("crest", pts([96, 100], [104, 100], [106, 236], [94, 236])),
+      belt([88, 146], [112, 146]),
+      ...arm(shR, [134, 104], [146, 82], "armor"),
+      part("glow", pts([145, 80], [157, 60], [151, 58], [167, 36], [161, 34], [180, 8], [170, 38], [176, 40], [160, 62], [166, 64])),
+      part("glow", `${disc([134, 60], 2.4)} ${disc([170, 70], 2)}`),
+      ...arm(shL, [70, 108], [72, 124], "armor"),
+      part("leather", pts([48, 110], [72, 104], [94, 112], [94, 132], [72, 126], [48, 130])),
+      part("bone", pts([51, 108], [72, 103], [91, 110], [91, 127], [72, 121], [51, 126]), `${line([72, 103], [72, 121])} ${line([56, 112], [68, 109])} ${line([56, 118], [68, 115])} ${line([76, 109], [88, 113])} ${line([76, 115], [88, 119])}`),
+      part("cape", pts([74, 82], [126, 82], [132, 112], [116, 104], [100, 112], [84, 104], [68, 112])),
+      part("crest", disc([100, 96], 4)),
+      head([100, 60]),
+      part("hair", pts([90, 64], [110, 64], [112, 84], [106, 104], [100, 112], [94, 104], [88, 84])),
+      part("hair", `${pts([88, 58], [84, 70], [90, 68])} ${pts([112, 58], [116, 70], [110, 68])}`),
+      part("cape", "M87,56 Q86,38 100,34 Q114,38 113,56 Q106,50 100,50 Q94,50 87,56 Z"),
+    ],
+  };
+})();
+
+/** A great helm with a plume. `look` is -1 for a helm turned left, 0 for facing us. */
+const greatHelm = (x: number, y: number, look: number) => [
+  part("plate", pts([x - 12, y - 16], [x + 12, y - 16], [x + 13, y + 10], [x, y + 16], [x - 13, y + 10]), look === 0 ? line([x, y - 16], [x, y + 14]) : line([x - 6, y - 16], [x - 7, y + 12])),
+  part("boot", look === 0 ? pts([x - 9, y - 4], [x + 9, y - 4], [x + 9, y - 1], [x - 9, y - 1]) : pts([x - 13, y - 4], [x + 2, y - 4], [x + 2, y - 1], [x - 13, y - 1])),
+  part("crest", `M${x},${y - 16} Q${x + 4},${y - 32} ${x + 18},${y - 34} Q${x + 12},${y - 22} ${x + 8},${y - 15} Z`),
+];
+
+/** A small shield bearing the sun. */
+const sunShield = (x: number, y: number) => [
+  part("armor", `M${x - 19},${y - 26} H${x + 19} V${y + 2} Q${x + 19},${y + 22} ${x},${y + 36} Q${x - 19},${y + 22} ${x - 19},${y + 2} Z`, `M${x - 15},${y - 22} H${x + 15} V${y + 2} Q${x + 15},${y + 19} ${x},${y + 31} Q${x - 15},${y + 19} ${x - 15},${y + 2} Z`),
+  part("crest", disc([x, y], 7)),
+];
+
+const KNIGHT_GEAR = ["blade", "wood", "crest", "cape"] as const;
+
+/** A Silverlance Knight at attention, lance upright and pennon flying. */
+const knightStanding: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [116, 88];
+  const hipL: P = [88, 146];
+  const hipR: P = [112, 146];
+  return {
+    top: 26,
+    bottom: 244,
+    gear: KNIGHT_GEAR,
+    tint: { cape: TABARD, wood: "#d8d2c4" },
+    parts: [
+      part("wood", limb([134, 241], [134, -4], 4)),
+      part("blade", pts([134, -28], [139, -3], [129, -3])),
+      part("cape", "M136,6 L164,12 L154,22 L166,32 L136,30 Z"),
+      ...leg(hipL, [86, 194], [84, 238], "armor", "plate", { toe: -1, w: 13 }),
+      ...leg(hipR, [114, 194], [116, 238], "armor", "plate", { toe: 1, w: 13 }),
+      part("plate", pts([81, 140], [119, 140], [125, 170], [75, 170]), line([94, 142], [91, 168]) + line([106, 142], [109, 168])),
+      torso(shL, shR, hipL, hipR, "armor", `${line([100, 86], [100, 138])} ${line([84, 104], [100, 112], [116, 104])}`),
+      belt(hipL, hipR),
+      ...arm(shR, [134, 108], [134, 128], "plate", { hand: "metal" }),
+      part("plate", pts([106, 77], [128, 79], [130, 99], [108, 96])),
+      ...arm(shL, [71, 106], [80, 124], "plate", { hand: "metal" }),
+      part("plate", pts([72, 79], [94, 77], [92, 96], [70, 99])),
+      ...sunShield(70, 122),
+      ...greatHelm(100, 60, 0),
+    ],
+  };
+})();
+
+/** A Silverlance Knight charging left behind a levelled lance. */
+const knightCharging: Figure = (() => {
+  const shL: P = [90, 94];
+  const shR: P = [116, 92];
+  const hipL: P = [94, 150];
+  const hipR: P = [114, 150];
+  return {
+    top: 32,
+    bottom: 244,
+    gear: KNIGHT_GEAR,
+    tint: { cape: TABARD, wood: "#d8d2c4" },
+    parts: [
+      ...leg(hipR, [126, 194], [140, 238], "armor", "plate", { toe: 1, w: 13 }),
+      ...leg(hipL, [78, 192], [66, 238], "armor", "plate", { toe: -1, w: 13 }),
+      part("plate", pts([87, 144], [121, 144], [127, 172], [81, 172])),
+      torso(shL, shR, hipL, hipR, "armor", `${line([103, 92], [104, 142])}`),
+      belt(hipL, hipR),
+      ...arm(shR, [128, 114], [116, 126], "plate", { hand: "metal" }),
+      part("wood", limb([156, 132], [18, 112], 4.4, 3)),
+      part("blade", pts([-6, 108.5], [19, 108], [18.5, 116])),
+      part("cape", "M40,113 L46,90 L56,98 L64,86 L66,117 Z"),
+      part("plate", pts([108, 82], [128, 84], [130, 103], [108, 100])),
+      ...sunShield(84, 124),
+      ...greatHelm(104, 66, -1),
+    ],
+  };
+})();
+
+const SUNBOUND = { cape: TABARD, wood: "#8a5a2b" };
+
+/** A gold band across the brow. */
+const sunBand = (x: number, y: number, look: number) => part("crest", look < 0 ? limb([x - 11, y - 6], [x + 9, y - 4], 3.4) : limb([x - 11, y - 5], [x + 11, y - 5], 3.4));
+
+/** A Sunbound Archer at full draw, loosing to the left. */
+const sunboundLoosing: Figure = (() => {
+  const shL: P = [94, 88];
+  const shR: P = [118, 86];
+  const hipL: P = [93, 146];
+  const hipR: P = [115, 146];
+  return {
+    top: 48,
+    bottom: 244,
+    gear: ["wood", "blade", "leather", "cape", "crest"],
+    tint: { ...SUNBOUND, hair: "#6e4a22" },
+    parts: [
+      part("cape", "M110,84 C132,92 144,122 146,164 L126,158 C126,128 122,104 110,94 Z", "M120,100 C130,120 134,140 135,158"),
+      part("leather", pts([116, 112], [128, 108], [138, 146], [126, 150]), line([119, 120], [131, 116])),
+      part("wood", `${pts([116, 96], [120, 95], [124, 112], [120, 113])} ${pts([123, 94], [127, 93], [130, 110], [126, 111])}`),
+      ...leg(hipR, [120, 194], [128, 238], "cloth", "leather", { toe: 1 }),
+      ...leg(hipL, [86, 194], [78, 238], "cloth", "leather", { toe: -1 }),
+      torso(shL, shR, hipL, hipR, "armor", `${line([92, 102], [118, 100])} ${line([92, 116], [119, 114])} ${line([92, 130], [119, 128])}`),
+      belt(hipL, hipR),
+      ...arm(shR, [146, 86], [125, 93], "armor"),
+      part("wood", "M64,28 Q32,104 62,188 L65,186.5 Q40,104 67,30 Z", "M65.5,29 L125,93 L63.5,187"),
+      part("wood", limb([125, 92.4], [40, 98.6], 2.2)),
+      part("blade", pts([27, 99.6], [41, 94.6], [41, 102.6])),
+      ...arm(shL, [76, 96], [58, 99], "armor"),
+      head([104, 62], -1),
+      part("hair", "M94,58 Q98,47 108,49 Q118,52 116,70 Q110,58 102,57 Z"),
+      sunBand(104, 62, -1),
+    ],
+  };
+})();
+
+/** A Sunbound Archer waiting, bow low and an arrow on the string. */
+const sunboundWaiting: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [116, 88];
+  const hipL: P = [88, 146];
+  const hipR: P = [112, 146];
+  return {
+    top: 46,
+    bottom: 244,
+    gear: ["wood", "blade", "leather", "cape", "crest"],
+    tint: { ...SUNBOUND, hair: "#d9b25a", skin: "#c99a72" },
+    parts: [
+      part("cape", pts([82, 84], [118, 84], [132, 172], [68, 172]), line([74, 140], [70, 170]) + line([126, 140], [130, 170])),
+      ...leg(hipL, [85, 194], [82, 238], "cloth", "leather", { toe: -1 }),
+      ...leg(hipR, [115, 194], [118, 238], "cloth", "leather", { toe: 1 }),
+      torso(shL, shR, hipL, hipR, "armor", `${line([82, 102], [118, 102])} ${line([82, 116], [118, 116])} ${line([83, 130], [117, 130])}`),
+      belt(hipL, hipR),
+      part("wood", "M56,96 Q44,150 68,198 L70.8,196 Q50,150 59,97 Z", "M57.5,97 L69.5,197"),
+      ...arm(shL, [70, 112], [60, 142], "armor"),
+      part("wood", limb([64, 152], [122, 120], 2.2)),
+      part("blade", pts([52, 158.6], [64, 148], [67, 155])),
+      ...arm(shR, [130, 106], [121, 121], "armor"),
+      head([100, 60]),
+      part("hair", "M88,60 Q88,47 100,47 Q112,47 112,60 Q106,53 100,55 Q94,53 88,60 Z"),
+      sunBand(100, 60, 0),
+    ],
+  };
+})();
+
+/** The long robe and gold stole of a Dawn Acolyte. */
+const acolyteRobe = (): Part[] => [
+  part("leather", pts([84, 236], [98, 236], [98, 244], [78, 244])),
+  part("leather", pts([102, 236], [116, 236], [122, 244], [102, 244])),
+  part("armor", pts([81, 85], [119, 85], [129, 238], [71, 238]), `${line([100, 150], [100, 236])} ${line([88, 150], [83, 236])} ${line([112, 150], [117, 236])}`),
+  part("crest", `${pts([86, 86], [93, 86], [96, 190], [88, 190])} ${pts([107, 86], [114, 86], [112, 190], [104, 190])}`),
+  part("cape", pts([78, 82], [122, 82], [126, 100], [112, 96], [100, 102], [88, 96], [74, 100])),
+];
+
+/** A Dawn Acolyte singing from an open book. */
+const acolyteSinging: Figure = {
+  top: 46,
+  bottom: 244,
+  gear: ["leather", "bone"],
+  tint: { cape: TABARD, hair: "#3a2a20" },
+  parts: [
+    ...acolyteRobe(),
+    ...arm([84, 88], [74, 112], [88, 122], "armor"),
+    ...arm([116, 88], [126, 112], [112, 122], "armor"),
+    part("leather", pts([80, 112], [100, 118], [120, 112], [120, 130], [100, 136], [80, 130])),
+    part("bone", pts([83, 111], [100, 116], [117, 111], [117, 126], [100, 131], [83, 126]), `${line([100, 116], [100, 131])} ${line([87, 116], [96, 119])} ${line([87, 121], [96, 124])} ${line([104, 119], [113, 116])} ${line([104, 124], [113, 121])}`),
+    head([100, 60]),
+    part("boot", disc([100, 67.5], 2.4)),
+    part("hair", "M88,58 Q88,46 100,46 Q112,46 112,58 Q110,52 100,52 Q90,52 88,58 Z"),
+  ],
+};
+
+/** A Dawn Acolyte lifting a sun-topped staff. */
+const acolyteBlessing: Figure = {
+  top: 16,
+  bottom: 244,
+  gear: ["wood", "glow", "crest"],
+  tint: { cape: TABARD, hair: "#b5651d", skin: "#c99a72", wood: "#c9861a" },
+  parts: [
+    ...acolyteRobe(),
+    part("wood", limb([136, 240], [132, 40], 3.8)),
+    part("glow", disc([131.6, 26], 10), `${line([131.6, 12], [131.6, 6])} ${line([145, 18], [150, 13])} ${line([118, 18], [113, 13])} ${line([148, 28], [154, 28])} ${line([115, 28], [109, 28])}`),
+    part("crest", disc([131.6, 26], 5)),
+    ...arm([116, 88], [132, 102], [134, 82], "armor"),
+    ...arm([84, 88], [70, 108], [78, 126], "armor"),
+    head([100, 60]),
+    part("hair", "M88,58 Q88,46 100,46 Q112,46 112,58 Q110,52 100,52 Q90,52 88,58 Z"),
+  ],
+};
+
 const darkHaired = (figure: Figure): Figure => ({ ...figure, tint: { ...figure.tint, hair: "#3a2a20" } });
 
 export const DAWNHOLD: Record<string, Drawing> = {
   "dame-rowena": solo(dameRowena),
+  solenne: solo(solenne, [8, 192]),
+  "orrin-vael": solo(orrinVael, [48, 180]),
+  "silverlance-knights": squad([knightStanding, knightCharging, knightCharging]),
+  "sunbound-archers": squad([sunboundWaiting, sunboundLoosing, sunboundLoosing]),
+  "dawn-acolytes": squad([acolyteBlessing, acolyteSinging, acolyteSinging]),
   "covenant-crossbowmen": squad([crossbowmanMarching, crossbowmanAiming, crossbowmanAiming]),
   "stormwake-huscarls": squad([huscarlResting, huscarlStriking, darkHaired(huscarlResting), darkHaired(huscarlStriking)]),
 };

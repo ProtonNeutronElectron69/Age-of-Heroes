@@ -74,9 +74,12 @@ try {
     cards: document.querySelectorAll(".draft-card .hex-card").length,
     slots: document.querySelectorAll(".draft-card").length,
     spilled: [...document.querySelectorAll(".draft-card .hc-rules")].filter((el) => el.scrollHeight > el.clientHeight + 1).length,
+    undrawn: [...document.querySelectorAll(".draft-card .hex-card")].filter((el) => !el.querySelector(".hc-art path")).map((el) => el.dataset.card),
   }));
   if (cardFit.cards !== cardFit.slots) fail(`${cardFit.slots} units in the draft but ${cardFit.cards} hex cards`);
   if (cardFit.spilled) fail(`${cardFit.spilled} cards have rules text that does not fit`);
+  // Every unit in the roster has its drawing.
+  if (cardFit.undrawn.length) fail(`Cards without unit art: ${cardFit.undrawn.join(", ")}`);
   await shot("2-draft");
   while (await page.getByRole("heading", { name: "Draft" }).count()) {
     await page.locator(".draft-card button.primary:not([disabled])").first().click();
