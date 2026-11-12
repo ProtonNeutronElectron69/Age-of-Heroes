@@ -14,14 +14,16 @@ import type { FigureState, GameEvent, GameState, RulesContext, Step, UnitState }
  * steps it changes. Abilities only exist in the Advanced game.
  *
  * Ability ids:
- * - Movement: flying, trample, smoke-step
+ * - Movement: flying, trample, smoke-step, war-drums (aura), corpse-feast (a move after a kill)
  * - Attack bonuses: massed-volley, grove-song (aura), command-the-dead (aura), charge, pack-hunt, duelist,
- *   steady-aim, longshot, bloodrage, fury, smite-the-unholy
+ *   steady-aim, longshot, bloodrage, fury, smite-the-unholy, piercing (one fewer defense die)
  * - Defense bonuses: rally-the-line (aura), deflector-field (aura), hidden-in-the-leaves, moss-armor, brace, shield-wall
- * - Reactions: answering-blade, thick-hide, salvage-protocol, soul-reap, reboot
- * - End of turn: field-dressing, reassemble
+ * - Who can be attacked: will-o-wisp (not from afar), challenge (neighbours must attack this figure)
+ * - Reactions: answering-blade, thick-hide, salvage-protocol, soul-reap, reboot, pin (no move next turn),
+ *   shove (push back 1 hex), last-stand (strike back when destroyed), volatile-core (bursts when destroyed)
+ * - End of turn: field-dressing, reassemble, regrowth, mending-hymn
  * - Special actions (used instead of a normal attack): ember-spit, mortar-barrage, arc-lightning (area attacks),
- *   lantern-gaze (mind control)
+ *   lantern-gaze (mind control), grapple-line (pull an enemy close), fae-step (swap places with a friend)
  */
 
 /** Species that Smite the Unholy is aimed at. */
@@ -227,7 +229,67 @@ export function abilityModifiers(
   if (brace && distance <= 1 && state.active?.moved.includes(attacker.figure.id)) {
     add("defense", param(brace, "bonus", 2), brace.name);
   }
+
+  // Piercing: the target rolls fewer defense dice.
+  const piercing = abilityOf(attacker.card, "piercing");
+  if (piercing) {
+    const cut = param(piercing, "reduce", 1);
+    mods.defense -= cut;
+    mods.notes.push(`${piercing.name} -${cut} defense`);
+  }
   return mods;
+}
+
+/**
+ * Why abilities stop `attacker` from targeting `target` with an attack or a
+ * special action, or null. Will-o'-the-Wisp cannot be targeted from afar, and
+ * a figure next to an enemy with Challenge may only attack that enemy.
+ */
+export function targetingProblem(
+  state: GameState,
+  ctx: RulesContext,
+  attacker: Combatant,
+  target: Combatant,
+  distance: number,
+): string | null {
+  if (state.config.mode !== "advanced") return null;
+  const wisp = abilityOf(target.card, "will-o-wisp");
+  if (wisp && distance > param(wisp, "maxDistance", 4)) {
+    return `${wisp.name}: it cannot be targeted from more than ${param(wisp, "maxDistance", 4)} hexes away`;
+  }
+  const challengers: Combatant[] = [];
+  for (const unit of state.units) {
+    if (unit.owner === attacker.unit.owner) continue;
+    const card = ctx.cards.get(unit.cardId);
+    if (!card || !hasAbility(state, card, "challenge")) continue;
+    for (const figure of unit.figures) {
+      if (figure.destroyed || !figure.position) continue;
+      const c = combatant(unit, figure, ctx);
+      if (spotDistance(c.spots, attacker.spots) <= 1) challengers.push(c);
+    }
+  }
+  if (challengers.length > 0 && !challengers.some((c) => c.figure.id === target.figure.id)) {
+    const c = challengers[0]!;
+    return `${abilityOf(c.card, "challenge")!.name}: it must attack ${c.card.name} first`;
+  }
+  return null;
+}
+
+/** Extra Move from auras (War Drums: other friendly Orcs that start a move near the drummer). */
+export function moveBonus(state: GameState, ctx: RulesContext, mover: Combatant): { bonus: number; notes: string[] } {
+  if (state.config.mode !== "advanced") return { bonus: 0, notes: [] };
+  if (mover.card.species !== "Orc") return { bonus: 0, notes: [] };
+  const drummer = friendsWith(state, mover.unit.owner, "war-drums", ctx, mover.figure.id).find(
+    (s) => spotDistance(s.spots, mover.spots) <= param(abilityOf(s.card, "war-drums"), "range", 3),
+  );
+  if (!drummer) return { bonus: 0, notes: [] };
+  const a = abilityOf(drummer.card, "war-drums")!;
+  return { bonus: param(a, "move", 2), notes: [`${a.name} +${param(a, "move", 2)} move`] };
+}
+
+/** Is this figure pinned (it cannot move this turn)? */
+export function isPinned(state: GameState, figureId: string): boolean {
+  return state.pinned?.includes(figureId) ?? false;
 }
 
 /** Wounds after defensive abilities that reduce damage (Thick Hide). */
@@ -257,9 +319,46 @@ export function afterAttack(
   distance: number,
   hits: number,
   blocks: number,
+  wounds: number,
   events: GameEvent[],
 ): void {
   if (state.config.mode !== "advanced") return;
+
+  // Pin: a figure wounded (and still standing) cannot move on its next turn.
+  const pin = abilityOf(attacker.card, "pin");
+  if (pin && wounds > 0 && !defender.figure.destroyed && !isPinned(state, defender.figure.id)) {
+    state.pinned = [...(state.pinned ?? []), defender.figure.id];
+    events.push({
+      type: "abilityUsed",
+      ability: pin.id,
+      figureId: attacker.figure.id,
+      targetId: defender.figure.id,
+      detail: `${pin.name}: ${defender.card.name} cannot move on its next turn`,
+    });
+  }
+
+  // Volatile Core: a destroyed machine bursts, hitting every figure next to where it stood.
+  const core = abilityOf(defender.card, "volatile-core");
+  if (core && defender.figure.destroyed && defender.unit.figures.includes(defender.figure)) {
+    for (const unit of state.units) {
+      const card = ctx.cards.get(unit.cardId);
+      if (!card) continue;
+      for (const figure of unit.figures) {
+        if (figure.destroyed || !figure.position || figure.id === defender.figure.id) continue;
+        if (spotDistance(figureSpots(figure, card.footprint, card.height, ctx), defender.spots) > 1) continue;
+        const dice = rollDice(rng, DEFENSE_DIE, param(core, "defenseDice", 1));
+        const safe = countFaces(dice, "shield") > 0;
+        events.push({
+          type: "abilityUsed",
+          ability: core.id,
+          figureId: defender.figure.id,
+          targetId: figure.id,
+          detail: safe ? `${core.name}: ${card.name} shields itself` : `${core.name}: ${card.name} takes 1 wound`,
+        });
+        if (!safe) woundFigure(state, unit, figure, param(core, "wounds", 1), card.advanced.life, "ability", events);
+      }
+    }
+  }
 
   // Reboot: a destroyed machine may get straight back up where it fell.
   const reboot = abilityOf(defender.card, "reboot");
@@ -368,7 +467,15 @@ export function endOfTurnAbilities(state: GameState, unitId: string, ctx: RulesC
   const unit = state.units.find((u) => u.id === unitId);
   const card = unit ? ctx.cards.get(unit.cardId) : undefined;
   if (!unit || !card) return;
+  // Pins last for one turn of the pinned figure's unit.
+  if (state.pinned) {
+    const mine = new Set(unit.figures.map((f) => f.id));
+    state.pinned = state.pinned.filter((id) => !mine.has(id));
+    if (state.pinned.length === 0) delete state.pinned;
+  }
   reassemble(state, unit, card, ctx, events);
+  regrowth(state, unit, card, ctx, events);
+  mendingHymn(state, unit, card, ctx, events);
   const dressing = abilityOf(card, "field-dressing");
   if (!dressing) return;
   for (const medic of unit.figures) {
@@ -399,6 +506,58 @@ export function endOfTurnAbilities(state: GameState, unitId: string, ctx: RulesC
       detail: `${dressing.name}: ${amount} wound removed`,
     });
   }
+}
+
+/** Heal one figure and log it. */
+function heal(figure: FigureState, amount: number, ability: Ability, by: string, events: GameEvent[]): void {
+  const n = Math.min(figure.wounds, amount);
+  if (n <= 0) return;
+  figure.wounds -= n;
+  events.push({ type: "figureHealed", figureId: figure.id, amount: n, total: figure.wounds });
+  events.push({
+    type: "abilityUsed",
+    ability: ability.id,
+    figureId: by,
+    ...(by !== figure.id ? { targetId: figure.id } : {}),
+    detail: `${ability.name}: ${n} wound removed`,
+  });
+}
+
+/** Regrowth: each wounded figure of the unit standing on the right terrain (forest) heals. */
+function regrowth(state: GameState, unit: UnitState, card: UnitCard, ctx: RulesContext, events: GameEvent[]): void {
+  const ability = abilityOf(card, "regrowth");
+  if (!ability) return;
+  for (const f of unit.figures) {
+    if (f.destroyed || !f.position || f.wounds === 0) continue;
+    const spots = figureSpots(f, card.footprint, card.height, ctx);
+    const onForest = spots.some((s) => ctx.board.surfaceAt(s.hex, s.elevation)?.terrain === "forest");
+    if (onForest) heal(f, param(ability, "heal", 1), ability, f.id, events);
+  }
+}
+
+/** Mending Hymn: the most wounded friendly hero within range of any figure of the unit heals. */
+function mendingHymn(state: GameState, unit: UnitState, card: UnitCard, ctx: RulesContext, events: GameEvent[]): void {
+  const ability = abilityOf(card, "mending-hymn");
+  if (!ability) return;
+  const singers = unit.figures.filter((f) => !f.destroyed && f.position);
+  if (singers.length === 0) return;
+  const range = param(ability, "range", 3);
+  let best: { figure: FigureState; singer: string } | null = null;
+  for (const u of state.units) {
+    if (u.owner !== unit.owner) continue;
+    const c = ctx.cards.get(u.cardId);
+    if (!c || c.figureCount !== 1) continue;
+    for (const f of u.figures) {
+      if (f.destroyed || !f.position || f.wounds === 0) continue;
+      const spots = figureSpots(f, c.footprint, c.height, ctx);
+      const singer = singers.find((s) => spotDistance(figureSpots(s, card.footprint, card.height, ctx), spots) <= range);
+      if (!singer) continue;
+      if (!best || f.wounds > best.figure.wounds || (f.wounds === best.figure.wounds && f.id < best.figure.id)) {
+        best = { figure: f, singer: singer.id };
+      }
+    }
+  }
+  if (best) heal(best.figure, param(ability, "heal", 1), ability, best.singer, events);
 }
 
 /** Reassemble: roll for one destroyed figure; on a high roll it returns next to a living squadmate. */
@@ -475,8 +634,42 @@ export interface MindControlSpec {
   readonly needed: number;
 }
 
+export interface ReachSpec {
+  readonly id: string;
+  readonly name: string;
+  readonly range: number;
+}
+
 const AREA_IDS = ["ember-spit", "mortar-barrage", "arc-lightning"] as const;
 const MIND_IDS = ["lantern-gaze"] as const;
+const PULL_IDS = ["grapple-line"] as const;
+const SWAP_IDS = ["fae-step"] as const;
+
+function reachOf(card: UnitCard, id: string, ids: readonly string[], range: number): ReachSpec | undefined {
+  if (!ids.includes(id)) return undefined;
+  const a = abilityOf(card, id);
+  return a ? { id, name: a.name, range: param(a, "range", range) } : undefined;
+}
+
+/** Grapple Line: pull an enemy into a hex next to the figure. */
+export function pullOf(card: UnitCard, id: string): ReachSpec | undefined {
+  return reachOf(card, id, PULL_IDS, 3);
+}
+
+/** Fae Step: swap places with a friendly single-hex figure. */
+export function swapOf(card: UnitCard, id: string): ReachSpec | undefined {
+  return reachOf(card, id, SWAP_IDS, 5);
+}
+
+export type SpecialKind = "area" | "mindControl" | "pull" | "swap";
+
+function specialKind(card: UnitCard, id: string): SpecialKind | null {
+  if (areaAttackOf(card, id)) return "area";
+  if (mindControlOf(card, id)) return "mindControl";
+  if (pullOf(card, id)) return "pull";
+  if (swapOf(card, id)) return "swap";
+  return null;
+}
 
 export function areaAttackOf(card: UnitCard, id: string): AreaAttackSpec | undefined {
   if (!(AREA_IDS as readonly string[]).includes(id)) return undefined;
@@ -501,9 +694,12 @@ export function mindControlOf(card: UnitCard, id: string): MindControlSpec | und
 }
 
 /** Special actions a card can use instead of a normal attack (Advanced only). */
-export function specialActions(state: GameState, card: UnitCard): { id: string; name: string; kind: "area" | "mindControl" }[] {
+export function specialActions(state: GameState, card: UnitCard): { id: string; name: string; kind: SpecialKind }[] {
   if (state.config.mode !== "advanced") return [];
-  return card.advanced.abilities
-    .filter((a) => areaAttackOf(card, a.id) || mindControlOf(card, a.id))
-    .map((a) => ({ id: a.id, name: a.name, kind: areaAttackOf(card, a.id) ? ("area" as const) : ("mindControl" as const) }));
+  const result: { id: string; name: string; kind: SpecialKind }[] = [];
+  for (const a of card.advanced.abilities) {
+    const kind = specialKind(card, a.id);
+    if (kind) result.push({ id: a.id, name: a.name, kind });
+  }
+  return result;
 }

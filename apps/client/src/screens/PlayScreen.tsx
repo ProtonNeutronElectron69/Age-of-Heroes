@@ -195,6 +195,7 @@ export function PlayScreen({ session }: { session: Session }) {
     setAttackMode(null);
   }, [selected, turnKey]);
   const specials = activeCard ? specialActions(state, activeCard) : [];
+  const modeKind = specials.find((s) => s.id === attackMode)?.kind ?? null;
 
   const options = useMemo<Map<string, MoveOption>>(() => {
     if (!active || !selected) return new Map();
@@ -550,6 +551,7 @@ export function PlayScreen({ session }: { session: Session }) {
                               : ""}
                         </span>
                         {engaged > 0 && <span className="tag">engaged</span>}
+                        {state.pinned?.includes(f.id) && <span className="tag">pinned</span>}
                       </button>
                     </li>
                   );
@@ -575,7 +577,17 @@ export function PlayScreen({ session }: { session: Session }) {
               {!myTurn
                 ? `Waiting for ${names.player(active.player)} to play this turn.`
                 : selected
-                ? `Green hexes: move there. ${targets.size > 0 ? "Red rings: attack." : "No enemy in range and sight."} Orange hexes are risky (lava, ice${mode === "advanced" ? ", falls or passing strikes" : ""}).`
+                ? `Green hexes: move there. ${
+                    modeKind === "swap"
+                      ? targets.size > 0
+                        ? "Rings: friends to swap places with."
+                        : "No friend in range to swap with."
+                      : targets.size > 0
+                        ? "Red rings: attack."
+                        : "No enemy in range and sight."
+                  } Orange hexes are risky (lava, ice${mode === "advanced" ? ", falls or passing strikes" : ""}).${
+                    state.pinned?.includes(selected) ? " This figure is pinned and cannot move this turn." : ""
+                  }`
                 : "This unit has finished."}
               {moveBig ? " Press R to turn." : ""}
               {myTurn ? ` Keys: ${activeUnit.figures.length > 1 ? "1-4 pick a figure, " : ""}E eye view, Space ends the turn, WASD moves the map.` : ""}

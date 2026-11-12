@@ -1,5 +1,6 @@
 import { unitCardSchema, type UnitCard } from "@aoh/rules";
 import legends from "./cards/legends.json";
+import reinforcements from "./cards/reinforcements.json";
 import starter from "./cards/starter.json";
 
 /** Parse and validate a unit card. Throws with a readable message if the data is malformed. */
@@ -22,11 +23,16 @@ export function cardCatalog(cards: readonly UnitCard[]): ReadonlyMap<string, Uni
 }
 
 /**
- * The roster: the 16 starter units in four factions, and the 30-unit "legends"
- * drop that adds two factions (the Ashen Host and the Dawnhold Covenant) and a
- * new unit for each starter faction. Every unit is original.
+ * The roster: the 16 starter units in four factions; the "legends" drop that
+ * adds two factions (the Ashen Host and the Dawnhold Covenant) and a unit for
+ * each starter faction, for 30; and the "reinforcements" drop of a hero and two
+ * squads for every faction, for 48. Every unit is original.
  */
-export const CARDS: readonly UnitCard[] = [...(starter as unknown[]), ...(legends as unknown[])].map(loadCard);
+export const CARDS: readonly UnitCard[] = [
+  ...(starter as unknown[]),
+  ...(legends as unknown[]),
+  ...(reinforcements as unknown[]),
+].map(loadCard);
 
 export const CARD_CATALOG = cardCatalog(CARDS);
 

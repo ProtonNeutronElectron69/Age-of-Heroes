@@ -116,8 +116,8 @@ describe("cards", () => {
     expect(cardCatalog(CARDS).size).toBe(CARDS.length);
   });
 
-  it("has a roster of 30 units, 5 in each of 6 factions, three of them multi-hex", () => {
-    expect(CARDS).toHaveLength(30);
+  it("has a roster of 48 units, 8 in each of 6 factions, three of them multi-hex", () => {
+    expect(CARDS).toHaveLength(48);
     expect(FACTIONS).toEqual([
       "Iron Concord",
       "House Kagero",
@@ -126,7 +126,7 @@ describe("cards", () => {
       "Ashen Host",
       "Dawnhold Covenant",
     ]);
-    for (const f of FACTIONS) expect(CARDS.filter((c) => c.faction === f), f).toHaveLength(5);
+    for (const f of FACTIONS) expect(CARDS.filter((c) => c.faction === f), f).toHaveLength(8);
     expect(CARDS.filter((c) => c.footprint !== "1").map((c) => [c.id, c.footprint])).toEqual([
       ["old-rootback", "2x1"],
       ["siege-walker-atlas", "2x2"],
@@ -135,11 +135,13 @@ describe("cards", () => {
     expect(new Set(CARDS.map((c) => c.tokenLabel)).size).toBe(CARDS.length);
   });
 
-  it("balances heroes against squads and ranged against melee", () => {
+  it("keeps heroes and squads, and ranged and melee, within about 60/40 of each other", () => {
     const heroes = CARDS.filter((c) => c.figureCount === 1);
     const ranged = CARDS.filter((c) => c.advanced.range > 1);
-    expect(heroes).toHaveLength(15);
-    expect(ranged).toHaveLength(15);
+    for (const share of [heroes.length / CARDS.length, ranged.length / CARDS.length]) {
+      expect(share).toBeGreaterThanOrEqual(0.35);
+      expect(share).toBeLessThanOrEqual(0.65);
+    }
     // Every faction can field both kinds of unit and both kinds of attack.
     for (const f of FACTIONS) {
       const units = CARDS.filter((c) => c.faction === f);
@@ -157,6 +159,8 @@ describe("cards", () => {
       "field-dressing", "ember-spit", "mortar-barrage", "lantern-gaze",
       "charge", "steady-aim", "longshot", "pack-hunt", "duelist", "bloodrage", "smite-the-unholy",
       "command-the-dead", "shield-wall", "soul-reap", "reboot", "reassemble", "arc-lightning", "fury",
+      "pin", "shove", "grapple-line", "last-stand", "fae-step", "will-o-wisp", "regrowth", "volatile-core",
+      "war-drums", "corpse-feast", "challenge", "piercing", "mending-hymn",
     ]);
     for (const c of CARDS) for (const a of c.advanced.abilities) expect(implemented.has(a.id), `${c.id} ${a.id}`).toBe(true);
   });

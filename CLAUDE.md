@@ -20,7 +20,7 @@
 - Heroes have 2 to 8 Life. Most squads have 1; squads of 2 or 3 figures may have up to 3.
 - Squads have at most 4 figures.
 - Point costs come from the balance model (`BALANCE_REPORT=1 pnpm test balance`).
-- The roster stays balanced between heroes and squads and between ranged and melee, and every faction has each kind.
+- The roster keeps heroes and squads, and ranged and melee, within about 60/40 of each other (a guideline, not a hard rule), and every faction has each kind.
 - Tests in `packages/content/test` enforce all of this; update their expected counts when the roster grows.
 
 ## Client notes

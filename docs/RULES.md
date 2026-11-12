@@ -243,7 +243,8 @@ General rulings:
 - Numbers in abilities (ranges, dice, bonuses, rolls needed) are on the card data and *tunable*.
 - **Auras do not stack.** A figure gets each named bonus at most once, however many sources are nearby.
 - Bonus dice from abilities add to height bonuses. Every roll lists why its dice changed.
-- **Special actions** (Ember Spit, Mortar Barrage, Arc Lightning, Lantern Gaze) are used **instead of** the figure's normal attack, and follow the normal attack rules (engagement, line of sight) unless they say otherwise.
+- **Special actions** (Ember Spit, Mortar Barrage, Arc Lightning, Lantern Gaze, Grapple Line, Fae Step) are used **instead of** the figure's normal attack, and follow the normal attack rules (engagement, line of sight) unless they say otherwise.
+- **Forced moves** (Shove, Grapple Line) move a figure without walking: there are no passing strikes and no ice slips, but the figure takes falling damage if it drops far enough and rolls for lava where it lands. **Assumption.**
 
 | Ability | What it does |
 |---|---|
@@ -278,6 +279,19 @@ General rulings:
 | **Reboot** | When a figure of the squad is destroyed by an attack, roll a d20. On 17 or more it stands back up where it fell, with no wounds. |
 | **Reassemble** | At the end of the squad's turn, if any of its figures are destroyed, roll a d20. On 15 or more one of them returns, with no wounds, next to a figure of the squad that is still standing. |
 | **Fury** | +1 attack die while the figure has at least 1 wound. |
+| **Pin** | A figure this figure wounds but does not destroy cannot move on its unit's next turn (it can still attack). The pin ends when that turn ends. |
+| **Shove** | After a normal attack on an adjacent single-hex enemy that is not Huge and survives, push it 1 hex straight back, onto the highest ground there no higher than it stands, if it fits and the spot is free. |
+| **Grapple Line** (special action) | Range 2 to 3, in sight: pull a Small or Medium single-hex enemy into the free hex next to the figure that is nearest to where it stood. |
+| **Last Stand** | When an attack destroys a figure of the squad, it makes a normal attack on its attacker as it falls, if the attacker is within its range (and engaged with it, for melee) and in sight. |
+| **Fae Step** (special action) | Swap places with a friendly single-hex figure up to 5 hexes away, if each fits where the other stands and neither is pinned. No line of sight is needed. |
+| **Will-o'-the-Wisp** | The figure cannot be the target of an attack or special action from more than 4 hexes away. Blasts aimed at others still catch it. |
+| **Regrowth** | At the end of the squad's turn, each wounded figure of the squad standing on forest removes 1 wound. |
+| **Volatile Core** | When an attack destroys a figure of the squad, every other figure next to it, friend or foe, rolls 1 defense die; on no shield it takes 1 wound. |
+| **War Drums** | Other friendly Orc figures that start a move within 3 hexes of the drummer get +2 Move for that move (an aura). |
+| **Corpse Feast** | When a figure of the squad destroys a figure with a normal attack, it may move up to 2 hexes, drawing no passing strikes. |
+| **Challenge** | An enemy figure next to this figure may only target this figure with its attacks and special actions. |
+| **Piercing** | The target rolls 1 fewer defense die (never fewer than none). |
+| **Mending Hymn** | At the end of the squad's turn, the most wounded friendly hero within 3 hexes of any figure of the squad removes 1 wound. |
 
 Every squad has 1 special ability and every hero has 2; Flying comes on top and does not count. Many cards give one of these rules a name of their own, and the card text spells it out. For example:
 - Flying: Jet Packs (Skyhook Raiders).
@@ -295,6 +309,18 @@ Every squad has 1 special ability and every hero has 2; Flying comes on top and 
 - Deflector Field: Arcane Ward (Orrin Vael).
 - Ember Spit: Grave Blight (Morvane), with range 4.
 - Fury: Oni Fury (Ashfang Oni).
+- Ember Spit: Satchel Charge (Sergeant Brannock), with range 2 and 3 dice.
+- Mortar Barrage: Lobbed Grenade (Concord Grenadiers), with range 1 to 3 and 2 dice.
+- Arc Lightning: Thornburst (Queen Ilyth) and Hex Bolt (Grubnak), with range 4 and 2 dice.
+- Trample: Ride Them Down (Brass Hussars).
+- Longshot: Whistling Arrow (Lady Suzume).
+- Massed Volley: Volley Fire (Teppo Gunners), from the second attack, +1 die.
+- Pin: Pinning Shot (Lady Suzume), Shock Gauntlets (Nexus Breachers).
+- Shove: Shoulder Barge (Sergeant Brannock).
+- Last Stand: Last Volley (Bonebow Archers).
+- Smoke Step: Phase Shift (Proxima).
+- Smite the Unholy: Righteous Fury (Dame Rowena).
+- Piercing: Piercing Bolts (Covenant Crossbowmen).
 
 A figure taken by mind control scores its share of its card's points for its new owner.
 

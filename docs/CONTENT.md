@@ -37,7 +37,7 @@ Rules the content tests enforce (`packages/content/test`):
 - **Labels and ids:** token labels and ids are unique.
 - **Multi-hex units:** every multi-hex unit must be able to deploy in every start zone of every map.
 - **Points:** every unit's points must be within 0.7 to 1.3 of what the balance model suggests. Aim for about 1.0. Run `BALANCE_REPORT=1 pnpm test balance` and set points near the "Fair" column, rounded to 5. Adding units shifts the scale a little for everyone, so check the whole table.
-- **Roster shape:** the test currently expects 30 units, 6 factions of 5, 15 heroes and 15 squads, and 15 ranged and 15 melee. Every faction must have heroes, squads, ranged and melee units. Update the expected counts in `content.test.ts` when the roster grows, keeping the balance.
+- **Roster shape:** the test currently expects 48 units in 6 factions of 8. Heroes and squads, and ranged and melee units, should each stay within about 60/40 of each other (the test allows 35% to 65%), and every faction must have heroes, squads, ranged and melee units. Update the expected counts in `content.test.ts` when the roster grows.
 
 Conventions:
 - **Basic side:** heroes, and squads with more than 1 Life, usually get +1 Basic defense, because a single wound destroys a figure in the Basic game.
