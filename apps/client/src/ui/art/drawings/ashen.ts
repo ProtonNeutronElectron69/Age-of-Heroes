@@ -238,10 +238,163 @@ const bonebowNocking: Figure = (() => {
   };
 })();
 
+/** An orc's head: heavy jaw, tusks, and a crest of hair. `look` is -1 for a head turned left, 0 for facing us. */
+const orcHead = (x: number, y: number, look: number): Part[] => [
+  part("skin", `${pts([x - 12, y - 4], [x - 26, y - 10], [x - 12, y + 4])} ${pts([x + 12, y - 4], [x + 26, y - 10], [x + 12, y + 4])}`),
+  part("skin", disc([x, y], 12.5), look === 0 ? `${line([x - 7, y - 2], [x - 2, y - 1])} ${line([x + 2, y - 1], [x + 7, y - 2])}` : line([x - 9, y - 2], [x - 4, y - 1])),
+  part("skin", pts([x - 10 + look * 2, y + 6], [x + 10 + look * 2, y + 6], [x + 7 + look * 2, y + 18], [x - 7 + look * 2, y + 18])),
+  part("bone", `${pts([x - 8 + look * 2, y + 14], [x - 10 + look * 2, y + 2], [x - 4 + look * 2, y + 12])} ${pts([x + 8 + look * 2, y + 14], [x + 10 + look * 2, y + 2], [x + 4 + look * 2, y + 12])}`),
+  part("hair", pts([x - 4, y - 10], [x - 2, y - 28], [x + 3, y - 14], [x + 8, y - 26], [x + 8, y - 10])),
+];
+
+/** A throwing axe from the hand toward `to`. */
+const handAxe = (hand: P, to: P): Part[] => {
+  const dx = (to[0] - hand[0]) / 30;
+  const dy = (to[1] - hand[1]) / 30;
+  const tip: P = [hand[0] + dx * 30, hand[1] + dy * 30];
+  return [
+    part("wood", limb([hand[0] - dx * 8, hand[1] - dy * 8], tip, 3.6)),
+    part("blade", pts([tip[0] - dx * 9, tip[1] - dy * 9], [tip[0] - dx * 6 - dy * 15, tip[1] - dy * 6 + dx * 15], [tip[0] + dx * 4 - dy * 13, tip[1] + dy * 4 + dx * 13], [tip[0] + dx * 1, tip[1] + dy * 1])),
+  ];
+};
+
+const RAIDER = { skin: ORC, cloth: "#3a2a22", cape: "#5b3a2a" };
+
+/** An Orc Raider winding up to hurl an axe to the left. */
+const orcHurling: Figure = (() => {
+  const shL: P = [86, 92];
+  const shR: P = [120, 90];
+  const hipL: P = [90, 148];
+  const hipR: P = [114, 148];
+  return {
+    top: 36,
+    bottom: 244,
+    gear: ["wood", "blade"],
+    tint: RAIDER,
+    parts: [
+      ...arm(shR, [140, 76], [146, 52], "skin", { w: 12 }),
+      ...handAxe([146, 52], [158, 22]),
+      ...leg(hipR, [124, 196], [134, 238], "cloth", "leather", { toe: 1, w: 15 }),
+      ...leg(hipL, [80, 196], [70, 238], "cloth", "leather", { toe: -1, w: 15 }),
+      part("skin", pts([82, 88], [124, 86], [118, 150], [86, 150]), `${line([102, 96], [102, 140])} ${line([88, 112], [102, 118], [118, 110])}`),
+      part("cape", pts([84, 142], [118, 142], [124, 176], [112, 170], [102, 180], [92, 170], [80, 176])),
+      part("bone", pts([86, 140], [118, 140], [119, 148], [85, 148])),
+      part("leather", limb([84, 90], [118, 142], 5)),
+      ...arm(shL, [66, 102], [50, 94], "skin", { w: 12 }),
+      part("leather", pts([74, 82], [96, 80], [94, 98], [72, 102])),
+      ...orcHead(103, 64, -1),
+    ],
+  };
+})();
+
+/** An Orc Raider bellowing, an axe in each fist. */
+const orcBellowing: Figure = (() => {
+  const shL: P = [82, 92];
+  const shR: P = [118, 92];
+  const hipL: P = [88, 148];
+  const hipR: P = [112, 148];
+  return {
+    top: 34,
+    bottom: 244,
+    gear: ["wood", "blade"],
+    tint: { ...RAIDER, skin: "#6b9150" },
+    parts: [
+      ...leg(hipL, [82, 196], [76, 238], "cloth", "leather", { toe: -1, w: 15 }),
+      ...leg(hipR, [118, 196], [124, 238], "cloth", "leather", { toe: 1, w: 15 }),
+      part("skin", pts([78, 88], [122, 88], [116, 150], [84, 150]), `${line([100, 96], [100, 140])} ${line([86, 112], [100, 118], [114, 112])}`),
+      part("cape", pts([82, 142], [118, 142], [124, 176], [112, 170], [100, 180], [88, 170], [76, 176])),
+      part("bone", pts([84, 140], [116, 140], [117, 148], [83, 148])),
+      part("leather", limb([116, 90], [84, 142], 5)),
+      ...arm(shL, [62, 110], [56, 136], "skin", { w: 12 }),
+      ...handAxe([56, 136], [36, 160]),
+      ...arm(shR, [138, 110], [144, 136], "skin", { w: 12 }),
+      ...handAxe([144, 136], [164, 160]),
+      part("leather", pts([106, 80], [128, 82], [130, 102], [108, 98])),
+      ...orcHead(100, 62, 0),
+      part("boot", pts([94, 71], [106, 71], [104, 77], [96, 77])),
+    ],
+  };
+})();
+
+const GHOUL = { skin: "#a9b59c", cape: "#4a3f52", glow: "#a6f07c" };
+
+/** Three claws on a hand, pointing along `dir`. */
+const claws = (hand: P, dir: P) =>
+  part(
+    "bone",
+    [-1, 0, 1]
+      .map((k) => {
+        const bx = hand[0] - dir[1] * k * 3.2;
+        const by = hand[1] + dir[0] * k * 3.2;
+        return pts([bx - dir[1] * 1.4, by + dir[0] * 1.4], [bx + dir[0] * 10, by + dir[1] * 10], [bx + dir[1] * 1.4, by - dir[0] * 1.4]);
+      })
+      .join(" "),
+  );
+
+/** A ghoul's bald head with lit eyes and an open jaw. */
+const ghoulHead = (x: number, y: number, look: number): Part[] => [
+  part("skin", disc([x, y], 11), ""),
+  part("skin", pts([x - 7 + look * 4, y + 6], [x + 7 + look * 4, y + 6], [x + 5 + look * 5, y + 19], [x - 5 + look * 5, y + 19])),
+  part("boot", pts([x - 4 + look * 4, y + 9], [x + 4 + look * 4, y + 9], [x + 3 + look * 5, y + 16], [x - 3 + look * 5, y + 16])),
+  part("glow", look === 0 ? `${disc([x - 4.4, y - 1], 2.4)} ${disc([x + 4.4, y - 1], 2.4)}` : disc([x + look * 6, y - 1.5], 2.4)),
+];
+
+/** A Ghoul loping forward to the left, arms reaching. */
+const ghoulLoping: Figure = (() => {
+  const shL: P = [92, 132];
+  const shR: P = [114, 126];
+  const hipL: P = [110, 172];
+  const hipR: P = [126, 168];
+  return {
+    top: 100,
+    bottom: 244,
+    gear: [],
+    tint: GHOUL,
+    parts: [
+      ...arm(shR, [100, 160], [86, 190], "skin", { w: 8 }),
+      claws([86, 190], [-0.5, 0.87]),
+      ...leg(hipR, [142, 202], [134, 238], "skin", "skin", { toe: -1, w: 11 }),
+      ...leg(hipL, [96, 206], [102, 238], "skin", "skin", { toe: -1, w: 11 }),
+      part("skin", pts([88, 126], [116, 118], [132, 164], [106, 178]), `${line([96, 134], [112, 128])} ${line([100, 144], [118, 138])} ${line([104, 154], [122, 148])}`),
+      part("cape", pts([104, 168], [132, 160], [140, 186], [128, 182], [124, 196], [114, 184], [106, 194])),
+      ...arm(shL, [72, 160], [52, 176], "skin", { w: 8 }),
+      claws([52, 176], [-0.87, 0.5]),
+      ...ghoulHead(80, 112, -1),
+    ],
+  };
+})();
+
+/** A Ghoul reared up and shrieking, claws spread. */
+const ghoulShrieking: Figure = (() => {
+  const shL: P = [84, 126];
+  const shR: P = [116, 126];
+  const hipL: P = [90, 176];
+  const hipR: P = [110, 176];
+  return {
+    top: 88,
+    bottom: 244,
+    gear: [],
+    tint: { ...GHOUL, skin: "#9aa890" },
+    parts: [
+      ...leg(hipL, [74, 206], [80, 238], "skin", "skin", { toe: -1, w: 11 }),
+      ...leg(hipR, [126, 206], [120, 238], "skin", "skin", { toe: 1, w: 11 }),
+      part("skin", pts([80, 122], [120, 122], [114, 178], [86, 178]), `${line([88, 134], [112, 134])} ${line([89, 144], [111, 144])} ${line([90, 154], [110, 154])} ${line([100, 124], [100, 164])}`),
+      part("cape", pts([86, 172], [114, 172], [120, 196], [110, 190], [100, 200], [90, 190], [80, 196])),
+      ...arm(shL, [62, 122], [48, 98], "skin", { w: 8 }),
+      claws([48, 98], [-0.3, -0.95]),
+      ...arm(shR, [138, 122], [152, 98], "skin", { w: 8 }),
+      claws([152, 98], [0.3, -0.95]),
+      ...ghoulHead(100, 100, 0),
+    ],
+  };
+})();
+
 export const ASHEN: Record<string, Drawing> = {
   vorhal: solo(vorhal),
   morvane: solo(morvane),
   grubnak: solo(grubnak),
   "bonebow-archers": squad([bonebowNocking, bonebowLoosing, bonebowLoosing]),
+  "ruinmaw-raiders": squad([orcBellowing, orcHurling, orcHurling]),
+  "ghoul-pack": squad([ghoulShrieking, ghoulLoping, ghoulShrieking, ghoulLoping]),
   "barrow-legion": squad([legionGuard, legionThrust, legionGuard, legionThrust]),
 };

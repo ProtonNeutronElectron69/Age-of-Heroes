@@ -1,4 +1,4 @@
-import { arm, belt, disc, head, leg, limb, line, type P, part, pts, solo, squad, torso } from "../build";
+import { type AimStance, arm, belt, disc, head, KNEELING_AIM, leg, limb, line, type P, part, pts, solo, squad, STANDING_AIM, torso } from "../build";
 import type { Drawing, Figure } from "../types";
 
 /** Captain Marisol Vance: bicorne and long coat, pistol levelled, sabre raised. */
@@ -291,6 +291,37 @@ const grenadierLighting: Figure = (() => {
   };
 })();
 
+/** A cocked hat with its cockade. */
+const cockedHat = (x: number, y: number) => [
+  part("helmet", pts([x - 20, y - 5], [x - 7, y - 17], [x + 9, y - 18], [x + 19, y - 7], [x + 11, y - 2], [x - 13, y - 2]), line([x - 12, y - 8], [x + 12, y - 9])),
+  part("crest", disc([x + 3, y - 12], 3)),
+];
+
+/** A Fusilier firing from one of the aiming stances, a puff of smoke at the muzzle. */
+const fusilier = (j: AimStance, skin?: string): Figure => ({
+  top: j.head[1] - 26,
+  bottom: 244,
+  gear: ["blade", "wood", "leather", "jewel"],
+  tint: { cloth: "#d9d5c8", ...(skin ? { skin } : {}) },
+  parts: [
+    part("leather", pts([j.shR[0] - 6, j.shR[1] + 3], [j.shR[0] + 11, j.shR[1] + 1], [j.shR[0] + 15, j.shR[1] + 34], [j.shR[0] - 2, j.shR[1] + 36])),
+    ...leg(j.hipR, j.kneeR, j.footR, "cloth", "boot", { toe: 1 }),
+    ...leg(j.hipL, j.kneeL, j.footL, "cloth", "boot", { toe: -1 }),
+    torso(j.shL, j.shR, j.hipL, j.hipR, "armor"),
+    part("bone", limb([j.shL[0] - 1, j.shL[1] - 1], [j.hipR[0] - 1, j.hipR[1] - 4], 4.2)),
+    part("bone", limb([j.shR[0] - 1, j.shR[1]], [j.hipL[0] + 1, j.hipL[1] - 4], 4.2)),
+    belt(j.hipL, j.hipR, "leather"),
+    ...arm(j.shR, j.elbowR, j.handR, "armor"),
+    part("wood", limb(j.stock, j.grip, 6, 4.2)),
+    part("metal", limb(j.breech, j.muzzle, 2.8)),
+    part("blade", pts([j.muzzle[0], j.muzzle[1] - 1.5], [j.muzzle[0] - 20, j.muzzle[1] - 1], [j.muzzle[0], j.muzzle[1] + 2])),
+    part("jewel", `M${j.muzzle[0] - 4},${j.muzzle[1] - 8} q-10,-8 -18,-2 q-10,0 -8,8 q-4,8 6,10 q8,6 16,-2 q8,-4 4,-14 Z`),
+    ...arm(j.shL, j.elbowL, j.handL, "armor"),
+    head(j.head, -1),
+    ...cockedHat(j.head[0] + 1, j.head[1] - 3),
+  ],
+});
+
 export const CONCORD: Record<string, Drawing> = {
   "marisol-vance": solo(marisolVance, [18, 172]),
   "harrow-riflemen": squad([riflemanAiming, riflemanReady, riflemanAiming]),
@@ -298,4 +329,5 @@ export const CONCORD: Record<string, Drawing> = {
   "gatewarden-pikemen": squad([pikemanStanding, pikemanBraced, pikemanBraced]),
   brannock: solo(brannock),
   "concord-grenadiers": squad([grenadierLighting, grenadierLobbing, grenadierLobbing]),
+  "concord-fusiliers": squad([fusilier(STANDING_AIM), fusilier(STANDING_AIM, "#c99a72"), fusilier(KNEELING_AIM, "#c99a72"), fusilier(KNEELING_AIM)]),
 };

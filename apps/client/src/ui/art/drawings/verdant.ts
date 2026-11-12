@@ -217,10 +217,76 @@ const treefolk = (reach: number): Figure => ({
   ],
 });
 
+const FUR = { armor: "#565b76", plate: "#8f94ad", cloth: "#3c4058", glow: "#f2c14e" };
+
+/** A Duskfang Prowler, side on and stalking left. `drop` lowers its head; `lift` raises its tail. */
+const prowler = (drop: number, lift: number): Figure => {
+  const hy = 150 + drop;
+  return {
+    top: 122 + Math.min(drop, 0),
+    bottom: 244,
+    gear: [],
+    tint: FUR,
+    parts: [
+      part("armor", `M156,164 Q182,${154 - lift} 190,${130 - lift * 2} Q190,${154 - lift} 168,176 Z`),
+      part("cloth", `${limb([140, 180], [146, 214], 15, 9)} ${limb([146, 214], [138, 240], 8, 6.5)}`),
+      part("cloth", `${limb([96, 184], [92, 216], 12, 8)} ${limb([92, 216], [88, 240], 7.5, 6.5)}`),
+      part("armor", "M70,168 Q76,150 100,150 Q136,146 158,160 Q168,172 160,188 Q140,198 100,196 Q78,196 70,186 Z", `${line([104, 156], [100, 190])} ${line([126, 154], [124, 192])} ${line([146, 160], [146, 188])}`),
+      part("plate", "M74,184 Q100,200 150,192 Q120,202 96,200 Q80,198 74,184 Z"),
+      part("armor", `${limb([152, 178], [162, 212], 17, 10)} ${limb([162, 212], [154, 240], 9, 7)}`),
+      part("bone", pts([146, 240], [162, 240], [160, 244], [140, 244])),
+      part("armor", `${limb([84, 184], [78, 216], 14, 9)} ${limb([78, 216], [74, 240], 8, 7)}`),
+      part("bone", pts([66, 240], [82, 240], [82, 244], [60, 244])),
+      part("armor", `M74,${166} Q58,${hy - 12} 40,${hy - 4} L20,${hy + 8} L24,${hy + 16} L44,${hy + 18} Q58,${hy + 22} 74,188 Z`),
+      part("plate", `M76,160 Q62,${hy - 8} 58,${hy + 14} Q70,${hy + 18} 80,186 Z`, `${line([66, hy + 2], [72, hy + 20])}`),
+      part("armor", pts([52, hy - 10], [56, hy - 28], [66, hy - 8])),
+      part("glow", disc([42, hy + 2], 2.6)),
+      part("boot", pts([20, hy + 8], [26, hy + 6], [26, hy + 11])),
+      part("bone", `${pts([28, hy + 15], [31, hy + 23], [34, hy + 16])} ${pts([38, hy + 17], [41, hy + 24], [44, hy + 18])}`),
+    ],
+  };
+};
+
+/** Cinderjaw, Wyrmling of the Glade: a young dragon on the wing, embers at its jaws. */
+const cinderjaw: Figure = {
+  top: 22,
+  bottom: 204,
+  hover: 40,
+  gear: ["glow"],
+  tint: { glow: "#f28c28" },
+  parts: [
+    part("cape", "M100,124 Q96,74 62,32 Q70,62 52,72 Q70,80 66,98 Q82,96 92,122 Z", `${line([98, 120], [66, 40])} ${line([96, 120], [58, 74])}`),
+    part("armor", "M146,146 Q184,138 194,170 Q196,188 184,200 Q186,178 168,168 Q156,166 146,172 Z"),
+    part("bone", pts([184, 200], [178, 186], [192, 190])),
+    part("armor", `${limb([134, 166], [144, 192], 15, 9)}`),
+    part("bone", `${pts([138, 192], [136, 204], [142, 196])} ${pts([145, 192], [146, 204], [150, 195])}`),
+    part("armor", "M70,130 Q96,110 130,120 Q158,130 158,156 Q152,180 118,180 Q88,178 72,158 Z", `${line([96, 120], [92, 172])} ${line([116, 118], [114, 178])} ${line([136, 124], [136, 176])}`),
+    part("sash", "M74,152 Q96,176 132,176 Q110,186 90,176 Q78,168 74,152 Z"),
+    part("bone", `${pts([92, 116], [98, 104], [104, 116])} ${pts([110, 116], [118, 104], [124, 118])} ${pts([130, 120], [140, 110], [144, 124])}`),
+    part("armor", `${limb([90, 164], [80, 190], 12, 7)}`),
+    part("bone", `${pts([75, 190], [72, 202], [79, 194])} ${pts([82, 190], [83, 202], [87, 193])}`),
+    part("armor", "M76,140 Q60,114 60,92 L84,90 Q84,112 98,128 Z", `${line([66, 106], [86, 102])} ${line([72, 122], [90, 114])}`),
+    part("bone", `${pts([76, 80], [94, 58], [84, 84])} ${pts([66, 78], [78, 54], [74, 80])}`),
+    part("armor", "M86,96 Q80,74 58,74 L26,84 L24,91 L52,95 L30,100 L32,107 L60,108 Q76,110 86,96 Z"),
+    part("glow", disc([64, 84], 2.8)),
+    part("glow", `${disc([14, 97], 5.5)} ${disc([4, 106], 3)} ${disc([6, 88], 2.4)}`),
+    part("cape", "M104,126 Q110,70 152,22 Q150,54 172,62 Q156,74 166,92 Q146,92 142,112 Q124,108 112,130 Z", `${line([106, 124], [150, 28])} ${line([108, 126], [168, 64])} ${line([110, 128], [162, 90])}`),
+  ],
+};
+
 export const VERDANT: Record<string, Drawing> = {
   "glade-wardens": squad([wardenLoosing, wardenWatching, wardenLoosing]),
   sylvanne: solo(sylvanne),
   "briar-sprites": squad([spriteHovering, spriteThrowing, spriteHovering, spriteThrowing]),
   "queen-ilyth": solo(queenIlyth, [26, 174]),
   "mossback-treefolk": squad([treefolk(0), treefolk(14)]),
+  // Prowlers are long and low: on the wide side they stand staggered, not in a row.
+  "duskfang-prowlers": squad([prowler(-10, 12), prowler(8, 0), prowler(0, 6)], {
+    wide: [
+      [46, 176, 0.72],
+      [128, 204, 0.72],
+      [66, 244, 0.84],
+    ],
+  }),
+  cinderjaw: solo(cinderjaw, [2, 196]),
 };

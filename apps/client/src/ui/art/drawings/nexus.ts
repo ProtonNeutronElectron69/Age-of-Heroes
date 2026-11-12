@@ -215,10 +215,74 @@ const reclaimerAdvancing: Figure = (() => {
   };
 })();
 
+/** A sidearm pointing left from a hand. */
+const sidearm = (hand: P) => part("metal", pts([hand[0] - 26, hand[1] - 5], [hand[0] + 2, hand[1] - 5], [hand[0] + 2, hand[1] + 1], [hand[0] - 3, hand[1] + 1], [hand[0] - 4, hand[1] + 9], [hand[0] - 9, hand[1] + 9], [hand[0] - 8, hand[1] + 1], [hand[0] - 26, hand[1]]));
+
+/** A jet's flame under a nozzle. */
+const jetFlame = (x: number, y: number) => part("glow", pts([x - 7, y], [x + 7, y], [x + 4, y + 16], [x + 1, y + 9], [x - 1, y + 26], [x - 4, y + 12], [x - 6, y + 18]));
+
+/** A Skyhook Raider swooping, sidearm levelled. */
+const raiderSwooping: Figure = (() => {
+  const shL: P = [90, 90];
+  const shR: P = [116, 88];
+  const hipL: P = [94, 148];
+  const hipR: P = [114, 148];
+  return {
+    top: 49,
+    bottom: 220,
+    hover: 24,
+    gear: ["glow"],
+    parts: [
+      part("metal", pts([112, 82], [136, 80], [140, 130], [116, 132]), `${line([116, 96], [137, 94])} ${line([117, 116], [139, 114])}`),
+      jetFlame(128, 132),
+      ...leg(hipR, [126, 184], [140, 212], "cloth", "plate", { toe: 1, w: 13 }),
+      ...leg(hipL, [84, 186], [96, 214], "cloth", "plate", { toe: 1, w: 13 }),
+      torso(shL, shR, hipL, hipR, "armor", `${line([90, 106], [118, 104])} ${line([103, 90], [104, 140])}`),
+      belt(hipL, hipR, "metal"),
+      ...arm(shR, [128, 110], [112, 122], "armor", { hand: "metal" }),
+      ...arm(shL, [70, 96], [52, 94], "armor", { hand: "metal" }),
+      sidearm([52, 94]),
+      part("plate", pts([80, 82], [100, 80], [100, 97], [78, 100])),
+      ...sealedHelmet(103, 62, -1),
+    ],
+  };
+})();
+
+/** A Skyhook Raider holding station on two shoulder jets. */
+const raiderHovering: Figure = (() => {
+  const shL: P = [84, 90];
+  const shR: P = [116, 90];
+  const hipL: P = [88, 148];
+  const hipR: P = [112, 148];
+  return {
+    top: 47,
+    bottom: 232,
+    hover: 12,
+    gear: ["glow"],
+    parts: [
+      part("metal", pts([62, 68], [80, 68], [80, 110], [64, 110]), line([63, 82], [80, 82])),
+      part("metal", pts([120, 68], [138, 68], [136, 110], [120, 110]), line([120, 82], [137, 82])),
+      jetFlame(72, 110),
+      jetFlame(128, 110),
+      ...leg(hipL, [86, 194], [84, 226], "cloth", "plate", { toe: -1, w: 13 }),
+      ...leg(hipR, [114, 194], [116, 226], "cloth", "plate", { toe: 1, w: 13 }),
+      torso(shL, shR, hipL, hipR, "armor", `${line([84, 106], [116, 106])} ${line([100, 90], [100, 140])}`),
+      belt(hipL, hipR, "metal"),
+      ...arm(shR, [130, 112], [114, 124], "armor", { hand: "metal" }),
+      ...arm(shL, [72, 112], [92, 122], "armor", { hand: "metal" }),
+      sidearm([92, 122]),
+      part("plate", pts([74, 82], [94, 80], [94, 98], [72, 101])),
+      part("plate", pts([106, 80], [126, 82], [128, 101], [106, 98])),
+      ...sealedHelmet(100, 60, 0),
+    ],
+  };
+})();
+
 export const NEXUS: Record<string, Drawing> = {
   "sentinel-k7": solo(sentinelK7, [3, 196]),
   "nexus-breachers": squad([breacherReady, breacherCharging, breacherCharging]),
   proxima: solo(proxima, [2, 168]),
   "swarmling-drones": squad([drone(0), drone(-7), drone(6), drone(-4)]),
   "nexus-reclaimers": squad([reclaimerAdvancing, reclaimerAiming, reclaimerAiming]),
+  "skyhook-raiders": squad([raiderHovering, raiderSwooping, raiderSwooping]),
 };

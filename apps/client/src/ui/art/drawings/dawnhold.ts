@@ -232,11 +232,117 @@ const solenne: Figure = (() => {
   };
 })();
 
+/** Magister Orrin Vael: white-bearded in a scholar's robe, a book open in one hand and lightning leaping from the other. */
+const orrinVael: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [116, 88];
+  return {
+    top: 34,
+    bottom: 244,
+    gear: ["glow", "leather", "bone"],
+    tint: { hair: "#ece9e1", cape: "#2f4a7a" },
+    parts: [
+      part("boot", pts([84, 236], [98, 236], [98, 244], [78, 244])),
+      part("boot", pts([102, 236], [116, 236], [122, 244], [102, 244])),
+      part("armor", pts([81, 85], [119, 85], [130, 238], [70, 238]), `${line([100, 150], [100, 236])} ${line([88, 150], [82, 236])} ${line([112, 150], [118, 236])}`),
+      part("crest", pts([96, 100], [104, 100], [106, 236], [94, 236])),
+      belt([88, 146], [112, 146]),
+      ...arm(shR, [134, 104], [146, 82], "armor"),
+      part("glow", pts([145, 80], [157, 60], [151, 58], [167, 36], [161, 34], [180, 8], [170, 38], [176, 40], [160, 62], [166, 64])),
+      part("glow", `${disc([134, 60], 2.4)} ${disc([170, 70], 2)}`),
+      ...arm(shL, [70, 108], [72, 124], "armor"),
+      part("leather", pts([48, 110], [72, 104], [94, 112], [94, 132], [72, 126], [48, 130])),
+      part("bone", pts([51, 108], [72, 103], [91, 110], [91, 127], [72, 121], [51, 126]), `${line([72, 103], [72, 121])} ${line([56, 112], [68, 109])} ${line([56, 118], [68, 115])} ${line([76, 109], [88, 113])} ${line([76, 115], [88, 119])}`),
+      part("cape", pts([74, 82], [126, 82], [132, 112], [116, 104], [100, 112], [84, 104], [68, 112])),
+      part("crest", disc([100, 96], 4)),
+      head([100, 60]),
+      part("hair", pts([90, 64], [110, 64], [112, 84], [106, 104], [100, 112], [94, 104], [88, 84])),
+      part("hair", `${pts([88, 58], [84, 70], [90, 68])} ${pts([112, 58], [116, 70], [110, 68])}`),
+      part("cape", "M87,56 Q86,38 100,34 Q114,38 113,56 Q106,50 100,50 Q94,50 87,56 Z"),
+    ],
+  };
+})();
+
+/** A great helm with a plume. `look` is -1 for a helm turned left, 0 for facing us. */
+const greatHelm = (x: number, y: number, look: number) => [
+  part("plate", pts([x - 12, y - 16], [x + 12, y - 16], [x + 13, y + 10], [x, y + 16], [x - 13, y + 10]), look === 0 ? line([x, y - 16], [x, y + 14]) : line([x - 6, y - 16], [x - 7, y + 12])),
+  part("boot", look === 0 ? pts([x - 9, y - 4], [x + 9, y - 4], [x + 9, y - 1], [x - 9, y - 1]) : pts([x - 13, y - 4], [x + 2, y - 4], [x + 2, y - 1], [x - 13, y - 1])),
+  part("crest", `M${x},${y - 16} Q${x + 4},${y - 32} ${x + 18},${y - 34} Q${x + 12},${y - 22} ${x + 8},${y - 15} Z`),
+];
+
+/** A small shield bearing the sun. */
+const sunShield = (x: number, y: number) => [
+  part("armor", `M${x - 19},${y - 26} H${x + 19} V${y + 2} Q${x + 19},${y + 22} ${x},${y + 36} Q${x - 19},${y + 22} ${x - 19},${y + 2} Z`, `M${x - 15},${y - 22} H${x + 15} V${y + 2} Q${x + 15},${y + 19} ${x},${y + 31} Q${x - 15},${y + 19} ${x - 15},${y + 2} Z`),
+  part("crest", disc([x, y], 7)),
+];
+
+const KNIGHT_GEAR = ["blade", "wood", "crest", "cape"] as const;
+
+/** A Silverlance Knight at attention, lance upright and pennon flying. */
+const knightStanding: Figure = (() => {
+  const shL: P = [84, 88];
+  const shR: P = [116, 88];
+  const hipL: P = [88, 146];
+  const hipR: P = [112, 146];
+  return {
+    top: 26,
+    bottom: 244,
+    gear: KNIGHT_GEAR,
+    tint: { cape: TABARD, wood: "#d8d2c4" },
+    parts: [
+      part("wood", limb([134, 241], [134, -4], 4)),
+      part("blade", pts([134, -28], [139, -3], [129, -3])),
+      part("cape", "M136,6 L164,12 L154,22 L166,32 L136,30 Z"),
+      ...leg(hipL, [86, 194], [84, 238], "armor", "plate", { toe: -1, w: 13 }),
+      ...leg(hipR, [114, 194], [116, 238], "armor", "plate", { toe: 1, w: 13 }),
+      part("plate", pts([81, 140], [119, 140], [125, 170], [75, 170]), line([94, 142], [91, 168]) + line([106, 142], [109, 168])),
+      torso(shL, shR, hipL, hipR, "armor", `${line([100, 86], [100, 138])} ${line([84, 104], [100, 112], [116, 104])}`),
+      belt(hipL, hipR),
+      ...arm(shR, [134, 108], [134, 128], "plate", { hand: "metal" }),
+      part("plate", pts([106, 77], [128, 79], [130, 99], [108, 96])),
+      ...arm(shL, [71, 106], [80, 124], "plate", { hand: "metal" }),
+      part("plate", pts([72, 79], [94, 77], [92, 96], [70, 99])),
+      ...sunShield(70, 122),
+      ...greatHelm(100, 60, 0),
+    ],
+  };
+})();
+
+/** A Silverlance Knight charging left behind a levelled lance. */
+const knightCharging: Figure = (() => {
+  const shL: P = [90, 94];
+  const shR: P = [116, 92];
+  const hipL: P = [94, 150];
+  const hipR: P = [114, 150];
+  return {
+    top: 32,
+    bottom: 244,
+    gear: KNIGHT_GEAR,
+    tint: { cape: TABARD, wood: "#d8d2c4" },
+    parts: [
+      ...leg(hipR, [126, 194], [140, 238], "armor", "plate", { toe: 1, w: 13 }),
+      ...leg(hipL, [78, 192], [66, 238], "armor", "plate", { toe: -1, w: 13 }),
+      part("plate", pts([87, 144], [121, 144], [127, 172], [81, 172])),
+      torso(shL, shR, hipL, hipR, "armor", `${line([103, 92], [104, 142])}`),
+      belt(hipL, hipR),
+      ...arm(shR, [128, 114], [116, 126], "plate", { hand: "metal" }),
+      part("wood", limb([156, 132], [18, 112], 4.4, 3)),
+      part("blade", pts([-6, 108.5], [19, 108], [18.5, 116])),
+      part("cape", "M40,113 L46,90 L56,98 L64,86 L66,117 Z"),
+      part("plate", pts([108, 82], [128, 84], [130, 103], [108, 100])),
+      ...sunShield(84, 124),
+      ...greatHelm(104, 66, -1),
+    ],
+  };
+})();
+
 const darkHaired = (figure: Figure): Figure => ({ ...figure, tint: { ...figure.tint, hair: "#3a2a20" } });
 
 export const DAWNHOLD: Record<string, Drawing> = {
   "dame-rowena": solo(dameRowena),
   solenne: solo(solenne, [8, 192]),
+  "orrin-vael": solo(orrinVael, [48, 180]),
+  "silverlance-knights": squad([knightStanding, knightCharging, knightCharging]),
   "covenant-crossbowmen": squad([crossbowmanMarching, crossbowmanAiming, crossbowmanAiming]),
   "stormwake-huscarls": squad([huscarlResting, huscarlStriking, darkHaired(huscarlResting), darkHaired(huscarlStriking)]),
 };

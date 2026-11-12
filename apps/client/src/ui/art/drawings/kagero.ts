@@ -1,4 +1,4 @@
-import { arm, belt, disc, head, leg, limb, line, type P, part, pts, solo, squad, torso } from "../build";
+import { type AimStance, arm, belt, disc, head, KNEELING_AIM, leg, limb, line, type P, part, pts, solo, squad, STANDING_AIM, torso } from "../build";
 import type { Drawing, Figure } from "../types";
 
 /** Lady Asagiri the Unbowed: a samurai in full armour, sword raised at her shoulder. */
@@ -238,10 +238,75 @@ const roninWaiting: Figure = (() => {
   };
 })();
 
+/** A Teppo Gunner in one of the aiming stances, the match glowing at the lock. */
+const teppoGunner = (j: AimStance, skin?: string): Figure => ({
+  top: j.head[1] - 23,
+  bottom: 244,
+  gear: ["wood", "glow", "leather"],
+  tint: skin ? { skin } : {},
+  parts: [
+    part("leather", pts([j.hipR[0] - 2, j.hipR[1] - 8], [j.hipR[0] + 12, j.hipR[1] - 10], [j.hipR[0] + 18, j.hipR[1] + 18], [j.hipR[0] + 4, j.hipR[1] + 20])),
+    ...leg(j.hipR, j.kneeR, j.footR, "cloth", "plate", { toe: 1, boot: "boot" }),
+    ...leg(j.hipL, j.kneeL, j.footL, "cloth", "plate", { toe: -1, boot: "boot" }),
+    torso(
+      j.shL,
+      j.shR,
+      j.hipL,
+      j.hipR,
+      "armor",
+      `${line([j.shL[0] + 8, j.shL[1]], [j.hipL[0] + 6, j.hipL[1] - 8])} ${line([j.shR[0] - 8, j.shR[1]], [j.hipR[0] - 6, j.hipR[1] - 8])} ${line([j.shL[0] - 2, j.shL[1] + 18], [j.shR[0] + 3, j.shR[1] + 18])} ${line([j.shL[0] - 3, j.shL[1] + 36], [j.shR[0] + 4, j.shR[1] + 36])}`,
+    ),
+    belt(j.hipL, j.hipR),
+    ...arm(j.shR, j.elbowR, j.handR, "cloth"),
+    part("wood", limb(j.stock, j.grip, 6.6, 4.8)),
+    part("metal", limb(j.breech, j.muzzle, 3.4)),
+    part("glow", disc([j.breech[0] + 6, j.breech[1] - 5], 2.6)),
+    ...arm(j.shL, j.elbowL, j.handL, "cloth"),
+    head(j.head, -1),
+    ...warHat(j.head[0] + 1, j.head[1] - 2),
+  ],
+});
+
+const ONI_RED = "#c2412f";
+
+/** The Ashfang Oni: a horned brute in a striped pelt, an iron-studded club hefted high. */
+const ashfangOni: Figure = (() => {
+  const shL: P = [72, 92];
+  const shR: P = [128, 92];
+  const hipL: P = [84, 150];
+  const hipR: P = [116, 150];
+  return {
+    top: 30,
+    bottom: 244,
+    gear: ["hilt", "jewel"],
+    tint: { skin: ONI_RED, cape: "#d9a441" },
+    parts: [
+      part("hair", pts([84, 50], [116, 50], [126, 92], [74, 92])),
+      ...arm(shR, [150, 96], [152, 66], "skin", { w: 16 }),
+      part("hilt", limb([150, 74], [166, 2], 9, 17)),
+      part("jewel", `${disc([160, 40], 2.4)} ${disc([166, 22], 2.4)} ${disc([158, 20], 2.4)} ${disc([153, 54], 2.2)}`),
+      ...leg(hipL, [78, 198], [72, 238], "skin", "skin", { toe: -1, w: 19 }),
+      ...leg(hipR, [122, 198], [128, 238], "skin", "skin", { toe: 1, w: 19 }),
+      part("skin", pts([68, 88], [132, 88], [122, 152], [78, 152]), `${line([100, 98], [100, 142])} ${line([82, 114], [100, 122], [118, 114])}`),
+      part("cape", pts([76, 144], [124, 144], [132, 186], [120, 178], [110, 192], [100, 180], [90, 192], [80, 178], [68, 186]), `${line([84, 150], [80, 172])} ${line([96, 150], [94, 176])} ${line([108, 150], [110, 176])} ${line([118, 150], [122, 172])}`),
+      part("sash", pts([78, 142], [122, 142], [123, 150], [77, 150])),
+      part("jewel", `${disc([84, 96], 3)} ${disc([92, 102], 3)} ${disc([100, 105], 3)} ${disc([108, 102], 3)} ${disc([116, 96], 3)}`),
+      ...arm(shL, [56, 118], [64, 146], "skin", { w: 16 }),
+      part("skin", disc([100, 64], 14), `${line([91, 61], [97, 63])} ${line([103, 63], [109, 61])}`),
+      part("skin", pts([88, 70], [112, 70], [108, 84], [92, 84])),
+      part("bone", `${pts([92, 80], [89, 66], [96, 78])} ${pts([108, 80], [111, 66], [104, 78])}`),
+      part("hair", "M86,62 Q84,46 100,46 Q116,46 114,62 Q108,54 100,56 Q92,54 86,62 Z"),
+      part("bone", `${pts([89, 52], [80, 30], [96, 48])} ${pts([111, 52], [120, 30], [104, 48])}`),
+    ],
+  };
+})();
+
 export const KAGERO: Record<string, Drawing> = {
   "lady-asagiri": solo(ladyAsagiri),
   "lady-suzume": solo(ladySuzume, [25, 153]),
   "crimson-lotus-guard": squad([lotusGuardWatching, lotusGuardStriking, lotusGuardWatching]),
   kenzo: solo(kenzo),
   "shirokage-ronin": squad([roninWaiting, roninDrawing, roninDrawing]),
+  "teppo-gunners": squad([teppoGunner(STANDING_AIM), teppoGunner(KNEELING_AIM, "#d9a97f"), teppoGunner(KNEELING_AIM)]),
+  "ashfang-oni": solo(ashfangOni),
 };

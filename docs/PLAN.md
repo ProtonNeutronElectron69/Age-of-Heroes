@@ -180,7 +180,8 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
   - [x] Batch 1 (10 of 48): Captain Marisol Vance, Harrow Line Riflemen, Lady Asagiri, Glade Wardens, Sentinel K-7, Nexus Breachers, Vorhal, Barrow Legion, Dame Rowena Ashgrove, Stormwake Huscarls
   - [x] Batch 2 (20 of 48): Sister Maren Holloway, Gatewarden Pikemen, Lady Suzume, Crimson Lotus Guard, Sylvanne, Briar Sprites, Proxima, Swarmling Drones, Morvane, Covenant Crossbowmen
   - [x] Batch 3 (30 of 48): Sergeant Brannock, Concord Grenadiers, Kenzo, Shirokage Ronin, Queen Ilyth, Mossback Treefolk, Nexus Reclaimers, Grubnak, Bonebow Archers, Solenne
-  - [ ] Batches 4 and 5: the other 18 units
+  - [x] Batch 4 (40 of 48): Concord Fusiliers, Teppo Gunners, Ashfang Oni, Duskfang Prowlers, Cinderjaw, Skyhook Raiders, Ruinmaw Orc Raiders, Ghoul Pack, Magister Orrin Vael, Silverlance Knights
+  - [ ] Batch 5: the last 8 units (Brass Hussars, Hollow Reed Shinobi, Old Rootback, Hollowsteel Hunters, Siege Walker Atlas, Marrowcoil, Sunbound Archers, Dawn Acolytes)
 - [ ] Sound effects and music
 - [ ] 3D models for the figures in place of tokens
 - [ ] Terrain textures and scenery art
