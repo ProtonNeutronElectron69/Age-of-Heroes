@@ -38,6 +38,11 @@ const models = Object.entries(UNIT_MODELS)
   .map(([id, unit]) => ({ id, unit, card: CARD_CATALOG.get(id)! }));
 
 describe("figure models", () => {
+  it("has a model for every unit card, and no model without a card", () => {
+    expect(CARDS.filter((card) => !UNIT_MODELS[card.id]).map((card) => card.id)).toEqual([]);
+    expect(Object.keys(UNIT_MODELS).filter((id) => !CARD_CATALOG.has(id))).toEqual([]);
+  });
+
   it("belong to cards", () => {
     expect(models.length).toBeGreaterThan(0);
     expect(Object.keys(UNIT_MODELS).filter((id) => !CARD_CATALOG.has(id))).toEqual([]);

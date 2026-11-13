@@ -309,6 +309,72 @@ const breacherCharged = (() => {
   return [...body.parts, ...reclaimerKit(body), ...gauntlet(body.handL), ...gauntlet(body.handR), ...sparks];
 })();
 
+const HUNTER = { shoulders: 0.17, bulk: 0.68, hollow: true };
+
+/** A Hollowsteel Hunter's forearm blade, from the wrist along +z. */
+const forearmBlade = (at: V3, turn: V3): Part[] =>
+  gear(
+    place(
+      [
+        plate(
+          [
+            [-0.16, 0.05],
+            [0.1, 0.07],
+            [0.56, 0],
+            [0.1, -0.04],
+            [-0.16, -0.03],
+          ],
+          0.034,
+        ),
+      ],
+      { at, turn },
+    ),
+  );
+
+/**
+ * A Hollowsteel Hunter: a lean frame around an open chest with a lit core,
+ * and a blade for each forearm. `raise` lifts the leading blade and `crouch`
+ * drops it into a stalk.
+ */
+function hunter(raise: number, crouch: number): Part[] {
+  const body = human(
+    {
+      pelvis: [0, 0.46 - crouch, 0],
+      lean: 14 + crouch * 120,
+      twist: -18,
+      look: 14,
+      handL: [0.1, 0.7 - crouch + raise, 0.32],
+      elbowL: [1, -0.6, -0.2],
+      handR: [-0.26, 0.54 - crouch * 0.5, 0.12 + crouch * 2],
+      elbowR: [-1, -0.2, -1],
+      footL: [0.1, 0, 0.24],
+      footR: [-0.11, 0, -0.22],
+    },
+    HUNTER,
+  );
+  const shell = [
+    ...body.onHead([
+      // A swept-back fin and a visor.
+      plate(
+        [
+          [-0.15, 0.11],
+          [-0.03, 0.125],
+          [0.08, 0.06],
+          [-0.05, 0.04],
+        ],
+        0.03,
+      ),
+      box([0.13, 0.035, 0.05], [0, 0.01, 0.085]),
+    ]),
+    ...body.onChest([
+      ball([0, 0.2, 0.01], 0.052, 0),
+      ball([0.19, 0.33, 0], [0.08, 0.055, 0.085], 0),
+      ball([-0.19, 0.33, 0], [0.08, 0.055, 0.085], 0),
+    ]),
+  ];
+  return [...body.parts, ...shell, ...forearmBlade(body.handL, [-18 - raise * 110, -8, 0]), ...forearmBlade(body.handR, [12 - crouch * 120, 10, 0])];
+}
+
 export const NEXUS: Record<string, UnitModel> = {
   "siege-walker-atlas": { figures: [siegeWalkerAtlas] },
   "nexus-reclaimers": { figures: squad([reclaimerAiming, reclaimerAdvancing], 5) },
@@ -317,4 +383,5 @@ export const NEXUS: Record<string, UnitModel> = {
   "skyhook-raiders": { figures: squad([raiderHovering, raiderSwooping], 5) },
   proxima: { figures: [proxima] },
   "nexus-breachers": { figures: squad([breacherClosing, breacherCharged], 5) },
+  "hollowsteel-hunters": { figures: squad([hunter(0.2, 0), hunter(0, 0.08)], 5) },
 };

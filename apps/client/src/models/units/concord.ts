@@ -2,7 +2,7 @@ import { ball, box, figure, gear, limb, place, plate, spine, squad } from "../bu
 import { GALLOP, TROT, horse, type HorsePose } from "../horse";
 import { HEAD, human, type Human } from "../human";
 import { AIM_TURN, aiming } from "../poses";
-import { spear } from "../gear";
+import { pointing, spear } from "../gear";
 import type { Part, UnitModel, V3 } from "../types";
 
 /** A sabre held at the grip, blade up. */
@@ -392,6 +392,55 @@ const grenadierLighting = (() => {
   return [...body.parts, ...grenadierKit(body, pelvis), ...grenade([body.handL[0], body.handL[1] + 0.07, body.handL[2]]), ...match];
 })();
 
+/** A long rifle, held at the wrist of the stock and pointing along +z. */
+function rifle(at: V3, turn: V3): Part[] {
+  return gear(
+    place([box([0.045, 0.08, 0.24], [0, -0.005, -0.15]), box([0.032, 0.042, 0.74], [0, 0.035, 0.31]), box([0.014, 0.03, 0.03], [0, 0.068, 0.64])], { at, turn }),
+  );
+}
+
+/** A Rifleman's shako with its peak and tuft, his short jacket, blanket roll and pouch. */
+const riflemanKit = (body: Human, pelvis: V3): Part[] => [
+  ...body.onHead([
+    limb([0, 0.04, 0], [0, 0.18, 0], 0.09, 0.1, 8),
+    box([0.14, 0.018, 0.08], [0, 0.05, 0.11]),
+    ...gear([limb([0, 0.18, 0.06], [0, 0.27, 0.06], 0.026, 0.018, 5)]),
+  ]),
+  ...place(
+    [
+      spine([
+        [0, 0.12, 0.118, 0.088],
+        [-0.005, -0.02, 0.15, 0.115],
+        [-0.01, -0.1, 0.158, 0.122],
+      ]),
+    ],
+    { at: pelvis },
+  ),
+  ...body.onChest([limb([-0.14, 0.31, -0.135], [0.14, 0.31, -0.135], 0.055, 0.055, 6), box([0.1, 0.1, 0.07], [-0.17, 0.02, -0.05])]),
+];
+
+/** A Rifleman taking aim. */
+const riflemanAiming = (() => {
+  const pose = aiming(false);
+  const body = human(pose);
+  return [...body.parts, ...riflemanKit(body, pose.pelvis), ...rifle(body.handR, AIM_TURN)];
+})();
+
+/** A Rifleman at the ready, rifle held across the chest. */
+const riflemanReady = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human({
+    pelvis,
+    twist: 12,
+    look: -8,
+    handR: [-0.13, 0.6, 0.17],
+    handL: [0.13, 0.86, 0.19],
+    footL: [0.09, 0, 0.05],
+    footR: [-0.09, 0, -0.03],
+  });
+  return [...body.parts, ...riflemanKit(body, pelvis), ...rifle(body.handR, pointing(body.handR, body.handL))];
+})();
+
 export const CONCORD: Record<string, UnitModel> = {
   "marisol-vance": { figures: [marisolVance] },
   "brass-hussars": {
@@ -405,4 +454,5 @@ export const CONCORD: Record<string, UnitModel> = {
   "sister-maren": { figures: [sisterMaren] },
   brannock: { figures: [brannock] },
   "concord-grenadiers": { figures: squad([grenadierLobbing, grenadierLighting], 5) },
+  "harrow-riflemen": { figures: squad([riflemanAiming, riflemanReady], 5) },
 };

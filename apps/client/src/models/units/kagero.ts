@@ -1,7 +1,7 @@
 import { ball, both, box, figure, gear, limb, place, plate, spine, squad } from "../build";
 import { HEAD, human, type Human } from "../human";
 import { AIM_TURN, DRAWN, aiming, loosing } from "../poses";
-import { arrow, bow } from "../gear";
+import { arrow, bow, spear } from "../gear";
 import type { Part, UnitModel, V3 } from "../types";
 
 /** A long sword held at the hilt, blade up, with a round guard. */
@@ -346,6 +346,69 @@ const ladySuzume = (() => {
   return figure([...body.parts, ...hair, ...armour, ...bow(body.handL, 0.09, [0, 0, 0], 1.45), ...arrow(...DRAWN)], 5);
 })();
 
+const GUARD = { shoulders: 0.165, bulk: 0.95 };
+
+/** A Lotus Guard's flat war hat with the house badge, her armour and skirt of plates, and the scabbard at her hip. */
+const lotusGuardKit = (body: Human, pelvis: V3): Part[] => [
+  ...body.onHead([limb([0, 0.03, 0], [0, 0.1, 0], 0.215, 0.04, 10), ball([0, 0.072, 0.125], [0.042, 0.022, 0.042], 0)]),
+  ...body.onChest([ball([0, 0.22, 0.02], [0.15, 0.13, 0.11], 0), box([0.055, 0.18, 0.16], [0.24, 0.25, 0]), box([0.055, 0.18, 0.16], [-0.24, 0.25, 0])]),
+  ...place(
+    [
+      spine(
+        [
+          [0, 0.12, 0.13, 0.095],
+          [0, -0.02, 0.185, 0.145],
+          [0, -0.17, 0.22, 0.18],
+        ],
+        { sides: 6 },
+      ),
+      ...gear([limb([0.17, 0.08, 0.12], [0.22, 0, -0.36], 0.022, 0.018, 5)]),
+    ],
+    { at: pelvis },
+  ),
+];
+
+/** A Lotus Guard on watch: spear grounded, a hand on the sword at her hip. */
+const lotusGuardWatching = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human(
+    {
+      pelvis,
+      twist: 8,
+      look: -8,
+      handR: [-0.27, 0.7, 0.1],
+      handL: [0.165, 0.61, 0.2],
+      footL: [0.09, 0, 0.04],
+      footR: [-0.09, 0, -0.02],
+    },
+    GUARD,
+  );
+  // The sword is still in its scabbard: only the hilt and guard show.
+  const hilt = gear([limb([0.17, 0.58, 0.12], [0.172, 0.585, 0.15], 0.05, 0.05, 8), limb([0.172, 0.585, 0.15], [0.16, 0.61, 0.3], 0.019, 0.019, 5)]);
+  return [...body.parts, ...lotusGuardKit(body, pelvis), ...hilt, ...spear([-0.27, 0, 0.1], [-0.27, 1.6, 0.1])];
+})();
+
+/** A Lotus Guard striking: stepping in, sword high in both hands. */
+const lotusGuardStriking = (() => {
+  const pelvis: V3 = [0, 0.46, 0];
+  const body = human(
+    {
+      pelvis,
+      lean: 6,
+      twist: -10,
+      look: 8,
+      handR: [-0.03, 1.04, 0.1],
+      handL: [0.04, 0.96, 0.13],
+      elbowR: [-1, 0, 0.5],
+      elbowL: [1, 0, 0.5],
+      footL: [0.09, 0, 0.24],
+      footR: [-0.1, 0, -0.2],
+    },
+    GUARD,
+  );
+  return [...body.parts, ...lotusGuardKit(body, pelvis), ...katana(body.handR, [-32, 0, 0])];
+})();
+
 export const KAGERO: Record<string, UnitModel> = {
   "lady-asagiri": { figures: [ladyAsagiri] },
   "hollow-reed-shinobi": { figures: squad([shinobiCrouched, shinobiBlowpipe], 4) },
@@ -354,4 +417,5 @@ export const KAGERO: Record<string, UnitModel> = {
   kenzo: { figures: [kenzo] },
   "teppo-gunners": { figures: squad([teppoGunner(false), teppoGunner(true)], 5) },
   "lady-suzume": { figures: [ladySuzume] },
+  "crimson-lotus-guard": { figures: squad([lotusGuardWatching, lotusGuardStriking], 5) },
 };

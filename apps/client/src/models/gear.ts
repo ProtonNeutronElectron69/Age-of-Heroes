@@ -1,6 +1,13 @@
 import { ball, gear, limb, place, plate } from "./build";
 import type { Part, V3 } from "./types";
 
+/** How to turn something that points along +z so that it points from `from` towards `to`. */
+export function pointing(from: V3, to: V3): V3 {
+  const [x, y, z] = [to[0] - from[0], to[1] - from[1], to[2] - from[2]];
+  const degrees = 180 / Math.PI;
+  return [-Math.atan2(y, Math.hypot(x, z)) * degrees, Math.atan2(x, z) * degrees, 0];
+}
+
 /** A spear from its butt to the tip of its leaf-shaped head. */
 export function spear(butt: V3, tip: V3, thick = 0.015): Part[] {
   const neck: V3 = [tip[0] + (butt[0] - tip[0]) * 0.1, tip[1] + (butt[1] - tip[1]) * 0.1, tip[2] + (butt[2] - tip[2]) * 0.1];

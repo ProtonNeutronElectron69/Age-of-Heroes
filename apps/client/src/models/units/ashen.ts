@@ -224,6 +224,9 @@ const ghoulShrieking = (() => {
   return [...body.parts, ...ghoulKit(body), ...claws(body.handL, [-50, 30, 0]), ...claws(body.handR, [-50, -30, 0])];
 })();
 
+/** An orc's heavy jaw and tusks, written around the middle of the head. */
+const ORC_JAW: Part[] = [box([0.15, 0.06, 0.11], [0, -0.08, 0.035]), ...both([limb([0.05, -0.065, 0.085], [0.06, -0.005, 0.11], 0.02, 0, 4)])];
+
 /** Grubnak Skullcaller: a hulking orc shaman under a skull headdress, a war drum at his hip and a hex in his fist. */
 const grubnak = (() => {
   const pelvis: V3 = [0, 0.47, 0];
@@ -243,9 +246,7 @@ const grubnak = (() => {
   const headdress = body.onHead([
     ball([0, 0.05, -0.01], [HEAD * 1.2, HEAD * 0.95, HEAD * 1.22], 0),
     ...both([limb([0.08, 0.08, 0], [0.21, 0.2, -0.04], 0.038, 0, 4)]),
-    // An orc's heavy jaw and tusks.
-    box([0.15, 0.06, 0.11], [0, -0.08, 0.035]),
-    ...both([limb([0.05, -0.065, 0.085], [0.06, -0.005, 0.11], 0.02, 0, 4)]),
+    ...ORC_JAW,
   ]);
   const hides = [
     ...body.onChest([
@@ -391,6 +392,101 @@ const bonebowNocking = (() => {
   return [...body.parts, ...bonebowKit(body), ...bow(body.handL, 0, [0, 0, 35]), ...arrow(body.handR, [body.handL[0] + 0.03, body.handL[1] + 0.02, body.handL[2] + 0.02])];
 })();
 
+const RAIDER = { shoulders: 0.215, bulk: 1.25 };
+
+/** A throwing axe held near the foot of its haft, head up and edge along +z. */
+function hatchet(at: V3, turn: V3): Part[] {
+  return gear(
+    place(
+      [
+        limb([0, -0.08, 0], [0, 0.28, 0], 0.02, 0.02, 5),
+        plate(
+          [
+            [0.012, 0.27],
+            [0.13, 0.33],
+            [0.155, 0.22],
+            [0.13, 0.12],
+            [0.012, 0.18],
+          ],
+          0.03,
+        ),
+      ],
+      { at, turn },
+    ),
+  );
+}
+
+/** An Orc Raider's jaw and tusks, ears and crest of hair, a hide over one shoulder and a hide kilt, with a spare axe in the belt. */
+const raiderKit = (body: Human, pelvis: V3): Part[] => [
+  ...body.onHead([
+    ...ORC_JAW,
+    ...both([limb([0.075, 0.01, -0.01], [0.165, 0.06, -0.05], 0.03, 0, 4)]),
+    plate(
+      [
+        [-0.13, 0],
+        [-0.11, 0.15],
+        [-0.02, 0.2],
+        [0.06, 0.15],
+        [0.085, 0.07],
+      ],
+      0.05,
+    ),
+  ]),
+  ...body.onChest([ball([0.225, 0.34, 0], [0.13, 0.085, 0.135], 0)]),
+  ...place(
+    [
+      spine(
+        [
+          [0, 0.12, 0.15, 0.112],
+          [0, -0.17, 0.205, 0.158],
+        ],
+        { sides: 6 },
+      ),
+      ...hatchet([-0.2, 0.1, -0.06], [165, 0, 0]),
+    ],
+    { at: pelvis },
+  ),
+];
+
+/** An Orc Raider winding up to hurl an axe. */
+const raiderHurling = (() => {
+  const pelvis: V3 = [0, 0.47, 0];
+  const body = human(
+    {
+      pelvis,
+      lean: 6,
+      twist: -38,
+      look: 32,
+      handR: [-0.3, 0.98, -0.26],
+      elbowR: [-1, 0, -0.5],
+      handL: [0.2, 0.8, 0.36],
+      footL: [0.12, 0, 0.24],
+      footR: [-0.14, 0, -0.2],
+    },
+    RAIDER,
+  );
+  return [...body.parts, ...raiderKit(body, pelvis), ...hatchet(body.handR, [-40, 0, 0])];
+})();
+
+/** An Orc Raider bellowing, an axe in each fist. */
+const raiderBellowing = (() => {
+  const pelvis: V3 = [0, 0.48, 0];
+  const body = human(
+    {
+      pelvis,
+      lean: -8,
+      handR: [-0.34, 0.62, 0.14],
+      elbowR: [-1, -0.3, -0.5],
+      handL: [0.34, 0.66, 0.14],
+      elbowL: [1, -0.3, -0.5],
+      footL: [0.15, 0, 0.06],
+      footR: [-0.15, 0, -0.02],
+    },
+    RAIDER,
+  );
+  return [...body.parts, ...raiderKit(body, pelvis), ...hatchet(body.handR, [0, -65, 24]), ...hatchet(body.handL, [0, 65, -24])];
+})();
+
 export const ASHEN: Record<string, UnitModel> = {
   marrowcoil: { figures: [marrowcoil] },
   "barrow-legion": { figures: squad([legionGuarding, legionLunging], 5) },
@@ -399,4 +495,5 @@ export const ASHEN: Record<string, UnitModel> = {
   grubnak: { figures: [grubnak] },
   morvane: { figures: [morvane] },
   "bonebow-archers": { figures: squad([bonebowLoosing, bonebowNocking], 5) },
+  "ruinmaw-raiders": { figures: squad([raiderHurling, raiderBellowing], 6) },
 };
