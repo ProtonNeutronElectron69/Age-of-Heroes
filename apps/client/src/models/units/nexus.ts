@@ -255,6 +255,60 @@ const proxima = (() => {
   return figure([...body.parts, ...shell, ...blade], 5);
 })();
 
+const BREACHER = { shoulders: 0.19, bulk: 1.15 };
+
+/** A shock gauntlet round a fist. */
+const gauntlet = (at: V3): Part[] => [box([0.12, 0.12, 0.15], at), box([0.14, 0.05, 0.05], [at[0], at[1] + 0.02, at[2] + 0.08])];
+
+/** A Breacher closing in, fists up. */
+const breacherClosing = (() => {
+  const body = human(
+    {
+      pelvis: [0, 0.47, 0],
+      lean: 12,
+      twist: -18,
+      look: 14,
+      handL: [0.12, 0.84, 0.32],
+      handR: [-0.15, 0.78, 0.22],
+      elbowL: [1, -1, 0],
+      elbowR: [-1, -1, 0],
+      footL: [0.1, 0, 0.2],
+      footR: [-0.11, 0, -0.16],
+    },
+    BREACHER,
+  );
+  return [...body.parts, ...reclaimerKit(body), ...gauntlet(body.handL), ...gauntlet(body.handR)];
+})();
+
+/** A Breacher standing ready, one gauntlet raised and charged. */
+const breacherCharged = (() => {
+  const body = human(
+    {
+      handR: [-0.32, 1.0, 0.08],
+      elbowR: [-1, -0.4, -0.3],
+      handL: [0.24, 0.56, 0.1],
+      footL: [0.11, 0, 0.04],
+      footR: [-0.11, 0, -0.03],
+    },
+    BREACHER,
+  );
+  // The charge: sparks leaping from the raised fist.
+  const sparks = gear(
+    place(
+      (
+        [
+          [0, 0.24, 0],
+          [0.17, 0.15, 0],
+          [-0.17, 0.15, 0],
+          [0, 0.13, 0.17],
+        ] as V3[]
+      ).map((d) => limb([d[0] * 0.4, d[1] * 0.4, d[2] * 0.4], d, 0.02, 0, 4)),
+      { at: body.handR },
+    ),
+  );
+  return [...body.parts, ...reclaimerKit(body), ...gauntlet(body.handL), ...gauntlet(body.handR), ...sparks];
+})();
+
 export const NEXUS: Record<string, UnitModel> = {
   "siege-walker-atlas": { figures: [siegeWalkerAtlas] },
   "nexus-reclaimers": { figures: squad([reclaimerAiming, reclaimerAdvancing], 5) },
@@ -262,4 +316,5 @@ export const NEXUS: Record<string, UnitModel> = {
   "swarmling-drones": { figures: squad([drone(0, 0.04), drone(18, 0), drone(-14, -0.06)], 3) },
   "skyhook-raiders": { figures: squad([raiderHovering, raiderSwooping], 5) },
   proxima: { figures: [proxima] },
+  "nexus-breachers": { figures: squad([breacherClosing, breacherCharged], 5) },
 };

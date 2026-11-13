@@ -24,3 +24,28 @@ export function aiming(kneeling: boolean): HumanPose & { pelvis: V3 } {
 
 /** How far to turn a gun held in the aiming pose, so that it lies along both hands. */
 export const AIM_TURN: V3 = [0, 28, 0];
+
+/**
+ * An archer at full draw, side on, loosing along +z: the left hand holds the
+ * bow out and the right is back at the cheek.
+ */
+export function loosing(): HumanPose {
+  return {
+    hips: -78,
+    twist: -84,
+    look: 78,
+    handL: [0.03, 0.8, 0.47],
+    handR: [-0.04, 0.85, 0.03],
+    elbowR: [0, 0.35, -1],
+    footL: [0.02, 0, 0.18],
+    footR: [-0.03, 0, -0.17],
+    kneeL: [-0.4, 0, 1],
+    kneeR: [-1, 0, 0.2],
+  };
+}
+
+/** The arrow on the string of an archer in the loosing pose: its nock and the neck of its head. */
+export const DRAWN: readonly [V3, V3] = [
+  [-0.04, 0.845, 0],
+  [0.03, 0.81, 0.54],
+];

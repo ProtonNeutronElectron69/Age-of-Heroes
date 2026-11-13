@@ -1,6 +1,7 @@
 import { ball, both, box, figure, gear, limb, place, plate, spine, squad } from "../build";
 import { HEAD, human, type Human } from "../human";
-import { AIM_TURN, aiming } from "../poses";
+import { AIM_TURN, DRAWN, aiming, loosing } from "../poses";
+import { arrow, bow } from "../gear";
 import type { Part, UnitModel, V3 } from "../types";
 
 /** A long sword held at the hilt, blade up, with a round guard. */
@@ -310,6 +311,41 @@ function teppoGunner(kneeling: boolean): Part[] {
   return [...body.parts, ...hat, ...armour, ...matchlock];
 }
 
+/** Lady Suzume of the Long Bow: a tall bow at full draw, hair and headband streaming. */
+const ladySuzume = (() => {
+  const body = human(loosing(), { shoulders: 0.16, bulk: 0.92 });
+  const hair = body.onHead([
+    // A long tail of hair, and the ends of her headband.
+    spine(
+      [
+        [-0.07, 0.04, 0.045, 0.045],
+        [-0.2, 0.02, 0.05, 0.04],
+        [-0.36, -0.05, 0.03, 0.022],
+      ],
+      { sides: 5 },
+    ),
+    limb([0, 0.04, 0], [0, 0.065, 0], 0.094, 0.094, 8),
+    limb([-0.03, 0.05, -0.09], [-0.08, 0.1, -0.26], 0.016, 0.006, 4),
+  ]);
+  const armour = [
+    ...body.onChest([ball([0, 0.22, 0.02], [0.15, 0.13, 0.11], 0), box([0.05, 0.16, 0.14], [0.22, 0.25, 0]), limb([-0.08, 0.1, -0.115], [0.07, 0.42, -0.13], 0.04, 0.046, 6)]),
+    ...place(
+      [
+        spine(
+          [
+            [0, 0.12, 0.13, 0.095],
+            [0, -0.03, 0.18, 0.14],
+            [0, -0.17, 0.21, 0.17],
+          ],
+          { sides: 6 },
+        ),
+      ],
+      { at: [0, 0.5, 0], turn: [0, -78, 0] },
+    ),
+  ];
+  return figure([...body.parts, ...hair, ...armour, ...bow(body.handL, 0.09, [0, 0, 0], 1.45), ...arrow(...DRAWN)], 5);
+})();
+
 export const KAGERO: Record<string, UnitModel> = {
   "lady-asagiri": { figures: [ladyAsagiri] },
   "hollow-reed-shinobi": { figures: squad([shinobiCrouched, shinobiBlowpipe], 4) },
@@ -317,4 +353,5 @@ export const KAGERO: Record<string, UnitModel> = {
   "shirokage-ronin": { figures: squad([ronin(true), ronin(false)], 5) },
   kenzo: { figures: [kenzo] },
   "teppo-gunners": { figures: squad([teppoGunner(false), teppoGunner(true)], 5) },
+  "lady-suzume": { figures: [ladySuzume] },
 };

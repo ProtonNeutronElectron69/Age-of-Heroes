@@ -267,6 +267,131 @@ const sisterMaren = (() => {
   return figure([...body.parts, ...veil, ...coat, ...satchel, ...lantern, ...pistol], 5);
 })();
 
+/** Sergeant Brannock: a burly sapper winding up to throw a satchel charge, its fuse lit. */
+const brannock = (() => {
+  const pelvis: V3 = [0, 0.47, 0];
+  const body = human(
+    {
+      pelvis,
+      lean: 6,
+      twist: -35,
+      look: 30,
+      handR: [-0.3, 0.95, -0.28],
+      elbowR: [-1, 0, -0.5],
+      handL: [0.2, 0.82, 0.36],
+      footL: [0.1, 0, 0.24],
+      footR: [-0.12, 0, -0.2],
+    },
+    { shoulders: 0.2, bulk: 1.25 },
+  );
+  const cap = body.onHead([
+    limb([0, 0.05, 0], [0, 0.105, 0], 0.094, 0.086, 8),
+    box([0.13, 0.02, 0.08], [0, 0.055, 0.1]),
+    // A full beard.
+    limb([0, -0.05, 0.065], [0, -0.17, 0.085], 0.06, 0.02, 5),
+  ]);
+  const apron = place(
+    [
+      spine(
+        [
+          [0, 0.13, 0.145, 0.105],
+          [0.01, -0.06, 0.18, 0.14],
+          [0.02, -0.24, 0.19, 0.15],
+        ],
+        { sides: 6 },
+      ),
+    ],
+    { at: pelvis },
+  );
+  const tools = body.onChest([box([0.1, 0.12, 0.09], [0.19, 0.03, 0.02]), box([0.1, 0.12, 0.09], [-0.19, 0.03, -0.02])]);
+  const [x, y, z] = body.handR;
+  const charge = gear([box([0.17, 0.13, 0.1], [x, y - 0.03, z - 0.02]), limb([x + 0.05, y + 0.03, z - 0.02], [x + 0.09, y + 0.16, z - 0.05], 0.012, 0.008, 4)]);
+  // A spade slung across his back.
+  const spade = gear(
+    body.onChest([
+      limb([-0.14, 0.02, -0.13], [0.12, 0.42, -0.14], 0.016, 0.016, 5),
+      plate(
+        [
+          [-0.06, 0],
+          [0.06, 0],
+          [0.07, 0.13],
+          [0, 0.17],
+          [-0.07, 0.13],
+        ],
+        0.016,
+        "front",
+        -0.14,
+      ),
+    ]),
+  );
+  return figure([...body.parts, ...cap, ...apron, ...tools, ...charge, ...spade], 5);
+})();
+
+/** A Grenadier's tall cap with its brass front, his coat and his pouch. */
+const grenadierKit = (body: Human, pelvis: V3): Part[] => [
+  ...body.onHead([
+    plate(
+      [
+        [-0.09, 0.04],
+        [-0.075, 0.2],
+        [0, 0.28],
+        [0.075, 0.2],
+        [0.09, 0.04],
+      ],
+      0.05,
+      "front",
+      0.045,
+    ),
+    ball([0, 0.07, -0.03], [0.085, 0.09, 0.08], 0),
+  ]),
+  ...place(
+    [
+      spine([
+        [0, 0.12, 0.118, 0.088],
+        [-0.01, -0.04, 0.155, 0.12],
+        [-0.04, -0.17, 0.175, 0.14],
+      ]),
+    ],
+    { at: pelvis },
+  ),
+  ...body.onChest([box([0.12, 0.11, 0.08], [-0.16, 0.03, -0.06])]),
+];
+
+/** A grenade with its fuse. */
+const grenade = (at: V3): Part[] => gear([ball(at, 0.05, 0), limb([at[0], at[1] + 0.04, at[2]], [at[0] + 0.02, at[1] + 0.1, at[2]], 0.01, 0.006, 4)]);
+
+/** A Grenadier lobbing a grenade. */
+const grenadierLobbing = (() => {
+  const pelvis: V3 = [0, 0.49, 0];
+  const body = human({
+    pelvis,
+    lean: -4,
+    twist: -22,
+    look: 18,
+    handR: [-0.3, 1.02, -0.12],
+    elbowR: [-1, -0.2, -0.5],
+    handL: [0.2, 0.8, 0.3],
+    footL: [0.09, 0, 0.2],
+    footR: [-0.1, 0, -0.16],
+  });
+  return [...body.parts, ...grenadierKit(body, pelvis), ...grenade([body.handR[0], body.handR[1] + 0.07, body.handR[2]])];
+})();
+
+/** A Grenadier lighting a fuse from a slow match. */
+const grenadierLighting = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human({
+    pelvis,
+    lean: 8,
+    handL: [0.06, 0.7, 0.26],
+    handR: [-0.09, 0.73, 0.23],
+    footL: [0.09, 0, 0.05],
+    footR: [-0.09, 0, -0.03],
+  });
+  const match = gear([limb(body.handR, [body.handR[0] + 0.1, body.handR[1] + 0.03, body.handR[2] + 0.06], 0.012, 0.008, 4)]);
+  return [...body.parts, ...grenadierKit(body, pelvis), ...grenade([body.handL[0], body.handL[1] + 0.07, body.handL[2]]), ...match];
+})();
+
 export const CONCORD: Record<string, UnitModel> = {
   "marisol-vance": { figures: [marisolVance] },
   "brass-hussars": {
@@ -278,4 +403,6 @@ export const CONCORD: Record<string, UnitModel> = {
   "concord-fusiliers": { figures: squad([fusilier(false), fusilier(true)], 5) },
   "gatewarden-pikemen": { figures: squad([pikemanGuarding, pikemanBraced], 5) },
   "sister-maren": { figures: [sisterMaren] },
+  brannock: { figures: [brannock] },
+  "concord-grenadiers": { figures: squad([grenadierLobbing, grenadierLighting], 5) },
 };

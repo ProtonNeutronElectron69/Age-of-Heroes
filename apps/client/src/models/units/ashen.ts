@@ -1,6 +1,7 @@
 import { ball, both, box, figure, gear, limb, place, plate, spine, squad } from "../build";
-import { roundShield, spear } from "../gear";
+import { arrow, bow, roundShield, spear } from "../gear";
 import { HEAD, human, type Human } from "../human";
+import { DRAWN, loosing } from "../poses";
 import type { Part, UnitModel, V3 } from "../types";
 
 const SKELETON = { shoulders: 0.15, bulk: 0.62 };
@@ -291,10 +292,111 @@ const grubnak = (() => {
   return figure([...body.parts, ...headdress, ...hides, ...hex, ...drumstick], 6);
 })();
 
+/** A hood, up: it covers the head and hangs to a point behind. */
+const hood = (body: Human): Part[] => body.onHead([ball([0, 0.008, -0.014], [HEAD * 1.16, HEAD * 1.2, HEAD * 1.2]), limb([0, 0.05, -0.05], [0, 0.0, -0.19], 0.055, 0, 5)]);
+
+/** Morvane the Gravecaller: hooded and ragged, a skull-topped staff in one hand, grave-light in the other. */
+const morvane = (() => {
+  const pelvis: V3 = [0, 0.49, 0];
+  const body = human(
+    {
+      pelvis,
+      lean: 8,
+      twist: -8,
+      handR: [-0.28, 0.8, 0.16],
+      handL: [0.25, 0.8, 0.24],
+      elbowL: [1, -0.8, -0.2],
+      footL: [0.08, 0, 0.06],
+      footR: [-0.09, 0, -0.03],
+    },
+    { shoulders: 0.16, bulk: 0.9 },
+  );
+  const robes = [
+    ...place(
+      [
+        spine(
+          [
+            [0, 0.12, 0.115, 0.085],
+            [0, -0.1, 0.17, 0.13],
+            [-0.02, -0.43, 0.23, 0.185],
+          ],
+          { sides: 7 },
+        ),
+        // Ragged ends at the hem.
+        ...[20, 110, 200, 290].map((turn) => place([limb([0, -0.36, 0.17], [0, -0.48, 0.24], 0.05, 0, 4)], { turn: [0, turn, 0] })).flat(),
+      ],
+      { at: pelvis },
+    ),
+    ...body.onChest([
+      spine(
+        [
+          [-0.07, 0.35, 0.13, 0.035],
+          [-0.11, 0.1, 0.18, 0.04],
+          [-0.17, -0.22, 0.2, 0.03],
+        ],
+        { sides: 6 },
+      ),
+    ]),
+  ];
+  const staff = gear([
+    limb([-0.31, 0, 0.12], [-0.25, 1.22, 0.2], 0.02, 0.018, 5),
+    // The skull on top.
+    ball([-0.245, 1.3, 0.205], [0.075, 0.085, 0.085], 0),
+    box([0.08, 0.04, 0.07], [-0.245, 1.215, 0.225]),
+  ]);
+  // Grave-light: a cold flame over his palm.
+  const [x, y, z] = body.handL;
+  const light = gear([ball([x, y + 0.1, z], 0.055, 0), limb([x, y + 0.11, z], [x + 0.02, y + 0.3, z], 0.045, 0, 5)]);
+  return figure([...body.parts, ...hood(body), ...robes, ...staff, ...light], 5);
+})();
+
+/** A skeleton archer's jaw and rib cage, under a rotted hood with a short cape. */
+const bonebowKit = (body: Human): Part[] => [
+  ...body.onHead([box([0.1, 0.05, 0.09], [0, -0.085, 0.03])]),
+  ...hood(body),
+  ...body.onChest([
+    ball([0, 0.23, 0.005], [0.125, 0.105, 0.085], 0),
+    spine(
+      [
+        [-0.05, 0.36, 0.12, 0.05],
+        [-0.09, 0.2, 0.16, 0.035],
+        [-0.12, 0.06, 0.17, 0.02],
+      ],
+      { sides: 6 },
+    ),
+    limb([-0.07, 0.1, -0.1], [0.06, 0.4, -0.115], 0.036, 0.04, 6),
+  ]),
+];
+
+/** A Bonebow Archer loosing. */
+const bonebowLoosing = (() => {
+  const body = human(loosing(), SKELETON);
+  return [...body.parts, ...bonebowKit(body), ...bow(body.handL, 0.09), ...arrow(...DRAWN)];
+})();
+
+/** A Bonebow Archer nocking the next arrow, bow held low. */
+const bonebowNocking = (() => {
+  const body = human(
+    {
+      lean: 6,
+      twist: -20,
+      look: 16,
+      handL: [0.2, 0.58, 0.2],
+      handR: [0.02, 0.62, 0.16],
+      footL: [0.09, 0, 0.08],
+      footR: [-0.09, 0, -0.05],
+    },
+    SKELETON,
+  );
+  return [...body.parts, ...bonebowKit(body), ...bow(body.handL, 0, [0, 0, 35]), ...arrow(body.handR, [body.handL[0] + 0.03, body.handL[1] + 0.02, body.handL[2] + 0.02])];
+})();
+
 export const ASHEN: Record<string, UnitModel> = {
   marrowcoil: { figures: [marrowcoil] },
   "barrow-legion": { figures: squad([legionGuarding, legionLunging], 5) },
   vorhal: { figures: [vorhal] },
   "ghoul-pack": { figures: squad([ghoulLoping, ghoulShrieking], 4) },
   grubnak: { figures: [grubnak] },
+  morvane: { figures: [morvane] },
+  "bonebow-archers": { figures: squad([bonebowLoosing, bonebowNocking], 5) },
 };

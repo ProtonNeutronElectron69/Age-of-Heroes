@@ -9,7 +9,7 @@ The core game is complete and playable: the Basic and Advanced rules, a 48-unit 
 ### Next
 - **Needs the repository owner:** create the online game server on Render and set the `GAME_SERVER_URL` repository variable (about 10 minutes; see [HOSTING.md](HOSTING.md)). Until then the published site can only play online against a server whose address is typed in.
 - **On hold (Phase 6):** a computer opponent, and a tutorial built on the Basic game.
-- **In progress (Phase 7):** 3D figure models, in stages. Stage 1 gives every unit a low polygon model of the right size and shape, in its faction's colour. Thirty-two units have one so far, from every faction; see them at `?models`. Each figure stands on a light brown base with a coloured ring round its edge, and there are two colour schemes to choose between. The other 16 units follow.
+- **In progress (Phase 7):** 3D figure models, in stages. Stage 1 gives every unit a low polygon model of the right size and shape, in its faction's colour. Forty-two units have one so far, from every faction; see them at `?models`. Each figure stands on a light brown base with a coloured ring round its edge, and there are two colour schemes to choose between. The last 6 units follow.
 - **On hold (Phase 7):** sound and music, terrain and scenery art.
 
 ### Ideas, not scheduled
@@ -191,7 +191,8 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
     - [x] A hero and a squad for every faction (12 of 48): Lady Asagiri, Hollow Reed Shinobi, Siege Walker Atlas, Nexus Reclaimers, Marrowcoil, Barrow Legion, Solenne, Stormwake Huscarls
     - [x] Ten more (22 of 48): Concord Fusiliers, Ashfang Oni, Shirokage Ronin, Cinderjaw, Mossback Treefolk, Sentinel K-7, Swarmling Drones, Vorhal, Ghoul Pack, Dame Rowena Ashgrove
     - [x] Ten more (32 of 48): Gatewarden Pikemen, Sister Maren Holloway, Kenzo, Teppo Gunners, Queen Ilyth, Briar Sprites, Skyhook Raiders, Proxima, Grubnak, Covenant Crossbowmen
-    - [ ] The other 16 units
+    - [x] Ten more (42 of 48): Sergeant Brannock, Concord Grenadiers, Lady Suzume, Sylvanne, Duskfang Prowlers, Nexus Breachers, Morvane, Bonebow Archers, Magister Orrin Vael, Silverlance Knights
+    - [ ] The last 6 units: Harrow Line Riflemen, Crimson Lotus Guard, Hollowsteel Hunters, Ruinmaw Orc Raiders, Dawn Acolytes, Sunbound Archers
     - [ ] Draw the models on the board in place of tokens, with the colour scheme as a setting
   - [ ] Later stages: more detail and colour
 - [ ] Terrain textures and scenery art
