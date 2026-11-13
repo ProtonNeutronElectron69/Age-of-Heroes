@@ -223,9 +223,78 @@ const ghoulShrieking = (() => {
   return [...body.parts, ...ghoulKit(body), ...claws(body.handL, [-50, 30, 0]), ...claws(body.handR, [-50, -30, 0])];
 })();
 
+/** Grubnak Skullcaller: a hulking orc shaman under a skull headdress, a war drum at his hip and a hex in his fist. */
+const grubnak = (() => {
+  const pelvis: V3 = [0, 0.47, 0];
+  const body = human(
+    {
+      pelvis,
+      lean: 8,
+      twist: 10,
+      handR: [-0.36, 1.02, 0.1],
+      elbowR: [-1, -0.3, -0.4],
+      handL: [0.27, 0.56, 0.24],
+      footL: [0.15, 0, 0.1],
+      footR: [-0.15, 0, -0.08],
+    },
+    { shoulders: 0.23, bulk: 1.35 },
+  );
+  const headdress = body.onHead([
+    ball([0, 0.05, -0.01], [HEAD * 1.2, HEAD * 0.95, HEAD * 1.22], 0),
+    ...both([limb([0.08, 0.08, 0], [0.21, 0.2, -0.04], 0.038, 0, 4)]),
+    // An orc's heavy jaw and tusks.
+    box([0.15, 0.06, 0.11], [0, -0.08, 0.035]),
+    ...both([limb([0.05, -0.065, 0.085], [0.06, -0.005, 0.11], 0.02, 0, 4)]),
+  ]);
+  const hides = [
+    ...body.onChest([
+      spine(
+        [
+          [0, 0.375, 0.1, 0.09],
+          [-0.01, 0.31, 0.265, 0.15],
+          [-0.02, 0.23, 0.27, 0.155],
+        ],
+        { sides: 8 },
+      ),
+    ]),
+    ...place(
+      [
+        spine(
+          [
+            [0, 0.12, 0.16, 0.12],
+            [0, -0.18, 0.22, 0.17],
+          ],
+          { sides: 6 },
+        ),
+      ],
+      { at: pelvis },
+    ),
+    // The war drum, slung at his left hip.
+    limb([0.19, 0.44, 0.12], [0.36, 0.5, 0.16], 0.135, 0.135, 8),
+  ];
+  // The hex: shards of light bursting from his raised fist.
+  const hex = gear(
+    place(
+      (
+        [
+          [0, 0.24, 0],
+          [0.16, 0.14, 0.04],
+          [-0.16, 0.14, 0.04],
+          [0, 0.12, 0.18],
+          [0, 0.12, -0.16],
+        ] as V3[]
+      ).map((d) => limb([d[0] * 0.3, d[1] * 0.3, d[2] * 0.3], d, 0.022, 0, 4)),
+      { at: body.handR },
+    ),
+  );
+  const drumstick = gear([limb([body.handL[0], body.handL[1] + 0.04, body.handL[2]], [body.handL[0] + 0.02, body.handL[1] - 0.12, body.handL[2] - 0.06], 0.016, 0.024, 5)]);
+  return figure([...body.parts, ...headdress, ...hides, ...hex, ...drumstick], 6);
+})();
+
 export const ASHEN: Record<string, UnitModel> = {
   marrowcoil: { figures: [marrowcoil] },
   "barrow-legion": { figures: squad([legionGuarding, legionLunging], 5) },
   vorhal: { figures: [vorhal] },
   "ghoul-pack": { figures: squad([ghoulLoping, ghoulShrieking], 4) },
+  grubnak: { figures: [grubnak] },
 };

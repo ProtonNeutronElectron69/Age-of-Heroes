@@ -1,4 +1,5 @@
-import { ball, both, box, figure, gear, limb, place, spine, squad } from "../build";
+import { ball, both, box, figure, gear, limb, place, plate, spine, squad } from "../build";
+import { flightStand } from "../gear";
 import { HEAD, human, type Human } from "../human";
 import type { Part, UnitModel, V3 } from "../types";
 
@@ -164,12 +165,101 @@ function drone(bank: number, lift: number): Part[] {
     limb([0, -0.16, -0.12], [0, -0.3, -0.24], 0.035, 0, 4),
   ];
   const height = 0.5 + lift;
-  return [limb([0, 0, 0], [0, height, 0], 0.04, 0.03, 5), ...place(machine, { at: [0, height, 0], turn: [bank * 0.5, bank, bank] })];
+  return [...flightStand([0, height, 0]), ...place(machine, { at: [0, height, 0], turn: [bank * 0.5, bank, bank] })];
 }
+
+/** A Skyhook Raider's jets: two nozzles under the pack and one over each shoulder. */
+const jetPack = (body: Human): Part[] =>
+  body.onChest(both([limb([0.1, 0.12, -0.2], [0.11, -0.02, -0.23], 0.05, 0.07, 6), limb([0.17, 0.34, -0.15], [0.21, 0.47, -0.18], 0.05, 0.035, 6)]));
+
+/** A sidearm pointing along +z from the hand. */
+const sidearm = (at: V3, turn: V3): Part[] => gear(place([box([0.04, 0.055, 0.18], [0, 0.03, 0.07]), box([0.038, 0.08, 0.045], [0, -0.03, -0.005])], { at, turn }));
+
+/** A Skyhook Raider holding station on his jets, legs tucked, sidearm out. */
+const raiderHovering = (() => {
+  const body = human(
+    {
+      twist: -14,
+      look: 10,
+      handR: [-0.2, 0.72, 0.26],
+      handL: [0.26, 0.6, 0.1],
+      footL: [0.1, 0.2, 0.1],
+      footR: [-0.1, 0.27, -0.05],
+    },
+    RECLAIMER,
+  );
+  return [...body.parts, ...reclaimerKit(body), ...jetPack(body), ...sidearm(body.handR, [0, 0, 0]), ...flightStand([0, 0.43, -0.03])];
+})();
+
+/** A Skyhook Raider swooping, sidearm levelled. */
+const raiderSwooping = (() => {
+  const body = human(
+    {
+      pelvis: [0, 0.5, -0.05],
+      lean: 50,
+      handR: [-0.14, 0.6, 0.48],
+      handL: [0.26, 0.62, 0],
+      footL: [0.08, 0.35, -0.42],
+      footR: [-0.08, 0.42, -0.38],
+      kneeL: [0, -1, 0],
+      kneeR: [0, -1, 0],
+    },
+    RECLAIMER,
+  );
+  return [...body.parts, ...reclaimerKit(body), ...jetPack(body), ...sidearm(body.handR, [20, 0, 0]), ...flightStand([0, 0.42, -0.05])];
+})();
+
+/** Proxima, the Shard Duelist: a slim machine in a full lunge, a blade of light leading. */
+const proxima = (() => {
+  const body = human(
+    {
+      pelvis: [0, 0.38, 0.05],
+      hips: -35,
+      lean: 8,
+      twist: -50,
+      look: 45,
+      handL: [0.05, 0.7, 0.52],
+      handR: [-0.1, 0.8, -0.38],
+      elbowR: [-0.5, -1, 0],
+      footL: [0.03, 0, 0.42],
+      footR: [-0.04, 0, -0.32],
+      kneeL: [0, 0.3, 1],
+    },
+    { shoulders: 0.16, bulk: 0.78 },
+  );
+  const shell = [
+    ...body.onHead([
+      // A crest like a shard, and a visor.
+      plate(
+        [
+          [-0.09, 0.05],
+          [-0.03, 0.19],
+          [0.07, 0.07],
+        ],
+        0.022,
+      ),
+      box([0.13, 0.035, 0.05], [0, 0.01, 0.085]),
+    ]),
+    ...body.onChest([
+      ball([0.185, 0.33, 0], [0.08, 0.06, 0.085], 0),
+      ball([-0.185, 0.33, 0], [0.08, 0.06, 0.085], 0),
+      ...both([limb([0.07, 0.3, -0.08], [0.16, 0.44, -0.2], 0.035, 0, 4)]),
+    ]),
+  ];
+  const blade = gear(
+    place([limb([0, 0.03, 0], [0, 0.045, 0], 0.045, 0.045, 6), limb([0, 0.045, 0], [0, 0.34, 0], 0.03, 0.022, 4), limb([0, 0.34, 0], [0, 0.7, 0], 0.022, 0, 4)], {
+      at: body.handL,
+      turn: [84, 0, 0],
+    }),
+  );
+  return figure([...body.parts, ...shell, ...blade], 5);
+})();
 
 export const NEXUS: Record<string, UnitModel> = {
   "siege-walker-atlas": { figures: [siegeWalkerAtlas] },
   "nexus-reclaimers": { figures: squad([reclaimerAiming, reclaimerAdvancing], 5) },
   "sentinel-k7": { figures: [sentinelK7] },
   "swarmling-drones": { figures: squad([drone(0, 0.04), drone(18, 0), drone(-14, -0.06)], 3) },
+  "skyhook-raiders": { figures: squad([raiderHovering, raiderSwooping], 5) },
+  proxima: { figures: [proxima] },
 };

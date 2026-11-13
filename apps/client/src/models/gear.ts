@@ -13,3 +13,13 @@ export function roundShield(at: V3, radius: number, turn: V3 = [0, 0, 0]): Part[
     place([limb([0, 0, -0.02], [0, 0, 0.02], radius, radius * 0.9, 10), ball([0, 0, 0.03], [radius * 0.28, radius * 0.28, radius * 0.16], 0)], { at, turn }),
   );
 }
+
+/**
+ * A flight stand, as on a tabletop miniature: a slim post from the base up to
+ * `top`, for a figure that flies or hovers. It does not count towards the
+ * figure's Height or its fit.
+ */
+export function flightStand(top: V3): Part[] {
+  const [x, , z] = top;
+  return [limb([x, 0, z], [x, 0.035, z], 0.1, 0.06, 6, "stand"), limb([x, 0.035, z], top, 0.036, 0.028, 5, "stand")];
+}

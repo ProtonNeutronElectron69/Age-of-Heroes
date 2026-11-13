@@ -1,4 +1,5 @@
 import { ball, both, box, figure, gear, limb, mirror, place, plate, spine, squad } from "../build";
+import { flightStand } from "../gear";
 import { HEAD, human, type Human } from "../human";
 import type { Part, UnitModel, V3 } from "../types";
 
@@ -323,9 +324,103 @@ function treefolk(reach: number): Part[] {
   ];
 }
 
+/** A thorn held like a dart, point along +y. */
+const thorn = (at: V3, turn: V3): Part[] => gear(place([limb([0, -0.03, 0], [0, 0.18, 0], 0.022, 0, 4)], { at, turn }));
+
+/**
+ * A fae in the air on a flight stand: slight, long-eared, with two pairs of
+ * wings and a skirt of petals. The Briar Sprites and their queen share it.
+ */
+function fae(hands: { handL: V3; handR: V3; elbowR?: V3 }, build: { shoulders: number; bulk: number }): { body: Human; parts: Part[] } {
+  const pelvis: V3 = [0, 0.75, 0];
+  const body = human({ pelvis, lean: 6, ...hands, footL: [0.04, 0.3, 0.04], footR: [-0.05, 0.37, -0.05] }, build);
+  const wing = place(
+    [
+      plate(
+        [
+          [0.03, 1.12],
+          [0.28, 1.4],
+          [0.56, 1.44],
+          [0.62, 1.24],
+          [0.4, 1.08],
+          [0.1, 1.02],
+        ],
+        0.022,
+        "front",
+      ),
+      plate(
+        [
+          [0.03, 1.02],
+          [0.36, 1.0],
+          [0.52, 0.8],
+          [0.34, 0.68],
+          [0.1, 0.86],
+        ],
+        0.022,
+        "front",
+      ),
+    ],
+    { at: [0, 0, -0.08], turn: [0, 20, 0] },
+  );
+  const petals = place(
+    [
+      spine(
+        [
+          [0, 0.1, 0.1, 0.08],
+          [0, -0.15, 0.21, 0.18],
+        ],
+        { sides: 6 },
+      ),
+    ],
+    { at: pelvis },
+  );
+  return { body, parts: [...body.parts, ...ears(body), ...wing, ...mirror(wing), ...petals, ...flightStand([0, 0.7, -0.05])] };
+}
+
+const SPRITE = { shoulders: 0.135, bulk: 0.75 };
+
+/** A Briar Sprite winding up to throw a thorn. */
+const spriteThrowing = (() => {
+  const sprite = fae({ handL: [0.24, 1.0, 0.22], handR: [-0.28, 1.3, -0.08], elbowR: [-1, -0.2, -0.6] }, SPRITE);
+  return [...sprite.parts, ...thorn(sprite.body.handR, [40, 0, 0])];
+})();
+
+/** A Briar Sprite hovering, a thorn ready in each hand. */
+const spriteHovering = (() => {
+  const sprite = fae({ handL: [0.28, 0.95, 0.14], handR: [-0.28, 0.95, 0.14] }, SPRITE);
+  return [...sprite.parts, ...thorn(sprite.body.handL, [70, 0, -20]), ...thorn(sprite.body.handR, [70, 0, 20])];
+})();
+
+/** Queen Ilyth of the Thorns: small and winged like her sprites, crowned in briar, a burst of thorns at her hand. */
+const queenIlyth = (() => {
+  const queen = fae({ handL: [0.28, 1.08, 0.25], handR: [-0.26, 0.9, 0.05] }, { shoulders: 0.14, bulk: 0.8 });
+  const crown = queen.body.onHead([
+    limb([0, 0.05, 0], [0, 0.085, 0], 0.092, 0.098, 8),
+    ...[0, 60, 120, 180, 240, 300].flatMap((turn) => place([limb([0, 0.08, 0.088], [0, 0.17, 0.11], 0.022, 0, 4)], { turn: [0, turn, 0] })),
+  ]);
+  const burst = gear(
+    place(
+      (
+        [
+          [0, 0, 0.24],
+          [0.14, 0.11, 0.16],
+          [-0.14, 0.11, 0.16],
+          [0, 0.2, 0.12],
+          [0.12, -0.12, 0.16],
+          [-0.12, -0.12, 0.16],
+        ] as V3[]
+      ).map((d) => limb([d[0] * 0.3, d[1] * 0.3, d[2] * 0.3], d, 0.02, 0, 4)),
+      { at: queen.body.handL },
+    ),
+  );
+  return figure([...queen.parts, ...crown, ...burst], 4);
+})();
+
 export const VERDANT: Record<string, UnitModel> = {
   "glade-wardens": { figures: squad([wardenLoosing, wardenWatching], 5) },
   "old-rootback": { figures: [oldRootback] },
   cinderjaw: { figures: [cinderjaw] },
   "mossback-treefolk": { figures: squad([treefolk(0), treefolk(1)], 8) },
+  "queen-ilyth": { figures: [queenIlyth] },
+  "briar-sprites": { figures: squad([spriteThrowing, spriteHovering], 3) },
 };

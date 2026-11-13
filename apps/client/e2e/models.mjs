@@ -35,7 +35,7 @@ try {
   const units = page.locator("[data-unit]");
   await units.first().waitFor();
   const count = await units.count();
-  if (count < 22) fail(`Expected at least 22 units with a model, found ${count}`);
+  if (count < 32) fail(`Expected at least 32 units with a model, found ${count}`);
 
   // Every unit says how it fits its base, and none needs a larger one.
   const list = await page.getByRole("list", { name: "Units" }).innerText();

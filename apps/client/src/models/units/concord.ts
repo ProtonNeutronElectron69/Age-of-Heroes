@@ -1,6 +1,8 @@
 import { ball, box, figure, gear, limb, place, plate, spine, squad } from "../build";
 import { GALLOP, TROT, horse, type HorsePose } from "../horse";
-import { human } from "../human";
+import { HEAD, human, type Human } from "../human";
+import { AIM_TURN, aiming } from "../poses";
+import { spear } from "../gear";
 import type { Part, UnitModel, V3 } from "../types";
 
 /** A sabre held at the grip, blade up. */
@@ -122,20 +124,8 @@ function musket(at: V3, turn: V3): Part[] {
 
 /** A Concord Fusilier firing: cocked hat, coat tails and pack, musket levelled. `kneeling` takes the front rank's stance. */
 function fusilier(kneeling: boolean): Part[] {
-  const drop = kneeling ? 0.2 : 0;
-  const pelvis: V3 = [0, 0.5 - drop, 0];
-  const body = human({
-    pelvis,
-    hips: kneeling ? 0 : -20,
-    lean: kneeling ? 5 : 0,
-    twist: -32,
-    look: 28,
-    handR: [-0.1, 0.78 - drop, 0.12],
-    handL: [0.05, 0.79 - drop, 0.4],
-    footL: kneeling ? [0.1, 0, 0.22] : [0.08, 0, 0.16],
-    footR: kneeling ? [-0.09, 0, -0.24] : [-0.1, 0, -0.12],
-    ...(kneeling ? { kneeL: [0, 1, 0.5] as V3, kneeR: [0, -1, 0.7] as V3 } : {}),
-  });
+  const pose = aiming(kneeling);
+  const body = human(pose);
   const hat = body.onHead([
     // A cocked hat: three corners, one to the front.
     plate(
@@ -158,11 +148,124 @@ function fusilier(kneeling: boolean): Part[] {
         [-0.04, kneeling ? -0.1 : -0.17, 0.175, 0.14],
       ]),
     ],
-    { at: pelvis },
+    { at: pose.pelvis },
   );
   const pack = body.onChest([box([0.2, 0.17, 0.09], [0, 0.22, -0.145])]);
-  return [...body.parts, ...hat, ...coat, ...pack, ...musket(body.handR, [0, 28, 0])];
+  return [...body.parts, ...hat, ...coat, ...pack, ...musket(body.handR, AIM_TURN)];
 }
+
+/** A Pikeman's helmet with its brim and comb, his breastplate and his coat. */
+const pikemanKit = (body: Human, pelvis: V3): Part[] => [
+  ...body.onHead([
+    ball([0, 0.03, 0], [HEAD * 1.1, HEAD * 0.95, HEAD * 1.12]),
+    plate(
+      [
+        [0, 0.2],
+        [0.115, 0.08],
+        [0.125, -0.06],
+        [0, -0.18],
+        [-0.125, -0.06],
+        [-0.115, 0.08],
+      ],
+      0.022,
+      "top",
+      0.03,
+    ),
+    plate(
+      [
+        [-0.1, 0.1],
+        [0, 0.18],
+        [0.1, 0.1],
+      ],
+      0.022,
+    ),
+  ]),
+  ...body.onChest([ball([0, 0.215, 0.02], [0.17, 0.145, 0.125], 0)]),
+  ...place(
+    [
+      spine([
+        [0, 0.12, 0.118, 0.088],
+        [-0.01, -0.04, 0.155, 0.12],
+        [-0.03, -0.14, 0.17, 0.135],
+      ]),
+    ],
+    { at: pelvis },
+  ),
+];
+
+/** A Pikeman on guard, pike upright. */
+const pikemanGuarding = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human({
+    pelvis,
+    handR: [-0.27, 0.72, 0.1],
+    handL: [0.2, 0.56, 0.06],
+    elbowL: [1, -0.3, -0.6],
+    footL: [0.09, 0, 0.04],
+    footR: [-0.09, 0, -0.02],
+  });
+  return [...body.parts, ...pikemanKit(body, pelvis), ...spear([-0.27, 0, 0.1], [-0.27, 1.9, 0.1], 0.016)];
+})();
+
+/** A Pikeman braced low to receive a charge, pike slanting forward from his back foot. */
+const pikemanBraced = (() => {
+  const pelvis: V3 = [0, 0.36, 0];
+  const body = human({
+    pelvis,
+    lean: 12,
+    twist: -30,
+    look: 26,
+    handL: [-0.058, 0.58, 0.27],
+    handR: [-0.082, 0.366, 0.052],
+    footL: [0.08, 0, 0.3],
+    footR: [-0.1, 0, -0.26],
+  });
+  return [...body.parts, ...pikemanKit(body, pelvis), ...spear([-0.12, 0.02, -0.3], [0, 1.1, 0.8], 0.016)];
+})();
+
+/** Sister Maren Holloway: veil and apron over a field coat, a lantern raised, a pistol kept low. */
+const sisterMaren = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human(
+    {
+      pelvis,
+      twist: 8,
+      look: -6,
+      handL: [0.27, 1.0, 0.16],
+      elbowL: [1, -0.6, -0.2],
+      handR: [-0.25, 0.54, 0.14],
+      footL: [0.08, 0, 0.06],
+      footR: [-0.09, 0, -0.03],
+    },
+    { shoulders: 0.16, bulk: 0.92 },
+  );
+  const veil = body.onHead([
+    ball([0, 0.012, -0.014], [HEAD * 1.14, HEAD * 1.14, HEAD * 1.16]),
+    spine(
+      [
+        [-0.06, 0, 0.1, 0.05],
+        [-0.1, -0.16, 0.145, 0.04],
+        [-0.13, -0.32, 0.155, 0.025],
+      ],
+      { sides: 6 },
+    ),
+  ]);
+  const coat = place(
+    [
+      spine([
+        [0, 0.12, 0.11, 0.082],
+        [0, -0.1, 0.16, 0.125],
+        [-0.01, -0.38, 0.2, 0.165],
+      ]),
+    ],
+    { at: pelvis },
+  );
+  const satchel = body.onChest([box([0.09, 0.14, 0.16], [-0.17, 0.05, -0.02])]);
+  const [x, y, z] = body.handL;
+  const lantern = gear([limb([x, y - 0.02, z], [x, y - 0.08, z], 0.012, 0.012, 4), limb([x, y - 0.08, z], [x, y - 0.11, z], 0.02, 0.055, 6), box([0.085, 0.12, 0.085], [x, y - 0.17, z])]);
+  const pistol = gear(place([box([0.04, 0.048, 0.22], [0, 0.03, 0.09]), box([0.038, 0.09, 0.048], [0, -0.03, -0.01])], { at: body.handR, turn: [25, 0, 0] }));
+  return figure([...body.parts, ...veil, ...coat, ...satchel, ...lantern, ...pistol], 5);
+})();
 
 export const CONCORD: Record<string, UnitModel> = {
   "marisol-vance": { figures: [marisolVance] },
@@ -173,4 +276,6 @@ export const CONCORD: Record<string, UnitModel> = {
     ),
   },
   "concord-fusiliers": { figures: squad([fusilier(false), fusilier(true)], 5) },
+  "gatewarden-pikemen": { figures: squad([pikemanGuarding, pikemanBraced], 5) },
+  "sister-maren": { figures: [sisterMaren] },
 };

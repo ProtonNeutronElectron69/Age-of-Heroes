@@ -1,5 +1,6 @@
 import { ball, both, box, figure, gear, limb, place, plate, spine, squad } from "../build";
 import { HEAD, human, type Human } from "../human";
+import { AIM_TURN, aiming } from "../poses";
 import type { Part, UnitModel, V3 } from "../types";
 
 /** A long sword held at the hilt, blade up, with a round guard. */
@@ -233,9 +234,87 @@ function ronin(coiled: boolean): Part[] {
   return [...body.parts, ...topknot, ...trousers, ...sword];
 }
 
+/** Kenzo the Lantern Monk: robed, under a wide straw hat, a paper lantern swinging from his staff. */
+const kenzo = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human({
+    pelvis,
+    lean: 3,
+    handR: [-0.276, 0.75, 0.168],
+    handL: [0.05, 0.72, 0.2],
+    elbowL: [0.6, -1, 0],
+    footL: [0.08, 0, 0.05],
+    footR: [-0.09, 0, -0.02],
+  });
+  const hat = body.onHead([limb([0, 0.03, 0], [0, 0.15, 0], 0.25, 0.02, 10)]);
+  const robe = [
+    ...place(
+      [
+        spine([
+          [0, 0.12, 0.125, 0.092],
+          [0, -0.1, 0.175, 0.135],
+          [0, -0.44, 0.23, 0.185],
+        ]),
+      ],
+      { at: pelvis },
+    ),
+    // The fold of the robe across the chest, and its hanging sleeves.
+    ...body.onChest([
+      spine(
+        [
+          [0.02, 0.37, 0.085, 0.075],
+          [0.03, 0.27, 0.16, 0.115],
+        ],
+        { sides: 6 },
+      ),
+    ]),
+    ball([body.handL[0] + 0.04, body.handL[1] - 0.07, body.handL[2] - 0.06], [0.07, 0.1, 0.09], 0),
+    ball([body.handR[0] + 0.02, body.handR[1] - 0.08, body.handR[2] - 0.07], [0.07, 0.1, 0.09], 0),
+  ];
+  const staff = gear([
+    limb([-0.3, 0, 0.12], [-0.26, 1.25, 0.2], 0.018, 0.016, 5),
+    limb([-0.26, 1.25, 0.2], [-0.25, 1.24, 0.37], 0.014, 0.012, 4),
+    limb([-0.25, 1.24, 0.37], [-0.25, 1.14, 0.37], 0.007, 0.007, 3),
+    ball([-0.25, 1.05, 0.37], [0.075, 0.1, 0.075], 0),
+  ]);
+  return figure([...body.parts, ...hat, ...robe, ...staff], 5);
+})();
+
+/** A Teppo Gunner firing a matchlock from one of the aiming stances, under a flat war hat. */
+function teppoGunner(kneeling: boolean): Part[] {
+  const pose = aiming(kneeling);
+  const body = human(pose);
+  const hat = body.onHead([limb([0, 0.035, 0], [0, 0.11, 0], 0.2, 0.03, 8)]);
+  const armour = [
+    ...body.onChest([box([0.05, 0.15, 0.14], [0.24, 0.25, 0]), box([0.05, 0.15, 0.14], [-0.24, 0.25, 0])]),
+    ...place(
+      [
+        spine(
+          [
+            [0, 0.12, 0.135, 0.1],
+            [0, -0.03, 0.19, 0.15],
+            [0, kneeling ? -0.1 : -0.17, 0.22, 0.18],
+          ],
+          { sides: 6 },
+        ),
+      ],
+      { at: pose.pelvis },
+    ),
+  ];
+  const matchlock = gear(
+    place([box([0.045, 0.07, 0.2], [0, 0, -0.13]), box([0.036, 0.045, 0.56], [0, 0.035, 0.24]), box([0.03, 0.035, 0.06], [-0.03, 0.065, 0.02])], {
+      at: body.handR,
+      turn: AIM_TURN,
+    }),
+  );
+  return [...body.parts, ...hat, ...armour, ...matchlock];
+}
+
 export const KAGERO: Record<string, UnitModel> = {
   "lady-asagiri": { figures: [ladyAsagiri] },
   "hollow-reed-shinobi": { figures: squad([shinobiCrouched, shinobiBlowpipe], 4) },
   "ashfang-oni": { figures: [ashfangOni] },
   "shirokage-ronin": { figures: squad([ronin(true), ronin(false)], 5) },
+  kenzo: { figures: [kenzo] },
+  "teppo-gunners": { figures: squad([teppoGunner(false), teppoGunner(true)], 5) },
 };

@@ -1,6 +1,7 @@
 import { ball, box, figure, gear, limb, mirror, place, plate, spine, squad } from "../build";
 import { roundShield, spear } from "../gear";
 import { human, type Human } from "../human";
+import { AIM_TURN, aiming } from "../poses";
 import type { Part, UnitModel, V3 } from "../types";
 
 /** Solenne, Herald of Dawn: winged and haloed, aloft with a pennoned spear. */
@@ -263,8 +264,76 @@ const dameRowena = (() => {
   return figure([...body.parts, ...armour, ...sword, ...shield], 5);
 })();
 
+/** A Crossbowman's kettle helm with its wide brim, his tabard and his quiver. */
+const crossbowmanKit = (body: Human, pelvis: V3): Part[] => [
+  ...body.onHead([ball([0, 0.03, 0], [0.097, 0.081, 0.099], 0), limb([0, 0.02, 0], [0, 0.04, 0], 0.18, 0.165, 10)]),
+  ...place(
+    [
+      spine(
+        [
+          [0, 0.13, 0.125, 0.095],
+          [0, -0.2, 0.175, 0.135],
+        ],
+        { sides: 6 },
+      ),
+    ],
+    { at: pelvis },
+  ),
+  ...body.onChest([box([0.07, 0.2, 0.07], [0.15, 0, -0.1])]),
+];
+
+/** A crossbow held at the grip and pointing along +z. */
+function crossbow(at: V3, turn: V3): Part[] {
+  return gear(
+    place(
+      [
+        box([0.042, 0.05, 0.44], [0, 0.02, 0.09]),
+        plate(
+          [
+            [-0.22, 0.2],
+            [-0.11, 0.275],
+            [0, 0.3],
+            [0.11, 0.275],
+            [0.22, 0.2],
+            [0.11, 0.245],
+            [0, 0.265],
+            [-0.11, 0.245],
+          ],
+          0.026,
+          "top",
+          0.03,
+        ),
+      ],
+      { at, turn },
+    ),
+  );
+}
+
+/** A Crossbowman taking aim. */
+const crossbowmanAiming = (() => {
+  const pose = aiming(false);
+  const body = human(pose);
+  return [...body.parts, ...crossbowmanKit(body, pose.pelvis), ...crossbow(body.handR, AIM_TURN)];
+})();
+
+/** A Crossbowman marching, the crossbow resting on his shoulder. */
+const crossbowmanMarching = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human({
+    pelvis,
+    lean: 3,
+    handR: [-0.2, 0.72, 0.14],
+    elbowR: [-0.6, -1, 0.3],
+    handL: [0.22, 0.5, -0.08],
+    footL: [0.09, 0, 0.18],
+    footR: [-0.09, 0, -0.14],
+  });
+  return [...body.parts, ...crossbowmanKit(body, pelvis), ...crossbow(body.handR, [-125, 0, 0])];
+})();
+
 export const DAWNHOLD: Record<string, UnitModel> = {
   solenne: { figures: [solenne] },
   "stormwake-huscarls": { figures: squad([huscarlStriking, huscarlResting], 5) },
   "dame-rowena": { figures: [dameRowena] },
+  "covenant-crossbowmen": { figures: squad([crossbowmanAiming, crossbowmanMarching], 5) },
 };
