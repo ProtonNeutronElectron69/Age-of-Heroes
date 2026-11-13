@@ -22,6 +22,8 @@ A turn-based 3D tactics game for 2 to 6 players in the browser. Heroes and squad
 
 **Keys in play:** WASD pans the map, 1 to 4 pick a squad's figures, E opens and closes eye view, Space ends the turn, R turns a multi-hex figure, C shows or hides the unit card.
 
+**Preview pages:** add `?cards` to the address to see every unit card, and `?models` to see the 3D figure models that will replace the tokens on the board.
+
 The rules are in [docs/RULES.md](docs/RULES.md). Progress and what's next are in [docs/PLAN.md](docs/PLAN.md).
 
 ## Documentation

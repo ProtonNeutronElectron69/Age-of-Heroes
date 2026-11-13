@@ -305,7 +305,7 @@ export function ModelGalleryScreen({ filter = "" }: { filter?: string }) {
           <button type="button" className={chosen === null ? "chosen" : ""} aria-pressed={chosen === null} onClick={() => setChosen(null)}>
             <strong>All units</strong>
             <span className="muted">
-              {standings.length} of {CARDS.length} units have a model so far.
+              {standings.length === CARDS.length ? `All ${CARDS.length} units.` : `${standings.length} of ${CARDS.length} units shown.`}
             </span>
           </button>
         </li>
