@@ -1,4 +1,4 @@
-import { ball, box, figure, gear, limb, place, plate, spine } from "../build";
+import { ball, box, figure, gear, limb, place, plate, spine, squad } from "../build";
 import { GALLOP, TROT, horse, type HorsePose } from "../horse";
 import { human } from "../human";
 import type { Part, UnitModel, V3 } from "../types";
@@ -77,7 +77,7 @@ const marisolVance = (() => {
 const MOUNT = 0.84;
 
 /** A Brass Hussar: a rider in a tall fur cap on a horse, sabre out. */
-function hussar(pose: HorsePose, sabreHand: V3, sabreTurn: V3): UnitModel["figures"][number] {
+function hussar(pose: HorsePose, sabreHand: V3, sabreTurn: V3): Part[] {
   const back = 0.89 * MOUNT;
   const rider = human({
     pelvis: [0, back + 0.05, -0.04],
@@ -103,15 +103,15 @@ function hussar(pose: HorsePose, sabreHand: V3, sabreTurn: V3): UnitModel["figur
     ),
   ]);
   const saddle = [box([0.36 * MOUNT, 0.04, 0.42], [0, back, -0.04])];
-  return figure([...place(horse(pose), { scale: MOUNT }), ...saddle, ...rider.parts, ...cap, ...pelisse, ...sabre(rider.handR, sabreTurn)], 6);
+  return [...place(horse(pose), { scale: MOUNT }), ...saddle, ...rider.parts, ...cap, ...pelisse, ...sabre(rider.handR, sabreTurn)];
 }
 
 export const CONCORD: Record<string, UnitModel> = {
   "marisol-vance": { figures: [marisolVance] },
   "brass-hussars": {
-    figures: [
-      hussar(GALLOP, [-0.27, 0.89 * MOUNT + 0.64, 0.16], [30, 0, 14]),
-      hussar(TROT, [-0.28, 0.89 * MOUNT + 0.46, 0.26], [48, 0, 10]),
-    ],
+    figures: squad(
+      [hussar(GALLOP, [-0.27, 0.89 * MOUNT + 0.64, 0.16], [30, 0, 14]), hussar(TROT, [-0.28, 0.89 * MOUNT + 0.46, 0.26], [48, 0, 10])],
+      6,
+    ),
   },
 };

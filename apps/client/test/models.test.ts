@@ -1,8 +1,21 @@
 import { CARD_CATALOG, CARDS } from "@aoh/content";
 import { HEX_SIZE, LEVEL_HEIGHT, isSquad } from "@aoh/rules";
 import { describe, expect, it } from "vitest";
-import { HEIGHT_TOLERANCE, TRIANGLE_BUDGET, UNIT_MODELS, baseFrame, figureGeometry, figureModel, measure } from "../src/models";
-import { box, figure } from "../src/models/build";
+import {
+  BASE_HEIGHT,
+  BASE_RADIUS,
+  HEIGHT_TOLERANCE,
+  TRIANGLE_BUDGET,
+  UNIT_MODELS,
+  baseFrame,
+  baseGeometry,
+  baseParts,
+  figureColors,
+  figureGeometry,
+  figureModel,
+  measure,
+} from "../src/models";
+import { box, figure, squad } from "../src/models/build";
 import type { Part } from "../src/models/types";
 
 function volume(part: Part): number {
@@ -46,13 +59,15 @@ describe("figure models", () => {
       }
     });
 
-    it("stands on the ground and is as tall as the card's Height", () => {
+    it("stands on its base and is as tall as the card's Height", () => {
+      const heights = unit.figures.map((model) => measure(model, card.footprint).height);
       for (const model of unit.figures) {
         const ys = model.parts.flatMap((p) => p.tris.filter((_, i) => i % 3 === 1));
-        expect(Math.min(...ys)).toBeGreaterThan(-0.02);
-        expect(Math.min(...ys)).toBeLessThan(0.02);
-        expect(Math.abs(measure(model, card.footprint).height - card.height)).toBeLessThanOrEqual(HEIGHT_TOLERANCE);
+        expect(Math.min(...ys)).toBeCloseTo(BASE_HEIGHT, 5);
       }
+      // The tallest pose stands the full Height; a crouching pose may be shorter, never taller.
+      expect(Math.abs(Math.max(...heights) - card.height)).toBeLessThanOrEqual(HEIGHT_TOLERANCE);
+      for (const height of heights) expect(height).toBeGreaterThan(card.height * 0.6);
     });
 
     it("fits the base on its card", () => {
@@ -78,13 +93,22 @@ describe("figure models", () => {
 
 describe("measuring a model against its base", () => {
   const width = Math.sqrt(3) * HEX_SIZE;
-  // A Height 5 box, written at its final size: `figure` leaves it as it is.
-  const slab = (w: number, d: number) => figure([box([w, 5 * LEVEL_HEIGHT, d], [0, 2.5 * LEVEL_HEIGHT, 0])], 5);
+  // A Height 5 box, written at its final size: `figure` only lifts it onto its base.
+  const tall = 5 * LEVEL_HEIGHT - BASE_HEIGHT;
+  const slab = (w: number, d: number) => figure([box([w, tall, d], [0, tall / 2, 0])], 5);
 
-  it("sizes a figure to its Height", () => {
+  it("sizes a figure and its base to its Height", () => {
     expect(measure(slab(0.5, 0.5), "1").height).toBeCloseTo(5);
     const ys = slab(0.5, 0.5).parts.flatMap((p) => p.tris.filter((_, i) => i % 3 === 1));
     expect(Math.max(...ys)).toBeCloseTo(5 * LEVEL_HEIGHT);
+    expect(Math.min(...ys)).toBeCloseTo(BASE_HEIGHT);
+  });
+
+  it("sizes a squad's poses to one scale", () => {
+    const [standing, crouching] = squad([[box([0.3, 1, 0.3], [0, 0.5, 0])], [box([0.3, 0.7, 0.3], [0, 0.35, 0])]], 5);
+    expect(measure(standing!, "1").height).toBeCloseTo(5);
+    const scale = (5 * LEVEL_HEIGHT - BASE_HEIGHT) / 1;
+    expect(measure(crouching!, "1").height).toBeCloseTo((0.7 * scale + BASE_HEIGHT) / LEVEL_HEIGHT);
   });
 
   it("finds nothing off the base for a figure inside its hex", () => {
@@ -115,5 +139,44 @@ describe("measuring a model against its base", () => {
       const length = Math.hypot(toFront.x, toFront.z);
       expect((ahead.x * toFront.x + ahead.z * toFront.z) / length).toBeCloseTo(1);
     }
+  });
+});
+
+describe("bases and colours", () => {
+  const corners = (footprint: "1" | "2x1" | "3x1" | "2x2") => {
+    const t = baseParts(footprint).flatMap((p) => p.tris);
+    return Array.from({ length: t.length / 3 }, (_, i) => ({ x: t[i * 3]!, y: t[i * 3 + 1]!, z: t[i * 3 + 2]! }));
+  };
+
+  it("gives a single-hex figure a circle a little smaller than its hex", () => {
+    const inradius = (Math.sqrt(3) / 2) * HEX_SIZE;
+    expect(BASE_RADIUS).toBeLessThan(inradius);
+    expect(BASE_RADIUS).toBeGreaterThan(inradius * 0.85);
+    const points = corners("1");
+    expect(Math.max(...points.map((p) => Math.hypot(p.x, p.z)))).toBeCloseTo(BASE_RADIUS);
+    expect(Math.max(...points.map((p) => p.y))).toBeCloseTo(BASE_HEIGHT);
+    expect(Math.min(...points.map((p) => p.y))).toBeCloseTo(0);
+  });
+
+  it("gives a larger footprint one base over all its hexes", () => {
+    for (const footprint of ["2x1", "3x1", "2x2"] as const) {
+      const frame = baseFrame(footprint);
+      const points = corners(footprint);
+      // The base reaches one base radius past the outermost hex centres, ahead and to each side.
+      const local = frame.cells.map((cell) => {
+        const dx = Math.sqrt(3) * HEX_SIZE * (cell.q + cell.r / 2) - frame.x;
+        const dz = 1.5 * HEX_SIZE * cell.r - frame.z;
+        return { x: dx * Math.cos(frame.yaw) - dz * Math.sin(frame.yaw), z: dx * Math.sin(frame.yaw) + dz * Math.cos(frame.yaw) };
+      });
+      expect(Math.max(...points.map((p) => p.z))).toBeCloseTo(Math.max(...local.map((c) => c.z)) + BASE_RADIUS, 1);
+      expect(Math.max(...points.map((p) => p.x))).toBeCloseTo(Math.max(...local.map((c) => c.x)) + BASE_RADIUS, 1);
+      expect(Math.min(...points.map((p) => p.x))).toBeCloseTo(Math.min(...local.map((c) => c.x)) - BASE_RADIUS, 1);
+      expect(baseGeometry(footprint).getAttribute("position").count).toBe(points.length);
+    }
+  });
+
+  it("swaps the model and base colours between the two schemes", () => {
+    expect(figureColors("faction", "#234573", "#e53935")).toEqual({ model: "#234573", base: "#e53935" });
+    expect(figureColors("player", "#234573", "#e53935")).toEqual({ model: "#e53935", base: "#234573" });
   });
 });

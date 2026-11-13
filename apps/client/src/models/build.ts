@@ -66,6 +66,15 @@ function cap(out: Tri[], ring: readonly V3[], reverse: boolean): void {
   }
 }
 
+/** A solid between two outlines with the same number of corners, one above the other. */
+export function prism(lower: readonly V3[], upper: readonly V3[], role: Role = "body"): Part {
+  const out: Tri[] = [];
+  band(out, lower, upper);
+  cap(out, lower, true);
+  cap(out, upper, false);
+  return solid(out, role);
+}
+
 /** A box of the given size, centred on `at`. */
 export function box(size: V3, at: V3 = [0, 0, 0], role: Role = "body"): Part {
   const [w, h, d] = [size[0] / 2, size[1] / 2, size[2] / 2];
@@ -234,15 +243,34 @@ function top(parts: readonly Part[], role: Role): number {
   return y;
 }
 
-/**
- * Finish a figure: lift it if anything dips under the ground, then size it so
- * its body is as tall as the card's Height (in terrain levels), which is the
- * height line of sight uses.
- */
-export function figure(parts: readonly Part[], height: number): FigureModel {
-  let lowest = 0;
+/** How thick a figure's base is, in world units. The base counts towards the figure's Height. */
+export const BASE_HEIGHT = 0.06;
+
+/** Move parts up or down so that their lowest point is on the ground. */
+function grounded(parts: readonly Part[]): readonly Part[] {
+  let lowest = Infinity;
   for (const part of parts) for (let i = 1; i < part.tris.length; i += 3) lowest = Math.min(lowest, part.tris[i]!);
-  const standing = lowest < 0 ? place(parts, { at: [0, -lowest, 0] }) : parts;
-  const scale = (height * LEVEL_HEIGHT) / top(standing, "body");
-  return { parts: place(standing, { scale }) };
+  return lowest === 0 || lowest === Infinity ? parts : place(parts, { at: [0, -lowest, 0] });
+}
+
+/**
+ * Finish a figure: stand it on its base and size it so that base and body
+ * together are as tall as the card's Height (in terrain levels), which is the
+ * height line of sight uses. `tall` is the body height, in the model's own
+ * units, that should come out at that Height; it defaults to this figure's.
+ */
+export function figure(parts: readonly Part[], height: number, tall?: number): FigureModel {
+  const standing = grounded(parts);
+  const scale = (height * LEVEL_HEIGHT - BASE_HEIGHT) / (tall ?? top(standing, "body"));
+  return { parts: place(standing, { scale, at: [0, BASE_HEIGHT, 0] }) };
+}
+
+/**
+ * Finish a squad's poses to one scale: the tallest pose stands the card's
+ * Height, and a crouching or kneeling one comes out shorter.
+ */
+export function squad(poses: readonly (readonly Part[])[], height: number): FigureModel[] {
+  const standing = poses.map(grounded);
+  const tall = Math.max(...standing.map((parts) => top(parts, "body")));
+  return standing.map((parts) => figure(parts, height, tall));
 }

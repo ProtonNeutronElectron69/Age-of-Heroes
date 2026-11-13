@@ -7,9 +7,10 @@ export type V3 = readonly [number, number, number];
  *   and must fit its base.
  * - `gear`: what it holds (a sabre, a bow). Gear may reach over the base and
  *   above the figure's Height.
+ * - `base`: the disc the figure stands on.
  * Later stages will add roles that pick colours, as the unit drawings do.
  */
-export type Role = "body" | "gear";
+export type Role = "body" | "gear" | "base";
 
 /** One solid piece of a model: a closed, flat-faced shape. */
 export interface Part {
@@ -19,8 +20,9 @@ export interface Part {
 }
 
 /**
- * One figure, in world units: it stands on y = 0 at the middle of its base
- * and faces +z. Its left is +x.
+ * One figure, in world units: it stands on top of its base, over the middle
+ * of it, and faces +z. Its left is +x. The base itself comes from the card's
+ * footprint (`baseParts`).
  */
 export interface FigureModel {
   readonly parts: readonly Part[];

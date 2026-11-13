@@ -21,11 +21,44 @@
   margin: 0;
 }
 
-.model-gallery-toggle {
+.model-gallery-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  font-size: 14px;
+}
+
+.model-gallery-controls fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.model-gallery-controls legend {
+  padding: 0;
+  float: left;
+  margin-right: 10px;
+  color: var(--muted);
+}
+
+.model-gallery-controls label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
+}
+
+.model-gallery-controls select {
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel-solid);
+  color: var(--text);
+  font: inherit;
 }
 
 .model-gallery-stage {
@@ -65,14 +98,15 @@
   line-height: 1.35;
 }
 
+/* The model's colour, ringed in its base's colour. */
 .model-gallery-swatch {
   position: absolute;
-  left: 10px;
-  top: 13px;
-  width: 12px;
-  height: 12px;
+  left: 8px;
+  top: 11px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  border: 1px solid var(--border);
+  border: 4px solid var(--border);
 }
 
 .model-gallery-fit {

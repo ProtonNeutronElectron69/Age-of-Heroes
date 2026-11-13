@@ -1,28 +1,45 @@
+import type { Footprint } from "@aoh/rules";
 import { BufferGeometry, Float32BufferAttribute } from "three";
-import type { FigureModel, UnitModel } from "./types";
+import { baseParts } from "./base";
+import type { FigureModel, Part, UnitModel } from "./types";
+import { ASHEN } from "./units/ashen";
 import { CONCORD } from "./units/concord";
+import { DAWNHOLD } from "./units/dawnhold";
+import { KAGERO } from "./units/kagero";
+import { NEXUS } from "./units/nexus";
 import { VERDANT } from "./units/verdant";
 
 export { baseFrame, measure, HEIGHT_TOLERANCE, OVERHANG_LIMITS, TRIANGLE_BUDGET, type BaseFrame, type Fit } from "./measure";
+export { BASE_RADIUS, baseParts } from "./base";
+export { BASE_HEIGHT } from "./build";
+export { COLOR_SCHEMES, figureColors, type ColorScheme } from "./colors";
 export type { FigureModel, Part, Role, UnitModel } from "./types";
 
 /**
  * Figure models by card id. Stage 1 gives each unit its size and shape in a
  * single colour; a unit with no model here is still drawn as a token.
  */
-export const UNIT_MODELS: Readonly<Record<string, UnitModel>> = { ...CONCORD, ...VERDANT };
+export const UNIT_MODELS: Readonly<Record<string, UnitModel>> = { ...CONCORD, ...KAGERO, ...VERDANT, ...NEXUS, ...ASHEN, ...DAWNHOLD };
 
 /** The model for figure number `index` of a unit: a squad's figures take its poses in turn. */
 export function figureModel(unit: UnitModel, index: number): FigureModel {
   return unit.figures[index % unit.figures.length]!;
 }
 
-/** One flat-shaded mesh for a whole figure. The caller disposes of it. */
-export function figureGeometry(model: FigureModel): BufferGeometry {
-  const positions = model.parts.flatMap((p) => p.tris);
-  const geometry = new BufferGeometry();
-  geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
+function geometry(parts: readonly Part[]): BufferGeometry {
+  const out = new BufferGeometry();
+  out.setAttribute("position", new Float32BufferAttribute(parts.flatMap((p) => p.tris), 3));
   // Corners are not shared between faces, so every face gets its own normal.
-  geometry.computeVertexNormals();
-  return geometry;
+  out.computeVertexNormals();
+  return out;
+}
+
+/** One flat-shaded mesh for a whole figure, without its base. The caller disposes of it. */
+export function figureGeometry(model: FigureModel): BufferGeometry {
+  return geometry(model.parts);
+}
+
+/** The mesh for the base under a figure with this footprint. The caller disposes of it. */
+export function baseGeometry(footprint: Footprint): BufferGeometry {
+  return geometry(baseParts(footprint));
 }

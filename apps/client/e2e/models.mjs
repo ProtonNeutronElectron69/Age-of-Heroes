@@ -35,7 +35,7 @@ try {
   const units = page.locator("[data-unit]");
   await units.first().waitFor();
   const count = await units.count();
-  if (count < 4) fail(`Expected at least 4 units with a model, found ${count}`);
+  if (count < 12) fail(`Expected at least 12 units with a model, found ${count}`);
 
   // Every unit says how it fits its base, and none needs a larger one.
   const list = await page.getByRole("list", { name: "Units" }).innerText();
@@ -58,6 +58,21 @@ try {
   await page.getByRole("checkbox", { name: "Show tokens" }).check();
   await drawn(all + 40);
 
+  // The two colour schemes swap the model's colour with its base's.
+  const colours = () => units.evaluateAll((list) => list.map((u) => [u.dataset.modelColor, u.dataset.baseColor]));
+  const byFaction = await colours();
+  if (byFaction.some(([model, base]) => !model || !base || model === base)) fail(`Models and bases need two colours: ${JSON.stringify(byFaction)}`);
+  await page.getByRole("radio", { name: "Player models, faction bases" }).check();
+  const byPlayer = await colours();
+  if (byPlayer.some(([model, base], i) => model !== byFaction[i][1] || base !== byFaction[i][0])) fail("The colour schemes did not swap model and base colours");
+  // One player for every unit: every model takes that player's colour.
+  await page.getByRole("combobox", { name: "Player" }).selectOption({ label: "Blue" });
+  const blue = await colours();
+  if (new Set(blue.map(([model]) => model)).size !== 1) fail(`Every model should be the Blue player's colour: ${JSON.stringify(blue)}`);
+  await page.getByRole("radio", { name: "Faction models, player bases" }).check();
+  if (new Set((await colours()).map(([, base]) => base)).size !== 1) fail("Every base should be the Blue player's colour");
+  await drawn(all + 40);
+
   // One unit on its own.
   await page.goto(`${url}?models=old-rootback`);
   await page.locator("[data-unit]").first().waitFor();
@@ -65,7 +80,7 @@ try {
   await drawn(500);
 
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
-  console.log(`Models test passed: ${count} units drawn on their bases.`);
+  console.log(`Models test passed: ${count} units drawn on their bases, in both colour schemes.`);
 } finally {
   await browser.close();
   await new Promise((resolve) => server.httpServer.close(resolve));

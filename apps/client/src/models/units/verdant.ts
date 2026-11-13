@@ -1,4 +1,4 @@
-import { ball, both, figure, gear, limb, place, plate, spine } from "../build";
+import { ball, both, figure, gear, limb, place, plate, spine, squad } from "../build";
 import { HEAD, human, type Human } from "../human";
 import type { Part, UnitModel, V3 } from "../types";
 
@@ -78,18 +78,15 @@ const wardenLoosing = (() => {
     WARDEN,
   );
   const hood = body.onChest([ball([0, 0.37, -0.09], [0.09, 0.06, 0.07], 0)]);
-  return figure(
-    [
-      ...body.parts,
-      ...ears(body),
-      ...hood,
-      ...cloak(body, 0.1),
-      ...quiver(body),
-      ...bow(body.handL, 0.09),
-      ...arrow([-0.04, 0.845, 0], [0.03, 0.81, 0.54]),
-    ],
-    5,
-  );
+  return [
+    ...body.parts,
+    ...ears(body),
+    ...hood,
+    ...cloak(body, 0.1),
+    ...quiver(body),
+    ...bow(body.handL, 0.09),
+    ...arrow([-0.04, 0.845, 0], [0.03, 0.81, 0.54]),
+  ];
 })();
 
 /** A Glade Warden on watch: hood up, bow grounded at her side, an arrow in the other hand. */
@@ -119,18 +116,15 @@ const wardenWatching = (() => {
       { sides: 8 },
     ),
   ]);
-  return figure(
-    [
-      ...body.parts,
-      ...hood,
-      ...mantle,
-      ...cloak(body, 0),
-      ...quiver(body),
-      ...bow(body.handL, 0, [0, 12, 0]),
-      ...arrow([-0.22, 0.5, 0.09], [-0.26, 0.2, 0.3]),
-    ],
-    5,
-  );
+  return [
+    ...body.parts,
+    ...hood,
+    ...mantle,
+    ...cloak(body, 0),
+    ...quiver(body),
+    ...bow(body.handL, 0, [0, 12, 0]),
+    ...arrow([-0.22, 0.5, 0.09], [-0.26, 0.2, 0.3]),
+  ];
 })();
 
 /** A sapling growing on Old Rootback: a trunk and a few clumps of leaves. */
@@ -214,6 +208,6 @@ const oldRootback = (() => {
 })();
 
 export const VERDANT: Record<string, UnitModel> = {
-  "glade-wardens": { figures: [wardenLoosing, wardenWatching] },
+  "glade-wardens": { figures: squad([wardenLoosing, wardenWatching], 5) },
   "old-rootback": { figures: [oldRootback] },
 };
