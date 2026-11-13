@@ -17,6 +17,7 @@ const UNIT = {
   content: "packages/content",
   protocol: "packages/protocol",
   server: "apps/server",
+  client: "apps/client",
 };
 
 /** Browser tests. Each runs from apps/client against the build. */
@@ -26,13 +27,15 @@ export const E2E = {
   editor: "node e2e/editor.mjs",
   saves: "node e2e/saves.mjs",
   online: "node e2e/online.mjs",
+  models: "node e2e/models.mjs",
 };
 
 const ALL = "all";
 /** Unit tests for a package and every package that depends on it. */
 const WITH_DEPENDENTS = {
   rules: ALL,
-  content: [UNIT.content, UNIT.protocol, UNIT.server],
+  // The client's tests hold the figure models to their cards' Height and footprint.
+  content: [UNIT.content, UNIT.protocol, UNIT.server, UNIT.client],
   protocol: [UNIT.protocol, UNIT.server],
   server: [UNIT.server],
 };
@@ -68,13 +71,18 @@ export const RULES = [
   { area: "browser test", match: /^apps\/client\/e2e\/editor\.mjs$/, check: false, unit: [], e2e: ["editor"] },
   { area: "browser test", match: /^apps\/client\/e2e\/saves\.mjs$/, check: false, unit: [], e2e: ["saves"] },
   { area: "browser test", match: /^apps\/client\/e2e\/online\.mjs$/, check: false, unit: [], e2e: ["online"] },
+  { area: "browser test", match: /^apps\/client\/e2e\/models\.mjs$/, check: false, unit: [], e2e: ["models"] },
+
+  { area: "client tests", match: /^apps\/client\/test\//, check: true, unit: [UNIT.client], e2e: [] },
+  // Figure models are only drawn on the model page so far. Once the play screen draws them, they belong with the rest of the client.
+  { area: "figure models", match: /^apps\/client\/src\/(models\/|screens\/(ModelGalleryScreen\.tsx|model-gallery\.css)$)/, check: true, unit: [UNIT.client], e2e: ["models"] },
 
   // Client files that only one part of the game uses.
   { area: "map editor", match: /^apps\/client\/src\/screens\/EditorScreen\.tsx$/, check: true, unit: [], e2e: ["editor"] },
   { area: "online play", match: /^apps\/client\/src\/(online\.ts|screens\/LobbyScreen\.tsx|ui\/OnlineBar\.tsx)$/, check: true, unit: [], e2e: ["online"] },
   { area: "saves and replays", match: /^apps\/client\/src\/(saves\.ts|ui\/SaveDialog\.tsx|screens\/ReplayScreen\.tsx)$/, check: true, unit: [], e2e: ["saves", "online"] },
   // Styles and the rest of the client: every browser test goes through them.
-  { area: "client", match: /^apps\/client\//, check: true, unit: [], e2e: ALL },
+  { area: "client", match: /^apps\/client\//, check: true, unit: [UNIT.client], e2e: ALL },
 
   // Shared build setup, dependencies, CI and this script: everything.
   { area: "build setup", match: /^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json|vitest\.config\.ts|\.github\/workflows\/ci\.yml|scripts\/)/, check: true, unit: ALL, e2e: ALL },

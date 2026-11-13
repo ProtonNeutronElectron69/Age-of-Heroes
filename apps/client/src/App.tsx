@@ -6,6 +6,7 @@ import { CardGalleryScreen } from "./screens/CardGalleryScreen";
 import { DraftScreen } from "./screens/DraftScreen";
 import { EditorScreen } from "./screens/EditorScreen";
 import { LobbyScreen } from "./screens/LobbyScreen";
+import { ModelGalleryScreen } from "./screens/ModelGalleryScreen";
 import { PlayScreen } from "./screens/PlayScreen";
 import { ReplayScreen } from "./screens/ReplayScreen";
 import { SetupScreen } from "./screens/SetupScreen";
@@ -21,8 +22,10 @@ export function App() {
   const online = useOnline();
   const [view, setView] = useState<View>({ name: "setup" });
 
-  // The card gallery is a design page, opened with ?cards in the address.
-  if (new URLSearchParams(window.location.search).has("cards")) return <CardGalleryScreen />;
+  // The card and model galleries are design pages, opened with ?cards or ?models in the address.
+  const query = new URLSearchParams(window.location.search);
+  if (query.has("cards")) return <CardGalleryScreen />;
+  if (query.has("models")) return <ModelGalleryScreen filter={query.get("models") ?? ""} />;
   if (session) {
     if (session.state.phase === "draft") return <DraftScreen session={session} />;
     return <PlayScreen session={session} />;

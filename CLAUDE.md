@@ -27,6 +27,7 @@
 - **Stores:** `session.ts` holds the game in play, `online.ts` the connection and lobby, `saves.ts` named saves.
 - **Online sends:** online commands set `session.pending` until the server answers; the UI blocks repeat actions meanwhile.
 - **Figure labels:** these are one DOM layer positioned each frame (`scene/Figures.tsx`). Do not go back to drei `Html` per figure; it threw on unmount.
+- **Figure models:** `apps/client/src/models` builds each unit's 3D model in code (see [docs/CONTENT.md](docs/CONTENT.md)). A model matches its card: as tall as its Height, on its footprint, within the overhang limits. Line of sight uses the token shape, never the model. `?models` shows them; the play screen still draws tokens.
 - **Browser tests:** `apps/client/e2e` drives the canvas through `window.__aoh` and `window.__aohUi` (`scene/TestHook.tsx`, `PlayScreen.tsx`). Keep those hooks working when changing the play screen.
 
 ## Checks and delivery

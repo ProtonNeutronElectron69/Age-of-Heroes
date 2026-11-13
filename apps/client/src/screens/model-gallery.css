@@ -1,0 +1,98 @@
+/* The figure model page (screens/ModelGalleryScreen.tsx), opened with ?models. */
+.model-gallery {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px 16px;
+  padding: 16px 20px 20px;
+}
+
+.model-gallery-head {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 8px 24px;
+}
+
+.model-gallery-head p {
+  margin: 0;
+}
+
+.model-gallery-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.model-gallery-stage {
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.model-gallery-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.model-gallery-list button {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px 10px 30px;
+  text-align: left;
+  background: var(--panel-solid);
+}
+
+.model-gallery-list button.chosen {
+  border-color: var(--accent);
+}
+
+.model-gallery-list .muted {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.model-gallery-swatch {
+  position: absolute;
+  left: 10px;
+  top: 13px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+
+.model-gallery-fit {
+  font-size: 13px;
+  font-weight: 600;
+  color: #7fd08a;
+}
+
+.model-gallery-fit.over {
+  color: var(--danger);
+}
+
+.model-gallery-note {
+  padding: 4px 2px;
+}
+
+@media (max-width: 820px) {
+  .model-gallery {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(280px, 55%) minmax(0, 1fr);
+    padding: 12px;
+  }
+}

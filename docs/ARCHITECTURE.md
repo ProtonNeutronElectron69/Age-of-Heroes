@@ -78,6 +78,8 @@ Scene (`scene/`): `BoardScene` (terrain as one instanced mesh per terrain type p
 
 UI (`ui/`): unit cards, dice overlay, log, round bar, token panel, game menu and save dialog. The unit card is `ui/HexCard.tsx`: a seven-hex SVG drawing with the name and rules text laid over it and sized to fit, coloured from `ui/factionThemes.ts`, with emblems and stat icons in `ui/hexCardArt.tsx`. Unit art lives in `ui/art/`: a drawing is a list of flat shapes with roles (`types.ts`), built with the helpers in `build.ts`, one file per faction in `drawings/`, collected by card id in `drawings.ts`. `UnitArt.tsx` paints a drawing in the ink and colour style and as the hit zone picture. `ui/UnitCardView.tsx` wraps the card with the flip and enlarge controls the screens use. `screens/CardGalleryScreen.tsx` shows every card; open the game with `?cards` in the address.
 
+Figure models (`models/`): each unit's 3D model is built in code from a few solid shapes, so there are no model files to load. `build.ts` has the shapes (`box`, `limb`, `ball`, `spine`, `plate`) and `figure`, which sizes a model to its card's Height; `human.ts` is a posable person and `horse.ts` a horse; `units/` holds one file per faction, with models by card id, collected in `index.ts` (`UNIT_MODELS`, `figureGeometry`). `measure.ts` works out how a model sits on its base (`baseFrame`) and how far its body hangs over the edge (`measure`, `OVERHANG_LIMITS`). `screens/ModelGalleryScreen.tsx` stands the models on a board; open the game with `?models` in the address. The play screen still draws tokens: stage 1 of the models is not on the board yet.
+
 Browser storage keys (all `localStorage`, each wrapped so the game works without storage):
 
 | Key | Contents |
