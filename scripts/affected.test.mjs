@@ -19,7 +19,7 @@ describe("affected checks", () => {
   it("runs the content tests and its dependents, but no browser tests, for unit stats", () => {
     expect(pick(["packages/content/src/cards/legends.json"])).toEqual({
       check: true,
-      unit: ["packages/content", "packages/protocol", "apps/server"],
+      unit: ["packages/content", "packages/protocol", "apps/server", "apps/client"],
       e2e: [],
     });
   });
@@ -57,7 +57,17 @@ describe("affected checks", () => {
   });
 
   it("runs every browser test for the rest of the client", () => {
-    expect(pick(["apps/client/src/screens/PlayScreen.tsx"])).toEqual({ check: true, unit: [], e2e: "all" });
+    expect(pick(["apps/client/src/screens/PlayScreen.tsx"])).toEqual({ check: true, unit: ["apps/client"], e2e: "all" });
+  });
+
+  it("runs the client tests and the model page test for a figure model", () => {
+    for (const f of ["apps/client/src/models/units/concord.ts", "apps/client/src/screens/ModelGalleryScreen.tsx", "apps/client/src/screens/model-gallery.css"]) {
+      expect(pick([f])).toEqual({ check: true, unit: ["apps/client"], e2e: ["models"] });
+    }
+  });
+
+  it("runs only the client tests for a change to them", () => {
+    expect(pick(["apps/client/test/models.test.ts"])).toEqual({ check: true, unit: ["apps/client"], e2e: [] });
   });
 
   it("runs a changed browser test script, with a build", () => {
@@ -78,7 +88,13 @@ describe("affected checks", () => {
 
   it("collapses to all when every browser test is picked", () => {
     expect(
-      pick(["apps/client/e2e/full-game.mjs", "apps/client/e2e/editor.mjs", "apps/client/e2e/saves.mjs", "apps/client/e2e/online.mjs"]).e2e,
+      pick([
+        "apps/client/e2e/full-game.mjs",
+        "apps/client/e2e/editor.mjs",
+        "apps/client/e2e/saves.mjs",
+        "apps/client/e2e/online.mjs",
+        "apps/client/e2e/models.mjs",
+      ]).e2e,
     ).toBe("all");
   });
 

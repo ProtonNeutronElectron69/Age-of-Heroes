@@ -1,0 +1,132 @@
+/* The figure model page (screens/ModelGalleryScreen.tsx), opened with ?models. */
+.model-gallery {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px 16px;
+  padding: 16px 20px 20px;
+}
+
+.model-gallery-head {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 8px 24px;
+}
+
+.model-gallery-head p {
+  margin: 0;
+}
+
+.model-gallery-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  font-size: 14px;
+}
+
+.model-gallery-controls fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.model-gallery-controls legend {
+  padding: 0;
+  float: left;
+  margin-right: 10px;
+  color: var(--muted);
+}
+
+.model-gallery-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.model-gallery-controls select {
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel-solid);
+  color: var(--text);
+  font: inherit;
+}
+
+.model-gallery-stage {
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.model-gallery-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.model-gallery-list button {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px 10px 30px;
+  text-align: left;
+  background: var(--panel-solid);
+}
+
+.model-gallery-list button.chosen {
+  border-color: var(--accent);
+}
+
+.model-gallery-list .muted {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* The model's colour, inside the colour of the ring on its base. */
+.model-gallery-swatch {
+  position: absolute;
+  left: 8px;
+  top: 11px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 4px solid var(--border);
+}
+
+.model-gallery-fit {
+  font-size: 13px;
+  font-weight: 600;
+  color: #7fd08a;
+}
+
+.model-gallery-fit.over {
+  color: var(--danger);
+}
+
+.model-gallery-note {
+  padding: 4px 2px;
+}
+
+@media (max-width: 820px) {
+  .model-gallery {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(280px, 55%) minmax(0, 1fr);
+    padding: 12px;
+  }
+}

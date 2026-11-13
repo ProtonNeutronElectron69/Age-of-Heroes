@@ -7,8 +7,8 @@ Checks run only for the parts of the game a change can affect. The browser tests
 | Check | What it covers | Time |
 |---|---|---|
 | Typecheck and build | Every package compiles, and the client and server build | under a minute |
-| Unit tests | Vitest, by package: `packages/rules`, `packages/content`, `packages/protocol`, `apps/server` | seconds |
-| Browser tests | Five Playwright scripts in `apps/client/e2e`: `full-basic`, `full-advanced`, `editor`, `saves`, `online` | 1 to 3 minutes each |
+| Unit tests | Vitest, by package: `packages/rules`, `packages/content`, `packages/protocol`, `apps/server`, `apps/client` (the figure models) | seconds |
+| Browser tests | Six Playwright scripts in `apps/client/e2e`: `full-basic`, `full-advanced`, `editor`, `saves`, `online`, `models` | 1 to 3 minutes each; `models` takes seconds |
 
 ## What a change runs
 
@@ -18,8 +18,8 @@ The first matching row decides for each file; a change runs everything its files
 |---|---|---|---|
 | Docs and other `.md` files | no | none | none |
 | Deployment files (`.dockerignore`, `render.yaml`, the server `Dockerfile`, `deploy.yml`) | no | none | none |
-| Unit card data (`packages/content/src/cards/*.json`) and the balance model | yes | content, protocol, server | none |
-| Other content: maps, terrain, scenery, tuning, the card loader | yes | content, protocol, server | all |
+| Unit card data (`packages/content/src/cards/*.json`) and the balance model | yes | content, protocol, server, client | none |
+| Other content: maps, terrain, scenery, tuning, the card loader | yes | content, protocol, server, client | all |
 | Engine (`packages/rules`) | yes | all | all |
 | Protocol | yes | protocol, server | saves, online |
 | Server | yes | server | online |
@@ -27,12 +27,15 @@ The first matching row decides for each file; a change runs everything its files
 | Map editor screen | yes | none | editor |
 | Online lobby and connection (`online.ts`, `LobbyScreen`, `OnlineBar`) | yes | none | online |
 | Saves and replays (`saves.ts`, `SaveDialog`, `ReplayScreen`) | yes | none | saves, online |
-| Any other client file | yes | none | all |
+| Figure models (`apps/client/src/models`) and the model page (`ModelGalleryScreen`, `model-gallery.css`) | yes | client | models |
+| Any other client file | yes | client | all |
 | A browser test script | yes | none | that script |
 | Shared setup: `package.json`, the lockfile, `tsconfig.base.json`, `vitest.config.ts`, `ci.yml`, `scripts/` | yes | all | all |
 | Anything else | yes | all | all |
 
-Unit tests follow the package graph: `rules` is used by everything, `content` by the protocol and the server, and the protocol by the server. The client has no unit tests of its own.
+Unit tests follow the package graph: `rules` is used by everything, `content` by the protocol, the server and the client, and the protocol by the server. The client's own tests (`apps/client/test`) cover the figure models: each one must be as tall as its card's Height, fit its base and stay low polygon.
+
+Figure models are only drawn on the model page (`?models`) so far, so a model change runs just the `models` browser test. When the play screen draws them, move that rule in with the rest of the client.
 
 ## Safety nets
 

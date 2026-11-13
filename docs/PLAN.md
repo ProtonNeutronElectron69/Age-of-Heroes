@@ -4,12 +4,13 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable: the Basic and Advanced rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. Over 200 unit and simulation tests and 5 browser tests run in CI, each pull request running only the ones its changes affect ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable: the Basic and Advanced rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. Over 200 unit and simulation tests and 6 browser tests run in CI, each pull request running only the ones its changes affect ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 - **Needs the repository owner:** create the online game server on Render and set the `GAME_SERVER_URL` repository variable (about 10 minutes; see [HOSTING.md](HOSTING.md)). Until then the published site can only play online against a server whose address is typed in.
 - **On hold (Phase 6):** a computer opponent, and a tutorial built on the Basic game.
-- **On hold until the core game is complete (Phase 7):** sound and music, 3D figure models, terrain and scenery art.
+- **In progress (Phase 7):** 3D figure models, in stages. Stage 1 gives every unit a low polygon model of the right size and shape, in its faction's colour. Twelve units have one so far, a hero and a squad from every faction; see them at `?models`. Each figure stands on a light brown base with a coloured ring round its edge, and there are two colour schemes to choose between. The other 36 units follow.
+- **On hold (Phase 7):** sound and music, terrain and scenery art.
 
 ### Ideas, not scheduled
 - More premade maps.
@@ -28,7 +29,7 @@ Each phase or drop is one pull request from a working branch, with CI green befo
 | Play modes | Hot-seat and online (done); computer opponent on hold |
 | Online hosting | Game server in a Docker image; Render recommended (free tier, deploys from `render.yaml`). The server keeps rooms in memory only; the host saves a game to a file to resume it later. See [HOSTING.md](HOSTING.md) |
 | Line of sight | Advanced: automatic check from eye point to hit band, plus a figure's-eye camera. Basic: forgiving |
-| Art | Unit cards are seven-hex cards in faction colours. Unit art is drawn, not rendered from models, in an ink and colour style; every unit has a drawing and a red and grey hit zone picture. Otherwise none for now: units are tokens as tall as their Height, terrain is flat colour, hovering or clicking a token shows its card, and a red arrow marks the figure chosen to act. Sound, models and the rest of the art come in Phase 7 |
+| Art | Unit cards are seven-hex cards in faction colours. Unit art is drawn, not rendered from models, in an ink and colour style; every unit has a drawing and a red and grey hit zone picture. Otherwise none for now: units are tokens as tall as their Height, terrain is flat colour, hovering or clicking a token shows its card, and a red arrow marks the figure chosen to act. Figure models are built in code from a few solid shapes, like the drawings, and arrive in stages: size and shape first, detail later. A figure stands on a round base a little smaller than its hex; a larger footprint gets one base with a lobe on each hex, thinner where it passes from hex to hex. Figure and base together are as tall as the card's Height. The body may reach a fifth of a hex past its hexes; a unit that reaches further gets a larger footprint on its card. Bases are light brown, with a ring of colour round the bevelled edge. Model and ring take two colours, the faction's and the player's, in one of two schemes: faction models with player rings, or player models with faction rings. Line of sight keeps using the token shape. Sound and the rest of the art come in Phase 7 |
 | Unit roster | Original units only, across all eras and myths. Squads have 1 special ability and heroes 2 (Flying not counted); heroes have 2 to 8 Life, most squads 1 (tough squads of 2 or 3 figures up to 3). Heroes and squads, and ranged and melee, stay within about 60/40. Point costs set with the balance model |
 | Involvement | Hands-off: work arrives as pull requests with a playable build; the owner decides when to merge |
 
@@ -184,4 +185,11 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
   - [x] Batch 5 (48 of 48): Brass Hussars, Hollow Reed Shinobi, Old Rootback, Hollowsteel Hunters, Siege Walker Atlas, Marrowcoil, Sunbound Archers, Dawn Acolytes
 - [ ] Sound effects and music
 - [ ] 3D models for the figures in place of tokens
+  - [ ] Stage 1: a low polygon model for every unit, sized to its Height and its base. Open the game with `?models` in the address to see them
+    - [x] Mockup (4 of 48): Captain Marisol Vance, Brass Hussars, Glade Wardens, Old Rootback
+    - [x] Light brown bases with a coloured ring round the edge, waisted between hexes on larger footprints, and two colour schemes to switch between: faction models with player rings, or player models with faction rings
+    - [x] A hero and a squad for every faction (12 of 48): Lady Asagiri, Hollow Reed Shinobi, Siege Walker Atlas, Nexus Reclaimers, Marrowcoil, Barrow Legion, Solenne, Stormwake Huscarls
+    - [ ] The other 36 units
+    - [ ] Draw the models on the board in place of tokens, with the colour scheme as a setting
+  - [ ] Later stages: more detail and colour
 - [ ] Terrain textures and scenery art
