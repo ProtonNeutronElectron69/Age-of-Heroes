@@ -9,9 +9,10 @@ export type V3 = readonly [number, number, number];
  *   above the figure's Height.
  * - `base`: the top of the base the figure stands on.
  * - `rim`: the bevelled edge of the base, which carries a colour.
+ * - `stand`: a flight stand, the post that holds a flying figure over its base.
  * Later stages will add roles that pick colours, as the unit drawings do.
  */
-export type Role = "body" | "gear" | "base" | "rim";
+export type Role = "body" | "gear" | "base" | "rim" | "stand";
 
 /** One solid piece of a model: a closed, flat-faced shape. */
 export interface Part {

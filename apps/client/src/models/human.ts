@@ -37,6 +37,8 @@ export interface HumanBuild {
   shoulders?: number;
   /** How thick the limbs and body are. 1 is a soldier; an elf is about 0.85. */
   bulk?: number;
+  /** An open frame in place of the chest, for a machine: a backbone, a yoke and a strut down each side. */
+  hollow?: boolean;
 }
 
 export interface Human {
@@ -80,7 +82,7 @@ const v3 = (v: Vector3): V3 => [v.x, v.y, v.z];
 
 export function human(pose: HumanPose, build: HumanBuild = {}): Human {
   const { pelvis = [0, 0.5, 0], hips = 0, lean = 0, twist = 0, look = 0 } = pose;
-  const { shoulders = 0.175, bulk = 1 } = build;
+  const { shoulders = 0.175, bulk = 1, hollow = false } = build;
   const k = bulk;
 
   const onHips = (parts: readonly Part[]) => place(parts, { at: pelvis, turn: [0, hips, 0] });
@@ -107,12 +109,20 @@ export function human(pose: HumanPose, build: HumanBuild = {}): Human {
       ]),
     ]),
     ...onChest([
-      spine([
-        [0, 0.08, 0.112 * k, 0.082 * k],
-        [0, 0.23, shoulders * 0.92, 0.108 * k],
-        [0, 0.315, shoulders * 0.95, 0.088 * k],
-        [0, 0.355, 0.07 * k, 0.06 * k],
-      ]),
+      ...(hollow
+        ? [
+            limb([0, 0.06, -0.04], [0, 0.34, -0.03], 0.034, 0.034, 5),
+            limb([-shoulders, 0.305, 0], [shoulders, 0.305, 0], 0.04, 0.04, 5),
+            ...[1, -1].map((side) => limb([side * shoulders * 0.9, 0.3, 0.01], [side * 0.06, 0.08, 0.035], 0.03, 0.03, 5)),
+          ]
+        : [
+            spine([
+              [0, 0.08, 0.112 * k, 0.082 * k],
+              [0, 0.23, shoulders * 0.92, 0.108 * k],
+              [0, 0.315, shoulders * 0.95, 0.088 * k],
+              [0, 0.355, 0.07 * k, 0.06 * k],
+            ]),
+          ]),
       limb([0, 0.33, 0], [0, 0.4, 0.008], 0.05 * k, 0.048 * k),
     ]),
   );

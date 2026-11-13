@@ -1,5 +1,7 @@
-import { ball, box, figure, gear, limb, place, plate, spine, squad } from "../build";
+import { ball, both, box, figure, gear, limb, place, plate, spine, squad } from "../build";
 import { HEAD, human, type Human } from "../human";
+import { AIM_TURN, DRAWN, aiming, loosing } from "../poses";
+import { arrow, bow, spear } from "../gear";
 import type { Part, UnitModel, V3 } from "../types";
 
 /** A long sword held at the hilt, blade up, with a round guard. */
@@ -152,7 +154,268 @@ const shinobiBlowpipe = (() => {
   return [...body.parts, ...shinobiKit(body), ...pipe];
 })();
 
+/** The Ashfang Oni: a horned brute in a striped pelt, an iron-studded club hefted high. */
+const ashfangOni = (() => {
+  const pelvis: V3 = [0, 0.47, 0];
+  const body = human(
+    {
+      pelvis,
+      lean: 10,
+      twist: -12,
+      look: 10,
+      handR: [-0.4, 1.06, 0.04],
+      elbowR: [-1, -0.3, -0.4],
+      handL: [0.32, 0.6, 0.28],
+      footL: [0.17, 0, 0.14],
+      footR: [-0.18, 0, -0.1],
+    },
+    { shoulders: 0.26, bulk: 1.5 },
+  );
+  const head = body.onHead([
+    ...both([limb([0.055, 0.06, 0.03], [0.12, 0.22, 0.07], 0.034, 0, 4)]),
+    // A heavy jaw with tusks.
+    box([0.15, 0.06, 0.11], [0, -0.075, 0.035]),
+    ...both([limb([0.05, -0.06, 0.085], [0.06, 0.0, 0.11], 0.02, 0, 4)]),
+  ]);
+  const pelt = [
+    ...place(
+      [
+        spine(
+          [
+            [0, 0.12, 0.17, 0.125],
+            [0, -0.06, 0.24, 0.18],
+            [0, -0.2, 0.27, 0.2],
+          ],
+          { sides: 7 },
+        ),
+      ],
+      { at: pelvis },
+    ),
+    // The pelt's shoulder, slung across the chest.
+    ...body.onChest([ball([0.2, 0.34, 0], [0.13, 0.085, 0.13], 0)]),
+  ];
+  const club = gear(
+    place([limb([0, -0.12, 0], [0, 0.24, 0], 0.03, 0.036, 6), limb([0, 0.24, 0], [0, 0.66, 0], 0.06, 0.11, 8), limb([0, 0.66, 0], [0, 0.72, 0], 0.11, 0.07, 8)], {
+      at: body.handR,
+      turn: [18, 0, 12],
+    }),
+  );
+  return figure([...body.parts, ...head, ...pelt, ...club], 7);
+})();
+
+/** A Ronin: topknot, wide trousers and a long sword. `coiled` is low with a hand on the hilt; otherwise he waits, blade loose at his side. */
+function ronin(coiled: boolean): Part[] {
+  const pelvis: V3 = [0, coiled ? 0.4 : 0.5, 0];
+  const body = human({
+    pelvis,
+    lean: coiled ? 20 : 2,
+    twist: coiled ? 20 : -8,
+    look: coiled ? -16 : 10,
+    handR: coiled ? [0.12, 0.52, 0.14] : [-0.25, 0.5, 0.06],
+    handL: coiled ? [0.18, 0.47, 0.02] : [0.21, 0.56, 0.08],
+    footL: coiled ? [0.1, 0, -0.22] : [0.09, 0, 0.05],
+    footR: coiled ? [-0.1, 0, 0.24] : [-0.1, 0, -0.03],
+  });
+  const topknot = body.onHead([limb([0, 0.075, -0.03], [0, 0.16, -0.08], 0.032, 0.022, 5)]);
+  const trousers = place(
+    [
+      spine(
+        [
+          [0, 0.1, 0.13, 0.09],
+          [0, -0.12, 0.2, 0.15],
+          [0, coiled ? -0.28 : -0.4, 0.24, 0.18],
+        ],
+        { sides: 8 },
+      ),
+    ],
+    { at: pelvis },
+  );
+  // Coiled, the sword is still in its scabbard at the hip.
+  const sword = coiled ? gear([limb([0.14, 0.5, 0.24], [0.21, 0.41, -0.46], 0.024, 0.018, 5)]) : katana(body.handR, [112, 0, 0]);
+  return [...body.parts, ...topknot, ...trousers, ...sword];
+}
+
+/** Kenzo the Lantern Monk: robed, under a wide straw hat, a paper lantern swinging from his staff. */
+const kenzo = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human({
+    pelvis,
+    lean: 3,
+    handR: [-0.276, 0.75, 0.168],
+    handL: [0.05, 0.72, 0.2],
+    elbowL: [0.6, -1, 0],
+    footL: [0.08, 0, 0.05],
+    footR: [-0.09, 0, -0.02],
+  });
+  const hat = body.onHead([limb([0, 0.03, 0], [0, 0.15, 0], 0.25, 0.02, 10)]);
+  const robe = [
+    ...place(
+      [
+        spine([
+          [0, 0.12, 0.125, 0.092],
+          [0, -0.1, 0.175, 0.135],
+          [0, -0.44, 0.23, 0.185],
+        ]),
+      ],
+      { at: pelvis },
+    ),
+    // The fold of the robe across the chest, and its hanging sleeves.
+    ...body.onChest([
+      spine(
+        [
+          [0.02, 0.37, 0.085, 0.075],
+          [0.03, 0.27, 0.16, 0.115],
+        ],
+        { sides: 6 },
+      ),
+    ]),
+    ball([body.handL[0] + 0.04, body.handL[1] - 0.07, body.handL[2] - 0.06], [0.07, 0.1, 0.09], 0),
+    ball([body.handR[0] + 0.02, body.handR[1] - 0.08, body.handR[2] - 0.07], [0.07, 0.1, 0.09], 0),
+  ];
+  const staff = gear([
+    limb([-0.3, 0, 0.12], [-0.26, 1.25, 0.2], 0.018, 0.016, 5),
+    limb([-0.26, 1.25, 0.2], [-0.25, 1.24, 0.37], 0.014, 0.012, 4),
+    limb([-0.25, 1.24, 0.37], [-0.25, 1.14, 0.37], 0.007, 0.007, 3),
+    ball([-0.25, 1.05, 0.37], [0.075, 0.1, 0.075], 0),
+  ]);
+  return figure([...body.parts, ...hat, ...robe, ...staff], 5);
+})();
+
+/** A Teppo Gunner firing a matchlock from one of the aiming stances, under a flat war hat. */
+function teppoGunner(kneeling: boolean): Part[] {
+  const pose = aiming(kneeling);
+  const body = human(pose);
+  const hat = body.onHead([limb([0, 0.035, 0], [0, 0.11, 0], 0.2, 0.03, 8)]);
+  const armour = [
+    ...body.onChest([box([0.05, 0.15, 0.14], [0.24, 0.25, 0]), box([0.05, 0.15, 0.14], [-0.24, 0.25, 0])]),
+    ...place(
+      [
+        spine(
+          [
+            [0, 0.12, 0.135, 0.1],
+            [0, -0.03, 0.19, 0.15],
+            [0, kneeling ? -0.1 : -0.17, 0.22, 0.18],
+          ],
+          { sides: 6 },
+        ),
+      ],
+      { at: pose.pelvis },
+    ),
+  ];
+  const matchlock = gear(
+    place([box([0.045, 0.07, 0.2], [0, 0, -0.13]), box([0.036, 0.045, 0.56], [0, 0.035, 0.24]), box([0.03, 0.035, 0.06], [-0.03, 0.065, 0.02])], {
+      at: body.handR,
+      turn: AIM_TURN,
+    }),
+  );
+  return [...body.parts, ...hat, ...armour, ...matchlock];
+}
+
+/** Lady Suzume of the Long Bow: a tall bow at full draw, hair and headband streaming. */
+const ladySuzume = (() => {
+  const body = human(loosing(), { shoulders: 0.16, bulk: 0.92 });
+  const hair = body.onHead([
+    // A long tail of hair, and the ends of her headband.
+    spine(
+      [
+        [-0.07, 0.04, 0.045, 0.045],
+        [-0.2, 0.02, 0.05, 0.04],
+        [-0.36, -0.05, 0.03, 0.022],
+      ],
+      { sides: 5 },
+    ),
+    limb([0, 0.04, 0], [0, 0.065, 0], 0.094, 0.094, 8),
+    limb([-0.03, 0.05, -0.09], [-0.08, 0.1, -0.26], 0.016, 0.006, 4),
+  ]);
+  const armour = [
+    ...body.onChest([ball([0, 0.22, 0.02], [0.15, 0.13, 0.11], 0), box([0.05, 0.16, 0.14], [0.22, 0.25, 0]), limb([-0.08, 0.1, -0.115], [0.07, 0.42, -0.13], 0.04, 0.046, 6)]),
+    ...place(
+      [
+        spine(
+          [
+            [0, 0.12, 0.13, 0.095],
+            [0, -0.03, 0.18, 0.14],
+            [0, -0.17, 0.21, 0.17],
+          ],
+          { sides: 6 },
+        ),
+      ],
+      { at: [0, 0.5, 0], turn: [0, -78, 0] },
+    ),
+  ];
+  return figure([...body.parts, ...hair, ...armour, ...bow(body.handL, 0.09, [0, 0, 0], 1.45), ...arrow(...DRAWN)], 5);
+})();
+
+const GUARD = { shoulders: 0.165, bulk: 0.95 };
+
+/** A Lotus Guard's flat war hat with the house badge, her armour and skirt of plates, and the scabbard at her hip. */
+const lotusGuardKit = (body: Human, pelvis: V3): Part[] => [
+  ...body.onHead([limb([0, 0.03, 0], [0, 0.1, 0], 0.215, 0.04, 10), ball([0, 0.072, 0.125], [0.042, 0.022, 0.042], 0)]),
+  ...body.onChest([ball([0, 0.22, 0.02], [0.15, 0.13, 0.11], 0), box([0.055, 0.18, 0.16], [0.24, 0.25, 0]), box([0.055, 0.18, 0.16], [-0.24, 0.25, 0])]),
+  ...place(
+    [
+      spine(
+        [
+          [0, 0.12, 0.13, 0.095],
+          [0, -0.02, 0.185, 0.145],
+          [0, -0.17, 0.22, 0.18],
+        ],
+        { sides: 6 },
+      ),
+      ...gear([limb([0.17, 0.08, 0.12], [0.22, 0, -0.36], 0.022, 0.018, 5)]),
+    ],
+    { at: pelvis },
+  ),
+];
+
+/** A Lotus Guard on watch: spear grounded, a hand on the sword at her hip. */
+const lotusGuardWatching = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human(
+    {
+      pelvis,
+      twist: 8,
+      look: -8,
+      handR: [-0.27, 0.7, 0.1],
+      handL: [0.165, 0.61, 0.2],
+      footL: [0.09, 0, 0.04],
+      footR: [-0.09, 0, -0.02],
+    },
+    GUARD,
+  );
+  // The sword is still in its scabbard: only the hilt and guard show.
+  const hilt = gear([limb([0.17, 0.58, 0.12], [0.172, 0.585, 0.15], 0.05, 0.05, 8), limb([0.172, 0.585, 0.15], [0.16, 0.61, 0.3], 0.019, 0.019, 5)]);
+  return [...body.parts, ...lotusGuardKit(body, pelvis), ...hilt, ...spear([-0.27, 0, 0.1], [-0.27, 1.6, 0.1])];
+})();
+
+/** A Lotus Guard striking: stepping in, sword high in both hands. */
+const lotusGuardStriking = (() => {
+  const pelvis: V3 = [0, 0.46, 0];
+  const body = human(
+    {
+      pelvis,
+      lean: 6,
+      twist: -10,
+      look: 8,
+      handR: [-0.03, 1.04, 0.1],
+      handL: [0.04, 0.96, 0.13],
+      elbowR: [-1, 0, 0.5],
+      elbowL: [1, 0, 0.5],
+      footL: [0.09, 0, 0.24],
+      footR: [-0.1, 0, -0.2],
+    },
+    GUARD,
+  );
+  return [...body.parts, ...lotusGuardKit(body, pelvis), ...katana(body.handR, [-32, 0, 0])];
+})();
+
 export const KAGERO: Record<string, UnitModel> = {
   "lady-asagiri": { figures: [ladyAsagiri] },
   "hollow-reed-shinobi": { figures: squad([shinobiCrouched, shinobiBlowpipe], 4) },
+  "ashfang-oni": { figures: [ashfangOni] },
+  "shirokage-ronin": { figures: squad([ronin(true), ronin(false)], 5) },
+  kenzo: { figures: [kenzo] },
+  "teppo-gunners": { figures: squad([teppoGunner(false), teppoGunner(true)], 5) },
+  "lady-suzume": { figures: [ladySuzume] },
+  "crimson-lotus-guard": { figures: squad([lotusGuardWatching, lotusGuardStriking], 5) },
 };

@@ -42,9 +42,9 @@ const FACING = 3;
 /** Empty hexes left between two units in a rank and between two ranks side by side, and columns between two ranks. */
 const UNIT_GAP = 1;
 const RANK_GAP = 3;
-const ROW_GAP = 6;
+const ROW_GAP = 4;
 /** Ranks side by side before the next row starts behind them. */
-const RANKS_ACROSS = 2;
+const RANKS_ACROSS = 1;
 
 /** Hex number `slot` along a row: a zig-zag line square to the way the figures face. */
 function slotHex(row: number, slot: number): Hex {
@@ -244,8 +244,8 @@ export function ModelGalleryScreen({ filter = "" }: { filter?: string }) {
     const deep = Math.max(...xs) - Math.min(...xs);
     const wide = Math.max(...zs) - Math.min(...zs);
     // The camera looks down from the front, so the nearest rank needs more room than the furthest: aim a little in front of the middle.
-    const middle = (Math.max(...xs) + Math.min(...xs)) / 2 + deep * 0.1;
-    return { target: [middle, 0.6, (Math.max(...zs) + Math.min(...zs)) / 2], distance: Math.max(wide * 0.92, deep * 1.25) + 8, from: WIDE };
+    const middle = (Math.max(...xs) + Math.min(...xs)) / 2 + deep * 0.17;
+    return { target: [middle, 0.6, (Math.max(...zs) + Math.min(...zs)) / 2], distance: Math.max(wide * 0.92, deep * 1.3) + 8, from: WIDE };
   }, [standings, chosen]);
 
   return (
@@ -254,7 +254,7 @@ export function ModelGalleryScreen({ filter = "" }: { filter?: string }) {
         <div>
           <h1>Figure models</h1>
           <p className="muted">
-            Stage 1: size and shape, in two colours. Drag to turn the board, scroll to zoom, and pick a unit to look closer.
+            Stage 1: size and shape, in flat colours. Drag to turn the board, scroll to zoom, and pick a unit to look closer.
           </p>
         </div>
         <div className="model-gallery-controls">
@@ -305,7 +305,7 @@ export function ModelGalleryScreen({ filter = "" }: { filter?: string }) {
           <button type="button" className={chosen === null ? "chosen" : ""} aria-pressed={chosen === null} onClick={() => setChosen(null)}>
             <strong>All units</strong>
             <span className="muted">
-              {standings.length} of {CARDS.length} units have a model so far.
+              {standings.length === CARDS.length ? `All ${CARDS.length} units.` : `${standings.length} of ${CARDS.length} units shown.`}
             </span>
           </button>
         </li>

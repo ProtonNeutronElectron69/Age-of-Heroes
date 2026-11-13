@@ -1,6 +1,7 @@
-import { box, figure, gear, limb, mirror, place, plate, spine, squad } from "../build";
-import { roundShield, spear } from "../gear";
+import { ball, box, figure, gear, limb, mirror, place, plate, spine, squad } from "../build";
+import { arrow, bow, roundShield, spear } from "../gear";
 import { human, type Human } from "../human";
+import { AIM_TURN, DRAWN, aiming, loosing } from "../poses";
 import type { Part, UnitModel, V3 } from "../types";
 
 /** Solenne, Herald of Dawn: winged and haloed, aloft with a pennoned spear. */
@@ -163,7 +164,451 @@ const huscarlResting = (() => {
   return [...body.parts, ...huscarlKit(body, pelvis), ...roundShield([0.32, 0.5, 0.04], 0.25, [0, 90, 0]), ...axe(body.handR, [-62, 0, 0])];
 })();
 
+/** A knight's shield, with the sun as its boss. Unturned, its face looks along +z. */
+function sunShield(at: V3, turn: V3, size = 1): Part[] {
+  return gear(
+    place(
+      [
+        plate(
+          [
+            [-0.17, 0.2],
+            [0.17, 0.2],
+            [0.17, -0.02],
+            [0, -0.28],
+            [-0.17, -0.02],
+          ],
+          0.036,
+          "front",
+        ),
+        ball([0, 0.03, 0.03], [0.075, 0.075, 0.035], 0),
+      ],
+      { at, turn, scale: size },
+    ),
+  );
+}
+
+/** Dame Rowena Ashgrove: plate armour, sword raised, a sun on her shield. */
+const dameRowena = (() => {
+  const pelvis: V3 = [0, 0.49, 0];
+  const body = human(
+    {
+      pelvis,
+      lean: 4,
+      twist: -16,
+      look: 12,
+      handR: [-0.34, 1.0, 0],
+      elbowR: [-1, -0.3, -0.5],
+      handL: [0.15, 0.64, 0.26],
+      footL: [0.1, 0, 0.17],
+      footR: [-0.11, 0, -0.13],
+    },
+    { shoulders: 0.185, bulk: 1.1 },
+  );
+  const armour = [
+    ...body.onHead([
+      // An open helm with a crest.
+      ball([0, 0.02, -0.01], [0.102, 0.1, 0.106]),
+      plate(
+        [
+          [-0.13, 0.03],
+          [-0.1, 0.17],
+          [0.02, 0.2],
+          [0.1, 0.12],
+          [0.05, 0.1],
+        ],
+        0.026,
+      ),
+    ]),
+    ...body.onChest([
+      ball([0.205, 0.335, 0], [0.105, 0.08, 0.11], 0),
+      ball([-0.205, 0.335, 0], [0.105, 0.08, 0.11], 0),
+      // Cloak.
+      spine(
+        [
+          [-0.08, 0.35, 0.13, 0.034],
+          [-0.12, 0.12, 0.18, 0.04],
+          [-0.18, -0.2, 0.21, 0.03],
+        ],
+        { sides: 6 },
+      ),
+    ]),
+    ...place(
+      [
+        spine(
+          [
+            [0, 0.12, 0.14, 0.1],
+            [0, -0.17, 0.2, 0.155],
+          ],
+          { sides: 6 },
+        ),
+      ],
+      { at: pelvis },
+    ),
+  ];
+  const sword = gear(
+    place(
+      [
+        plate(
+          [
+            [0.024, 0.06],
+            [0.024, 0.52],
+            [0, 0.62],
+            [-0.024, 0.52],
+            [-0.024, 0.06],
+          ],
+          0.022,
+        ),
+        box([0.03, 0.028, 0.18], [0, 0.045, 0]),
+        limb([0, -0.08, 0], [0, 0.04, 0], 0.018, 0.018, 5),
+      ],
+      { at: body.handR, turn: [22, 0, 14] },
+    ),
+  );
+  const shield = sunShield([0.17, 0.62, 0.33], [0, 14, 0]);
+  return figure([...body.parts, ...armour, ...sword, ...shield], 5);
+})();
+
+/** A Crossbowman's kettle helm with its wide brim, his tabard and his quiver. */
+const crossbowmanKit = (body: Human, pelvis: V3): Part[] => [
+  ...body.onHead([ball([0, 0.03, 0], [0.097, 0.081, 0.099], 0), limb([0, 0.02, 0], [0, 0.04, 0], 0.18, 0.165, 10)]),
+  ...place(
+    [
+      spine(
+        [
+          [0, 0.13, 0.125, 0.095],
+          [0, -0.2, 0.175, 0.135],
+        ],
+        { sides: 6 },
+      ),
+    ],
+    { at: pelvis },
+  ),
+  ...body.onChest([box([0.07, 0.2, 0.07], [0.15, 0, -0.1])]),
+];
+
+/** A crossbow held at the grip and pointing along +z. */
+function crossbow(at: V3, turn: V3): Part[] {
+  return gear(
+    place(
+      [
+        box([0.042, 0.05, 0.44], [0, 0.02, 0.09]),
+        plate(
+          [
+            [-0.22, 0.2],
+            [-0.11, 0.275],
+            [0, 0.3],
+            [0.11, 0.275],
+            [0.22, 0.2],
+            [0.11, 0.245],
+            [0, 0.265],
+            [-0.11, 0.245],
+          ],
+          0.026,
+          "top",
+          0.03,
+        ),
+      ],
+      { at, turn },
+    ),
+  );
+}
+
+/** A Crossbowman taking aim. */
+const crossbowmanAiming = (() => {
+  const pose = aiming(false);
+  const body = human(pose);
+  return [...body.parts, ...crossbowmanKit(body, pose.pelvis), ...crossbow(body.handR, AIM_TURN)];
+})();
+
+/** A Crossbowman marching, the crossbow resting on his shoulder. */
+const crossbowmanMarching = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human({
+    pelvis,
+    lean: 3,
+    handR: [-0.2, 0.72, 0.14],
+    elbowR: [-0.6, -1, 0.3],
+    handL: [0.22, 0.5, -0.08],
+    footL: [0.09, 0, 0.18],
+    footR: [-0.09, 0, -0.14],
+  });
+  return [...body.parts, ...crossbowmanKit(body, pelvis), ...crossbow(body.handR, [-125, 0, 0])];
+})();
+
+/** A book lying open, its spine at `at`. */
+const openBook = (at: V3): Part[] =>
+  gear([...place([box([0.13, 0.02, 0.18], [0.065, 0, 0])], { at, turn: [0, 0, 16] }), ...place([box([0.13, 0.02, 0.18], [-0.065, 0, 0])], { at, turn: [0, 0, -16] })]);
+
+/** Magister Orrin Vael: white-bearded in a scholar's robe, a book open in one hand and lightning leaping from the other. */
+const orrinVael = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human(
+    {
+      pelvis,
+      lean: 2,
+      twist: -14,
+      look: 10,
+      handR: [-0.28, 0.94, 0.24],
+      elbowR: [-1, -0.6, -0.2],
+      handL: [0.2, 0.7, 0.24],
+      footL: [0.08, 0, 0.06],
+      footR: [-0.09, 0, -0.03],
+    },
+    { bulk: 0.95 },
+  );
+  const scholar = [
+    ...body.onHead([
+      // A soft cap and a long beard.
+      limb([0, 0.045, -0.005], [0, 0.115, -0.015], 0.1, 0.08, 8),
+      limb([0, -0.05, 0.07], [0, -0.26, 0.1], 0.06, 0.016, 5),
+    ]),
+    ...place(
+      [
+        spine([
+          [0, 0.12, 0.12, 0.09],
+          [0, -0.1, 0.175, 0.135],
+          [-0.01, -0.44, 0.235, 0.19],
+        ]),
+      ],
+      { at: pelvis },
+    ),
+    // The stole over his shoulders, and wide sleeves.
+    ...body.onChest([
+      spine(
+        [
+          [0.01, 0.37, 0.085, 0.075],
+          [0.02, 0.26, 0.17, 0.12],
+        ],
+        { sides: 6 },
+      ),
+    ]),
+    ball([body.handL[0] + 0.02, body.handL[1] - 0.08, body.handL[2] - 0.07], [0.07, 0.1, 0.09], 0),
+    ball([body.handR[0] + 0.02, body.handR[1] - 0.09, body.handR[2] - 0.07], [0.07, 0.1, 0.09], 0),
+  ];
+  const [bx, by, bz] = body.handL;
+  const book = openBook([bx, by + 0.05, bz + 0.02]);
+  // Lightning: a forked, jagged bolt from his raised hand.
+  const [x, y, z] = body.handR;
+  const bolt = gear([
+    limb([x, y + 0.02, z + 0.04], [x - 0.04, y + 0.12, z + 0.2], 0.026, 0.02, 4),
+    limb([x - 0.04, y + 0.12, z + 0.2], [x + 0.04, y + 0.04, z + 0.34], 0.02, 0.016, 4),
+    limb([x + 0.04, y + 0.04, z + 0.34], [x - 0.02, y + 0.14, z + 0.54], 0.016, 0, 4),
+    limb([x + 0.04, y + 0.04, z + 0.34], [x + 0.1, y - 0.06, z + 0.46], 0.014, 0, 4),
+  ]);
+  return figure([...body.parts, ...scholar, ...book, ...bolt], 5);
+})();
+
+const KNIGHT = { shoulders: 0.185, bulk: 1.1 };
+
+/** A Silverlance Knight's great helm with its plume, and his surcoat. */
+const knightKit = (body: Human, pelvis: V3): Part[] => [
+  ...body.onHead([
+    limb([0, -0.095, 0], [0, 0.085, 0], 0.102, 0.104, 8),
+    limb([0, 0.085, 0], [0, 0.115, 0], 0.104, 0.07, 8),
+    ...gear([limb([0, 0.11, -0.02], [0, 0.26, -0.08], 0.034, 0.012, 5)]),
+  ]),
+  ...body.onChest([ball([0.205, 0.335, 0], [0.1, 0.075, 0.105], 0), ball([-0.205, 0.335, 0], [0.1, 0.075, 0.105], 0)]),
+  ...place(
+    [
+      spine(
+        [
+          [0, 0.13, 0.135, 0.1],
+          [0, -0.24, 0.19, 0.15],
+        ],
+        { sides: 6 },
+      ),
+    ],
+    { at: pelvis },
+  ),
+];
+
+/** A lance from its butt to its point, with a pennon flying behind the head. */
+function lance(butt: V3, tip: V3): Part[] {
+  const along = (t: number): V3 => [butt[0] + (tip[0] - butt[0]) * t, butt[1] + (tip[1] - butt[1]) * t, butt[2] + (tip[2] - butt[2]) * t];
+  const [a, b] = [along(0.78), along(0.9)];
+  // The pennon hangs to the knight's right of the shaft.
+  return [...spear(butt, tip, 0.018), ...gear([limb(b, [a[0] - 0.16, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], 0.045, 0, 4)])];
+}
+
+/** A Silverlance Knight at attention, lance upright and pennon flying. */
+const knightAtAttention = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human({ pelvis, handR: [-0.27, 0.72, 0.1], handL: [0.22, 0.6, 0.16], footL: [0.09, 0, 0.04], footR: [-0.09, 0, -0.02] }, KNIGHT);
+  return [...body.parts, ...knightKit(body, pelvis), ...lance([-0.27, 0, 0.1], [-0.27, 1.95, 0.1]), ...sunShield([0.25, 0.6, 0.24], [0, 30, 0], 0.8)];
+})();
+
+/** A Silverlance Knight charging behind a levelled lance. */
+const knightCharging = (() => {
+  const pelvis: V3 = [0, 0.46, 0];
+  const body = human(
+    {
+      pelvis,
+      lean: 20,
+      twist: -10,
+      handR: [-0.163, 0.657, 0],
+      elbowR: [-1, -0.2, -0.6],
+      handL: [0.16, 0.62, 0.3],
+      footL: [0.09, 0, 0.26],
+      footR: [-0.1, 0, -0.24],
+    },
+    KNIGHT,
+  );
+  return [...body.parts, ...knightKit(body, pelvis), ...lance([-0.2, 0.62, -0.5], [-0.1, 0.72, 0.85]), ...sunShield([0.17, 0.6, 0.38], [0, 12, 0], 0.8)];
+})();
+
+const ACOLYTE = { shoulders: 0.16, bulk: 0.9 };
+
+/** A Dawn Acolyte's cap, long robe and wide sleeves, with the stole hanging from the shoulders. */
+const acolyteKit = (body: Human, pelvis: V3): Part[] => [
+  ...body.onHead([limb([0, 0.045, -0.005], [0, 0.09, -0.01], 0.09, 0.06, 8)]),
+  ...place(
+    [
+      spine([
+        [0, 0.12, 0.115, 0.085],
+        [0, -0.1, 0.17, 0.13],
+        [-0.01, -0.44, 0.225, 0.18],
+      ]),
+    ],
+    { at: pelvis },
+  ),
+  ...body.onChest([
+    // The cowl round the shoulders, with its hood down the back.
+    spine(
+      [
+        [0, 0.38, 0.08, 0.075],
+        [-0.005, 0.31, 0.18, 0.115],
+        [-0.01, 0.25, 0.19, 0.12],
+      ],
+      { sides: 8 },
+    ),
+    ball([0, 0.35, -0.11], [0.09, 0.065, 0.07], 0),
+    // The stole: a strip down each side of the front.
+    ...[0.062, -0.062].map((x) =>
+      spine(
+        [
+          [0.118, 0.3, 0.03, 0.014],
+          [0.128, 0.02, 0.03, 0.014],
+          [0.168, -0.3, 0.033, 0.014],
+        ],
+        { sides: 4, x },
+      ),
+    ),
+  ]),
+  ball([body.handL[0] + 0.02, body.handL[1] - 0.08, body.handL[2] - 0.07], [0.07, 0.1, 0.09], 0),
+  ball([body.handR[0] - 0.02, body.handR[1] - 0.08, body.handR[2] - 0.07], [0.07, 0.1, 0.09], 0),
+];
+
+/** A Dawn Acolyte singing from an open book. */
+const acolyteSinging = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human(
+    {
+      pelvis,
+      lean: -3,
+      handL: [0.1, 0.74, 0.25],
+      handR: [-0.1, 0.74, 0.25],
+      footL: [0.08, 0, 0.04],
+      footR: [-0.08, 0, -0.02],
+    },
+    ACOLYTE,
+  );
+  return [...body.parts, ...acolyteKit(body, pelvis), ...openBook([0, 0.79, 0.27])];
+})();
+
+/** A Dawn Acolyte lifting a sun-topped staff, the other hand open in blessing. */
+const acolyteBlessing = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human(
+    {
+      pelvis,
+      twist: -8,
+      look: 6,
+      handR: [-0.26, 0.98, 0.2],
+      elbowR: [-1, -0.5, -0.2],
+      handL: [0.25, 0.66, 0.22],
+      elbowL: [1, -0.8, -0.2],
+      footL: [0.08, 0, 0.06],
+      footR: [-0.09, 0, -0.03],
+    },
+    ACOLYTE,
+  );
+  const sun: V3 = [-0.236, 1.42, 0.246];
+  const staff = gear([
+    limb([-0.29, 0.28, 0.13], [-0.24, 1.33, 0.24], 0.017, 0.015, 5),
+    // The sun: a disc with rays.
+    ...place(
+      [
+        limb([0, 0, -0.016], [0, 0, 0.016], 0.085, 0.085, 10),
+        ...[0, 45, 90, 135, 180, 225, 270, 315].flatMap((turn) => place([limb([0, 0.09, 0], [0, 0.16, 0], 0.022, 0, 4)], { turn: [0, 0, turn] })),
+      ],
+      { at: sun },
+    ),
+  ]);
+  return [...body.parts, ...acolyteKit(body, pelvis), ...staff];
+})();
+
+const SUNBOUND = { shoulders: 0.165, bulk: 0.95 };
+
+/** A Sunbound Archer's brow band with its sun, tied-back hair, tabard, shoulder plate and quiver. `hips` turns the tabard with the legs. */
+const sunboundKit = (body: Human, hips: number): Part[] => [
+  ...body.onHead([
+    limb([0, 0.03, 0], [0, 0.062, 0], 0.097, 0.097, 8),
+    ball([0, 0.046, 0.094], [0.034, 0.034, 0.016], 0),
+    limb([0, 0.03, -0.07], [0, -0.09, -0.135], 0.042, 0.016, 5),
+  ]),
+  ...place(
+    [
+      spine(
+        [
+          [0, 0.13, 0.12, 0.09],
+          [0, -0.2, 0.165, 0.13],
+        ],
+        { sides: 6 },
+      ),
+    ],
+    { at: [0, 0.5, 0], turn: [0, hips, 0] },
+  ),
+  ...body.onChest([
+    ball([0.195, 0.335, 0], [0.09, 0.065, 0.1], 0),
+    limb([-0.08, 0.1, -0.115], [0.07, 0.4, -0.13], 0.042, 0.048, 6),
+    limb([0.07, 0.4, -0.13], [0.1, 0.47, -0.133], 0.036, 0.04, 5),
+  ]),
+];
+
+/** A Sunbound Archer at full draw. */
+const sunboundLoosing = (() => {
+  const body = human(loosing(), SUNBOUND);
+  return [...body.parts, ...sunboundKit(body, -78), ...bow(body.handL, 0.09, [0, 0, 0], 1.25), ...arrow(...DRAWN)];
+})();
+
+/** A Sunbound Archer waiting, bow low and an arrow on the string. */
+const sunboundWaiting = (() => {
+  const body = human(
+    {
+      twist: 16,
+      look: -12,
+      handL: [0.21, 0.55, 0.2],
+      handR: [0.03, 0.57, 0.14],
+      footL: [0.09, 0, 0.06],
+      footR: [-0.09, 0, -0.04],
+    },
+    SUNBOUND,
+  );
+  return [
+    ...body.parts,
+    ...sunboundKit(body, 0),
+    ...bow(body.handL, 0.03, [0, 48, 50], 1.25),
+    ...arrow(body.handR, [body.handL[0] + 0.05, body.handL[1] - 0.01, body.handL[2] + 0.06]),
+  ];
+})();
+
 export const DAWNHOLD: Record<string, UnitModel> = {
   solenne: { figures: [solenne] },
   "stormwake-huscarls": { figures: squad([huscarlStriking, huscarlResting], 5) },
+  "dame-rowena": { figures: [dameRowena] },
+  "covenant-crossbowmen": { figures: squad([crossbowmanAiming, crossbowmanMarching], 5) },
+  "orrin-vael": { figures: [orrinVael] },
+  "silverlance-knights": { figures: squad([knightAtAttention, knightCharging], 5) },
+  "dawn-acolytes": { figures: squad([acolyteSinging, acolyteBlessing], 5) },
+  "sunbound-archers": { figures: squad([sunboundLoosing, sunboundWaiting], 5) },
 };
