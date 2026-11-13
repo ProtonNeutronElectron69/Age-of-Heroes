@@ -5,7 +5,9 @@ import {
   BASE_BEVEL,
   BASE_HEIGHT,
   BASE_RADIUS,
+  COLOR_SCHEMES,
   HEIGHT_TOLERANCE,
+  MODEL_GREY,
   TRIANGLE_BUDGET,
   UNIT_MODELS,
   baseFrame,
@@ -215,8 +217,14 @@ describe("bases and colours", () => {
     }
   });
 
-  it("swaps the model and ring colours between the two schemes", () => {
+  it("swaps the model and ring colours between the faction and player schemes", () => {
     expect(figureColors("faction", "#234573", "#e53935")).toEqual({ model: "#234573", ring: "#e53935" });
     expect(figureColors("player", "#234573", "#e53935")).toEqual({ model: "#e53935", ring: "#234573" });
+  });
+
+  it("makes every model grey in the grey scheme and keeps the player's colour on the ring", () => {
+    expect(figureColors("grey", "#234573", "#e53935")).toEqual({ model: MODEL_GREY, ring: "#e53935" });
+    expect(figureColors("grey", "#2d6136", "#1e88e5")).toEqual({ model: MODEL_GREY, ring: "#1e88e5" });
+    expect(COLOR_SCHEMES.map((s) => s.id)).toEqual(["faction", "player", "grey"]);
   });
 });

@@ -254,7 +254,7 @@ export function ModelGalleryScreen({ filter = "" }: { filter?: string }) {
         <div>
           <h1>Figure models</h1>
           <p className="muted">
-            Stage 1: size and shape, in two colours. Drag to turn the board, scroll to zoom, and pick a unit to look closer.
+            Stage 1: size and shape, in flat colours. Drag to turn the board, scroll to zoom, and pick a unit to look closer.
           </p>
         </div>
         <div className="model-gallery-controls">

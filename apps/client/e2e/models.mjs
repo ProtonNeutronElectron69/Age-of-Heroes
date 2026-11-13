@@ -58,7 +58,7 @@ try {
   await page.getByRole("checkbox", { name: "Show tokens" }).check();
   await drawn(all + 40);
 
-  // The two colour schemes swap the model's colour with the colour of the ring on its base.
+  // The faction and player schemes swap the model's colour with the colour of the ring on its base.
   const colours = () => units.evaluateAll((list) => list.map((u) => [u.dataset.modelColor, u.dataset.ringColor]));
   const byFaction = await colours();
   if (byFaction.some(([model, ring]) => !model || !ring || model === ring)) fail(`Models and rings need two colours: ${JSON.stringify(byFaction)}`);
@@ -71,6 +71,14 @@ try {
   if (new Set(blue.map(([model]) => model)).size !== 1) fail(`Every model should be the Blue player's colour: ${JSON.stringify(blue)}`);
   await page.getByRole("radio", { name: "Faction models, player rings" }).check();
   if (new Set((await colours()).map(([, ring]) => ring)).size !== 1) fail("Every ring should be the Blue player's colour");
+
+  // The grey scheme: every model the same grey, with each player's colour still on the ring.
+  await page.getByRole("combobox", { name: "Player" }).selectOption({ index: 0 });
+  await page.getByRole("radio", { name: "Grey models, player rings" }).check();
+  const grey = await colours();
+  if (new Set(grey.map(([model]) => model)).size !== 1) fail(`Every model should be the same grey: ${JSON.stringify(grey)}`);
+  if (grey.some(([model, ring], i) => ring !== byFaction[i][1] || model === ring)) fail("The grey scheme should keep each player's colour on the ring");
+  await page.getByRole("radio", { name: "Faction models, player rings" }).check();
   await drawn(all + 40);
 
   // One unit on its own.
@@ -80,7 +88,7 @@ try {
   await drawn(500);
 
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
-  console.log(`Models test passed: ${count} units drawn on their bases, in both colour schemes.`);
+  console.log(`Models test passed: ${count} units drawn on their bases, in every colour scheme.`);
 } finally {
   await browser.close();
   await new Promise((resolve) => server.httpServer.close(resolve));

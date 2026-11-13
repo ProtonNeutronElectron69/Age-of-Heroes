@@ -12,7 +12,7 @@ import { VERDANT } from "./units/verdant";
 export { baseFrame, measure, HEIGHT_TOLERANCE, OVERHANG_LIMITS, TRIANGLE_BUDGET, type BaseFrame, type Fit } from "./measure";
 export { BASE_BEVEL, BASE_RADIUS, baseParts } from "./base";
 export { BASE_HEIGHT } from "./build";
-export { BASE_COLOR, COLOR_SCHEMES, figureColors, type ColorScheme } from "./colors";
+export { BASE_COLOR, COLOR_SCHEMES, MODEL_GREY, figureColors, type ColorScheme } from "./colors";
 export type { FigureModel, Part, Role, UnitModel } from "./types";
 
 /**
