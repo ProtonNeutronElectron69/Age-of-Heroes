@@ -98,7 +98,7 @@
   line-height: 1.35;
 }
 
-/* The model's colour, ringed in its base's colour. */
+/* The model's colour, inside the colour of the ring on its base. */
 .model-gallery-swatch {
   position: absolute;
   left: 8px;

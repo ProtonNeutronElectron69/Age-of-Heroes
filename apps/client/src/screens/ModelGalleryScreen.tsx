@@ -5,6 +5,7 @@ import { HEX_SIZE, LEVEL_HEIGHT, TOKEN_RADIUS, footprintCells, hex, hexKey, hexN
 import { useEffect, useMemo, useState } from "react";
 import { CylinderGeometry } from "three";
 import {
+  BASE_COLOR,
   COLOR_SCHEMES,
   OVERHANG_LIMITS,
   UNIT_MODELS,
@@ -98,14 +99,21 @@ function lineUp(cards: readonly UnitCard[]): Standing[] {
 
 interface Colors {
   readonly model: string;
-  readonly base: string;
+  /** The ring round the edge of the base. */
+  readonly ring: string;
 }
 
 function StandingUnit({ standing, colors, tokens }: { standing: Standing; colors: Colors; tokens: boolean }) {
   const figures = useMemo(() => standing.unit.figures.map(figureGeometry), [standing.unit]);
   const base = useMemo(() => baseGeometry(standing.card.footprint), [standing.card.footprint]);
   useEffect(() => () => figures.forEach((g) => g.dispose()), [figures]);
-  useEffect(() => () => base.dispose(), [base]);
+  useEffect(
+    () => () => {
+      base.top.dispose();
+      base.rim.dispose();
+    },
+    [base],
+  );
   const tall = standing.card.height * LEVEL_HEIGHT;
   return (
     <>
@@ -115,8 +123,11 @@ function StandingUnit({ standing, colors, tokens }: { standing: Standing; colors
             <mesh geometry={figures[i % figures.length]!}>
               <meshStandardMaterial color={colors.model} roughness={0.7} />
             </mesh>
-            <mesh geometry={base}>
-              <meshStandardMaterial color={colors.base} roughness={0.6} />
+            <mesh geometry={base.top}>
+              <meshStandardMaterial color={BASE_COLOR} roughness={0.75} />
+            </mesh>
+            <mesh geometry={base.rim}>
+              <meshStandardMaterial color={colors.ring} roughness={0.55} />
             </mesh>
           </group>
           {tokens &&
@@ -308,10 +319,10 @@ export function ModelGalleryScreen({ filter = "" }: { filter?: string }) {
                 aria-pressed={chosen === s.card.id}
                 data-unit={s.card.id}
                 data-model-color={colors.model}
-                data-base-color={colors.base}
+                data-ring-color={colors.ring}
                 onClick={() => setChosen(s.card.id)}
               >
-                <span className="model-gallery-swatch" style={{ background: colors.model, borderColor: colors.base }} />
+                <span className="model-gallery-swatch" style={{ background: colors.model, borderColor: colors.ring }} />
                 <strong>{s.card.name}</strong>
                 <span className="muted">
                   {s.card.faction}. {describe(s)}

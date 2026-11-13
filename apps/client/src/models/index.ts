@@ -10,9 +10,9 @@ import { NEXUS } from "./units/nexus";
 import { VERDANT } from "./units/verdant";
 
 export { baseFrame, measure, HEIGHT_TOLERANCE, OVERHANG_LIMITS, TRIANGLE_BUDGET, type BaseFrame, type Fit } from "./measure";
-export { BASE_RADIUS, baseParts } from "./base";
+export { BASE_BEVEL, BASE_RADIUS, baseParts } from "./base";
 export { BASE_HEIGHT } from "./build";
-export { COLOR_SCHEMES, figureColors, type ColorScheme } from "./colors";
+export { BASE_COLOR, COLOR_SCHEMES, figureColors, type ColorScheme } from "./colors";
 export type { FigureModel, Part, Role, UnitModel } from "./types";
 
 /**
@@ -39,7 +39,11 @@ export function figureGeometry(model: FigureModel): BufferGeometry {
   return geometry(model.parts);
 }
 
-/** The mesh for the base under a figure with this footprint. The caller disposes of it. */
-export function baseGeometry(footprint: Footprint): BufferGeometry {
-  return geometry(baseParts(footprint));
+/**
+ * The meshes for the base under a figure with this footprint: its top, and
+ * the bevelled edge that takes a colour. The caller disposes of them.
+ */
+export function baseGeometry(footprint: Footprint): { top: BufferGeometry; rim: BufferGeometry } {
+  const parts = baseParts(footprint);
+  return { top: geometry(parts.filter((p) => p.role === "base")), rim: geometry(parts.filter((p) => p.role === "rim")) };
 }

@@ -1,7 +1,8 @@
 import { CARD_CATALOG, CARDS } from "@aoh/content";
-import { HEX_SIZE, LEVEL_HEIGHT, isSquad } from "@aoh/rules";
+import { HEX_SIZE, LEVEL_HEIGHT, hexKey, isSquad, worldToHex } from "@aoh/rules";
 import { describe, expect, it } from "vitest";
 import {
+  BASE_BEVEL,
   BASE_HEIGHT,
   BASE_RADIUS,
   HEIGHT_TOLERANCE,
@@ -143,40 +144,79 @@ describe("measuring a model against its base", () => {
 });
 
 describe("bases and colours", () => {
-  const corners = (footprint: "1" | "2x1" | "3x1" | "2x2") => {
-    const t = baseParts(footprint).flatMap((p) => p.tris);
+  type Size = "1" | "2x1" | "3x1" | "2x2";
+  const corners = (footprint: Size, role: "base" | "rim") => {
+    const t = baseParts(footprint)
+      .filter((p) => p.role === role)
+      .flatMap((p) => p.tris);
     return Array.from({ length: t.length / 3 }, (_, i) => ({ x: t[i * 3]!, y: t[i * 3 + 1]!, z: t[i * 3 + 2]! }));
   };
+  /** Where the hexes of a footprint are, in the figure's own frame. */
+  const lobes = (footprint: Size) => {
+    const frame = baseFrame(footprint);
+    return frame.cells.map((cell) => {
+      const dx = Math.sqrt(3) * HEX_SIZE * (cell.q + cell.r / 2) - frame.x;
+      const dz = 1.5 * HEX_SIZE * cell.r - frame.z;
+      return { x: dx * Math.cos(frame.yaw) - dz * Math.sin(frame.yaw), z: dx * Math.sin(frame.yaw) + dz * Math.cos(frame.yaw) };
+    });
+  };
+
+  it("makes a base of a top and a bevelled rim, both solid", () => {
+    for (const footprint of ["1", "2x1", "3x1", "2x2"] as const) {
+      const parts = baseParts(footprint);
+      expect(parts.map((p) => p.role).sort()).toEqual(["base", "rim"]);
+      for (const part of parts) expect(volume(part)).toBeGreaterThan(0);
+      const { top, rim } = baseGeometry(footprint);
+      expect(top.getAttribute("position").count).toBe(corners(footprint, "base").length);
+      expect(rim.getAttribute("position").count).toBe(corners(footprint, "rim").length);
+    }
+  });
 
   it("gives a single-hex figure a circle a little smaller than its hex", () => {
     const inradius = (Math.sqrt(3) / 2) * HEX_SIZE;
     expect(BASE_RADIUS).toBeLessThan(inradius);
     expect(BASE_RADIUS).toBeGreaterThan(inradius * 0.85);
-    const points = corners("1");
-    expect(Math.max(...points.map((p) => Math.hypot(p.x, p.z)))).toBeCloseTo(BASE_RADIUS);
-    expect(Math.max(...points.map((p) => p.y))).toBeCloseTo(BASE_HEIGHT);
-    expect(Math.min(...points.map((p) => p.y))).toBeCloseTo(0);
+    const rim = corners("1", "rim");
+    expect(Math.max(...rim.map((p) => Math.hypot(p.x, p.z)))).toBeCloseTo(BASE_RADIUS);
+    expect(Math.max(...rim.map((p) => p.y))).toBeCloseTo(BASE_HEIGHT);
+    expect(Math.min(...rim.map((p) => p.y))).toBeCloseTo(0);
+    // The top is the base without its bevelled edge.
+    const top = corners("1", "base");
+    expect(Math.max(...top.map((p) => Math.hypot(p.x, p.z)))).toBeCloseTo(BASE_RADIUS - BASE_BEVEL);
+    expect(Math.max(...top.map((p) => p.y))).toBeCloseTo(BASE_HEIGHT);
   });
 
-  it("gives a larger footprint one base over all its hexes", () => {
+  it("gives a larger footprint one base with a full lobe on every hex", () => {
     for (const footprint of ["2x1", "3x1", "2x2"] as const) {
+      const centres = lobes(footprint);
+      const rim = corners(footprint, "rim");
+      expect(Math.max(...rim.map((p) => p.z))).toBeCloseTo(Math.max(...centres.map((c) => c.z)) + BASE_RADIUS, 1);
+      expect(Math.min(...rim.map((p) => p.z))).toBeCloseTo(Math.min(...centres.map((c) => c.z)) - BASE_RADIUS, 1);
+      expect(Math.max(...rim.map((p) => p.x))).toBeCloseTo(Math.max(...centres.map((c) => c.x)) + BASE_RADIUS, 1);
+      // The whole base stays on the hexes of its footprint, waists included.
       const frame = baseFrame(footprint);
-      const points = corners(footprint);
-      // The base reaches one base radius past the outermost hex centres, ahead and to each side.
-      const local = frame.cells.map((cell) => {
-        const dx = Math.sqrt(3) * HEX_SIZE * (cell.q + cell.r / 2) - frame.x;
-        const dz = 1.5 * HEX_SIZE * cell.r - frame.z;
-        return { x: dx * Math.cos(frame.yaw) - dz * Math.sin(frame.yaw), z: dx * Math.sin(frame.yaw) + dz * Math.cos(frame.yaw) };
-      });
-      expect(Math.max(...points.map((p) => p.z))).toBeCloseTo(Math.max(...local.map((c) => c.z)) + BASE_RADIUS, 1);
-      expect(Math.max(...points.map((p) => p.x))).toBeCloseTo(Math.max(...local.map((c) => c.x)) + BASE_RADIUS, 1);
-      expect(Math.min(...points.map((p) => p.x))).toBeCloseTo(Math.min(...local.map((c) => c.x)) - BASE_RADIUS, 1);
-      expect(baseGeometry(footprint).getAttribute("position").count).toBe(points.length);
+      const cells = new Set(frame.cells.map(hexKey));
+      for (const p of rim) {
+        const x = frame.x + p.x * Math.cos(frame.yaw) + p.z * Math.sin(frame.yaw);
+        const z = frame.z - p.x * Math.sin(frame.yaw) + p.z * Math.cos(frame.yaw);
+        expect(cells.has(hexKey(worldToHex(x, z, HEX_SIZE)))).toBe(true);
+      }
     }
   });
 
-  it("swaps the model and base colours between the two schemes", () => {
-    expect(figureColors("faction", "#234573", "#e53935")).toEqual({ model: "#234573", base: "#e53935" });
-    expect(figureColors("player", "#234573", "#e53935")).toEqual({ model: "#e53935", base: "#234573" });
+  it("narrows a larger base where it passes from hex to hex", () => {
+    for (const footprint of ["2x1", "3x1"] as const) {
+      const [front, next] = lobes(footprint);
+      const between = (front!.z + next!.z) / 2;
+      // The base's half-width at the waist between its first two hexes.
+      const waist = Math.max(...corners(footprint, "rim").filter((p) => Math.abs(p.z - between) < 0.06).map((p) => Math.abs(p.x)));
+      expect(waist).toBeLessThan(BASE_RADIUS * 0.65);
+      expect(waist).toBeGreaterThan(BASE_RADIUS * 0.35);
+    }
+  });
+
+  it("swaps the model and ring colours between the two schemes", () => {
+    expect(figureColors("faction", "#234573", "#e53935")).toEqual({ model: "#234573", ring: "#e53935" });
+    expect(figureColors("player", "#234573", "#e53935")).toEqual({ model: "#e53935", ring: "#234573" });
   });
 });

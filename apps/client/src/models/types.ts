@@ -7,10 +7,11 @@ export type V3 = readonly [number, number, number];
  *   and must fit its base.
  * - `gear`: what it holds (a sabre, a bow). Gear may reach over the base and
  *   above the figure's Height.
- * - `base`: the disc the figure stands on.
+ * - `base`: the top of the base the figure stands on.
+ * - `rim`: the bevelled edge of the base, which carries a colour.
  * Later stages will add roles that pick colours, as the unit drawings do.
  */
-export type Role = "body" | "gear" | "base";
+export type Role = "body" | "gear" | "base" | "rim";
 
 /** One solid piece of a model: a closed, flat-faced shape. */
 export interface Part {

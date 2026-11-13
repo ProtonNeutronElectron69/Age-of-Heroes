@@ -66,12 +66,10 @@ function cap(out: Tri[], ring: readonly V3[], reverse: boolean): void {
   }
 }
 
-/** A solid between two outlines with the same number of corners, one above the other. */
-export function prism(lower: readonly V3[], upper: readonly V3[], role: Role = "body"): Part {
+/** A closed ring: outlines with the same number of corners, joined each to the next and the last to the first. */
+export function hoop(outlines: readonly (readonly V3[])[], role: Role = "body"): Part {
   const out: Tri[] = [];
-  band(out, lower, upper);
-  cap(out, lower, true);
-  cap(out, upper, false);
+  outlines.forEach((ring, i) => band(out, ring, outlines[(i + 1) % outlines.length]!));
   return solid(out, role);
 }
 
@@ -244,7 +242,7 @@ function top(parts: readonly Part[], role: Role): number {
 }
 
 /** How thick a figure's base is, in world units. The base counts towards the figure's Height. */
-export const BASE_HEIGHT = 0.06;
+export const BASE_HEIGHT = 0.07;
 
 /** Move parts up or down so that their lowest point is on the ground. */
 function grounded(parts: readonly Part[]): readonly Part[] {

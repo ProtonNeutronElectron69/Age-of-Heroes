@@ -58,19 +58,19 @@ try {
   await page.getByRole("checkbox", { name: "Show tokens" }).check();
   await drawn(all + 40);
 
-  // The two colour schemes swap the model's colour with its base's.
-  const colours = () => units.evaluateAll((list) => list.map((u) => [u.dataset.modelColor, u.dataset.baseColor]));
+  // The two colour schemes swap the model's colour with the colour of the ring on its base.
+  const colours = () => units.evaluateAll((list) => list.map((u) => [u.dataset.modelColor, u.dataset.ringColor]));
   const byFaction = await colours();
-  if (byFaction.some(([model, base]) => !model || !base || model === base)) fail(`Models and bases need two colours: ${JSON.stringify(byFaction)}`);
-  await page.getByRole("radio", { name: "Player models, faction bases" }).check();
+  if (byFaction.some(([model, ring]) => !model || !ring || model === ring)) fail(`Models and rings need two colours: ${JSON.stringify(byFaction)}`);
+  await page.getByRole("radio", { name: "Player models, faction rings" }).check();
   const byPlayer = await colours();
-  if (byPlayer.some(([model, base], i) => model !== byFaction[i][1] || base !== byFaction[i][0])) fail("The colour schemes did not swap model and base colours");
+  if (byPlayer.some(([model, ring], i) => model !== byFaction[i][1] || ring !== byFaction[i][0])) fail("The colour schemes did not swap model and ring colours");
   // One player for every unit: every model takes that player's colour.
   await page.getByRole("combobox", { name: "Player" }).selectOption({ label: "Blue" });
   const blue = await colours();
   if (new Set(blue.map(([model]) => model)).size !== 1) fail(`Every model should be the Blue player's colour: ${JSON.stringify(blue)}`);
-  await page.getByRole("radio", { name: "Faction models, player bases" }).check();
-  if (new Set((await colours()).map(([, base]) => base)).size !== 1) fail("Every base should be the Blue player's colour");
+  await page.getByRole("radio", { name: "Faction models, player rings" }).check();
+  if (new Set((await colours()).map(([, ring]) => ring)).size !== 1) fail("Every ring should be the Blue player's colour");
   await drawn(all + 40);
 
   // One unit on its own.
