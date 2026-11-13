@@ -1,4 +1,4 @@
-import { ball, both, figure, gear, limb, place, plate, spine, squad } from "../build";
+import { ball, both, box, figure, gear, limb, mirror, place, plate, spine, squad } from "../build";
 import { HEAD, human, type Human } from "../human";
 import type { Part, UnitModel, V3 } from "../types";
 
@@ -207,7 +207,125 @@ const oldRootback = (() => {
   return figure([body, shell, ...head, ...tusks, ...legs, tail, ...saplings], 9);
 })();
 
+/** Cinderjaw, Wyrmling of the Glade: a young dragon on the wing, its tail trailing to the ground. */
+const cinderjaw = (() => {
+  const body = [
+    spine([
+      [-0.25, 0.75, 0.2, 0.2],
+      [-0.05, 0.95, 0.31, 0.29],
+      [0.2, 1.2, 0.31, 0.28],
+      [0.36, 1.4, 0.2, 0.2],
+    ]),
+    // Neck.
+    spine(
+      [
+        [0.32, 1.36, 0.18, 0.18],
+        [0.46, 1.6, 0.13, 0.13],
+        [0.6, 1.78, 0.11, 0.11],
+      ],
+      { sides: 6 },
+    ),
+    // Tail, curling down to rest on the base.
+    spine(
+      [
+        [-0.22, 0.78, 0.19, 0.19],
+        [-0.45, 0.5, 0.13, 0.13],
+        [-0.5, 0.25, 0.09, 0.09],
+        [-0.35, 0.07, 0.06, 0.055],
+        [-0.08, 0.03, 0.03, 0.025],
+      ],
+      { sides: 6 },
+    ),
+  ];
+  const head = [
+    spine(
+      [
+        [0.5, 1.82, 0.13, 0.12],
+        [0.7, 1.84, 0.16, 0.14],
+        [0.93, 1.76, 0.1, 0.08],
+        [1.03, 1.72, 0.06, 0.04],
+      ],
+      { sides: 6 },
+    ),
+    // The jaw hangs open.
+    spine(
+      [
+        [0.62, 1.72, 0.12, 0.035],
+        [0.96, 1.6, 0.05, 0.02],
+      ],
+      { sides: 5 },
+    ),
+    ...both([limb([0.09, 1.92, 0.56], [0.17, 2.0, 0.3], 0.05, 0, 4)]),
+  ];
+  const legs = both([
+    limb([0.2, 0.8, -0.15], [0.32, 0.52, 0.1], 0.12, 0.085, 5),
+    limb([0.32, 0.52, 0.1], [0.3, 0.3, -0.04], 0.085, 0.05, 5),
+    limb([0.3, 0.3, -0.04], [0.32, 0.22, 0.12], 0.05, 0, 4),
+    limb([0.26, 1.22, 0.25], [0.35, 1.02, 0.46], 0.075, 0.05, 5),
+    limb([0.35, 1.02, 0.46], [0.34, 0.9, 0.56], 0.05, 0, 4),
+  ]);
+  const wing = place(
+    [
+      plate(
+        [
+          [0.12, 1.36],
+          [0.4, 1.76],
+          [0.74, 1.98],
+          [0.95, 1.88],
+          [0.85, 1.6],
+          [0.95, 1.4],
+          [0.7, 1.26],
+          [0.72, 1.06],
+          [0.45, 1.06],
+          [0.15, 1.16],
+        ],
+        0.04,
+        "front",
+      ),
+    ],
+    { at: [0, 0, 0.05], turn: [0, 25, 0] },
+  );
+  return figure([...body, ...head, ...legs, ...wing, ...mirror(wing)], 7);
+})();
+
+/** A Mossback Treefolk: a walking trunk under a crown of leaves. `reach` is how far its right bough lifts. */
+function treefolk(reach: number): Part[] {
+  return [
+    // Trunk.
+    spine(
+      [
+        [0, 0.3, 0.31, 0.29],
+        [0.02, 0.85, 0.26, 0.24],
+        [0, 1.4, 0.31, 0.28],
+        [0, 1.72, 0.22, 0.2],
+      ],
+      { sides: 7 },
+    ),
+    // Root legs.
+    ...both([limb([0.15, 0.45, 0], [0.3, 0, 0.06], 0.18, 0.2, 6), limb([0.3, 0.07, 0.06], [0.44, 0, 0.32], 0.1, 0.03, 5), limb([0.3, 0.07, 0.06], [0.5, 0, -0.14], 0.09, 0.03, 5)]),
+    // The left bough hangs; the right one lifts.
+    limb([0.27, 1.36, 0], [0.56, 1.06, 0.16], 0.115, 0.085, 5),
+    limb([0.56, 1.06, 0.16], [0.64, 0.7, 0.3], 0.085, 0.055, 5),
+    limb([0.64, 0.7, 0.3], [0.6, 0.5, 0.42], 0.05, 0, 4),
+    limb([0.64, 0.7, 0.3], [0.74, 0.54, 0.3], 0.05, 0, 4),
+    limb([-0.27, 1.4, 0], [-0.6, 1.4 + reach * 0.2, 0.12], 0.115, 0.085, 5),
+    limb([-0.6, 1.4 + reach * 0.2, 0.12], [-0.72, 1.2 + reach * 0.72, 0.24], 0.085, 0.055, 5),
+    limb([-0.72, 1.2 + reach * 0.72, 0.24], [-0.7, 1.05 + reach * 0.98, 0.36], 0.05, 0, 4),
+    limb([-0.72, 1.2 + reach * 0.72, 0.24], [-0.84, 1.1 + reach * 0.86, 0.22], 0.05, 0, 4),
+    // A heavy brow and a knot for a nose.
+    box([0.4, 0.07, 0.1], [0, 1.42, 0.25]),
+    limb([0, 1.34, 0.26], [0, 1.2, 0.36], 0.06, 0.03, 5),
+    // The crown of leaves.
+    ball([0, 2.04, 0], [0.56, 0.38, 0.52], 1),
+    ball([0.4, 1.86, 0.12], 0.26, 0),
+    ball([-0.38, 1.9, -0.14], 0.28, 0),
+    ball([0.05, 1.88, -0.36], 0.25, 0),
+  ];
+}
+
 export const VERDANT: Record<string, UnitModel> = {
   "glade-wardens": { figures: squad([wardenLoosing, wardenWatching], 5) },
   "old-rootback": { figures: [oldRootback] },
+  cinderjaw: { figures: [cinderjaw] },
+  "mossback-treefolk": { figures: squad([treefolk(0), treefolk(1)], 8) },
 };

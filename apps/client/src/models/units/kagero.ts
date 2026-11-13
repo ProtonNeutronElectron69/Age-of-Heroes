@@ -1,4 +1,4 @@
-import { ball, box, figure, gear, limb, place, plate, spine, squad } from "../build";
+import { ball, both, box, figure, gear, limb, place, plate, spine, squad } from "../build";
 import { HEAD, human, type Human } from "../human";
 import type { Part, UnitModel, V3 } from "../types";
 
@@ -152,7 +152,90 @@ const shinobiBlowpipe = (() => {
   return [...body.parts, ...shinobiKit(body), ...pipe];
 })();
 
+/** The Ashfang Oni: a horned brute in a striped pelt, an iron-studded club hefted high. */
+const ashfangOni = (() => {
+  const pelvis: V3 = [0, 0.47, 0];
+  const body = human(
+    {
+      pelvis,
+      lean: 10,
+      twist: -12,
+      look: 10,
+      handR: [-0.4, 1.06, 0.04],
+      elbowR: [-1, -0.3, -0.4],
+      handL: [0.32, 0.6, 0.28],
+      footL: [0.17, 0, 0.14],
+      footR: [-0.18, 0, -0.1],
+    },
+    { shoulders: 0.26, bulk: 1.5 },
+  );
+  const head = body.onHead([
+    ...both([limb([0.055, 0.06, 0.03], [0.12, 0.22, 0.07], 0.034, 0, 4)]),
+    // A heavy jaw with tusks.
+    box([0.15, 0.06, 0.11], [0, -0.075, 0.035]),
+    ...both([limb([0.05, -0.06, 0.085], [0.06, 0.0, 0.11], 0.02, 0, 4)]),
+  ]);
+  const pelt = [
+    ...place(
+      [
+        spine(
+          [
+            [0, 0.12, 0.17, 0.125],
+            [0, -0.06, 0.24, 0.18],
+            [0, -0.2, 0.27, 0.2],
+          ],
+          { sides: 7 },
+        ),
+      ],
+      { at: pelvis },
+    ),
+    // The pelt's shoulder, slung across the chest.
+    ...body.onChest([ball([0.2, 0.34, 0], [0.13, 0.085, 0.13], 0)]),
+  ];
+  const club = gear(
+    place([limb([0, -0.12, 0], [0, 0.24, 0], 0.03, 0.036, 6), limb([0, 0.24, 0], [0, 0.66, 0], 0.06, 0.11, 8), limb([0, 0.66, 0], [0, 0.72, 0], 0.11, 0.07, 8)], {
+      at: body.handR,
+      turn: [18, 0, 12],
+    }),
+  );
+  return figure([...body.parts, ...head, ...pelt, ...club], 7);
+})();
+
+/** A Ronin: topknot, wide trousers and a long sword. `coiled` is low with a hand on the hilt; otherwise he waits, blade loose at his side. */
+function ronin(coiled: boolean): Part[] {
+  const pelvis: V3 = [0, coiled ? 0.4 : 0.5, 0];
+  const body = human({
+    pelvis,
+    lean: coiled ? 20 : 2,
+    twist: coiled ? 20 : -8,
+    look: coiled ? -16 : 10,
+    handR: coiled ? [0.12, 0.52, 0.14] : [-0.25, 0.5, 0.06],
+    handL: coiled ? [0.18, 0.47, 0.02] : [0.21, 0.56, 0.08],
+    footL: coiled ? [0.1, 0, -0.22] : [0.09, 0, 0.05],
+    footR: coiled ? [-0.1, 0, 0.24] : [-0.1, 0, -0.03],
+  });
+  const topknot = body.onHead([limb([0, 0.075, -0.03], [0, 0.16, -0.08], 0.032, 0.022, 5)]);
+  const trousers = place(
+    [
+      spine(
+        [
+          [0, 0.1, 0.13, 0.09],
+          [0, -0.12, 0.2, 0.15],
+          [0, coiled ? -0.28 : -0.4, 0.24, 0.18],
+        ],
+        { sides: 8 },
+      ),
+    ],
+    { at: pelvis },
+  );
+  // Coiled, the sword is still in its scabbard at the hip.
+  const sword = coiled ? gear([limb([0.14, 0.5, 0.24], [0.21, 0.41, -0.46], 0.024, 0.018, 5)]) : katana(body.handR, [112, 0, 0]);
+  return [...body.parts, ...topknot, ...trousers, ...sword];
+}
+
 export const KAGERO: Record<string, UnitModel> = {
   "lady-asagiri": { figures: [ladyAsagiri] },
   "hollow-reed-shinobi": { figures: squad([shinobiCrouched, shinobiBlowpipe], 4) },
+  "ashfang-oni": { figures: [ashfangOni] },
+  "shirokage-ronin": { figures: squad([ronin(true), ronin(false)], 5) },
 };

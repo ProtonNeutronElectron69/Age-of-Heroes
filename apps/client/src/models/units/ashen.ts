@@ -1,7 +1,7 @@
-import { ball, both, box, figure, limb, place, plate, spine, squad } from "../build";
+import { ball, both, box, figure, gear, limb, place, plate, spine, squad } from "../build";
 import { roundShield, spear } from "../gear";
 import { HEAD, human, type Human } from "../human";
-import type { Part, UnitModel } from "../types";
+import type { Part, UnitModel, V3 } from "../types";
 
 const SKELETON = { shoulders: 0.15, bulk: 0.62 };
 
@@ -107,7 +107,125 @@ const marrowcoil = (() => {
   return figure([...parts, ...skull], 6);
 })();
 
+/** Vorhal, the Unburied Lord: a crowned skull in old plate, both hands on a grounded greatsword. */
+const vorhal = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human(
+    {
+      pelvis,
+      handL: [0.03, 0.8, 0.21],
+      handR: [-0.03, 0.74, 0.21],
+      footL: [0.12, 0, 0.02],
+      footR: [-0.12, 0, -0.02],
+    },
+    { shoulders: 0.19, bulk: 1.1 },
+  );
+  const crown = body.onHead([
+    box([0.11, 0.05, 0.1], [0, -0.085, 0.03]),
+    limb([0, 0.05, 0], [0, 0.1, 0], 0.094, 0.1, 8),
+    ...[0, 72, 144, 216, 288].flatMap((turn) => place([limb([0, 0.09, 0.09], [0, 0.19, 0.1], 0.026, 0, 4)], { turn: [0, turn, 0] })),
+  ]);
+  const armour = [
+    ...body.onChest([
+      ball([0.21, 0.335, 0], [0.11, 0.08, 0.115], 0),
+      ball([-0.21, 0.335, 0], [0.11, 0.08, 0.115], 0),
+      // A tattered cloak down the back.
+      spine(
+        [
+          [-0.08, 0.35, 0.14, 0.035],
+          [-0.13, 0.1, 0.2, 0.04],
+          [-0.19, -0.2, 0.23, 0.035],
+          [-0.24, -0.44, 0.2, 0.015],
+        ],
+        { sides: 6 },
+      ),
+    ]),
+    ...place(
+      [
+        spine(
+          [
+            [0, 0.12, 0.145, 0.105],
+            [0, -0.16, 0.2, 0.15],
+          ],
+          { sides: 6 },
+        ),
+      ],
+      { at: pelvis },
+    ),
+  ];
+  // The greatsword stands point down in front of him.
+  const greatsword = gear([
+    plate(
+      [
+        [0, 0],
+        [0.05, 0.09],
+        [0.044, 0.66],
+        [-0.044, 0.66],
+        [-0.05, 0.09],
+      ],
+      0.022,
+      "front",
+      0.21,
+    ),
+    box([0.28, 0.034, 0.045], [0, 0.675, 0.21]),
+    limb([0, 0.69, 0.21], [0, 0.86, 0.21], 0.02, 0.02, 5),
+    ball([0, 0.885, 0.21], 0.034, 0),
+  ]);
+  return figure([...body.parts, ...crown, ...armour, ...greatsword], 6);
+})();
+
+/** Three claws on a ghoul's hand, reaching along +z. */
+const claws = (at: V3, turn: V3): Part[] =>
+  place([limb([0.03, 0.01, 0.02], [0.06, 0, 0.15], 0.022, 0, 4), limb([-0.03, 0.01, 0.02], [-0.06, 0, 0.15], 0.022, 0, 4), limb([0, -0.02, 0.02], [0, -0.05, 0.15], 0.022, 0, 4)], {
+    at,
+    turn,
+  });
+
+const GHOUL = { shoulders: 0.16, bulk: 0.78 };
+
+/** A ghoul's open jaw and the knuckles of its spine. */
+const ghoulKit = (body: Human): Part[] => [
+  ...body.onHead([box([0.1, 0.045, 0.1], [0, -0.1, 0.04])]),
+  ...body.onChest([limb([0, 0.3, -0.07], [0, 0.34, -0.14], 0.04, 0, 4), limb([0, 0.2, -0.08], [0, 0.23, -0.15], 0.04, 0, 4), limb([0, 0.1, -0.075], [0, 0.12, -0.14], 0.035, 0, 4)]),
+];
+
+/** A Ghoul loping forward, arms reaching. */
+const ghoulLoping = (() => {
+  const body = human(
+    {
+      pelvis: [0, 0.36, 0],
+      lean: 45,
+      handL: [0.17, 0.3, 0.42],
+      handR: [-0.15, 0.36, 0.38],
+      footL: [0.1, 0, 0.1],
+      footR: [-0.1, 0, -0.25],
+    },
+    GHOUL,
+  );
+  return [...body.parts, ...ghoulKit(body), ...claws(body.handL, [20, 0, 0]), ...claws(body.handR, [20, 0, 0])];
+})();
+
+/** A Ghoul reared up and shrieking, claws spread. */
+const ghoulShrieking = (() => {
+  const body = human(
+    {
+      pelvis: [0, 0.42, 0],
+      lean: -8,
+      handL: [0.37, 0.78, 0.12],
+      handR: [-0.37, 0.74, 0.14],
+      elbowL: [1, -0.6, -0.3],
+      elbowR: [-1, -0.6, -0.3],
+      footL: [0.13, 0, 0.05],
+      footR: [-0.12, 0, -0.06],
+    },
+    GHOUL,
+  );
+  return [...body.parts, ...ghoulKit(body), ...claws(body.handL, [-50, 30, 0]), ...claws(body.handR, [-50, -30, 0])];
+})();
+
 export const ASHEN: Record<string, UnitModel> = {
   marrowcoil: { figures: [marrowcoil] },
   "barrow-legion": { figures: squad([legionGuarding, legionLunging], 5) },
+  vorhal: { figures: [vorhal] },
+  "ghoul-pack": { figures: squad([ghoulLoping, ghoulShrieking], 4) },
 };

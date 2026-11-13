@@ -9,7 +9,7 @@ The core game is complete and playable: the Basic and Advanced rules, a 48-unit 
 ### Next
 - **Needs the repository owner:** create the online game server on Render and set the `GAME_SERVER_URL` repository variable (about 10 minutes; see [HOSTING.md](HOSTING.md)). Until then the published site can only play online against a server whose address is typed in.
 - **On hold (Phase 6):** a computer opponent, and a tutorial built on the Basic game.
-- **In progress (Phase 7):** 3D figure models, in stages. Stage 1 gives every unit a low polygon model of the right size and shape, in its faction's colour. Twelve units have one so far, a hero and a squad from every faction; see them at `?models`. Each figure stands on a light brown base with a coloured ring round its edge, and there are two colour schemes to choose between. The other 36 units follow.
+- **In progress (Phase 7):** 3D figure models, in stages. Stage 1 gives every unit a low polygon model of the right size and shape, in its faction's colour. Twenty-two units have one so far, from every faction; see them at `?models`. Each figure stands on a light brown base with a coloured ring round its edge, and there are two colour schemes to choose between. The other 26 units follow.
 - **On hold (Phase 7):** sound and music, terrain and scenery art.
 
 ### Ideas, not scheduled
@@ -189,7 +189,8 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
     - [x] Mockup (4 of 48): Captain Marisol Vance, Brass Hussars, Glade Wardens, Old Rootback
     - [x] Light brown bases with a coloured ring round the edge, waisted between hexes on larger footprints, and two colour schemes to switch between: faction models with player rings, or player models with faction rings
     - [x] A hero and a squad for every faction (12 of 48): Lady Asagiri, Hollow Reed Shinobi, Siege Walker Atlas, Nexus Reclaimers, Marrowcoil, Barrow Legion, Solenne, Stormwake Huscarls
-    - [ ] The other 36 units
+    - [x] Ten more (22 of 48): Concord Fusiliers, Ashfang Oni, Shirokage Ronin, Cinderjaw, Mossback Treefolk, Sentinel K-7, Swarmling Drones, Vorhal, Ghoul Pack, Dame Rowena Ashgrove
+    - [ ] The other 26 units
     - [ ] Draw the models on the board in place of tokens, with the colour scheme as a setting
   - [ ] Later stages: more detail and colour
 - [ ] Terrain textures and scenery art
