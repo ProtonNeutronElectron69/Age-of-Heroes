@@ -62,6 +62,8 @@ interface Props {
   focus?: { point: Vec3; key: number } | null;
   /** Figure's-eye view: put the camera at `eye` looking at `look` (board coordinates). */
   eyeView?: { eye: Vec3; look: Vec3 } | null;
+  /** A backdrop only: no camera controls or keyboard panning; the caller moves the camera. */
+  still?: boolean;
   children?: ReactNode;
 }
 
@@ -490,6 +492,7 @@ export function BoardScene({
   leftButton = "camera",
   focus,
   eyeView,
+  still = false,
   children,
 }: Props) {
   const cells = useMemo(() => board.cells(), [board]);
@@ -580,9 +583,9 @@ export function BoardScene({
         })}
         {children}
       </group>
-      {eyeView ? <EyeCamera view={eyeView} center={center} /> : <KeyboardPan />}
-      {focus && !eyeView && <CameraFocus focus={focus} center={center} />}
-      <OrbitControls
+      {still ? null : eyeView ? <EyeCamera view={eyeView} center={center} /> : <KeyboardPan />}
+      {focus && !eyeView && !still && <CameraFocus focus={focus} center={center} />}
+      {!still && <OrbitControls
         makeDefault
         enabled={!eyeView}
         // The default damping (0.05) lets the camera trail the pointer and drift after release.
@@ -598,7 +601,7 @@ export function BoardScene({
             ? { LEFT: -1 as MOUSE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE }
             : { LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN }
         }
-      />
+      />}
     </>
   );
 }

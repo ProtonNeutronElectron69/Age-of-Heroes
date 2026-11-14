@@ -46,7 +46,7 @@ const problems = () => page.getByRole("region", { name: "Problems" }).locator("h
 
 try {
   await page.goto(url);
-  await page.getByRole("button", { name: "New map" }).click();
+  await page.getByRole("button", { name: "Map editor" }).click();
   await page.getByRole("region", { name: "Tools" }).waitFor();
   await page.waitForTimeout(800);
 

@@ -74,6 +74,11 @@ describe("affected checks", () => {
     }
   });
 
+  it("runs every browser test for the main menu, which every test starts from", () => {
+    expect(pick(["apps/client/src/screens/menu/menu.css"]).e2e).toBe("all");
+    expect(pick(["apps/client/e2e/menu.mjs"]).e2e).toEqual(["menu"]);
+  });
+
   it("runs only the gallery test for the unit gallery", () => {
     for (const f of ["apps/client/src/screens/UnitGalleryScreen.tsx", "apps/client/src/screens/unit-gallery.css", "apps/client/e2e/gallery.mjs"]) {
       expect(pick([f]).e2e).toEqual(["gallery"]);
@@ -109,6 +114,7 @@ describe("affected checks", () => {
         "apps/client/e2e/online.mjs",
         "apps/client/e2e/models.mjs",
         "apps/client/e2e/gallery.mjs",
+        "apps/client/e2e/menu.mjs",
       ]).e2e,
     ).toBe("all");
   });

@@ -29,6 +29,7 @@ export const E2E = {
   online: "node e2e/online.mjs",
   models: "node e2e/models.mjs",
   gallery: "node e2e/gallery.mjs",
+  menu: "node e2e/menu.mjs",
 };
 
 const ALL = "all";
@@ -74,6 +75,7 @@ export const RULES = [
   { area: "browser test", match: /^apps\/client\/e2e\/online\.mjs$/, check: false, unit: [], e2e: ["online"] },
   { area: "browser test", match: /^apps\/client\/e2e\/models\.mjs$/, check: false, unit: [], e2e: ["models"] },
   { area: "browser test", match: /^apps\/client\/e2e\/gallery\.mjs$/, check: false, unit: [], e2e: ["gallery"] },
+  { area: "browser test", match: /^apps\/client\/e2e\/menu\.mjs$/, check: false, unit: [], e2e: ["menu"] },
 
   { area: "client tests", match: /^apps\/client\/test\//, check: true, unit: [UNIT.client], e2e: [] },
   // Figure models are drawn on the board as well as on the model page and in the gallery, so they fall through to the rest of the client.

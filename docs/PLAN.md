@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable: the Basic and Advanced rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. Over 450 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable: the Basic and Advanced rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. Over 450 unit and simulation tests and 8 browser tests run in CI, each pull request running only the ones its changes affect ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 - **Needs the repository owner:** create the online game server on Render and set the `GAME_SERVER_URL` repository variable (about 10 minutes; see [HOSTING.md](HOSTING.md)). Until then the published site can only play online against a server whose address is typed in.
@@ -13,6 +13,8 @@ The core game is complete and playable: the Basic and Advanced rules, a 48-unit 
 - **On hold (Phase 7):** sound and music, terrain and scenery art.
 
 - **Done (Phase 7):** a unit gallery on the main menu. It shows every unit card in a scrolling grid, 5, 3 or 1 across, filtered by faction, type, attack and a search and sorted by name, faction or a stat. Choosing a card opens its figure model to turn and zoom.
+
+- **Done (Phase 7):** a reworked main menu in four styles to choose from under **Menu style**: War Table (the board and its armies drift behind the menu), Atlas (an inked atlas on parchment), Banner Hall (house banners in a torchlit hall) and Hex Command (a honeycomb of faction hexes). Each fits a landscape window without scrolling and animates its buttons on hover.
 
 ### Ideas, not scheduled
 - More premade maps.

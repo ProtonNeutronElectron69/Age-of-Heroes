@@ -38,6 +38,8 @@ interface Props {
   onHover?: (id: string | null) => void;
   /** The <FigureLabels> layer drawn over the canvas, kept in step with the camera. */
   labels?: RefObject<HTMLDivElement | null>;
+  /** Draw models or tokens whatever the display setting says (the menu backdrop always shows models). */
+  style?: "models" | "tokens";
 }
 
 const RING: Record<FigureView["status"], string | null> = {
@@ -435,13 +437,14 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
   );
 }
 
-export function Figures({ figures, onClick, onHover, labels }: Props) {
+export function Figures({ figures, onClick, onHover, labels, style }: Props) {
   const display = useDisplay();
+  const drawn = style ?? display.figures;
   const facing = useMemo(() => facings(figures), [figures]);
   return (
     <>
       {figures.map((f) =>
-        display.figures === "models" && UNIT_MODELS[f.cardId] ? (
+        drawn === "models" && UNIT_MODELS[f.cardId] ? (
           <ModelFigure key={f.id} f={f} onClick={onClick} onHover={onHover} yaw={facing.get(f.id) ?? SIDES[0]!} scheme={display.scheme} />
         ) : (
           <Token key={f.id} f={f} onClick={onClick} onHover={onHover} />

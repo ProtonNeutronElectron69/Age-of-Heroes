@@ -10,10 +10,21 @@ export interface DisplaySettings {
   readonly figures: "models" | "tokens";
   /** How models and the rings round their bases are coloured. */
   readonly scheme: ColorScheme;
+  /** The look of the main menu. */
+  readonly menu: MenuStyle;
 }
 
+/** The main menu's four looks, all with the same choices. */
+export type MenuStyle = "war-table" | "atlas" | "banner-hall" | "hex-command";
+export const MENU_STYLES: readonly { readonly id: MenuStyle; readonly name: string }[] = [
+  { id: "war-table", name: "War Table" },
+  { id: "atlas", name: "Atlas" },
+  { id: "banner-hall", name: "Banner Hall" },
+  { id: "hex-command", name: "Hex Command" },
+];
+
 const KEY = "aoh.display";
-const DEFAULTS: DisplaySettings = { figures: "models", scheme: "faction" };
+const DEFAULTS: DisplaySettings = { figures: "models", scheme: "faction", menu: "war-table" };
 
 function load(): DisplaySettings {
   try {
@@ -21,6 +32,7 @@ function load(): DisplaySettings {
     return {
       figures: saved.figures === "tokens" ? "tokens" : "models",
       scheme: COLOR_SCHEMES.some((s) => s.id === saved.scheme) ? saved.scheme! : DEFAULTS.scheme,
+      menu: MENU_STYLES.some((m) => m.id === saved.menu) ? saved.menu! : DEFAULTS.menu,
     };
   } catch {
     return DEFAULTS;

@@ -32,6 +32,18 @@ importers:
       '@fontsource/cinzel':
         specifier: 5.3.0
         version: 5.3.0
+      '@fontsource/cinzel-decorative':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/im-fell-english':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/im-fell-english-sc':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/marcellus-sc':
+        specifier: 5.3.0
+        version: 5.3.0
       '@react-three/drei':
         specifier: 10.7.9
         version: 10.7.9(@react-three/fiber@9.8.2(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(three@0.187.0))(@types/react@19.3.0)(@types/three@0.187.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(three@0.187.0)
@@ -135,8 +147,20 @@ packages:
   '@fontsource/alegreya-sans@5.3.0':
     resolution: {integrity: sha512-Uf0RbuwzhSS3NQrBFcRzEUm7TxDQW3qdAbQ6JIOhsIW6V+YN2dqlR99lhfEE38R3GHgMCMJBzqSp7aJxhNXSOw==}
 
+  '@fontsource/cinzel-decorative@5.3.0':
+    resolution: {integrity: sha512-9T6Fsv6l+5CUjvKWcTlMtkAYR/C8p2ll0bgT5krOU+DTLJRmaZYpXzcRoxPvENA6+uApa+Yyn0Ft/hdq083iVA==}
+
   '@fontsource/cinzel@5.3.0':
     resolution: {integrity: sha512-KEOYTsrRppW0uRIPWBDPrQgunCS6f8u4nzZxYRBfo9SCknKojLYjK7B0ZoVmJhyVLefz271ZQRF9EOpHZlfhRw==}
+
+  '@fontsource/im-fell-english-sc@5.3.0':
+    resolution: {integrity: sha512-jKnCJ22tgVwxWVs1YQ/GCWmP60ulVq49IJZ7c0wgv0MXHe8T8LPbl0sOteYLOkCURW5+ZKwFiLNU2h/l9fHgrg==}
+
+  '@fontsource/im-fell-english@5.3.0':
+    resolution: {integrity: sha512-FcgdWfY9WeUM2gQkfmwhn4Ed9LVtlll8LSSZvHfbsUrnHK5tHHnGg6BgwAfHogp52adU3eE89J/3B52qV3b+Vw==}
+
+  '@fontsource/marcellus-sc@5.3.0':
+    resolution: {integrity: sha512-i4URFFrg7hgJnp05puIVvDuCmSqRZwKBrY6tx+Z4I6XQs5JTiMbpKMYttU8Oioup/0LxfvrJY0FPFku592hJew==}
 
   '@jridgewell/resolve-uri@3.1.2':
     resolution: {integrity: sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==}
@@ -993,7 +1017,15 @@ snapshots:
 
   '@fontsource/alegreya-sans@5.3.0': {}
 
+  '@fontsource/cinzel-decorative@5.3.0': {}
+
   '@fontsource/cinzel@5.3.0': {}
+
+  '@fontsource/im-fell-english-sc@5.3.0': {}
+
+  '@fontsource/im-fell-english@5.3.0': {}
+
+  '@fontsource/marcellus-sc@5.3.0': {}
 
   '@jridgewell/resolve-uri@3.1.2': {}
 
