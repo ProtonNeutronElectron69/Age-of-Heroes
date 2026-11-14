@@ -54,7 +54,7 @@ The server keeps nothing on disk. Instead, the **host** can save the game at any
 
 To carry on later, on this server or any other:
 
-1. The host opens **Online** on the setup screen, chooses **Resume from a save file** (or **Host online** next to a saved game) and picks which army is theirs. A new room opens with a new code.
+1. The host chooses **Play online** on the main menu, chooses **Resume from a save file** (or **Host online** next to a saved game) and picks which army is theirs. A new room opens with a new code.
 2. The others join with the code and press **This is me** next to their army.
 3. Once every army still in the game has its player, the host presses **Continue game**, and play picks up exactly where the save was made.
 

@@ -1,4 +1,4 @@
-import { MAPS, buildBoard, contextFor } from "@aoh/content";
+import { CARDS, MAPS, buildBoard, contextFor } from "@aoh/content";
 import { MAX_NAME_LENGTH, parseReplay, type Replay, type RoomSettings } from "@aoh/protocol";
 import { MAX_BUDGET, MAX_PLAYERS, MIN_PLAYERS, replayGame, seedFromString, type MapDefinition, type RulesMode } from "@aoh/rules";
 import { useMemo, useRef, useState } from "react";
@@ -18,10 +18,13 @@ import {
 import { SEAT_COLORS, SEAT_COLOR_NAMES } from "../scene/scale";
 import { deleteSave, describeSummary, downloadGameFile, formatSavedAt, listSaves, type SaveSlot } from "../saves";
 import { loadGame, resumeSavedGame, savedGame, startGame } from "../session";
+import { MenuFrame, type MenuCommand } from "./menu/MenuFrame";
 
 const ROUND_LIMITS = [null, 5, 8, 12] as const;
 const BUDGETS = [300, 400, 500, 600] as const;
 const MIN_POINTS = 50;
+/** How many players each premade map hosts, for its button. */
+const PREMADE_COUNTS = new Map(MAPS.map((m) => [m.id, buildBoard(m).board.playerCounts()]));
 
 interface ResumeChoice {
   readonly record: Replay;
@@ -45,6 +48,7 @@ type Where = "local" | "online";
 export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUnits }: Props) {
   const online = useOnline();
   const [where, setWhere] = useState<Where>(() => (online.error || savedSeat() ? "online" : "local"));
+  const [view, setView] = useState<"play" | "saves">("play");
   const [serverUrl, setServerUrl] = useState(defaultServerUrl);
   const [myName, setMyName] = useState(() => savedName());
   const [code, setCode] = useState("");
@@ -181,462 +185,480 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
     );
   };
 
-  const savedSection = (saved || saves.length > 0 || loadError) && (
-          <fieldset>
-            <legend>Saved games</legend>
-            {saved && (
-              <div className="save-row current">
-                <div className="save-info">
-                  <strong>Last game</strong>
-                  <span className="muted small">
-                    {saved.summary ? describeSummary(saved.summary) : "Kept automatically"}
-                  </span>
-                </div>
-                <div className="save-actions">
-                  {where === "local" ? (
-                    <button type="button" className="primary" onClick={() => resumeSavedGame()}>
-                      Continue
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        chooseResume({ formatVersion: 1, setup: saved.setup, map: saved.map, commands: saved.commands }, "Last game")
-                      }
-                    >
-                      Host online
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-            {saves.length > 0 && (
-              <ul className="save-list" aria-label="Saved games">
-                {saves.map((slot) => (
-                  <li key={slot.id} className="save-row">
-                    <div className="save-info">
-                      <strong>{slot.name}</strong>
-                      <span className="muted small">
-                        {describeSummary(slot.summary)}
-                        {formatSavedAt(slot.savedAt) ? `, saved ${formatSavedAt(slot.savedAt)}` : ""}
-                      </span>
-                    </div>
-                    <div className="save-actions">
-                      {where === "local" ? (
-                        <button type="button" onClick={() => loadSlot(slot)} aria-label={`Load ${slot.name}`}>
-                          Load
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => chooseResume(slot.record, slot.name)}
-                          aria-label={`Host ${slot.name} online`}
-                        >
-                          Host online
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => downloadGameFile(slot.record, slot.name)}
-                        aria-label={`Download ${slot.name}`}
-                        title="Download as a file"
-                      >
-                        File
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Delete ${slot.name}`}
-                        onClick={() => {
-                          if (!window.confirm(`Delete the save "${slot.name}"?`)) return;
-                          deleteSave(slot.id);
-                          setSaves(listSaves());
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {loadError && (
-              <p className="issues" role="alert">
-                {loadError}
-              </p>
-            )}
-          </fieldset>
+  // ---- Settings shared by both ways to play --------------------------------
+  const rules = (
+    <section className="mp-sec mp-rules">
+      <h3 className="mp-label">Rules</h3>
+      <div className="mp-seg" role="radiogroup" aria-label="Rule set">
+        {(["basic", "advanced"] as const).map((m) => (
+          <button key={m} type="button" role="radio" aria-checked={mode === m} className={mode === m ? "on" : ""} onClick={() => setMode(m)}>
+            {m === "basic" ? "Basic" : "Advanced"}
+          </button>
+        ))}
+      </div>
+      <p className="mp-hint">
+        {mode === "basic"
+          ? "The front of each card: move, range, attack and defense. Any wound destroys a figure."
+          : "The back of each card: Life, points, abilities, height bonuses, falling, engagement and strict line of sight."}
+      </p>
+    </section>
   );
 
-  return (
-    <div className="screen setup">
-      <section className="panel setup-panel">
-        <h1>Age of Heroes</h1>
-        <div className="segmented where" role="radiogroup" aria-label="Where to play">
-          {(["local", "online"] as const).map((w) => (
+  const playersSection =
+    where === "online" ? (
+      <section className="mp-sec mp-players">
+        <h3 className="mp-label">Players</h3>
+        <p className="mp-hint">
+          {counts.length === 0
+            ? "This map has no start zone layouts."
+            : `This map hosts ${counts.join(", ")} players. Seats and colours follow the order people join.`}
+        </p>
+      </section>
+    ) : (
+      <section className="mp-sec mp-players">
+        <h3 className="mp-label">Players</h3>
+        <div className="mp-seg" role="radiogroup" aria-label="Number of players">
+          {Array.from({ length: MAX_PLAYERS - MIN_PLAYERS + 1 }, (_, i) => i + MIN_PLAYERS).map((n) => (
             <button
-              key={w}
+              key={n}
               type="button"
               role="radio"
-              aria-checked={where === w}
-              className={where === w ? "on" : ""}
-              onClick={() => setWhere(w)}
+              aria-checked={players === n}
+              className={players === n ? "on" : ""}
+              disabled={!counts.includes(n)}
+              title={counts.includes(n) ? undefined : "This map does not have enough start zones"}
+              onClick={() => setCount(n)}
             >
-              {w === "local" ? "This device" : "Online"}
+              {n}
             </button>
           ))}
         </div>
-        <p className="muted">
-          {where === "local"
-            ? "Hot-seat for 2 to 6 players on one device."
-            : "Each player on their own device, connected through a game server."}
-        </p>
-
-        {where === "local" && savedSection}
-
-        {where === "online" && (
-          <fieldset>
-            <legend>Online</legend>
-            <label className="field">
-              <span>Game server</span>
+        <ol className="mp-names" aria-label="Player names, in turn order">
+          {Array.from({ length: players }, (_, i) => (
+            <li key={i}>
+              <span className="swatch" style={{ background: SEAT_COLORS[i] }} />
               <input
-                aria-label="Game server address"
-                value={serverUrl}
-                placeholder="wss://your-server.example/ws"
-                spellCheck={false}
-                onChange={(e) => setServerUrl(e.target.value)}
+                className="mp-input"
+                aria-label={`Player ${i + 1} name`}
+                value={names[i]}
+                maxLength={24}
+                onChange={(e) => setNames(names.map((n, j) => (j === i ? e.target.value : n)))}
               />
-            </label>
-            <label className="field">
-              <span>Your name</span>
-              <input
-                aria-label="Your name"
-                value={myName}
-                maxLength={MAX_NAME_LENGTH}
-                onChange={(e) => setMyName(e.target.value)}
-              />
-            </label>
-            {online.error && (
-              <p className="issues" role="alert" onClick={clearOnlineError}>
-                {online.error}
-              </p>
-            )}
-            {seat && (
-              <div className="actions">
-                <button type="button" className="primary" onClick={() => rejoinSaved()}>
-                  Rejoin room {seat.code}
-                </button>
-              </div>
-            )}
-            <div className="join-row">
-              <input
-                aria-label="Room code"
-                className="code-input"
-                value={code}
-                placeholder="CODE"
-                maxLength={8}
-                spellCheck={false}
-                autoCapitalize="characters"
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-              />
-              <button
-                type="button"
-                disabled={!codeOk || !nameOk || !serverOk}
-                onClick={() => joinRoom(serverUrl, code.trim(), myName.trim())}
-              >
-                Join
-              </button>
-              <button type="button" disabled={!codeOk || !serverOk} onClick={() => spectateRoom(serverUrl, code.trim())}>
-                Watch
-              </button>
-            </div>
-            <p className="muted small">
-              Join a friend's room with its code, or set up a game below and create a room for others to join.
-            </p>
+            </li>
+          ))}
+        </ol>
+      </section>
+    );
 
-            <div className="resume-row">
-              <button type="button" onClick={() => resumeInput.current?.click()}>
-                Resume from a save file
-              </button>
-              <input
-                ref={resumeInput}
-                type="file"
-                accept=".json,application/json"
-                hidden
-                aria-label="Resume file"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = "";
-                  if (file) void openResumeFile(file);
-                }}
-              />
-              <span className="muted small">or pick one under Saved games.</span>
-            </div>
-            {resumeError && (
-              <p className="issues" role="alert">
-                {resumeError}
-              </p>
-            )}
-            {resumeChoice && (
-              <div className="resume-choice" role="group" aria-label="Resume a saved game">
-                <p className="small">
-                  Resume <strong>{resumeChoice.label}</strong> in a new room. Which army is yours?
-                </p>
-                <div className="actions">
-                  {resumeChoice.armies.map((a) => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      disabled={!serverOk}
-                      title={!serverOk ? "Enter the game server address first" : undefined}
-                      onClick={() => resumeRoom(serverUrl, resumeChoice.record, a.id)}
-                    >
-                      <span className="swatch" style={{ background: a.color }} /> {a.name}
-                      {a.out ? " (out)" : ""}
-                    </button>
-                  ))}
-                  <button type="button" className="link-button" onClick={() => setResumeChoice(null)}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </fieldset>
-        )}
-        {where === "online" && savedSection}
-
-        <fieldset>
-          <legend>Rules</legend>
-          <div className="segmented" role="radiogroup" aria-label="Rule set">
-            {(["basic", "advanced"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                role="radio"
-                aria-checked={mode === m}
-                className={mode === m ? "on" : ""}
-                onClick={() => setMode(m)}
-              >
-                {m === "basic" ? "Basic" : "Advanced"}
-              </button>
-            ))}
-          </div>
-          <p className="muted small">
-            {mode === "basic"
-              ? "The front of each card: move, range, attack and defense. Any wound destroys a figure."
-              : "The back of each card: Life, points, special abilities, height bonuses, falling, engagement and strict line of sight."}
-          </p>
-        </fieldset>
-
-        <fieldset>
-          <legend>Battlefield</legend>
-          <div className="map-row">
-            <select value={map.id} onChange={(e) => setMapId(e.target.value)} aria-label="Map">
-              <optgroup label="Premade maps">
-                {MAPS.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </optgroup>
-              {mine.length > 0 && (
-                <optgroup label="My maps">
-                  {mine.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-            <button type="button" onClick={() => onOpenEditor(map)}>
-              {isCustom ? "Edit" : "Copy and edit"}
-            </button>
-            {isCustom && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (!window.confirm(`Delete "${map.name}" from this browser?`)) return;
-                  deleteCustomMap(map.id);
-                  setMine(customMaps());
-                  setMapId(MAPS[0]!.id);
-                }}
-              >
-                Delete
-              </button>
-            )}
-          </div>
-          <p className="muted small">{map.description}</p>
-        </fieldset>
-
-        {where === "online" ? (
-          <fieldset>
-            <legend>Players</legend>
-            <p className="muted small">
-              {counts.length === 0
-                ? "This map has no start zone layouts."
-                : `This map hosts ${counts.join(", ")} players. Seats and colors follow the order people join.`}
-            </p>
-          </fieldset>
-        ) : (
-          <fieldset>
-            <legend>Players</legend>
-            <div className="segmented" role="radiogroup" aria-label="Number of players">
-              {Array.from({ length: MAX_PLAYERS - MIN_PLAYERS + 1 }, (_, i) => i + MIN_PLAYERS).map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  role="radio"
-                  aria-checked={players === n}
-                  className={players === n ? "on" : ""}
-                  disabled={!counts.includes(n)}
-                  title={counts.includes(n) ? undefined : "This map does not have enough start zones"}
-                  onClick={() => setCount(n)}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-            <ol className="player-list">
-              {Array.from({ length: players }, (_, i) => (
-                <li key={i}>
-                  <span className="swatch" style={{ background: SEAT_COLORS[i] }} />
-                  <input
-                    aria-label={`Player ${i + 1} name`}
-                    value={names[i]}
-                    maxLength={24}
-                    onChange={(e) => setNames(names.map((n, j) => (j === i ? e.target.value : n)))}
-                  />
-                </li>
-              ))}
-            </ol>
-            <p className="muted small">Turn order passes in this order (to the left).</p>
-          </fieldset>
-        )}
-
-        {mode === "advanced" ? (
-          <fieldset>
-            <legend>Army points</legend>
-            <div className="segmented" role="radiogroup" aria-label="Points budget">
-              {BUDGETS.map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  role="radio"
-                  aria-checked={!noLimit && budget === n}
-                  className={!noLimit && budget === n ? "on" : ""}
-                  disabled={noLimit}
-                  onClick={() => pickBudget(n)}
-                >
-                  {n} points
-                </button>
-              ))}
-            </div>
-            <div className="control-row">
-              <label className="inline-field">
-                Points
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  aria-label="Points per player"
-                  min={MIN_POINTS}
-                  max={MAX_BUDGET}
-                  step={25}
-                  value={budgetText}
-                  disabled={noLimit}
-                  onChange={(e) => {
-                    setBudgetText(e.target.value);
-                    const n = Number(e.target.value);
-                    setBudget(Number.isInteger(n) ? n : NaN);
-                  }}
-                  onBlur={() => {
-                    if (Number.isInteger(budget)) pickBudget(Math.min(MAX_BUDGET, Math.max(MIN_POINTS, budget)));
-                    else pickBudget(400);
-                  }}
-                />
-              </label>
-              <label className="check">
-                <input type="checkbox" checked={noLimit} onChange={(e) => setNoLimit(e.target.checked)} />
-                No limit
-              </label>
-            </div>
-            <p className={`muted small ${budgetOk ? "" : "bad"}`}>
-              {noLimit
-                ? "Players draft until they choose to stop or their start zone is full."
-                : `Any whole number from ${MIN_POINTS} to ${MAX_BUDGET}.`}
-            </p>
-            <label className="check">
-              <input type="checkbox" checked={factionPure} onChange={(e) => setFactionPure(e.target.checked)} />
-              Faction-pure armies (every unit shares the faction of your first pick)
-            </label>
-          </fieldset>
-        ) : (
-          <fieldset>
-            <legend>Army size</legend>
-            <div className="segmented" role="radiogroup" aria-label="Cards per player">
-              {[1, 2, 3, 4].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  role="radio"
-                  aria-checked={armySize === n}
-                  className={armySize === n ? "on" : ""}
-                  onClick={() => setArmySize(n)}
-                >
-                  {n} {n === 1 ? "card" : "cards"}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-        )}
-
-        <fieldset>
-          <legend>Round limit</legend>
-          <div className="segmented" role="radiogroup" aria-label="Round limit">
-            {ROUND_LIMITS.map((n) => (
-              <button
-                key={String(n)}
-                type="button"
-                role="radio"
-                aria-checked={roundLimit === n}
-                className={roundLimit === n ? "on" : ""}
-                onClick={() => setRoundLimit(n)}
-              >
-                {n === null ? "None" : `${n} rounds`}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
-        <div className="actions">
-          {where === "local" ? (
-            <button type="button" className="primary" onClick={start} disabled={counts.length === 0 || !budgetOk}>
-              Start draft
-            </button>
-          ) : (
+  const army =
+    mode === "advanced" ? (
+      <section className="mp-sec mp-army">
+        <h3 className="mp-label">Army points</h3>
+        <div className="mp-seg" role="radiogroup" aria-label="Points budget">
+          {BUDGETS.map((n) => (
             <button
+              key={n}
               type="button"
-              className="primary"
-              onClick={create}
-              disabled={counts.length === 0 || !nameOk || !serverOk || !budgetOk}
-              title={!nameOk ? "Enter your name first" : !serverOk ? "Enter the game server address first" : undefined}
+              role="radio"
+              aria-label={`${n} points`}
+              aria-checked={!noLimit && budget === n}
+              className={!noLimit && budget === n ? "on" : ""}
+              disabled={noLimit}
+              onClick={() => pickBudget(n)}
             >
-              Create room
+              {n}
             </button>
-          )}
-          {where === "local" && (
-            <button type="button" onClick={() => saveInput.current?.click()}>
-              Load a save file
+          ))}
+        </div>
+        <div className="mp-row">
+          <label className="mp-inline">
+            Other
+            <input
+              className="mp-input mp-number"
+              type="number"
+              inputMode="numeric"
+              aria-label="Points per player"
+              min={MIN_POINTS}
+              max={MAX_BUDGET}
+              step={25}
+              value={budgetText}
+              disabled={noLimit}
+              onChange={(e) => {
+                setBudgetText(e.target.value);
+                const n = Number(e.target.value);
+                setBudget(Number.isInteger(n) ? n : NaN);
+              }}
+              onBlur={() => {
+                if (Number.isInteger(budget)) pickBudget(Math.min(MAX_BUDGET, Math.max(MIN_POINTS, budget)));
+                else pickBudget(400);
+              }}
+            />
+          </label>
+          <label className="mp-check">
+            <input type="checkbox" checked={noLimit} onChange={(e) => setNoLimit(e.target.checked)} />
+            No limit
+          </label>
+          <label className="mp-check">
+            <input type="checkbox" checked={factionPure} onChange={(e) => setFactionPure(e.target.checked)} />
+            One faction per army
+          </label>
+        </div>
+        {(noLimit || !budgetOk) && (
+          <p className={`mp-hint${budgetOk ? "" : " bad"}`}>
+            {noLimit ? "Players draft until they stop or their start zone is full." : `Any whole number from ${MIN_POINTS} to ${MAX_BUDGET}.`}
+          </p>
+        )}
+      </section>
+    ) : (
+      <section className="mp-sec mp-army">
+        <h3 className="mp-label">Army size</h3>
+        <div className="mp-seg" role="radiogroup" aria-label="Cards per player">
+          {[1, 2, 3, 4].map((n) => (
+            <button key={n} type="button" role="radio" aria-checked={armySize === n} className={armySize === n ? "on" : ""} onClick={() => setArmySize(n)}>
+              {n} {n === 1 ? "card" : "cards"}
             </button>
-          )}
-          <button type="button" onClick={() => onOpenEditor(null)}>
-            New map
+          ))}
+        </div>
+      </section>
+    );
+
+  const battlefield = (
+    <section className="mp-sec mp-map">
+      <h3 className="mp-label">Battlefield</h3>
+      <div className="mp-maps" role="radiogroup" aria-label="Map">
+        {MAPS.map((m) => {
+          const n = PREMADE_COUNTS.get(m.id) ?? [];
+          return (
+            <button key={m.id} type="button" role="radio" aria-label={m.name} aria-checked={map.id === m.id} className={`mp-mapbtn${map.id === m.id ? " on" : ""}`} onClick={() => setMapId(m.id)}>
+              <span className={`mp-mhex m-${m.id}`} aria-hidden="true" />
+              <span className="mp-mapname">
+                <b>{m.name}</b>
+                <small>{n.length > 1 ? `${n[0]} to ${n[n.length - 1]} players` : `${n[0] ?? 0} players`}</small>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="mp-row">
+        {mine.length > 0 && (
+          <select className="mp-input mp-mine" aria-label="My maps" value={isCustom ? map.id : ""} onChange={(e) => e.target.value && setMapId(e.target.value)}>
+            <option value="">My maps…</option>
+            {mine.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+        )}
+        <button type="button" className="mp-btn" onClick={() => onOpenEditor(map)}>
+          {isCustom ? "Edit" : "Copy and edit"}
+        </button>
+        {isCustom && (
+          <button
+            type="button"
+            className="mp-btn"
+            onClick={() => {
+              if (!window.confirm(`Delete "${map.name}" from this browser?`)) return;
+              deleteCustomMap(map.id);
+              setMine(customMaps());
+              setMapId(MAPS[0]!.id);
+            }}
+          >
+            Delete
           </button>
-          <button type="button" onClick={() => replayInput.current?.click()}>
-            Watch a replay
+        )}
+      </div>
+      <p className="mp-hint mp-desc">{map.description}</p>
+    </section>
+  );
+
+  const rounds = (
+    <section className="mp-sec mp-rounds">
+      <h3 className="mp-label">Round limit</h3>
+      <div className="mp-seg" role="radiogroup" aria-label="Round limit">
+        {ROUND_LIMITS.map((n) => (
+          <button
+            key={String(n)}
+            type="button"
+            role="radio"
+            aria-label={n === null ? "No round limit" : `${n} rounds`}
+            aria-checked={roundLimit === n}
+            className={roundLimit === n ? "on" : ""}
+            onClick={() => setRoundLimit(n)}
+          >
+            {n === null ? "None" : n}
           </button>
-          <button type="button" onClick={onOpenUnits}>
-            Unit gallery
+        ))}
+      </div>
+    </section>
+  );
+
+  const connection = (
+    <section className="mp-sec mp-conn">
+      <div className="mp-row mp-fields">
+        <label className="mp-field">
+          <span className="mp-label">Game server</span>
+          <input
+            className="mp-input"
+            aria-label="Game server address"
+            value={serverUrl}
+            placeholder="wss://your-server.example/ws"
+            spellCheck={false}
+            onChange={(e) => setServerUrl(e.target.value)}
+          />
+        </label>
+        <label className="mp-field">
+          <span className="mp-label">Your name</span>
+          <input className="mp-input" aria-label="Your name" value={myName} maxLength={MAX_NAME_LENGTH} onChange={(e) => setMyName(e.target.value)} />
+        </label>
+      </div>
+      {online.error && (
+        <p className="mp-issue" role="alert" onClick={clearOnlineError}>
+          {online.error}
+        </p>
+      )}
+      <div className="mp-row">
+        <input
+          className="mp-input mp-code"
+          aria-label="Room code"
+          value={code}
+          placeholder="ROOM CODE"
+          maxLength={8}
+          spellCheck={false}
+          autoCapitalize="characters"
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+        />
+        <button type="button" className="mp-btn" disabled={!codeOk || !nameOk || !serverOk} onClick={() => joinRoom(serverUrl, code.trim(), myName.trim())}>
+          Join
+        </button>
+        <button type="button" className="mp-btn" disabled={!codeOk || !serverOk} onClick={() => spectateRoom(serverUrl, code.trim())}>
+          Watch
+        </button>
+        {seat && (
+          <button type="button" className="mp-btn mp-strong" onClick={() => rejoinSaved()}>
+            Rejoin room {seat.code}
           </button>
+        )}
+        <button type="button" className="mp-btn" onClick={() => resumeInput.current?.click()}>
+          Resume from a save file
+        </button>
+      </div>
+      {resumeError && (
+        <p className="mp-issue" role="alert">
+          {resumeError}
+        </p>
+      )}
+      {resumeChoice && (
+        <div className="mp-resume" role="group" aria-label="Resume a saved game">
+          <p className="mp-hint">
+            Resume <strong>{resumeChoice.label}</strong> in a new room. Which army is yours?
+          </p>
+          <div className="mp-row">
+            {resumeChoice.armies.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                className="mp-btn"
+                disabled={!serverOk}
+                title={!serverOk ? "Enter the game server address first" : undefined}
+                onClick={() => resumeRoom(serverUrl, resumeChoice.record, a.id)}
+              >
+                <span className="swatch" style={{ background: a.color }} /> {a.name}
+                {a.out ? " (out)" : ""}
+              </button>
+            ))}
+            <button type="button" className="mp-btn mp-quiet" onClick={() => setResumeChoice(null)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+
+  const playPanel = (
+    <div className={`mp mp-play mp-${where}`}>
+      {where === "online" && connection}
+      <div className="mp-cols">
+        <div className="mp-col mp-col1">
+          {rules}
+          {playersSection}
+          {rounds}
+        </div>
+        <div className="mp-col mp-col2">
+          {army}
+          {battlefield}
+        </div>
+      </div>
+      <div className="mp-foot">
+        <p className="mp-hint">
+          {where === "local"
+            ? `${players} players on ${map.name}. Turns pass in the order above.`
+            : "Create a room with these settings and share its code, or join a friend's room above."}
+        </p>
+        {where === "local" ? (
+          <button type="button" className="mp-go" onClick={start} disabled={counts.length === 0 || !budgetOk}>
+            Start draft
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="mp-go"
+            onClick={create}
+            disabled={counts.length === 0 || !nameOk || !serverOk || !budgetOk}
+            title={!nameOk ? "Enter your name first" : !serverOk ? "Enter the game server address first" : undefined}
+          >
+            Create room
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  const savesPanel = (
+    <div className="mp mp-saves">
+      {saved && (
+        <div className="mp-save current">
+          <div className="mp-save-info">
+            <strong>Last game</strong>
+            <span>{saved.summary ? describeSummary(saved.summary) : "Kept automatically"}</span>
+          </div>
+          <div className="mp-row">
+            {where === "local" ? (
+              <button type="button" className="mp-btn mp-strong" onClick={() => resumeSavedGame()}>
+                Resume
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="mp-btn"
+                onClick={() => chooseResume({ formatVersion: 1, setup: saved.setup, map: saved.map, commands: saved.commands }, "Last game")}
+              >
+                Host online
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {saves.length > 0 ? (
+        <ul className="mp-savelist" aria-label="Saved games">
+          {saves.map((slot) => (
+            <li key={slot.id} className="mp-save">
+              <div className="mp-save-info">
+                <strong>{slot.name}</strong>
+                <span>
+                  {describeSummary(slot.summary)}
+                  {formatSavedAt(slot.savedAt) ? `, saved ${formatSavedAt(slot.savedAt)}` : ""}
+                </span>
+              </div>
+              <div className="mp-row">
+                {where === "local" ? (
+                  <button type="button" className="mp-btn" onClick={() => loadSlot(slot)} aria-label={`Load ${slot.name}`}>
+                    Load
+                  </button>
+                ) : (
+                  <button type="button" className="mp-btn" onClick={() => chooseResume(slot.record, slot.name)} aria-label={`Host ${slot.name} online`}>
+                    Host online
+                  </button>
+                )}
+                <button type="button" className="mp-btn" onClick={() => downloadGameFile(slot.record, slot.name)} aria-label={`Download ${slot.name}`} title="Download as a file">
+                  File
+                </button>
+                <button
+                  type="button"
+                  className="mp-btn"
+                  aria-label={`Delete ${slot.name}`}
+                  onClick={() => {
+                    if (!window.confirm(`Delete the save "${slot.name}"?`)) return;
+                    deleteSave(slot.id);
+                    setSaves(listSaves());
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        !saved && <p className="mp-hint">No saved games yet. Save a game from its menu while you play, and it appears here.</p>
+      )}
+      {where === "online" && resumeChoice && connection}
+      {loadError && (
+        <p className="mp-issue" role="alert">
+          {loadError}
+        </p>
+      )}
+      <div className="mp-foot">
+        <p className="mp-hint">{where === "local" ? "A save file holds a whole game; load one from your device." : "Pick a save above to host it in a new room."}</p>
+        <button type="button" className="mp-go" onClick={() => saveInput.current?.click()}>
+          Load a save file
+        </button>
+      </div>
+    </div>
+  );
+
+  const commands: MenuCommand[] = [
+    {
+      id: "local",
+      label: "Play on this device",
+      sub: "Hot-seat, pass the screen",
+      icon: "swords",
+      on: view === "play" && where === "local",
+      onClick: () => {
+        setWhere("local");
+        setView("play");
+      },
+    },
+    {
+      id: "online",
+      label: "Play online",
+      sub: "Create or join a room",
+      icon: "globe",
+      on: view === "play" && where === "online",
+      onClick: () => {
+        setWhere("online");
+        setView("play");
+      },
+    },
+    {
+      id: "continue",
+      label: "Continue",
+      sub: saved ? (saved.summary ? describeSummary(saved.summary) : "Your last game") : "No unfinished game",
+      icon: "hourglass",
+      disabled: !saved,
+      onClick: () => resumeSavedGame(),
+    },
+    {
+      id: "saves",
+      label: "Saved games",
+      sub: saves.length === 0 ? "Load a save file" : `${saves.length} saved in this browser`,
+      icon: "scroll",
+      on: view === "saves",
+      onClick: () => setView(view === "saves" ? "play" : "saves"),
+    },
+    { id: "replay", label: "Watch a replay", sub: "Every move of a finished game", icon: "eye", onClick: () => replayInput.current?.click() },
+    { id: "editor", label: "Map editor", sub: "Build and share battlefields", icon: "map", onClick: () => onOpenEditor(null) },
+    { id: "gallery", label: "Unit gallery", sub: `All ${CARDS.length} units and their figures`, icon: "cards", onClick: onOpenUnits },
+  ];
+
+  const heading = view === "saves" ? "Saved games" : where === "local" ? "Play on this device" : "Play online";
+  const sub =
+    view === "saves"
+      ? where === "local"
+        ? "Load a game saved in this browser, or a save file."
+        : "Host a saved game in a new online room."
+      : where === "local"
+        ? "Hot-seat for 2 to 6 players on one screen."
+        : "Each player on their own device, connected through a game server.";
+
+  return (
+    <MenuFrame
+      commands={commands}
+      heading={heading}
+      sub={sub}
+      extras={
+        <>
           <input
             ref={replayInput}
             type="file"
@@ -662,13 +684,27 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
               if (file) void openSave(file);
             }}
           />
-        </div>
-        {replayError && (
-          <p className="issues" role="alert">
-            {replayError}
-          </p>
-        )}
-      </section>
-    </div>
+          <input
+            ref={resumeInput}
+            type="file"
+            accept=".json,application/json"
+            hidden
+            aria-label="Resume file"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) void openResumeFile(file);
+            }}
+          />
+          {replayError && (
+            <p className="menu-toast" role="alert" onClick={() => setReplayError(null)}>
+              {replayError}
+            </p>
+          )}
+        </>
+      }
+    >
+      {view === "saves" ? savesPanel : playPanel}
+    </MenuFrame>
   );
 }

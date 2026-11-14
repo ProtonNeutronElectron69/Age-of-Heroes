@@ -96,21 +96,23 @@ try {
 
   // ---- Quit, then load from the list ---------------------------------------
   await page.getByRole("button", { name: "Quit game" }).click();
+  await page.getByRole("button", { name: "Saved games" }).click();
   const list = page.getByRole("list", { name: "Saved games" });
   await list.waitFor();
   if ((await list.getByRole("listitem").count()) !== 1) fail("Expected one saved game");
-  if (await page.getByRole("button", { name: "Continue" }).count()) fail("A quit game should not be offered to continue");
+  if (!(await page.getByRole("button", { name: "Continue", exact: true }).isDisabled())) fail("A quit game should not be offered to continue");
   await shot("2-list");
   await page.getByRole("button", { name: "Load Test battle", exact: true }).click();
   await expectSameGame(before, "Loading from the list");
 
   // ---- Reload: the game is kept and offered to continue --------------------
   await page.reload();
-  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expectSameGame(before, "Continuing after a reload");
 
   // ---- Quit, then open the downloaded file --------------------------------
   await page.getByRole("button", { name: "Quit game" }).click();
+  await page.getByRole("button", { name: "Saved games" }).click();
   await page.getByRole("button", { name: "Load a save file" }).waitFor();
   await page.getByLabel("Save file").setInputFiles(file);
   await expectSameGame(before, "Loading the save file");
@@ -122,6 +124,7 @@ try {
   await page.getByRole("button", { name: "Close replay" }).click();
 
   // ---- Delete --------------------------------------------------------------
+  await page.getByRole("button", { name: "Saved games" }).click();
   await page.getByRole("button", { name: "Delete Test battle", exact: true }).click();
   if (await page.getByRole("list", { name: "Saved games" }).count()) fail("The save was not deleted");
 
