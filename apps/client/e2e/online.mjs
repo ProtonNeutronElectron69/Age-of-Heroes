@@ -180,6 +180,7 @@ try {
 
   // ---- Lobby --------------------------------------------------------------
   await goOnline(alice, "Alice");
+  await alice.page.getByRole("radio", { name: "Basic" }).click();
   await alice.page.getByRole("radio", { name: "1 card" }).click();
   await alice.page.getByRole("radio", { name: "5 rounds" }).click();
   await alice.page.getByRole("button", { name: "Create room" }).click();

@@ -108,12 +108,12 @@ Each map has up to 6 start zones. The map says which zones are used for each pla
 ## 4. Setting up a game
 
 Game options:
-- **Rule set**: Basic or Advanced.
-- **Players**: 2 to 6, each in a seat. Seat order is also the "to the left" order.
-- **Map**.
-- **Army size**: Basic: number of cards per player, 1 to 4 (default 3). Advanced: a points budget per player (default 400), any whole number from 50 to 9999, or **no limit**. With no limit, players draft until they choose to stop or their start zone is full.
+- **Rule set**: Basic or Advanced (default Advanced).
+- **Players**: 2 to 6, each in a seat (default 2). Seat order is also the "to the left" order.
+- **Map** (default Proving Grounds).
+- **Army size**: Basic: number of cards per player, 1 to 4 (default 3). Advanced: a points budget per player (default 1000; the menu offers 500, 750, 1000 and 1500), any whole number from 50 to 9999, or **no limit**. With no limit, players draft until they choose to stop or their start zone is full.
 - **Faction-pure mode** (Advanced, optional): every unit in an army must share the faction of that player's first pick. There is no extra reward; it is a theme restriction. **Assumption.**
-- **Round limit**: none, or a number of rounds.
+- **Round limit**: none (the default), or a number of rounds.
 
 ### Drafting
 Armies are drafted from a shared pool in a **snake draft**: the pick order reverses each round of picks (seat 1, 2, 3, 3, 2, 1, 1, 2, 3 and so on). The first picker is decided by a d20 roll.

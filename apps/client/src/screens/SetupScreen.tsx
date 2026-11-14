@@ -21,7 +21,9 @@ import { loadGame, resumeSavedGame, savedGame, startGame } from "../session";
 import { MenuFrame, type MenuCommand } from "./menu/MenuFrame";
 
 const ROUND_LIMITS = [null, 5, 8, 12] as const;
-const BUDGETS = [300, 400, 500, 600] as const;
+const BUDGETS = [500, 750, 1000, 1500] as const;
+/** A new game starts as an Advanced game of 1000 points a side, with no round limit. */
+const DEFAULT_BUDGET = 1000;
 const MIN_POINTS = 50;
 /** How many players each premade map hosts, for its button. */
 const PREMADE_COUNTS = new Map(MAPS.map((m) => [m.id, buildBoard(m).board.playerCounts()]));
@@ -60,15 +62,15 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
   const resumeInput = useRef<HTMLInputElement>(null);
   const [resumeChoice, setResumeChoice] = useState<ResumeChoice | null>(null);
   const [resumeError, setResumeError] = useState<string | null>(null);
-  const [mode, setMode] = useState<RulesMode>("basic");
+  const [mode, setMode] = useState<RulesMode>("advanced");
   const [count, setCount] = useState(2);
   const [names, setNames] = useState<string[]>(SEAT_COLOR_NAMES.map((c) => `${c} Player`));
   const [armySize, setArmySize] = useState(3);
-  const [budget, setBudget] = useState(400);
-  const [budgetText, setBudgetText] = useState("400");
+  const [budget, setBudget] = useState(DEFAULT_BUDGET);
+  const [budgetText, setBudgetText] = useState(String(DEFAULT_BUDGET));
   const [noLimit, setNoLimit] = useState(false);
   const [factionPure, setFactionPure] = useState(false);
-  const [roundLimit, setRoundLimit] = useState<number | null>(8);
+  const [roundLimit, setRoundLimit] = useState<number | null>(null);
   const [mine, setMine] = useState(() => customMaps());
   const [mapId, setMapId] = useState(() => (initialMapId && findMap(initialMapId) ? initialMapId : MAPS[0]!.id));
   const map = MAPS.find((m) => m.id === mapId) ?? mine.find((m) => m.id === mapId) ?? MAPS[0]!;
@@ -290,7 +292,7 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
               }}
               onBlur={() => {
                 if (Number.isInteger(budget)) pickBudget(Math.min(MAX_BUDGET, Math.max(MIN_POINTS, budget)));
-                else pickBudget(400);
+                else pickBudget(DEFAULT_BUDGET);
               }}
             />
           </label>
