@@ -60,9 +60,21 @@ describe("affected checks", () => {
     expect(pick(["apps/client/src/screens/PlayScreen.tsx"])).toEqual({ check: true, unit: ["apps/client"], e2e: "all" });
   });
 
-  it("runs the client tests and the model page test for a figure model", () => {
-    for (const f of ["apps/client/src/models/units/concord.ts", "apps/client/src/screens/ModelGalleryScreen.tsx", "apps/client/src/screens/model-gallery.css"]) {
-      expect(pick([f])).toEqual({ check: true, unit: ["apps/client"], e2e: ["models"] });
+  it("runs the client tests, the model page test and the gallery test for a figure model", () => {
+    for (const f of ["apps/client/src/models/units/concord.ts", "apps/client/src/scene/standing.tsx"]) {
+      expect(pick([f])).toEqual({ check: true, unit: ["apps/client"], e2e: ["models", "gallery"] });
+    }
+  });
+
+  it("runs only the model page test for the model page", () => {
+    for (const f of ["apps/client/src/screens/ModelGalleryScreen.tsx", "apps/client/src/screens/model-gallery.css"]) {
+      expect(pick([f])).toEqual({ check: true, unit: [], e2e: ["models"] });
+    }
+  });
+
+  it("runs only the gallery test for the unit gallery", () => {
+    for (const f of ["apps/client/src/screens/UnitGalleryScreen.tsx", "apps/client/src/screens/unit-gallery.css", "apps/client/e2e/gallery.mjs"]) {
+      expect(pick([f]).e2e).toEqual(["gallery"]);
     }
   });
 
@@ -94,6 +106,7 @@ describe("affected checks", () => {
         "apps/client/e2e/saves.mjs",
         "apps/client/e2e/online.mjs",
         "apps/client/e2e/models.mjs",
+        "apps/client/e2e/gallery.mjs",
       ]).e2e,
     ).toBe("all");
   });

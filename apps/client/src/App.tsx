@@ -10,12 +10,14 @@ import { ModelGalleryScreen } from "./screens/ModelGalleryScreen";
 import { PlayScreen } from "./screens/PlayScreen";
 import { ReplayScreen } from "./screens/ReplayScreen";
 import { SetupScreen } from "./screens/SetupScreen";
+import { UnitGalleryScreen } from "./screens/UnitGalleryScreen";
 import { useSession } from "./session";
 
 type View =
   | { name: "setup"; mapId?: string }
   | { name: "editor"; map: MapDefinition | null }
-  | { name: "replay"; replay: Replay };
+  | { name: "replay"; replay: Replay }
+  | { name: "units" };
 
 export function App() {
   const session = useSession();
@@ -37,11 +39,13 @@ export function App() {
   if (view.name === "replay") {
     return <ReplayScreen replay={view.replay} onClose={() => setView({ name: "setup" })} />;
   }
+  if (view.name === "units") return <UnitGalleryScreen onClose={() => setView({ name: "setup" })} />;
   return (
     <SetupScreen
       initialMapId={view.mapId}
       onOpenEditor={(map) => setView({ name: "editor", map })}
       onOpenReplay={(replay) => setView({ name: "replay", replay })}
+      onOpenUnits={() => setView({ name: "units" })}
     />
   );
 }
