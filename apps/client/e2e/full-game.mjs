@@ -66,7 +66,42 @@ async function steadyTriangles() {
   );
 }
 
+/** Screen point of a figure's name tag, which floats just above the figure. */
+async function tagOf(id) {
+  return page.evaluate((id) => {
+    const el = document.querySelector(`.label-anchor[data-id="${id}"]`);
+    if (!el || el.style.visibility === "hidden") return null;
+    const b = el.getBoundingClientRect();
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  }, id);
+}
+
+/**
+ * Waits until the camera has stopped moving: `frames` frames in a row project the same point.
+ * The camera glides to the acting figure after a turn starts or a squad figure acts, so clicks wait for it.
+ */
+async function steadyCamera(frames = 20) {
+  await page.evaluate(
+    (frames) =>
+      new Promise((resolve) => {
+        let last = "";
+        let same = 0;
+        const tick = () => {
+          const p = JSON.stringify(window.__aoh?.project(0, 0, 0));
+          same = p === last ? same + 1 : 0;
+          last = p;
+          if (same >= frames) resolve();
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }),
+    frames,
+  );
+}
+
 let moves = 0;
+let hoverChecked = false;
+let followChecked = false;
 let attacks = 0;
 let eyeChecked = false;
 let squadMoves = 0;
@@ -164,12 +199,50 @@ try {
     if (`${round}|${key}` !== turnKey) {
       turnKey = `${round}|${key}`;
       handled.clear();
+      // A new turn brings the camera to the acting figure and shows its unit's card.
+      await page.locator(".hud-right .unit-card-main").waitFor();
+      const acting = await page.evaluate(() => window.__aohUi?.selected);
+      if (acting && !followChecked) {
+        await steadyCamera();
+        // Judge only a turn that is still the same turn, with the figure it now has chosen.
+        const still = (await turn.locator(".turn-banner").innerText()) === key && (await page.locator(".round-label").innerText()) === round;
+        const now = await page.evaluate(() => window.__aohUi?.selected);
+        if (still && now) {
+          const tag = await tagOf(now);
+          const view = page.viewportSize();
+          if (!tag || Math.abs(tag.x - view.width / 2) > view.width * 0.2 || Math.abs(tag.y - view.height / 2) > view.height * 0.3) {
+            fail(`The camera did not come to the acting figure ${now} at the start of a turn: its tag is at ${JSON.stringify(tag)}`);
+          }
+          followChecked = true;
+        }
+      }
+      // Resting the pointer on another unit's figure shows its card below the acting unit's, until the pointer leaves.
+      if (acting && !hoverChecked) {
+        const unit = acting.split("#")[0];
+        const others = await page.evaluate((unit) => [...document.querySelectorAll(".label-anchor")].map((a) => a.dataset.id).filter((id) => id.split("#")[0] !== unit), unit);
+        for (const id of others) {
+          const tag = await tagOf(id);
+          if (!tag) continue;
+          const at = { x: tag.x, y: tag.y + 30 };
+          if (!(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.tagName === "CANVAS", at))) continue;
+          await page.mouse.move(at.x, at.y);
+          const shown = await page.locator(".hud-right .unit-card-other").waitFor({ timeout: 3000 }).then(() => true, () => false);
+          // Over the turn panel, off the board.
+          await page.mouse.move(120, 140);
+          if (!shown) continue;
+          await page.locator(".hud-right .unit-card-other").waitFor({ state: "detached" });
+          hoverChecked = true;
+          break;
+        }
+      }
     }
 
     // The dice stay up until closed (or the next action): close them so they do not cover the board.
     const closeDice = page.getByRole("button", { name: "Close dice" });
     if (await closeDice.count()) await closeDice.click();
 
+    // Screen points are only good once the camera has stopped gliding.
+    await steadyCamera(1);
     const ui = await page.evaluate(() => window.__aohUi);
     const squad = (await turn.locator(".figure-button").count()) > 1;
     // Attack whenever the selected figure has a target.
@@ -267,6 +340,8 @@ try {
   const heading = await over.getByRole("heading").innerText();
   if (!/wins|share the win|Nobody/.test(heading)) fail(`Unexpected result: ${heading}`);
   if (moves === 0) fail("No figure moved during the game");
+  if (!followChecked) fail("The camera was never checked following the acting figure");
+  if (!hoverChecked) fail("Resting the pointer on another unit never showed its card");
   if (!eyeChecked) fail("Eye view was never tried");
   if (squadMoves > 0 && cycled === 0) fail("Squads never moved on to their next figure after a move");
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);

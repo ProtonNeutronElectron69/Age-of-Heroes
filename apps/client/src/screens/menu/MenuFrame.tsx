@@ -132,7 +132,7 @@ export function MenuFrame({ commands, heading, sub, children, extras }: Props) {
   const rest = commands.filter((c) => c.id !== "local" && c.id !== "online");
 
   return (
-    <div className={`screen menu ms-${style}${compact ? " compact" : ""}`} data-menu-style={style}>
+    <div className={`screen main-menu ms-${style}${compact ? " compact" : ""}`} data-menu-style={style}>
       {style === "war-table" && <MenuBoard />}
       <div className="menu-fit">
         <div

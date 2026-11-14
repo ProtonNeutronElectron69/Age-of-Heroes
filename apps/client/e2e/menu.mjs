@@ -87,8 +87,8 @@ try {
 
   // A phone held upright gets one scrolling column with every choice.
   const phone = await open({ width: 400, height: 860 });
-  if (!(await phone.locator(".menu.compact").count())) fail("A narrow window should get the one-column menu");
-  if ((await phone.evaluate(() => document.querySelector(".menu").scrollWidth > innerWidth + 1))) fail("The phone menu scrolls sideways");
+  if (!(await phone.locator(".main-menu.compact").count())) fail("A narrow window should get the one-column menu");
+  if ((await phone.evaluate(() => document.querySelector(".main-menu").scrollWidth > innerWidth + 1))) fail("The phone menu scrolls sideways");
   await phone.getByRole("button", { name: "Unit gallery" }).waitFor();
 
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);

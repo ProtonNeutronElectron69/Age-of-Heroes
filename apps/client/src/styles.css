@@ -1309,3 +1309,34 @@ p.bad {
   padding: 5px 10px;
   font-size: 13px;
 }
+
+/* ---- Unit cards on the play screen ---------------------------------------
+   The acting unit's card, and below it a smaller card for the unit under the
+   pointer or clicked. With both showing, they shrink to fit the window's height. */
+.hud-right .unit-card-main,
+.hud-right .unit-card-other {
+  align-self: flex-end;
+  width: 100%;
+}
+
+.hud-right.two-cards .unit-card-main {
+  width: min(100%, 39vh);
+}
+
+.hud-right .unit-card-other {
+  width: min(78%, 29vh);
+  animation: card-other-in 0.18s ease-out;
+}
+
+@keyframes card-other-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-right .unit-card-other {
+    animation: none;
+  }
+}

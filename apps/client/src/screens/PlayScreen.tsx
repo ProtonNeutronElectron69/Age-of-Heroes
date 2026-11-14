@@ -24,9 +24,9 @@ import {
   type Vec3,
 } from "@aoh/rules";
 import { Canvas } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Names } from "../describe";
-import { BoardScene, boardCenter, type Marker } from "../scene/BoardScene";
+import { BoardScene, boardCenter, type CameraFocusRequest, type Marker } from "../scene/BoardScene";
 import { FigureLabels, Figures, type FigureView } from "../scene/Figures";
 import { TestHook } from "../scene/TestHook";
 import { closeOnline } from "../online";
@@ -63,6 +63,38 @@ function writeFlag(key: string, value: boolean): void {
   }
 }
 
+/** How long the pointer rests on a figure before its card shows, and how long the card stays after it leaves. */
+const HOVER_DELAY_MS = 500;
+const HOVER_GRACE_MS = 150;
+
+/**
+ * The figure whose card to show for the pointer: it changes only after the
+ * pointer has rested on a figure for HOVER_DELAY_MS, and clears shortly after
+ * it leaves. Passing between a figure's parts (or its label) does not flicker.
+ */
+function useDelayedHover(): [string | null, (id: string | null) => void] {
+  const [shown, setShown] = useState<string | null>(null);
+  const shownRef = useRef<string | null>(null);
+  const aim = useRef<string | null>(null);
+  const timer = useRef<number | undefined>(undefined);
+  const show = (id: string | null) => {
+    shownRef.current = id;
+    setShown(id);
+  };
+  const onHover = useCallback((id: string | null) => {
+    if (id === aim.current) return;
+    aim.current = id;
+    window.clearTimeout(timer.current);
+    if (id === shownRef.current) return;
+    timer.current = window.setTimeout(() => show(id), id === null ? HOVER_GRACE_MS : HOVER_DELAY_MS);
+  }, []);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  return [shown, onHover];
+}
+
+/** The view the camera glides to when it follows the acting figure: from the south, looking down at about 50 degrees. */
+const FOLLOW_FRAME = { from: { x: 0, y: 1, z: 0.85 }, distance: 15 } as const;
+
 export function PlayScreen({ session }: { session: Session }) {
   const { state, ctx } = session;
   const isOnline = session.kind === "online";
@@ -73,7 +105,12 @@ export function PlayScreen({ session }: { session: Session }) {
   const board = ctx.board;
   const center = useMemo(() => boardCenter(board), [board]);
 
-  const [hoveredFigure, setHoveredFigure] = useState<string | null>(null);
+  const [hoveredFigure, hoverFigure] = useDelayedHover();
+  /** The figure the camera last glided to; a new key starts a glide. */
+  const [follow, setFollow] = useState<{ id: string; key: number } | null>(null);
+  const followFigure = (id: string | null | undefined) => {
+    if (id) setFollow((f) => ({ id, key: (f?.key ?? 0) + 1 }));
+  };
   const [pinnedFigure, setPinnedFigure] = useState<string | null>(null);
   const [hoverStep, setHoverStep] = useState<Step | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -160,6 +197,16 @@ export function PlayScreen({ session }: { session: Session }) {
   const turnKey = active ? `${state.round}:${active.token}:${active.player}` : "";
   // Eye view belongs to one figure's turn; a new turn (or the end of the round) starts outside it.
   useEffect(() => setEyeView(false), [turnKey]);
+  // A new turn brings the camera to the unit that acts and shows its card, on every player's turn.
+  useEffect(() => {
+    if (!active || !activeUnit) return;
+    const living = activeUnit.figures.filter((f) => !f.destroyed && f.position);
+    const first = (living.find((f) => canAct(f.id)) ?? living[0])?.id;
+    // The turn starts with this figure chosen, so the arrow and the camera agree.
+    if (first && canAct(first)) setSelected(first);
+    followFigure(first);
+    setShowCard(true);
+  }, [turnKey]);
   useEffect(() => {
     if (!active || !activeUnit) {
       setSelected(null);
@@ -190,6 +237,8 @@ export function PlayScreen({ session }: { session: Session }) {
     const fresh = after.find((id) => canAct(id) && !active.moved.includes(id) && !active.attacked.includes(id));
     const next = fresh ?? after.find((id) => canAct(id)) ?? (canAct(actor.id) ? actor.id : null);
     if (next) setSelected(next);
+    // The camera follows the selection to the squad's next figure.
+    if (next && next !== actor.id) followFigure(next);
   }, [session.lastEvents]);
   useEffect(() => {
     const f = activeUnit?.figures.find((x) => x.id === selected);
@@ -445,11 +494,48 @@ export function PlayScreen({ session }: { session: Session }) {
 
   const replay = state.phase === "gameOver" ? replayOf(session) : null;
 
-  const ownFigure = selected ?? (deployUnit ? deployUnit.figures[0]?.id : null) ?? null;
-  const cardFigure = hoveredFigure ?? pinnedFigure ?? (showCard ? ownFigure : null);
-  const found = cardFigure ? findFigure(state, cardFigure) : undefined;
-  const cardUnit = found?.unit;
-  const cardFigureState = found?.figure;
+  // ---- Unit cards: the acting unit's, and below it the one under the pointer or clicked ----
+  const ownFigure =
+    selected ??
+    (deployUnit ? deployUnit.figures[0]?.id : null) ??
+    activeUnit?.figures.find((f) => !f.destroyed && f.position)?.id ??
+    null;
+  const mainCard = showCard && ownFigure ? findFigure(state, ownFigure) : undefined;
+  const otherId = hoveredFigure ?? pinnedFigure;
+  const otherFound = otherId ? findFigure(state, otherId) : undefined;
+  const actingUnitId = deployUnit?.id ?? activeUnit?.id;
+  const otherCard = otherFound && otherFound.unit.id !== actingUnitId && otherFound.unit.id !== mainCard?.unit.id ? otherFound : undefined;
+  const cardView = (hit: NonNullable<typeof mainCard>) => (
+    <UnitCardView
+      key={hit.unit.id}
+      card={ctx.cards.get(hit.unit.cardId)!}
+      mode={mode}
+      color={names.playerColor(hit.unit.owner)}
+      alive={hit.unit.figures.filter((f) => !f.destroyed).length}
+      wounds={hit.figure.wounds}
+    />
+  );
+
+  // ---- Camera: glide to the figure being followed, read when the request is made ----
+  const focusRequest = useMemo((): CameraFocusRequest | null => {
+    if (!follow) return null;
+    const hit = findFigure(state, follow.id);
+    if (!hit?.figure.position) return null;
+    const card = ctx.cards.get(hit.unit.cardId)!;
+    const spots = figureSpots(hit.figure, card.footprint, card.height, ctx);
+    const at = spots.map((s) => hexToWorld(s.hex));
+    const ground = Math.max(...spots.map((s) => s.elevation));
+    return {
+      key: follow.key,
+      point: {
+        x: at.reduce((n, p) => n + p.x, 0) / at.length,
+        y: (ground + card.height * 0.4) * LEVEL_HEIGHT,
+        z: at.reduce((n, p) => n + p.z, 0) / at.length,
+      },
+      frame: FOLLOW_FRAME,
+    };
+    // Only a new follow request moves the camera; later state changes must not.
+  }, [follow]);
 
   return (
     <div className="screen play" data-pending={busy ? "true" : undefined}>
@@ -466,8 +552,9 @@ export function PlayScreen({ session }: { session: Session }) {
           onSurfaceClick={onSurfaceClick}
           onSurfaceHover={setHoverStep}
           eyeView={eye}
+          focus={focusRequest}
         >
-          <Figures figures={figures} onClick={onFigureClick} onHover={setHoveredFigure} labels={labelLayer} />
+          <Figures figures={figures} onClick={onFigureClick} onHover={hoverFigure} labels={labelLayer} />
         </BoardScene>
         <TestHook offset={center} />
       </Canvas>
@@ -651,21 +738,17 @@ export function PlayScreen({ session }: { session: Session }) {
         <EventLog events={session.events} names={names} />
       </aside>
 
-      <aside className="hud-right">
+      <aside className={`hud-right${mainCard && otherCard ? " two-cards" : ""}`}>
         {ownFigure && (
           <button type="button" className="card-toggle" aria-pressed={showCard} onClick={toggleCard} title="Show or hide the selected unit's card (C)">
             {showCard ? "Hide unit card" : "Show unit card"}
           </button>
         )}
-        {cardUnit && (
-          <UnitCardView
-            key={cardUnit.id}
-            card={ctx.cards.get(cardUnit.cardId)!}
-            mode={mode}
-            color={names.playerColor(cardUnit.owner)}
-            alive={cardUnit.figures.filter((f) => !f.destroyed).length}
-            wounds={cardFigureState?.wounds}
-          />
+        {mainCard && <div className="unit-card-main">{cardView(mainCard)}</div>}
+        {otherCard && (
+          <div className="unit-card-other" aria-label="Other unit">
+            {cardView(otherCard)}
+          </div>
         )}
         <DisplayMenu />
         <GameMenu session={session} />
