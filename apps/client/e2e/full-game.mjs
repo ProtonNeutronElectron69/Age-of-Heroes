@@ -242,7 +242,7 @@ try {
     if (await closeDice.count()) await closeDice.click();
 
     // Screen points are only good once the camera has stopped gliding.
-    await steadyCamera(5);
+    await steadyCamera(1);
     const ui = await page.evaluate(() => window.__aohUi);
     const squad = (await turn.locator(".figure-button").count()) > 1;
     // Attack whenever the selected figure has a target.

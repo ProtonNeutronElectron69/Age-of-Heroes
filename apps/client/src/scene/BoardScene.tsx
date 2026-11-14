@@ -233,9 +233,15 @@ function KeyboardPan() {
   return null;
 }
 
-/** How close the camera comes when it jumps to a point, and how fast it gets there. */
+/** How close the camera comes when it jumps to a point. */
 const FOCUS_DISTANCE = 16;
-const FOCUS_EASE = 0.18;
+/**
+ * How fast it gets there: the share of the remaining way covered each second is
+ * 1 - e^-FOCUS_RATE, so most of a glide takes about 0.3 seconds at any frame rate.
+ * After FOCUS_MAX_SECONDS it snaps the last bit.
+ */
+const FOCUS_RATE = 10;
+const FOCUS_MAX_SECONDS = 0.8;
 
 /** A request to move the camera; a new `key` starts a move. */
 export interface CameraFocusRequest {
@@ -258,12 +264,12 @@ function CameraFocus({ focus, center }: { focus: CameraFocusRequest; center: { x
     addEventListener?: (type: string, fn: () => void) => void;
     removeEventListener?: (type: string, fn: () => void) => void;
   } | null;
-  const goal = useRef<{ target: Vector3; eye: Vector3 | null } | null>(null);
+  const goal = useRef<{ target: Vector3; eye: Vector3 | null; age: number } | null>(null);
   const { point, key, frame } = focus;
   useEffect(() => {
     const target = new Vector3(point.x - center.x, point.y, point.z - center.z);
     const eye = frame ? new Vector3(frame.from.x, frame.from.y, frame.from.z).setLength(frame.distance).add(target) : null;
-    goal.current = { target, eye };
+    goal.current = { target, eye, age: 0 };
     // Only a new key starts a move; the point is read when it does.
   }, [key]);
   useEffect(() => {
@@ -273,24 +279,27 @@ function CameraFocus({ focus, center }: { focus: CameraFocusRequest; center: { x
     return () => controls.removeEventListener?.("start", stop);
   }, [controls]);
   const offset = useMemo(() => new Vector3(), []);
-  useFrame(() => {
+  useFrame((_, delta) => {
     const g = goal.current;
     if (!g || !controls) return;
+    g.age += delta;
+    const last = g.age >= FOCUS_MAX_SECONDS;
+    const ease = last ? 1 : 1 - Math.exp(-FOCUS_RATE * Math.min(delta, 0.25));
     if (g.eye) {
-      controls.target.lerp(g.target, FOCUS_EASE);
-      camera.position.lerp(g.eye, FOCUS_EASE);
+      controls.target.lerp(g.target, ease);
+      camera.position.lerp(g.eye, ease);
       controls.update();
-      if (controls.target.distanceTo(g.target) < 0.01 && camera.position.distanceTo(g.eye) < 0.01) goal.current = null;
+      if (last || (controls.target.distanceTo(g.target) < 0.02 && camera.position.distanceTo(g.eye) < 0.02)) goal.current = null;
       return;
     }
     offset.copy(camera.position).sub(controls.target);
     const distance = offset.length();
     const wanted = Math.min(distance, FOCUS_DISTANCE);
-    controls.target.lerp(g.target, FOCUS_EASE);
-    offset.setLength(distance + (wanted - distance) * FOCUS_EASE);
+    controls.target.lerp(g.target, ease);
+    offset.setLength(distance + (wanted - distance) * ease);
     camera.position.copy(controls.target).add(offset);
     controls.update();
-    if (controls.target.distanceTo(g.target) < 0.01 && Math.abs(distance - wanted) < 0.01) goal.current = null;
+    if (last || (controls.target.distanceTo(g.target) < 0.02 && Math.abs(distance - wanted) < 0.02)) goal.current = null;
   });
   return null;
 }

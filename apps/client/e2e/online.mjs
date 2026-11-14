@@ -67,7 +67,7 @@ const hexDistance = (a, b) => {
   return (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
 };
 
-/** Waits until the camera has stopped moving: five frames in a row project the same point. */
+/** Waits until the camera has stopped moving: two frames in a row project the same point (a glide changes every frame). */
 async function steadyCamera(page) {
   await page.evaluate(
     () =>
@@ -78,7 +78,7 @@ async function steadyCamera(page) {
           const p = JSON.stringify(window.__aoh?.project(0, 0, 0));
           same = p === last ? same + 1 : 0;
           last = p;
-          if (same >= 5) resolve();
+          if (same >= 1) resolve();
           else requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
