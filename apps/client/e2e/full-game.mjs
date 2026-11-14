@@ -76,8 +76,11 @@ try {
   await page.goto(url);
   if (MODE === "advanced") {
     await page.getByRole("radio", { name: "Advanced" }).click();
-    await page.getByRole("radio", { name: "300 points" }).click();
+    // A small army keeps the game short; the buttons start at 500.
+    await page.getByLabel("Points per player").fill("300");
+    await page.getByLabel("Points per player").blur();
   } else {
+    await page.getByRole("radio", { name: "Basic" }).click();
     await page.getByRole("radio", { name: "2 cards" }).click();
   }
   await page.getByRole("radio", { name: `${ROUNDS} rounds` }).click();

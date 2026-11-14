@@ -40,6 +40,7 @@ async function expectSameGame(before, how) {
 
 try {
   await page.goto(url);
+  await page.getByRole("radio", { name: "Basic" }).click();
   await page.getByRole("radio", { name: "1 card" }).click();
   await page.getByRole("radio", { name: "5 rounds" }).click();
   await page.getByRole("button", { name: "Start draft" }).click();

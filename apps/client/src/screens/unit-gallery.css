@@ -87,15 +87,50 @@
   background: none;
 }
 
+/* Pointing at a card makes it hop and gives its hex outline a gold glow. */
+.unit-gallery-card .hex-card {
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
 .unit-gallery-card:hover:not(:disabled) {
   filter: none;
-  border-color: var(--border);
-  background: rgba(255, 255, 255, 0.03);
+}
+
+.unit-gallery-card:hover:not(:disabled) .hex-card,
+.unit-gallery-card:focus-visible .hex-card {
+  transform: translateY(-4px);
+  filter: drop-shadow(0 0 1.5px #ffe08a) drop-shadow(0 0 7px rgba(242, 181, 68, 0.85));
+  animation: gallery-hop 0.38s ease-out;
+}
+
+@keyframes gallery-hop {
+  0% {
+    transform: translateY(0);
+  }
+  45% {
+    transform: translateY(-10px);
+  }
+  75% {
+    transform: translateY(-2px);
+  }
+  100% {
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unit-gallery-card .hex-card {
+    transition: none;
+  }
+
+  .unit-gallery-card:hover:not(:disabled) .hex-card,
+  .unit-gallery-card:focus-visible .hex-card {
+    animation: none;
+  }
 }
 
 .unit-gallery-card:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 0;
+  outline: none;
 }
 
 .unit-gallery-empty {
