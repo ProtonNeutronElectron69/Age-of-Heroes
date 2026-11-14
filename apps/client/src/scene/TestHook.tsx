@@ -30,7 +30,7 @@ declare global {
 export function TestHook({ offset }: { offset: { x: number; z: number } }) {
   const { camera, gl } = useThree();
   useEffect(() => {
-    window.__aoh = {
+    const hook: NonNullable<Window["__aoh"]> = {
       project(q, r, elevation) {
         const { x, z } = hexToWorld({ q, r }, HEX_SIZE);
         const v = new Vector3(x - offset.x, elevation * LEVEL_HEIGHT, z - offset.z).project(camera);
@@ -42,8 +42,11 @@ export function TestHook({ offset }: { offset: { x: number; z: number } }) {
         return { calls: r.calls, triangles: r.triangles, lines: r.lines };
       },
     };
+    window.__aoh = hook;
+    // A canvas can shut down after the next screen's has started (the menu's backdrop does),
+    // so only remove the hook if it is still this one.
     return () => {
-      delete window.__aoh;
+      if (window.__aoh === hook) delete window.__aoh;
     };
   }, [camera, gl, offset]);
   return null;

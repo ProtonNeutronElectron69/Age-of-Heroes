@@ -101,7 +101,8 @@ function Drift({ span, still }: { span: number; still: boolean }) {
 /** The War Table backdrop: the Proving Grounds with six armies on it, drawn by the game itself. */
 export function MenuBoard() {
   const { figures, board } = useMemo(muster, []);
-  const span = useMemo(() => boardCenter(board).span, [board]);
+  const centre = useMemo(() => boardCenter(board), [board]);
+  const span = centre.span;
   const still = useMemo(() => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false, []);
   return (
     <div className="menu-board" aria-hidden="true">
@@ -111,7 +112,7 @@ export function MenuBoard() {
           <Figures figures={figures} style="models" />
         </BoardScene>
         <Drift span={span} still={still} />
-        <TestHook offset={boardCenter(board)} />
+        <TestHook offset={centre} />
       </Canvas>
     </div>
   );
