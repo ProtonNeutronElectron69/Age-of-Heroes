@@ -16,6 +16,8 @@ The core game is complete and playable: the Basic and Advanced rules, a 48-unit 
 
 - **Done (Phase 7):** a reworked main menu in four styles to choose from under **Menu style**: War Table (the board and its armies drift behind the menu), Atlas (an inked atlas on parchment), Banner Hall (house banners in a torchlit hall) and Hex Command (a honeycomb of faction hexes). Each fits a landscape window without scrolling and animates its buttons on hover.
 
+- **Done:** the play screen follows the action. Each turn, on every player's turn, the camera glides to the acting unit at a standard zoom and angle and its card comes up; after a squad figure acts, the camera moves on to the next figure. Resting the pointer on another unit for half a second shows its card, smaller, below the acting unit's card until the pointer leaves; clicking a unit keeps its card there.
+
 ### Ideas, not scheduled
 - More premade maps.
 - A balance pass from real playtests (costs come from the balance model so far).

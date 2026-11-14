@@ -5,7 +5,7 @@
  * Panel parts (.mp-*) take their colours from the --p-* variables each style sets.
  */
 
-.menu {
+.main-menu {
   position: relative;
   height: 100%;
   overflow: hidden;
@@ -26,18 +26,18 @@
   color: var(--p-text);
 }
 
-.menu button {
+.main-menu button {
   font: inherit;
   cursor: pointer;
 }
 
-.menu button:disabled {
+.main-menu button:disabled {
   cursor: default;
 }
 
-.menu button:focus-visible,
-.menu input:focus-visible,
-.menu select:focus-visible {
+.main-menu button:focus-visible,
+.main-menu input:focus-visible,
+.main-menu select:focus-visible {
   outline: 2px solid #ffd479;
   outline-offset: 2px;
 }
@@ -1619,16 +1619,16 @@
    Compact: a narrow or upright window flows the menu into one column.
    ===================================================================== */
 
-.menu.compact {
+.main-menu.compact {
   overflow-y: auto;
 }
 
-.menu.compact .menu-fit,
-.menu.compact .menu-stage,
-.menu.compact .menu-title,
-.menu.compact .menu-cmds,
-.menu.compact .menu-panel,
-.menu.compact .menu-styles {
+.main-menu.compact .menu-fit,
+.main-menu.compact .menu-stage,
+.main-menu.compact .menu-title,
+.main-menu.compact .menu-cmds,
+.main-menu.compact .menu-panel,
+.main-menu.compact .menu-styles {
   position: static;
   transform: none;
   inset: auto;
@@ -1637,36 +1637,36 @@
   max-height: none;
 }
 
-.menu.compact .menu-stage {
+.main-menu.compact .menu-stage {
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 20px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
 }
 
-.menu.compact .menu-decor .atlas-grid,
-.menu.compact .menu-decor .atlas-rose,
-.menu.compact .menu-decor .hall-torch,
-.menu.compact .menu-decor .hall-rod,
-.menu.compact .menu-decor .hall-bricks {
+.main-menu.compact .menu-decor .atlas-grid,
+.main-menu.compact .menu-decor .atlas-rose,
+.main-menu.compact .menu-decor .hall-torch,
+.main-menu.compact .menu-decor .hall-rod,
+.main-menu.compact .menu-decor .hall-bricks {
   display: none;
 }
 
-.menu.compact .menu-title {
+.main-menu.compact .menu-title {
   text-align: left;
 }
 
-.menu.compact .menu-title h1 {
+.main-menu.compact .menu-title h1 {
   font-size: 34px;
 }
 
-.menu.compact .menu-cmds {
+.main-menu.compact .menu-cmds {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 8px;
 }
 
-.menu.compact .mc {
+.main-menu.compact .mc {
   position: relative;
   inset: auto;
   width: auto;
@@ -1682,18 +1682,18 @@
   opacity: 1;
 }
 
-.menu.compact .mc.on {
+.main-menu.compact .mc.on {
   border-color: #f0c977;
   box-shadow: 0 0 0 2px #f0c977;
 }
 
-.menu.compact .mc .mc-bg,
-.menu.compact .mc::after,
-.menu.compact .mc::before {
+.main-menu.compact .mc .mc-bg,
+.main-menu.compact .mc::after,
+.main-menu.compact .mc::before {
   display: none;
 }
 
-.menu.compact .mc-face {
+.main-menu.compact .mc-face {
   position: static;
   inset: auto;
   clip-path: none;
@@ -1704,7 +1704,7 @@
   gap: 10px;
 }
 
-.menu.compact .mc-icon {
+.main-menu.compact .mc-icon {
   display: grid;
   width: auto;
   height: auto;
@@ -1713,73 +1713,73 @@
   color: inherit;
 }
 
-.menu.compact .mc-text {
+.main-menu.compact .mc-text {
   display: block;
 }
 
-.menu.compact .mc-text::after {
+.main-menu.compact .mc-text::after {
   display: none;
 }
 
-.menu.compact .mc-text b {
+.main-menu.compact .mc-text b {
   font: 600 15px/1.2 "Alegreya Sans", system-ui, sans-serif;
   background: none;
   color: inherit;
 }
 
-.menu.compact .mc-text small {
+.main-menu.compact .mc-text small {
   color: rgba(246, 238, 221, 0.78);
   font-style: normal;
   font-size: 13px;
 }
 
-.menu.compact .menu-panel {
+.main-menu.compact .menu-panel {
   padding: 16px;
   clip-path: none;
 }
 
-.menu.compact .mp-cols,
-.menu.compact .mp-play,
-.menu.compact .mp-saves,
-.menu.compact .mp-play.mp-online {
+.main-menu.compact .mp-cols,
+.main-menu.compact .mp-play,
+.main-menu.compact .mp-saves,
+.main-menu.compact .mp-play.mp-online {
   display: flex;
   flex-direction: column;
 }
 
-.menu.compact .mp-col {
+.main-menu.compact .mp-col {
   display: flex;
 }
 
-.menu.compact .mp-fields,
-.menu.compact .mp-foot {
+.main-menu.compact .mp-fields,
+.main-menu.compact .mp-foot {
   flex-wrap: wrap;
 }
 
-.menu.compact.ms-atlas {
+.main-menu.compact.ms-atlas {
   background: linear-gradient(#eadcbd, #d8c39a);
 }
 
-.menu.compact.ms-atlas .atlas-book {
+.main-menu.compact.ms-atlas .atlas-book {
   display: none;
 }
 
-.menu.compact .menu-styles {
+.main-menu.compact .menu-styles {
   flex-wrap: wrap;
   align-self: flex-start;
   border-radius: 12px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .menu *,
-  .menu *::before,
-  .menu *::after {
+  .main-menu *,
+  .main-menu *::before,
+  .main-menu *::after {
     animation: none !important;
     transition: none !important;
   }
 }
 
 /* A panel with a fixed height keeps its main button at the bottom. */
-.menu:not(.compact) .menu-panel > .mp {
+.main-menu:not(.compact) .menu-panel > .mp {
   flex: 1;
 }
 

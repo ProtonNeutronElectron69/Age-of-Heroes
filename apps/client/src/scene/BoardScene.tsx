@@ -59,7 +59,7 @@ interface Props {
   /** "select": the left button is left free (for dragging out a box) and the right button turns the camera. */
   leftButton?: "camera" | "select";
   /** Move the camera to look at this point (board coordinates) whenever `key` changes. */
-  focus?: { point: Vec3; key: number } | null;
+  focus?: CameraFocusRequest | null;
   /** Figure's-eye view: put the camera at `eye` looking at `look` (board coordinates). */
   eyeView?: { eye: Vec3; look: Vec3 } | null;
   /** A backdrop only: no camera controls or keyboard panning; the caller moves the camera. */
@@ -237,28 +237,60 @@ function KeyboardPan() {
 const FOCUS_DISTANCE = 16;
 const FOCUS_EASE = 0.18;
 
-/** Glides the map camera to look at a point, keeping its angle. */
-function CameraFocus({ focus, center }: { focus: { point: Vec3; key: number }; center: { x: number; z: number } }) {
+/** A request to move the camera; a new `key` starts a move. */
+export interface CameraFocusRequest {
+  readonly point: Vec3;
+  readonly key: number;
+  /** Also set the view: look from this direction (it need not be unit length) at this distance. */
+  readonly frame?: { readonly from: Vec3; readonly distance: number };
+}
+
+/**
+ * Glides the map camera to look at a point. Without a frame it keeps its angle
+ * and comes no further away than FOCUS_DISTANCE; with one it ends at the
+ * frame's distance and direction. Turning or zooming the camera by hand stops it.
+ */
+function CameraFocus({ focus, center }: { focus: CameraFocusRequest; center: { x: number; z: number } }) {
   const camera = useThree((s) => s.camera);
-  const controls = useThree((s) => s.controls) as unknown as { target: Vector3; update: () => void } | null;
-  const goal = useRef<Vector3 | null>(null);
-  const { point, key } = focus;
+  const controls = useThree((s) => s.controls) as unknown as {
+    target: Vector3;
+    update: () => void;
+    addEventListener?: (type: string, fn: () => void) => void;
+    removeEventListener?: (type: string, fn: () => void) => void;
+  } | null;
+  const goal = useRef<{ target: Vector3; eye: Vector3 | null } | null>(null);
+  const { point, key, frame } = focus;
   useEffect(() => {
-    goal.current = new Vector3(point.x - center.x, point.y, point.z - center.z);
+    const target = new Vector3(point.x - center.x, point.y, point.z - center.z);
+    const eye = frame ? new Vector3(frame.from.x, frame.from.y, frame.from.z).setLength(frame.distance).add(target) : null;
+    goal.current = { target, eye };
     // Only a new key starts a move; the point is read when it does.
   }, [key]);
+  useEffect(() => {
+    if (!controls?.addEventListener) return;
+    const stop = () => (goal.current = null);
+    controls.addEventListener("start", stop);
+    return () => controls.removeEventListener?.("start", stop);
+  }, [controls]);
   const offset = useMemo(() => new Vector3(), []);
   useFrame(() => {
     const g = goal.current;
     if (!g || !controls) return;
+    if (g.eye) {
+      controls.target.lerp(g.target, FOCUS_EASE);
+      camera.position.lerp(g.eye, FOCUS_EASE);
+      controls.update();
+      if (controls.target.distanceTo(g.target) < 0.01 && camera.position.distanceTo(g.eye) < 0.01) goal.current = null;
+      return;
+    }
     offset.copy(camera.position).sub(controls.target);
     const distance = offset.length();
     const wanted = Math.min(distance, FOCUS_DISTANCE);
-    controls.target.lerp(g, FOCUS_EASE);
+    controls.target.lerp(g.target, FOCUS_EASE);
     offset.setLength(distance + (wanted - distance) * FOCUS_EASE);
     camera.position.copy(controls.target).add(offset);
     controls.update();
-    if (controls.target.distanceTo(g) < 0.01 && Math.abs(distance - wanted) < 0.01) goal.current = null;
+    if (controls.target.distanceTo(g.target) < 0.01 && Math.abs(distance - wanted) < 0.01) goal.current = null;
   });
   return null;
 }
