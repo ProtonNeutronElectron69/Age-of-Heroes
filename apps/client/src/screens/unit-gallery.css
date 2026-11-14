@@ -1,0 +1,212 @@
+/* The unit gallery (screens/UnitGalleryScreen.tsx), opened from the main menu. */
+.unit-gallery {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 16px 20px 0;
+}
+
+.unit-gallery-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+}
+
+.unit-gallery-head h1 {
+  margin: 0;
+}
+
+.unit-gallery-head p {
+  margin: 0;
+}
+
+.unit-gallery-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px 16px;
+}
+
+.unit-gallery-controls .field {
+  margin: 0;
+}
+
+.unit-gallery-controls input[type="search"] {
+  width: 200px;
+}
+
+.unit-gallery-sort {
+  display: flex;
+  gap: 6px;
+}
+
+.unit-gallery-sort button {
+  min-width: 38px;
+  padding: 7px 10px;
+}
+
+.unit-gallery-controls .link-button {
+  align-self: center;
+}
+
+.unit-gallery-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 24px;
+}
+
+.unit-gallery-grid {
+  --across: 3;
+  display: grid;
+  grid-template-columns: repeat(var(--across), minmax(0, 1fr));
+  gap: 16px 20px;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 4px;
+  list-style: none;
+}
+
+.unit-gallery-grid.small {
+  --across: 5;
+  gap: 10px 12px;
+}
+
+.unit-gallery-grid.large {
+  --across: 1;
+  max-width: 760px;
+}
+
+/* The whole square round the card takes the click, so the button itself is see-through. */
+.unit-gallery-card {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: none;
+}
+
+.unit-gallery-card:hover:not(:disabled) {
+  filter: none;
+  border-color: var(--border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.unit-gallery-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+
+.unit-gallery-empty {
+  text-align: center;
+  padding: 40px 0;
+}
+
+/* Phones cannot fit five or three cards a row and still read them. */
+@media (max-width: 700px) {
+  .unit-gallery {
+    padding: 12px 16px 0;
+  }
+
+  .unit-gallery-grid.small {
+    --across: 3;
+  }
+
+  .unit-gallery-grid.medium {
+    --across: 2;
+  }
+
+  .unit-gallery-controls input[type="search"] {
+    width: 100%;
+  }
+
+  .unit-gallery-controls > label:first-child {
+    flex: 1 1 100%;
+  }
+}
+
+/* ---- The figure viewer ---- */
+
+.unit-viewer-backdrop {
+  position: fixed;
+}
+
+.unit-viewer {
+  width: min(1180px, 100%);
+  height: min(780px, 100%);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  background: var(--panel-solid);
+  /* Solid already; blurring the whole grid behind it every frame is slow. */
+  backdrop-filter: none;
+}
+
+.unit-viewer-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.unit-viewer-title {
+  margin: 0;
+  font-size: 20px;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+}
+
+.unit-viewer-nav {
+  display: flex;
+  gap: 6px;
+}
+
+.unit-viewer-body {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 14px;
+}
+
+.unit-viewer-stage {
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.unit-viewer-side {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+@media (max-width: 820px) {
+  .unit-viewer-backdrop {
+    padding: 8px;
+  }
+
+  .unit-viewer {
+    height: 100%;
+  }
+
+  .unit-viewer-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(260px, 1fr) auto;
+    overflow-y: auto;
+  }
+
+  .unit-viewer-side {
+    overflow: visible;
+  }
+
+  .unit-viewer-side .hex-card {
+    max-width: 360px;
+    margin: 0 auto;
+  }
+}

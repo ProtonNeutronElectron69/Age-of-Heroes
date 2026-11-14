@@ -4,13 +4,15 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable: the Basic and Advanced rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. Over 450 unit and simulation tests and 6 browser tests run in CI, each pull request running only the ones its changes affect ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable: the Basic and Advanced rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. Over 450 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 - **Needs the repository owner:** create the online game server on Render and set the `GAME_SERVER_URL` repository variable (about 10 minutes; see [HOSTING.md](HOSTING.md)). Until then the published site can only play online against a server whose address is typed in.
 - **On hold (Phase 6):** a computer opponent, and a tutorial built on the Basic game.
 - **In progress (Phase 7):** 3D figure models, in stages. Stage 1 gives every unit a low polygon model of the right size and shape, in flat colour. All 48 units have one, and the owner has approved their look; see them at `?models`. Each figure stands on a light brown base with a coloured ring round its edge, and there are three colour schemes to choose between. **Next:** draw the models on the board in place of tokens, with the colour scheme as a setting. After that, later stages add detail and colour.
 - **On hold (Phase 7):** sound and music, terrain and scenery art.
+
+- **Done (Phase 7):** a unit gallery on the main menu. It shows every unit card in a scrolling grid, 5, 3 or 1 across, filtered by faction, type, attack and a search and sorted by name, faction or a stat. Choosing a card opens its figure model to turn and zoom.
 
 ### Ideas, not scheduled
 - More premade maps.

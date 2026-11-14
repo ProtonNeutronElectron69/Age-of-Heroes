@@ -28,6 +28,7 @@ export const E2E = {
   saves: "node e2e/saves.mjs",
   online: "node e2e/online.mjs",
   models: "node e2e/models.mjs",
+  gallery: "node e2e/gallery.mjs",
 };
 
 const ALL = "all";
@@ -72,10 +73,13 @@ export const RULES = [
   { area: "browser test", match: /^apps\/client\/e2e\/saves\.mjs$/, check: false, unit: [], e2e: ["saves"] },
   { area: "browser test", match: /^apps\/client\/e2e\/online\.mjs$/, check: false, unit: [], e2e: ["online"] },
   { area: "browser test", match: /^apps\/client\/e2e\/models\.mjs$/, check: false, unit: [], e2e: ["models"] },
+  { area: "browser test", match: /^apps\/client\/e2e\/gallery\.mjs$/, check: false, unit: [], e2e: ["gallery"] },
 
   { area: "client tests", match: /^apps\/client\/test\//, check: true, unit: [UNIT.client], e2e: [] },
-  // Figure models are only drawn on the model page so far. Once the play screen draws them, they belong with the rest of the client.
-  { area: "figure models", match: /^apps\/client\/src\/(models\/|screens\/(ModelGalleryScreen\.tsx|model-gallery\.css)$)/, check: true, unit: [UNIT.client], e2e: ["models"] },
+  // Figure models are only drawn on the model page and in the unit gallery so far. Once the play screen draws them, they belong with the rest of the client.
+  { area: "figure models", match: /^apps\/client\/src\/(models\/|scene\/standing\.tsx$)/, check: true, unit: [UNIT.client], e2e: ["models", "gallery"] },
+  { area: "model page", match: /^apps\/client\/src\/screens\/(ModelGalleryScreen\.tsx|model-gallery\.css)$/, check: true, unit: [], e2e: ["models"] },
+  { area: "unit gallery", match: /^apps\/client\/src\/screens\/(UnitGalleryScreen\.tsx|unit-gallery\.css)$/, check: true, unit: [], e2e: ["gallery"] },
 
   // Client files that only one part of the game uses.
   { area: "map editor", match: /^apps\/client\/src\/screens\/EditorScreen\.tsx$/, check: true, unit: [], e2e: ["editor"] },

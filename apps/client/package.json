@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
-    "e2e": "node e2e/full-game.mjs basic && node e2e/full-game.mjs advanced && node e2e/editor.mjs && node e2e/saves.mjs && node e2e/online.mjs && node e2e/models.mjs"
+    "e2e": "node e2e/full-game.mjs basic && node e2e/full-game.mjs advanced && node e2e/editor.mjs && node e2e/saves.mjs && node e2e/online.mjs && node e2e/models.mjs && node e2e/gallery.mjs"
   },
   "dependencies": {
     "@aoh/content": "workspace:*",

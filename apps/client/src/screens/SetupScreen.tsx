@@ -36,11 +36,13 @@ interface Props {
   initialMapId?: string;
   /** Watch a finished game from a replay file. */
   onOpenReplay: (replay: Replay) => void;
+  /** Browse every unit card and its figure model. */
+  onOpenUnits: () => void;
 }
 
 type Where = "local" | "online";
 
-export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props) {
+export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUnits }: Props) {
   const online = useOnline();
   const [where, setWhere] = useState<Where>(() => (online.error || savedSeat() ? "online" : "local"));
   const [serverUrl, setServerUrl] = useState(defaultServerUrl);
@@ -631,6 +633,9 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay }: Props)
           </button>
           <button type="button" onClick={() => replayInput.current?.click()}>
             Watch a replay
+          </button>
+          <button type="button" onClick={onOpenUnits}>
+            Unit gallery
           </button>
           <input
             ref={replayInput}

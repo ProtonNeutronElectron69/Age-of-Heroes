@@ -8,7 +8,7 @@ Checks run only for the parts of the game a change can affect. The browser tests
 |---|---|---|
 | Typecheck and build | Every package compiles, and the client and server build | under a minute |
 | Unit tests | Vitest, by package: `packages/rules`, `packages/content`, `packages/protocol`, `apps/server`, `apps/client` (the figure models) | seconds |
-| Browser tests | Six Playwright scripts in `apps/client/e2e`: `full-basic`, `full-advanced`, `editor`, `saves`, `online`, `models` | 1 to 3 minutes each; `models` takes seconds |
+| Browser tests | Seven Playwright scripts in `apps/client/e2e`: `full-basic`, `full-advanced`, `editor`, `saves`, `online`, `models`, `gallery` | 1 to 3 minutes each; `models` takes seconds |
 
 ## What a change runs
 
@@ -27,7 +27,9 @@ The first matching row decides for each file; a change runs everything its files
 | Map editor screen | yes | none | editor |
 | Online lobby and connection (`online.ts`, `LobbyScreen`, `OnlineBar`) | yes | none | online |
 | Saves and replays (`saves.ts`, `SaveDialog`, `ReplayScreen`) | yes | none | saves, online |
-| Figure models (`apps/client/src/models`) and the model page (`ModelGalleryScreen`, `model-gallery.css`) | yes | client | models |
+| Figure models (`apps/client/src/models`, `scene/standing.tsx`) | yes | client | models, gallery |
+| The model page (`ModelGalleryScreen`, `model-gallery.css`) | yes | none | models |
+| The unit gallery (`UnitGalleryScreen`, `unit-gallery.css`) | yes | none | gallery |
 | Any other client file | yes | client | all |
 | A browser test script | yes | none | that script |
 | Shared setup: `package.json`, the lockfile, `tsconfig.base.json`, `vitest.config.ts`, `ci.yml`, `scripts/` | yes | all | all |
@@ -35,7 +37,7 @@ The first matching row decides for each file; a change runs everything its files
 
 Unit tests follow the package graph: `rules` is used by everything, `content` by the protocol, the server and the client, and the protocol by the server. The client's own tests (`apps/client/test`) cover the figure models: each one must be as tall as its card's Height, fit its base and stay low polygon.
 
-Figure models are only drawn on the model page (`?models`) so far, so a model change runs just the `models` browser test. When the play screen draws them, move that rule in with the rest of the client.
+Figure models are only drawn on the model page (`?models`) and in the unit gallery so far, so a model change runs just the `models` and `gallery` browser tests. When the play screen draws them, move that rule in with the rest of the client.
 
 ## Safety nets
 
