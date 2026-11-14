@@ -44,20 +44,26 @@ async function screenPoint(q, r, elevation) {
   );
 }
 
-/** Triangles in the frame once the count has held for a second. */
+/**
+ * Triangles drawn once 20 frames in a row have drawn the same. Counting frames, not
+ * time, waits out a new shader: software WebGL can stall frames for a second compiling one.
+ */
 async function steadyTriangles() {
-  await page.evaluate(() => delete window.__steady);
-  const handle = await page.waitForFunction(
-    () => {
-      const t = window.__aoh?.stats().triangles ?? 0;
-      const w = (window.__steady ??= { t, since: performance.now() });
-      if (w.t !== t) Object.assign(w, { t, since: performance.now() });
-      return performance.now() - w.since > 1000 ? t : false;
-    },
-    null,
-    { polling: 100 },
+  return page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        let last = -1;
+        let same = 0;
+        const tick = () => {
+          const t = window.__aoh?.stats().triangles ?? 0;
+          same = t === last ? same + 1 : 0;
+          last = t;
+          if (same >= 20) resolve(t);
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }),
   );
-  return handle.jsonValue();
 }
 
 let moves = 0;
