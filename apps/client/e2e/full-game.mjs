@@ -76,10 +76,13 @@ async function tagOf(id) {
   }, id);
 }
 
-/** Waits until the camera has stopped moving: 20 frames in a row project the same point. */
-async function steadyCamera() {
+/**
+ * Waits until the camera has stopped moving: `frames` frames in a row project the same point.
+ * The camera glides to the acting figure after a turn starts or a squad figure acts, so clicks wait for it.
+ */
+async function steadyCamera(frames = 20) {
   await page.evaluate(
-    () =>
+    (frames) =>
       new Promise((resolve) => {
         let last = "";
         let same = 0;
@@ -87,11 +90,12 @@ async function steadyCamera() {
           const p = JSON.stringify(window.__aoh?.project(0, 0, 0));
           same = p === last ? same + 1 : 0;
           last = p;
-          if (same >= 20) resolve();
+          if (same >= frames) resolve();
           else requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
       }),
+    frames,
   );
 }
 
@@ -200,12 +204,17 @@ try {
       const acting = await page.evaluate(() => window.__aohUi?.selected);
       if (acting && !followChecked) {
         await steadyCamera();
-        const tag = await tagOf(acting);
-        const view = page.viewportSize();
-        if (!tag || Math.abs(tag.x - view.width / 2) > view.width * 0.2 || Math.abs(tag.y - view.height / 2) > view.height * 0.3) {
-          fail(`The camera did not come to the acting figure at the start of a turn: its tag is at ${JSON.stringify(tag)}`);
+        // Judge only a turn that is still the same turn, with the figure it now has chosen.
+        const still = (await turn.locator(".turn-banner").innerText()) === key && (await page.locator(".round-label").innerText()) === round;
+        const now = await page.evaluate(() => window.__aohUi?.selected);
+        if (still && now) {
+          const tag = await tagOf(now);
+          const view = page.viewportSize();
+          if (!tag || Math.abs(tag.x - view.width / 2) > view.width * 0.2 || Math.abs(tag.y - view.height / 2) > view.height * 0.3) {
+            fail(`The camera did not come to the acting figure ${now} at the start of a turn: its tag is at ${JSON.stringify(tag)}`);
+          }
+          followChecked = true;
         }
-        followChecked = true;
       }
       // Resting the pointer on another unit's figure shows its card below the acting unit's, until the pointer leaves.
       if (acting && !hoverChecked) {
@@ -232,6 +241,8 @@ try {
     const closeDice = page.getByRole("button", { name: "Close dice" });
     if (await closeDice.count()) await closeDice.click();
 
+    // Screen points are only good once the camera has stopped gliding.
+    await steadyCamera(5);
     const ui = await page.evaluate(() => window.__aohUi);
     const squad = (await turn.locator(".figure-button").count()) > 1;
     // Attack whenever the selected figure has a target.

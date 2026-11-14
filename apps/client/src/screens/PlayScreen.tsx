@@ -201,7 +201,10 @@ export function PlayScreen({ session }: { session: Session }) {
   useEffect(() => {
     if (!active || !activeUnit) return;
     const living = activeUnit.figures.filter((f) => !f.destroyed && f.position);
-    followFigure((living.find((f) => canAct(f.id)) ?? living[0])?.id);
+    const first = (living.find((f) => canAct(f.id)) ?? living[0])?.id;
+    // The turn starts with this figure chosen, so the arrow and the camera agree.
+    if (first && canAct(first)) setSelected(first);
+    followFigure(first);
     setShowCard(true);
   }, [turnKey]);
   useEffect(() => {

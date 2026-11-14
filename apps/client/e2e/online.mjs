@@ -67,6 +67,25 @@ const hexDistance = (a, b) => {
   return (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
 };
 
+/** Waits until the camera has stopped moving: five frames in a row project the same point. */
+async function steadyCamera(page) {
+  await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        let last = "";
+        let same = 0;
+        const tick = () => {
+          const p = JSON.stringify(window.__aoh?.project(0, 0, 0));
+          same = p === last ? same + 1 : 0;
+          last = p;
+          if (same >= 5) resolve();
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }),
+  );
+}
+
 async function screenPoint(page, q, r, elevation) {
   return page.evaluate(
     ({ q, r, elevation }) => {
@@ -131,6 +150,8 @@ async function tryAct(p) {
   // The dice stay up until closed (or the next action): close them so they do not cover the board.
   const closeDice = page.getByRole("button", { name: "Close dice" });
   if (await closeDice.count()) await closeDice.click(QUICK);
+  // Screen points are only good once the camera has stopped gliding to the acting figure.
+  await steadyCamera(page);
   const ui = await page.evaluate(() => window.__aohUi);
   if (ui?.selected && ui.targets.length > 0 && !p.handled.has(`attack:${ui.selected}`)) {
     const t = ui.targets[0];
