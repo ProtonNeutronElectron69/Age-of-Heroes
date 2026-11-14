@@ -60,10 +60,12 @@ describe("affected checks", () => {
     expect(pick(["apps/client/src/screens/PlayScreen.tsx"])).toEqual({ check: true, unit: ["apps/client"], e2e: "all" });
   });
 
-  it("runs the client tests, the model page test and the gallery test for a figure model", () => {
-    for (const f of ["apps/client/src/models/units/concord.ts", "apps/client/src/scene/standing.tsx"]) {
-      expect(pick([f])).toEqual({ check: true, unit: ["apps/client"], e2e: ["models", "gallery"] });
-    }
+  it("runs the client tests and every browser test for a figure model, which the board draws", () => {
+    expect(pick(["apps/client/src/models/units/concord.ts"])).toEqual({ check: true, unit: ["apps/client"], e2e: "all" });
+  });
+
+  it("runs the model page and gallery tests for the display board they share", () => {
+    expect(pick(["apps/client/src/scene/standing.tsx"])).toEqual({ check: true, unit: [], e2e: ["models", "gallery"] });
   });
 
   it("runs only the model page test for the model page", () => {

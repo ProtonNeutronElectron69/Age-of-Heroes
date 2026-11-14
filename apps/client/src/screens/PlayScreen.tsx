@@ -32,6 +32,8 @@ import { TestHook } from "../scene/TestHook";
 import { closeOnline } from "../online";
 import { downloadGameFile } from "../saves";
 import { canControl, clearError, dispatch, endSession, replayOf, type Session } from "../session";
+import { DisplayMenu } from "../ui/DisplayMenu";
+import { toggleFigures } from "../settings";
 import { GameMenu } from "../ui/GameMenu";
 import { OnlineBar } from "../ui/OnlineBar";
 import { DiceOverlay, EventLog, GameOver, PassScreen, RoundBar, TokenPanel } from "../ui/panels";
@@ -225,7 +227,7 @@ export function PlayScreen({ session }: { session: Session }) {
   const hoverOption = optionAt(hoverStep);
 
   // Keys: R turns a big figure, 1-4 pick a squad figure, E toggles eye view, C the unit card,
-  // Space ends the turn. WASD pans the map (in BoardScene).
+  // T models or tokens, Space ends the turn. WASD pans the map (in BoardScene).
   const keys = useRef<(e: KeyboardEvent) => void>(() => {});
   keys.current = (e: KeyboardEvent) => {
     const t = e.target;
@@ -233,7 +235,9 @@ export function PlayScreen({ session }: { session: Session }) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (document.querySelector(".page-overlay, .pass-screen")) return; // a dialog is open
     const key = e.key.toLowerCase();
-    if (key === "r") {
+    if (key === "t") {
+      toggleFigures();
+    } else if (key === "r") {
       setRotation((r) => (r + (e.shiftKey ? 5 : 1)) % 6);
     } else if (key === "c") {
       toggleCard();
@@ -333,6 +337,11 @@ export function PlayScreen({ session }: { session: Session }) {
       }
       figures.push({
         id: f.id,
+        cardId: card.id,
+        footprint: card.footprint,
+        faction: card.faction,
+        owner: unit.owner,
+        pose: unit.figures.indexOf(f),
         spots: figureSpots(f, card.footprint, card.height, ctx),
         height: card.height,
         color,
@@ -349,6 +358,11 @@ export function PlayScreen({ session }: { session: Session }) {
       const f = deployUnit.figures[i]!;
       figures.push({
         id: f.id,
+        cardId: deployCard.id,
+        footprint: deployCard.footprint,
+        faction: deployCard.faction,
+        owner: deployUnit.owner,
+        pose: i,
         spots: p.spots,
         height: deployCard.height,
         color: names.playerColor(deployUnit.owner),
@@ -653,6 +667,7 @@ export function PlayScreen({ session }: { session: Session }) {
             wounds={cardFigureState?.wounds}
           />
         )}
+        <DisplayMenu />
         <GameMenu session={session} />
       </aside>
 

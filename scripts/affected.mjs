@@ -76,8 +76,8 @@ export const RULES = [
   { area: "browser test", match: /^apps\/client\/e2e\/gallery\.mjs$/, check: false, unit: [], e2e: ["gallery"] },
 
   { area: "client tests", match: /^apps\/client\/test\//, check: true, unit: [UNIT.client], e2e: [] },
-  // Figure models are only drawn on the model page and in the unit gallery so far. Once the play screen draws them, they belong with the rest of the client.
-  { area: "figure models", match: /^apps\/client\/src\/(models\/|scene\/standing\.tsx$)/, check: true, unit: [UNIT.client], e2e: ["models", "gallery"] },
+  // Figure models are drawn on the board as well as on the model page and in the gallery, so they fall through to the rest of the client.
+  { area: "display board", match: /^apps\/client\/src\/scene\/standing\.tsx$/, check: true, unit: [], e2e: ["models", "gallery"] },
   { area: "model page", match: /^apps\/client\/src\/screens\/(ModelGalleryScreen\.tsx|model-gallery\.css)$/, check: true, unit: [], e2e: ["models"] },
   { area: "unit gallery", match: /^apps\/client\/src\/screens\/(UnitGalleryScreen\.tsx|unit-gallery\.css)$/, check: true, unit: [], e2e: ["gallery"] },
 

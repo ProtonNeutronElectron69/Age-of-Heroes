@@ -197,7 +197,7 @@ Some figures cover 2 or more hexes (2x1, 3x1 or 2x2 footprints). **Assumption** 
 - **Advanced:** an attack at range 1 needs the two figures to be engaged (see 9).
 
 ### Line of sight
-Every figure is shown as a token as tall as its Height. Each token has an **eye point** (the centre of its top) and a **hit band** (a coloured band around its upper part).
+Line of sight treats every figure as a token as tall as its Height, whether the board shows it as a figure model or as that token (the Display setting). Each token has an **eye point** (the centre of its top) and a **hit band** (a coloured band around its upper part).
 - **Advanced:** the attacker needs a clear straight line from its eye point to some part of the target's hit band. Terrain and other figures (friend or enemy) block the line. The game checks this automatically; a figure's-eye camera shows the player what the figure sees.
 - **Basic:** the attacker needs a clear line from its eye point to any part of the target's token. Only terrain and scenery block; other figures do not. **Assumption.**
 - The ground each figure stands on never blocks the line, so a figure at the edge of a cliff can see the figure at its foot. A bridge or overhang above either figure still can.

@@ -44,6 +44,22 @@ async function screenPoint(q, r, elevation) {
   );
 }
 
+/** Triangles in the frame once the count has held for a second. */
+async function steadyTriangles() {
+  await page.evaluate(() => delete window.__steady);
+  const handle = await page.waitForFunction(
+    () => {
+      const t = window.__aoh?.stats().triangles ?? 0;
+      const w = (window.__steady ??= { t, since: performance.now() });
+      if (w.t !== t) Object.assign(w, { t, since: performance.now() });
+      return performance.now() - w.since > 1000 ? t : false;
+    },
+    null,
+    { polling: 100 },
+  );
+  return handle.jsonValue();
+}
+
 let moves = 0;
 let attacks = 0;
 let eyeChecked = false;
@@ -92,8 +108,22 @@ try {
   // The board draws each terrain as one instanced mesh; one mesh per hex took over 1000 draw calls.
   const { calls } = await page.evaluate(() => window.__aoh.stats());
   if (calls > MAX_DRAW_CALLS) fail(`The board took ${calls} draw calls (limit ${MAX_DRAW_CALLS})`);
+  let checkedFigures = false;
   while (await page.getByRole("region", { name: "Deployment" }).count()) {
     await page.getByRole("button", { name: "Auto place" }).click();
+    if (!checkedFigures) {
+      checkedFigures = true;
+      // Placed figures are drawn as models; T swaps them for tokens, and the Display menu brings the models back.
+      const models = await steadyTriangles();
+      await page.keyboard.press("t");
+      const tokens = await steadyTriangles();
+      if (tokens === models) fail(`T did not swap the models for tokens (${models} triangles either way)`);
+      await page.getByRole("button", { name: "Display" }).click();
+      await page.getByRole("radio", { name: "Models" }).click();
+      const back = await steadyTriangles();
+      if (back !== models) fail(`The models did not come back: ${back} triangles, not ${models}`);
+      await page.getByRole("button", { name: "Display" }).click();
+    }
     await page.getByRole("button", { name: "Confirm" }).click();
   }
 
