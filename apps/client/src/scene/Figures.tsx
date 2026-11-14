@@ -1,14 +1,26 @@
 import type { ThreeEvent } from "@react-three/fiber";
 import { useFrame } from "@react-three/fiber";
-import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS, hexKey, hexToWorld, type Step } from "@aoh/rules";
+import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS, hex, hexKey, hexToWorld, type Footprint, type Step } from "@aoh/rules";
 import { useEffect, useMemo, useRef, type RefObject } from "react";
-import { ExtrudeGeometry, Shape, ShapeGeometry, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
+import { BufferGeometry, Color, ExtrudeGeometry, Shape, ShapeGeometry, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
+import { BASE_COLOR, BASE_RADIUS, UNIT_MODELS, baseFrame, baseGeometry, figureColors, figureGeometry } from "../models";
+import { useDisplay } from "../settings";
+import { factionTheme } from "../ui/factionThemes";
 
 export interface FigureView {
   readonly id: string;
+  /** The unit card, which picks the figure model. */
+  readonly cardId: string;
+  readonly footprint: Footprint;
+  readonly faction: string;
+  /** The owning player: a figure faces the nearest figure of another player. */
+  readonly owner: string;
+  /** The figure's place in its unit; a squad's figures take its model's poses in turn. */
+  readonly pose: number;
   /** Every hex the figure covers, front first. */
   readonly spots: readonly Step[];
   readonly height: number;
+  /** The owning player's colour. */
   readonly color: string;
   readonly label: string;
   readonly hero: boolean;
@@ -191,6 +203,173 @@ function BigToken({ f, handlers }: { f: FigureView; handlers: object }) {
   );
 }
 
+// ---- Figure models -----------------------------------------------------------
+
+/** The six ways a single-hex figure can face: across a flat side of its hex. */
+const SIDES = [0, 1, 2, 3, 4, 5].map((r) => baseFrame("1", hex(0, 0), r).yaw);
+
+function nearestSide(yaw: number): number {
+  const turn = (a: number) => Math.abs(Math.atan2(Math.sin(a - yaw), Math.cos(a - yaw)));
+  return SIDES.reduce((best, side) => (turn(side) < turn(best) ? side : best));
+}
+
+/**
+ * Which way each single-hex figure faces: towards the nearest figure of another
+ * player, or the middle of the others when there is none. A figure on several
+ * hexes faces along its base instead, so it is not listed.
+ */
+function facings(figures: readonly FigureView[]): Map<string, number> {
+  const at = new Map(figures.map((f) => [f.id, hexToWorld(f.spots[0]!.hex, HEX_SIZE)]));
+  const out = new Map<string, number>();
+  for (const f of figures) {
+    if (f.spots.length !== 1) continue;
+    const me = at.get(f.id)!;
+    const others = figures.filter((o) => o.id !== f.id);
+    const enemies = others.filter((o) => o.owner !== f.owner);
+    let target: { x: number; z: number } | undefined;
+    if (enemies.length > 0) {
+      const d = (o: FigureView) => Math.hypot(at.get(o.id)!.x - me.x, at.get(o.id)!.z - me.z);
+      target = at.get(enemies.reduce((a, b) => (d(b) < d(a) ? b : a)).id);
+    } else if (others.length > 0) {
+      target = {
+        x: others.reduce((n, o) => n + at.get(o.id)!.x, 0) / others.length,
+        z: others.reduce((n, o) => n + at.get(o.id)!.z, 0) / others.length,
+      };
+    }
+    if (target && Math.hypot(target.x - me.x, target.z - me.z) > 1e-6) out.set(f.id, nearestSide(Math.atan2(target.x - me.x, target.z - me.z)));
+  }
+  return out;
+}
+
+interface UnitMeshes {
+  readonly poses: readonly BufferGeometry[];
+  readonly base: { top: BufferGeometry; rim: BufferGeometry };
+}
+
+/** Built once per unit card and shared by every figure of it, for as long as the page is open. */
+const meshCache = new Map<string, UnitMeshes>();
+
+function unitMeshes(cardId: string, footprint: Footprint): UnitMeshes {
+  let found = meshCache.get(cardId);
+  if (!found) {
+    const unit = UNIT_MODELS[cardId]!;
+    found = { poses: unit.figures.map(figureGeometry), base: baseGeometry(footprint) };
+    meshCache.set(cardId, found);
+  }
+  return found;
+}
+
+/** A figure that has acted this turn is drawn darker, as a spent token is drawn faded. */
+const SPENT_SHADE = new Color("#30343a");
+
+/** A status ring just outside the base, flat on the ground. */
+const MODEL_RING_INNER = BASE_RADIUS * 1.03;
+const MODEL_RING_OUTER = BASE_RADIUS * 1.2;
+
+/**
+ * A figure model on its base, in place of a token. It stands where the token
+ * would, takes the same clicks through an unseen token-shaped target, and
+ * shows its state with a ring round its base.
+ */
+function ModelFigure({
+  f,
+  onClick,
+  onHover,
+  yaw,
+  scheme,
+}: {
+  f: FigureView;
+  onClick?: Props["onClick"];
+  onHover?: Props["onHover"];
+  yaw: number;
+  scheme: Parameters<typeof figureColors>[0];
+}) {
+  const ring = useRef<MeshBasicMaterial>(null);
+  const meshes = unitMeshes(f.cardId, f.footprint);
+  const geometry = meshes.poses[f.pose % meshes.poses.length]!;
+  const handlers = pointerHandlers(f.id, onClick, onHover);
+  const h = f.height * LEVEL_HEIGHT;
+  const ground = Math.max(...f.spots.map((s) => s.elevation)) * LEVEL_HEIGHT;
+  const cells = f.spots.map((s) => hexToWorld(s.hex, HEX_SIZE));
+  const centre = { x: cells.reduce((n, c) => n + c.x, 0) / cells.length, z: cells.reduce((n, c) => n + c.z, 0) / cells.length };
+  // A figure on several hexes faces from the middle of its base to its front hex, as on the model page.
+  const turn = cells.length > 1 ? Math.atan2(cells[0]!.x - centre.x, cells[0]!.z - centre.z) : yaw;
+
+  const colors = figureColors(scheme, factionTheme(f.faction).primary, f.color);
+  const modelColor = useMemo(() => {
+    const c = new Color(colors.model);
+    return f.status === "spent" ? c.lerp(SPENT_SHADE, 0.45) : c;
+  }, [colors.model, f.status]);
+
+  const ringColor = RING[f.status];
+  const ringGeometry = useMemo(() => {
+    if (!ringColor) return null;
+    const points = cells.map((c) => ({ x: c.x - centre.x, y: -(c.z - centre.z) }));
+    const outer = new Shape();
+    roundedOutline(points, MODEL_RING_OUTER, outer);
+    const hole = new Shape();
+    roundedOutline(points, MODEL_RING_INNER, hole);
+    outer.holes.push(hole);
+    return new ShapeGeometry(outer, 12);
+    // The ring follows the hexes the figure covers.
+  }, [ringColor, f.spots]);
+  useEffect(() => () => ringGeometry?.dispose(), [ringGeometry]);
+  useFrame(({ clock }) => {
+    if (ring.current) {
+      ring.current.opacity = f.status === "ready" || f.status === "target" ? 0.6 + 0.35 * Math.sin(clock.elapsedTime * 4) : 0.95;
+    }
+  });
+
+  return (
+    <>
+      <group position={[centre.x, ground, centre.z]}>
+        <group rotation={[0, turn, 0]}>
+          <mesh geometry={geometry} raycast={() => null}>
+            <meshStandardMaterial color={modelColor} roughness={0.7} />
+          </mesh>
+          <mesh geometry={meshes.base.top} raycast={() => null}>
+            <meshStandardMaterial color={BASE_COLOR} roughness={0.75} />
+          </mesh>
+          <mesh geometry={meshes.base.rim} raycast={() => null}>
+            <meshStandardMaterial color={colors.ring} roughness={0.55} />
+          </mesh>
+        </group>
+        {ringGeometry && (
+          <mesh geometry={ringGeometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]} raycast={() => null}>
+            <meshBasicMaterial ref={ring} color={ringColor!} transparent opacity={0.95} depthWrite={false} />
+          </mesh>
+        )}
+        {f.arrow && <SelectionArrow top={h} />}
+      </group>
+      {/* Clicks and hovers land on the token's shape, which is what the rules measure. It is hidden, but rays still find it. */}
+      {f.spots.map((s) => {
+        const { x, z } = hexToWorld(s.hex, HEX_SIZE);
+        return (
+          <mesh key={hexKey(s.hex)} position={[x, s.elevation * LEVEL_HEIGHT + h / 2, z]} visible={false} {...handlers}>
+            <cylinderGeometry args={[TOKEN_RADIUS, TOKEN_RADIUS, h, 12]} />
+          </mesh>
+        );
+      })}
+    </>
+  );
+}
+
+/** Click and hover for a figure's meshes. A drag that turns the camera is not a click. */
+function pointerHandlers(id: string, onClick?: Props["onClick"], onHover?: Props["onHover"]) {
+  return {
+    onClick: (e: ThreeEvent<MouseEvent>) => {
+      if (e.delta > 5) return;
+      e.stopPropagation();
+      onClick?.(id);
+    },
+    onPointerOver: (e: ThreeEvent<PointerEvent>) => {
+      e.stopPropagation();
+      onHover?.(id);
+    },
+    onPointerOut: () => onHover?.(null),
+  };
+}
+
 function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClick"]; onHover?: Props["onHover"] }) {
   const ring = useRef<Mesh>(null);
   const h = f.height * LEVEL_HEIGHT;
@@ -206,18 +385,7 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
     }
   });
 
-  const handlers = {
-    onClick: (e: ThreeEvent<MouseEvent>) => {
-      if (e.delta > 5) return;
-      e.stopPropagation();
-      onClick?.(f.id);
-    },
-    onPointerOver: (e: ThreeEvent<PointerEvent>) => {
-      e.stopPropagation();
-      onHover?.(f.id);
-    },
-    onPointerOut: () => onHover?.(null),
-  };
+  const handlers = pointerHandlers(f.id, onClick, onHover);
 
   if (f.spots.length > 1) return <BigToken f={f} handlers={handlers} />;
 
@@ -268,11 +436,17 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
 }
 
 export function Figures({ figures, onClick, onHover, labels }: Props) {
+  const display = useDisplay();
+  const facing = useMemo(() => facings(figures), [figures]);
   return (
     <>
-      {figures.map((f) => (
-        <Token key={f.id} f={f} onClick={onClick} onHover={onHover} />
-      ))}
+      {figures.map((f) =>
+        display.figures === "models" && UNIT_MODELS[f.cardId] ? (
+          <ModelFigure key={f.id} f={f} onClick={onClick} onHover={onHover} yaw={facing.get(f.id) ?? SIDES[0]!} scheme={display.scheme} />
+        ) : (
+          <Token key={f.id} f={f} onClick={onClick} onHover={onHover} />
+        ),
+      )}
       {labels && <LabelTracker figures={figures} layer={labels} />}
     </>
   );

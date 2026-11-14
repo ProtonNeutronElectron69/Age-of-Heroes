@@ -1283,3 +1283,29 @@ p.bad {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+
+/* ---- Display menu (ui/DisplayMenu.tsx) --------------------------------- */
+
+.display-menu {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.display-menu + .menu {
+  margin-top: 0;
+}
+
+.display-panel {
+  width: 100%;
+  max-width: 300px;
+  background: var(--panel-solid);
+}
+
+.display-toggle {
+  padding: 5px 10px;
+  font-size: 13px;
+}

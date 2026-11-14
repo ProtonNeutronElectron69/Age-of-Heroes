@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Names } from "../describe";
 import { BoardScene, boardCenter } from "../scene/BoardScene";
 import { FigureLabels, Figures, type FigureView } from "../scene/Figures";
+import { DisplayMenu } from "../ui/DisplayMenu";
 import { DiceOverlay, EventLog, RoundBar } from "../ui/panels";
 import { UnitCardView } from "../ui/UnitCardView";
 
@@ -115,6 +116,11 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
       if (f.destroyed || !f.position) continue;
       figures.push({
         id: f.id,
+        cardId: card.id,
+        footprint: card.footprint,
+        faction: card.faction,
+        owner: unit.owner,
+        pose: unit.figures.indexOf(f),
         spots: figureSpots(f, card.footprint, card.height, ctx),
         height: card.height,
         color: names.playerColor(unit.owner),
@@ -216,6 +222,7 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
             wounds={found.figure.wounds}
           />
         )}
+        <DisplayMenu />
         <div className="actions menu">
           <button type="button" onClick={onClose}>
             Close replay

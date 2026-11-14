@@ -44,6 +44,28 @@ async function screenPoint(q, r, elevation) {
   );
 }
 
+/**
+ * Triangles drawn once 20 frames in a row have drawn the same. Counting frames, not
+ * time, waits out a new shader: software WebGL can stall frames for a second compiling one.
+ */
+async function steadyTriangles() {
+  return page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        let last = -1;
+        let same = 0;
+        const tick = () => {
+          const t = window.__aoh?.stats().triangles ?? 0;
+          same = t === last ? same + 1 : 0;
+          last = t;
+          if (same >= 20) resolve(t);
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }),
+  );
+}
+
 let moves = 0;
 let attacks = 0;
 let eyeChecked = false;
@@ -92,8 +114,22 @@ try {
   // The board draws each terrain as one instanced mesh; one mesh per hex took over 1000 draw calls.
   const { calls } = await page.evaluate(() => window.__aoh.stats());
   if (calls > MAX_DRAW_CALLS) fail(`The board took ${calls} draw calls (limit ${MAX_DRAW_CALLS})`);
+  let checkedFigures = false;
   while (await page.getByRole("region", { name: "Deployment" }).count()) {
     await page.getByRole("button", { name: "Auto place" }).click();
+    if (!checkedFigures) {
+      checkedFigures = true;
+      // Placed figures are drawn as models; T swaps them for tokens, and the Display menu brings the models back.
+      const models = await steadyTriangles();
+      await page.keyboard.press("t");
+      const tokens = await steadyTriangles();
+      if (tokens === models) fail(`T did not swap the models for tokens (${models} triangles either way)`);
+      await page.getByRole("button", { name: "Display" }).click();
+      await page.getByRole("radio", { name: "Models" }).click();
+      const back = await steadyTriangles();
+      if (back !== models) fail(`The models did not come back: ${back} triangles, not ${models}`);
+      await page.getByRole("button", { name: "Display" }).click();
+    }
     await page.getByRole("button", { name: "Confirm" }).click();
   }
 

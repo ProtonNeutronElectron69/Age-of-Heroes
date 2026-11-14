@@ -27,7 +27,7 @@ The first matching row decides for each file; a change runs everything its files
 | Map editor screen | yes | none | editor |
 | Online lobby and connection (`online.ts`, `LobbyScreen`, `OnlineBar`) | yes | none | online |
 | Saves and replays (`saves.ts`, `SaveDialog`, `ReplayScreen`) | yes | none | saves, online |
-| Figure models (`apps/client/src/models`, `scene/standing.tsx`) | yes | client | models, gallery |
+| The display board shared by the model page and the gallery (`scene/standing.tsx`) | yes | none | models, gallery |
 | The model page (`ModelGalleryScreen`, `model-gallery.css`) | yes | none | models |
 | The unit gallery (`UnitGalleryScreen`, `unit-gallery.css`) | yes | none | gallery |
 | Any other client file | yes | client | all |
@@ -37,7 +37,7 @@ The first matching row decides for each file; a change runs everything its files
 
 Unit tests follow the package graph: `rules` is used by everything, `content` by the protocol, the server and the client, and the protocol by the server. The client's own tests (`apps/client/test`) cover the figure models: each one must be as tall as its card's Height, fit its base and stay low polygon.
 
-Figure models are only drawn on the model page (`?models`) and in the unit gallery so far, so a model change runs just the `models` and `gallery` browser tests. When the play screen draws them, move that rule in with the rest of the client.
+Figure models (`apps/client/src/models`) are drawn on the game board too, so a model change runs every browser test, like the rest of the client.
 
 ## Safety nets
 
