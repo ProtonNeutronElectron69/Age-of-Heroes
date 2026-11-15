@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, type RefObject }
 import { BufferGeometry, Color, ExtrudeGeometry, Shape, ShapeGeometry, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import { BASE_COLOR, BASE_RADIUS, UNIT_MODELS, baseFrame, baseGeometry, figureColors, figureGeometry } from "../models";
 import { useDisplay } from "../settings";
+import { useWake } from "./wake";
 import { factionTheme } from "../ui/factionThemes";
 
 export interface FigureView {
@@ -82,13 +83,58 @@ const RING: Record<FigureView["status"], string | null> = {
 
 /** Gap between the top of a token and the tip of its selection arrow, leaving room for the name tag. */
 const ARROW_GAP = 0.8;
+/** How long the arrow bobs and spins once it appears: one full bob, so it comes to rest where it started. */
+const ARROW_SECONDS = (2 * Math.PI) / 3;
+/** How long a ready or target ring pulses after it lights up: one and a quarter pulses, ending at full strength. */
+const PULSE_SECONDS = (2.5 * Math.PI) / 4;
 
-/** A red arrow that bobs and spins above a figure, pointing down at it. */
+/**
+ * A short animation. The board is only drawn when something changes, so an
+ * animation that ran forever would keep it drawing. Call the returned function
+ * in useFrame with the clock time: it gives the seconds since the animation
+ * began (asking for the next frame), or null once `seconds` have passed or
+ * while `active` is false. A new `restart` value starts it again.
+ */
+function useBriefAnimation(active: boolean, seconds: number, restart?: unknown): (time: number) => number | null {
+  const invalidate = useThree((s) => s.invalidate);
+  const wake = useWake();
+  const start = useRef<number | null>(null);
+  useEffect(() => {
+    start.current = null;
+    if (active) wake();
+  }, [active, restart, wake]);
+  return (time: number) => {
+    if (!active) return null;
+    start.current ??= time;
+    const age = time - start.current;
+    if (age >= seconds) return null;
+    invalidate();
+    return age;
+  };
+}
+
+/** The pulse of a ready or target ring, from 0 to 1; it rests at 1 once it has pulsed for a moment. */
+function useRingPulse(status: FigureView["status"]): (time: number) => number | null {
+  const pulsing = status === "ready" || status === "target";
+  const age = useBriefAnimation(pulsing, PULSE_SECONDS, status);
+  return (time: number) => {
+    if (!pulsing) return null;
+    const a = age(time);
+    return a === null ? 1 : 0.5 + 0.5 * Math.sin(a * 4);
+  };
+}
+
+/** A red arrow that bobs and spins above a figure, pointing down at it, then comes to rest. */
 function SelectionArrow({ top }: { top: number }) {
   const arrow = useRef<Group>(null);
+  const age = useBriefAnimation(true, ARROW_SECONDS, top);
   useFrame(({ clock }) => {
     if (!arrow.current) return;
-    const t = clock.elapsedTime;
+    const t = age(clock.elapsedTime);
+    if (t === null) {
+      arrow.current.position.y = top + ARROW_GAP;
+      return;
+    }
     arrow.current.rotation.y = t * 2;
     arrow.current.position.y = top + ARROW_GAP + 0.18 * Math.sin(t * 3);
   });
@@ -140,6 +186,7 @@ function worldOf(step: Step, out: Vector3): Vector3 {
 
 const scratch = new Vector3();
 const scratch2 = new Vector3();
+const lastDrawn = new Vector3();
 
 /**
  * Moves a figure's drawing about its place on the board: hopping hex by hex
@@ -159,6 +206,10 @@ function useFigureAnimation(f: FigureView): RefObject<Group | null> {
     hop: null as { points: Vector3[]; t: number } | null,
     jumpT: -1,
   });
+  const invalidate = useThree((s) => s.invalidate);
+  const wake = useWake();
+  // A new move, jump, drag or place needs a frame to start from.
+  useEffect(() => wake(), [anim?.motions, anim?.jump, anim?.carry, f.spots, wake]);
   useEffect(() => {
     const offsets = anim?.offsets;
     if (!offsets) return;
@@ -229,7 +280,11 @@ function useFigureAnimation(f: FigureView): RefObject<Group | null> {
       else if (u < 0.72) up = JUMP_HEIGHT * 4 * (u / 0.72) * (1 - u / 0.72);
       else up = JUMP_HEIGHT * 0.16 * 4 * ((u - 0.72) / 0.28) * (1 - (u - 0.72) / 0.28);
     }
+    const was = lastDrawn.copy(g.position);
     g.position.set(st.offset.x, st.offset.y + up, st.offset.z);
+    // Keep drawing while the figure moves, and once more after it stops, so its name tag
+    // (placed in the same frame, perhaps before it moved) catches up.
+    if (!was.equals(g.position) || st.hop || st.jumpT >= 0) invalidate();
   });
   return group;
 }
@@ -319,10 +374,10 @@ function BigToken({ f, handlers }: { f: FigureView; handlers: object }) {
     [geometries],
   );
   const ringColor = RING[f.status];
+  const pulse = useRingPulse(f.status);
   useFrame(({ clock }) => {
-    if (ring.current && (f.status === "ready" || f.status === "target")) {
-      ring.current.opacity = 0.55 + 0.35 * Math.sin(clock.elapsedTime * 4);
-    }
+    const p = pulse(clock.elapsedTime);
+    if (ring.current && p !== null) ring.current.opacity = 0.2 + 0.7 * p;
   });
   const centre = points.reduce((c, p) => ({ x: c.x + p.x / points.length, y: c.y + p.y / points.length }), { x: 0, y: 0 });
   return (
@@ -474,10 +529,10 @@ function ModelFigure({
     // The ring follows the hexes the figure covers.
   }, [ringColor, f.spots]);
   useEffect(() => () => ringGeometry?.dispose(), [ringGeometry]);
+  const pulse = useRingPulse(f.status);
   useFrame(({ clock }) => {
-    if (ring.current) {
-      ring.current.opacity = f.status === "ready" || f.status === "target" ? 0.6 + 0.35 * Math.sin(clock.elapsedTime * 4) : 0.95;
-    }
+    const p = pulse(clock.elapsedTime);
+    if (ring.current) ring.current.opacity = p === null ? 0.95 : 0.25 + 0.7 * p;
   });
 
   return (
@@ -543,11 +598,11 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
   const moving = useFigureAnimation(f);
   const down = useContext(AnimationContext)?.onDown;
 
+  const pulse = useRingPulse(f.status);
   useFrame(({ clock }) => {
-    if (ring.current) {
-      const pulse = f.status === "ready" || f.status === "target" ? 0.75 + 0.25 * Math.sin(clock.elapsedTime * 4) : 1;
-      ring.current.scale.set(pulse, 1, pulse);
-    }
+    const p = pulse(clock.elapsedTime);
+    const scale = p === null ? 1 : 0.5 + 0.5 * p;
+    if (ring.current) ring.current.scale.set(scale, 1, scale);
   });
 
   const handlers = pointerHandlers(f.id, onClick, onHover, down);
@@ -678,7 +733,7 @@ function labelAnchor(f: FigureView): Vector3 {
   return new Vector3(x, top * LEVEL_HEIGHT + 0.35, z);
 }
 
-/** Moves the DOM name tags to follow their figures on screen, every frame. */
+/** Moves the DOM name tags to follow their figures on screen, every frame that is drawn. */
 function LabelTracker({
   figures,
   layer,
@@ -689,6 +744,9 @@ function LabelTracker({
   offsets: Map<string, Vector3>;
 }) {
   const anchors = useMemo(() => new Map(figures.map((f) => [f.id, labelAnchor(f)])), [figures]);
+  const invalidate = useThree((s) => s.invalidate);
+  // New or changed figures have new tags to place.
+  useEffect(() => invalidate(), [anchors, invalidate]);
   const v = useMemo(() => new Vector3(), []);
   // Anchors are in board coordinates; this group shares the figures' parent, so it maps them to the world.
   const frame = useRef<Group>(null);

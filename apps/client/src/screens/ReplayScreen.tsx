@@ -154,6 +154,8 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
     <div className="screen play replay">
       <Canvas
         className="canvas"
+        // Drawn only when something changes: a resting board costs nothing, which matters without a graphics card.
+        frameloop="demand"
         camera={{ position: [-center.span * 0.1, center.span * 0.72, center.span * 0.8], fov: 45 }}
         dpr={[1, 2]}
         onPointerMissed={() => setPinned(null)}

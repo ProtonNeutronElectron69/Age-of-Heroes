@@ -193,6 +193,27 @@ try {
       await page.getByLabel("Table").selectOption("tavern");
       if ((await trianglesAfter({ expect: back })) !== back) fail("The first table did not come back");
       await page.getByRole("button", { name: "Display" }).click();
+      // The board is drawn only when something changes: once its short animations end, it rests.
+      const resting = await page.evaluate(
+        () =>
+          new Promise((resolve) => {
+            const end = performance.now() + 15000;
+            let last = window.__aoh.stats().frames;
+            let since = performance.now();
+            const check = () => {
+              const now = window.__aoh.stats().frames;
+              if (now !== last) {
+                last = now;
+                since = performance.now();
+              }
+              if (performance.now() - since > 1500) resolve(true);
+              else if (performance.now() > end) resolve(false);
+              else setTimeout(check, 100);
+            };
+            check();
+          }),
+      );
+      if (!resting) fail("The board kept drawing while nothing moved");
     }
     await page.getByRole("button", { name: "Confirm" }).click();
   }

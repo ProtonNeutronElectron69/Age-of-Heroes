@@ -8,7 +8,7 @@ Checks run only for the parts of the game a change can affect. The browser tests
 |---|---|---|
 | Typecheck and build | Every package compiles, and the client and server build | under a minute |
 | Unit tests | Vitest, by package: `packages/rules`, `packages/content`, `packages/protocol`, `apps/server`, `apps/client` (the figure models and the table layout) | seconds |
-| Browser tests | Seven Playwright scripts in `apps/client/e2e`: `full-game`, `editor`, `saves`, `online`, `models`, `gallery`, `menu` | under a minute to about 2 minutes each in CI; `full-game` is the longest, at about 3 to 4 |
+| Browser tests | Seven Playwright scripts in `apps/client/e2e`: `full-game`, `editor`, `saves`, `online`, `models`, `gallery`, `menu` | under a minute to about 2 minutes each in CI; `full-game` is the longest, at about 2.5 to 4 |
 
 ## What a change runs
 

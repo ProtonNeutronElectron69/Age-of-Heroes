@@ -8,7 +8,10 @@ The online test no longer plays a whole game across three 3D boards; the server'
 ## Fixed: `full-game` and CI setup
 `full-game` now plays to the lowest round limit (5) and ends each turn at once after its one-off checks and three attacks. Its display checks wait for the triangle count to change and then hold for 3 frames, instead of holding for 20. Locally it takes about 3.5 minutes instead of 9. Each browser job now installs only Chromium's headless shell, cached, with no system packages; that step took 16 to 33 s.
 
-Points 2, 4, 5 (the cache) and 6 below are done.
+## Fixed: drawing on demand
+The play and replay boards draw only when something changes. A resting board draws nothing, so pages that wait (the other players in the online test, a test waiting on the interface) cost nothing. The selection arrow and the ready and target rings move for a moment and then rest, since anything that ran forever would keep the board drawing. Locally `full-game` went from 3.5 to about 2.5 minutes and `online` from about 130 to 106 seconds.
+
+Points 1, 2, 4, 5 (the cache) and 6 below are done.
 
 ## Where things stood
 - **`main` is red.** `e2e (online)` failed on both pushes to `main` after the gaming table (#29, #30), in the same step as before: Bob's page is reloaded mid-game and must come back to his seat. The state `57c6037` that passed twice on the pull request fails too, so the wider zoom was not the cause.
@@ -24,7 +27,7 @@ Points 2, 4, 5 (the cache) and 6 below are done.
 - **Waits that count frames are slow at this frame rate.** `full-game` waits for 20 steady frames in `steadyTriangles` (six times) and `steadyCamera(20)`, which is 5 to 10 s each. It also plays all 8 rounds, though its one-off checks (dragging, H, hover card, eye view, camera follow) are done in the first round or two.
 
 ## What to do, most useful first
-1. **Draw only when something changes.** Render the play and replay screens on demand (`frameloop="demand"`, calling `invalidate` from the camera glide, hops, drags and label updates), or drop to a low frame rate when nothing moves. This speeds up every browser test and helps players without a graphics card. It touches every `useFrame` animation, so it needs care.
+1. **Draw only when something changes (done).** Render the play and replay screens on demand (`frameloop="demand"`, calling `invalidate` from the camera glide, hops, drags and label updates), or drop to a low frame rate when nothing moves. This speeds up every browser test and helps players without a graphics card. It touches every `useFrame` animation, so it needs care.
 2. **Online test (done):** one browser per player, and the reload moved to the draft.
 3. **A cheaper overview:** bring back the cheaper table drawing (`225a7ca`, `f85528a`, below), or open a reloaded page with the camera on the player's own start zone.
 4. **`full-game` (done):** fewer rounds, turns ended at once after the one-off checks, and no long runs of steady frames.
