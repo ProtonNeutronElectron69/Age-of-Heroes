@@ -1,6 +1,6 @@
 # Testing
 
-Checks run only for the parts of the game a change can affect. The browser tests take about 10 minutes, so a change to docs or unit stats should not wait for them. `scripts/affected.mjs` reads the changed files and picks the checks; CI and local runs use the same rules.
+Checks run only for the parts of the game a change can affect. The browser tests take a few minutes even run side by side, so a change to docs or unit stats should not wait for them. `scripts/affected.mjs` reads the changed files and picks the checks; CI and local runs use the same rules.
 
 ## The checks
 
@@ -8,7 +8,7 @@ Checks run only for the parts of the game a change can affect. The browser tests
 |---|---|---|
 | Typecheck and build | Every package compiles, and the client and server build | under a minute |
 | Unit tests | Vitest, by package: `packages/rules`, `packages/content`, `packages/protocol`, `apps/server`, `apps/client` (the figure models and the table layout) | seconds |
-| Browser tests | Seven Playwright scripts in `apps/client/e2e`: `full-game`, `editor`, `saves`, `online`, `models`, `gallery`, `menu` | under a minute to about 2 minutes each in CI, except `full-game`, which takes 7 to 9 |
+| Browser tests | Seven Playwright scripts in `apps/client/e2e`: `full-game`, `editor`, `saves`, `online`, `models`, `gallery`, `menu` | under a minute to about 2 minutes each in CI; `full-game` is the longest, at about 3 to 4 |
 
 ## What a change runs
 
@@ -50,7 +50,7 @@ Figure models (`apps/client/src/models`) are drawn on the game board too, so a m
 `.github/workflows/ci.yml` has four jobs:
 1. **plan** runs `scripts/affected.mjs` against the pull request's base and lists its choices in the run summary.
 2. **check** runs typecheck, the chosen unit tests and the build, or is skipped.
-3. **e2e** runs each chosen browser test as its own parallel job, named `e2e (online)` and so on.
+3. **e2e** runs each chosen browser test as its own parallel job, named `e2e (online)` and so on. It installs only Chromium's headless shell, cached by Playwright version, and no system packages: GitHub's Ubuntu machines already have the libraries it needs.
 4. **CI result** passes when every other job passed or was skipped. Make this the one required check in branch protection, since skipped and parallel jobs change name from run to run.
 
 ## Locally

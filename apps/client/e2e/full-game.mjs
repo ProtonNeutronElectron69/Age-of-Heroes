@@ -1,11 +1,17 @@
 // Plays a complete 2-player game through the real UI in headless Chromium.
+// The one-off checks (dragging, H, the hover card, eye view, the camera
+// following, the dice) are made in the first round or two; after that the test
+// ends each turn at once until the round limit ends the game. The rules tests
+// cover playing many turns.
 // Usage: node e2e/full-game.mjs   (serves the build in apps/client/dist)
 import { chromium } from "playwright";
 import { preview } from "vite";
 
-/** A short game: small armies and a round limit. */
+/** A short game: small armies and the lowest round limit. */
 const POINTS = 300;
-const ROUNDS = 8;
+const ROUNDS = 5;
+/** Attacks to make before the rest of the turns are ended at once. */
+const ATTACKS_WANTED = 3;
 const shotsDir = process.env.E2E_SCREENSHOTS; // optional folder for screenshots
 /** Draw calls allowed for the board during deployment. */
 const MAX_DRAW_CALLS = 300;
@@ -13,6 +19,9 @@ const MAX_DRAW_CALLS = 300;
 function fail(message) {
   throw new Error(message);
 }
+
+const started = Date.now();
+const phase = (name) => console.log(`[${((Date.now() - started) / 1000).toFixed(1)}s] ${name}`);
 
 const server = await preview({ preview: { port: 4180, strictPort: true }, logLevel: "error" });
 const url = server.resolvedUrls.local[0];
@@ -46,25 +55,32 @@ async function screenPoint(q, r, elevation) {
 }
 
 /**
- * Triangles drawn once 20 frames in a row have drawn the same. Counting frames, not
- * time, waits out a new shader: software WebGL can stall frames for a second compiling one.
+ * Triangles drawn once a change has shown: the count first differs from `before`
+ * (or equals `expect`), then holds for 3 frames. Waiting for the change, rather
+ * than for many steady frames, is quick even at a few frames a second. With
+ * `steady` it only waits for that many frames in a row to draw the same.
+ * Gives up after 20 seconds.
  */
-async function steadyTriangles() {
-  return page.evaluate(
-    () =>
+async function trianglesAfter({ before, expect, steady }) {
+  const t = await page.evaluate(
+    ({ before, expect, steady }) =>
       new Promise((resolve) => {
+        const end = performance.now() + 20000;
         let last = -1;
         let same = 0;
         const tick = () => {
           const t = window.__aoh?.stats().triangles ?? 0;
-          same = t === last ? same + 1 : 0;
+          const changed = steady ? true : expect !== undefined ? t === expect : t !== before;
+          same = changed && t === last ? same + 1 : 0;
           last = t;
-          if (same >= 20) resolve(t);
+          if (same >= (steady ?? 3) || performance.now() > end) resolve(t);
           else requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
       }),
+    { before: before ?? -1, expect, steady },
   );
+  return t;
 }
 
 /** Screen point of a figure's name tag, which floats just above the figure. */
@@ -81,7 +97,7 @@ async function tagOf(id) {
  * Waits until the camera has stopped moving: `frames` frames in a row project the same point.
  * The camera glides to the acting figure after a turn starts or a squad figure acts, so clicks wait for it.
  */
-async function steadyCamera(frames = 20) {
+async function steadyCamera(frames = 5) {
   await page.evaluate(
     (frames) =>
       new Promise((resolve) => {
@@ -111,6 +127,7 @@ let dragged = false;
 let jumpChecked = false;
 
 try {
+  phase("setup");
   await page.goto(url);
   // A small army keeps the game short; the buttons start at 500.
   await page.getByLabel("Points per player").fill(String(POINTS));
@@ -142,6 +159,7 @@ try {
     await page.locator(".draft-card button.primary:not([disabled])").first().click();
   }
 
+  phase("deployment");
   // Deployment: auto place each unit.
   await page.getByRole("region", { name: "Deployment" }).waitFor();
   await page.waitForTimeout(800);
@@ -155,30 +173,37 @@ try {
     if (!checkedFigures) {
       checkedFigures = true;
       // Placed figures are drawn as models; T swaps them for tokens, and the Display menu brings the models back.
-      const models = await steadyTriangles();
+      const models = await trianglesAfter({ steady: 2 });
       await page.keyboard.press("t");
-      const tokens = await steadyTriangles();
+      const tokens = await trianglesAfter({ before: models });
       if (tokens === models) fail(`T did not swap the models for tokens (${models} triangles either way)`);
       await page.getByRole("button", { name: "Display" }).click();
       await page.getByRole("radio", { name: "Models" }).click();
-      const back = await steadyTriangles();
+      const back = await trianglesAfter({ expect: models });
       if (back !== models) fail(`The models did not come back: ${back} triangles, not ${models}`);
       // The board stands on a gaming table, in one of three styles.
       const tables = new Set([back]);
+      let last = back;
       for (const table of ["felt", "mat"]) {
         await page.getByLabel("Table").selectOption(table);
-        tables.add(await steadyTriangles());
+        last = await trianglesAfter({ before: last });
+        tables.add(last);
       }
       if (tables.size !== 3) fail(`The three tables should differ, but drew ${[...tables].join(", ")} triangles`);
       await page.getByLabel("Table").selectOption("tavern");
-      if ((await steadyTriangles()) !== back) fail("The first table did not come back");
+      if ((await trianglesAfter({ expect: back })) !== back) fail("The first table did not come back");
       await page.getByRole("button", { name: "Display" }).click();
     }
     await page.getByRole("button", { name: "Confirm" }).click();
   }
 
+  phase("play");
   const handled = new Set();
   let turnKey = "";
+  let roundSeen = "";
+  /** Every one-off check is done: from here on, turns are ended at once. */
+  const checksDone = () =>
+    dragged && jumpChecked && followChecked && hoverChecked && eyeChecked && attacks >= ATTACKS_WANTED && (squadMoves === 0 || cycled > 0);
   for (let step = 0; step < 2000; step++) {
     if (await page.getByRole("dialog", { name: "Game over" }).count()) break;
 
@@ -202,6 +227,10 @@ try {
     }
     const key = await turn.locator(".turn-banner").innerText();
     const round = await page.locator(".round-label").innerText();
+    if (round.split(",")[0] !== roundSeen) {
+      roundSeen = round.split(",")[0];
+      phase(`${roundSeen}: ${moves} moves, ${attacks} attacks so far`);
+    }
     if (`${round}|${key}` !== turnKey) {
       turnKey = `${round}|${key}`;
       handled.clear();
@@ -246,6 +275,10 @@ try {
     // The dice stay up until closed (or the next action): close them so they do not cover the board.
     const closeDice = page.getByRole("button", { name: "Close dice" });
     if (await closeDice.count()) await closeDice.click();
+    if (checksDone()) {
+      await page.getByRole("button", { name: "End turn" }).click();
+      continue;
+    }
 
     // Screen points are only good once the camera has stopped gliding.
     await steadyCamera(1);
@@ -393,6 +426,7 @@ try {
     }
   }
 
+  phase("game over");
   const over = page.getByRole("dialog", { name: "Game over" });
   if (!(await over.count())) fail("The game did not reach the game over screen");
   await shot("7-game-over");
