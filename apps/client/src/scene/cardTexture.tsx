@@ -85,7 +85,6 @@ function paintNow(card: UnitCard, ownerColor: string): Promise<Texture> {
           canvas.getContext("2d")!.drawImage(image, 0, 0, canvas.width, canvas.height);
           const texture = new CanvasTexture(canvas);
           texture.colorSpace = SRGBColorSpace;
-          texture.anisotropy = 4;
           resolve(texture);
         };
         image.onerror = () => reject(new Error(`The card picture for ${card.id} did not load`));

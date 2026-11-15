@@ -302,7 +302,8 @@ try {
         await shot(carol, "3-watching");
         phase("reloading Bob's page");
         await bob.page.reload();
-        await bob.page.getByText("Playing as Bob").waitFor({ timeout: 15000 });
+        // Three pages draw the board on its table in software here, so a page takes a while to come back.
+        await bob.page.getByText("Playing as Bob").waitFor({ timeout: 40000 });
         // The catch-up brings the whole log back, not just the board. The log comes after the
         // board's first frame, which can take many seconds in software WebGL now that the board stands on its table.
         await bob.page.locator(".log-lines li").filter({ hasText: "drafts" }).first().waitFor({ timeout: 40000 });

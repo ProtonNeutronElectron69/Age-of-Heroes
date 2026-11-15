@@ -1,7 +1,7 @@
 import type { ThreeEvent } from "@react-three/fiber";
 import type { Footprint, UnitCard } from "@aoh/rules";
 import { useEffect, useMemo, useState } from "react";
-import { CanvasTexture, RepeatWrapping, SRGBColorSpace, Shape, ShapeGeometry, type Texture } from "three";
+import { CanvasTexture, CircleGeometry, Color, Float32BufferAttribute, RepeatWrapping, SRGBColorSpace, Shape, ShapeGeometry, type Texture } from "three";
 import type { TableStyle } from "../settings";
 import { factionTheme } from "../ui/factionThemes";
 import { CARD_BOX, cardTexture } from "./cardTexture";
@@ -36,7 +36,6 @@ function painted(size: number, paint: (g: CanvasRenderingContext2D, size: number
   texture.colorSpace = SRGBColorSpace;
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
-  texture.anisotropy = 8;
   return texture;
 }
 
@@ -85,16 +84,22 @@ function speckled(base: string, light: string, dark: string, seed: number): Canv
   });
 }
 
-/** The floor: lit under the table and falling away to the room's darkness. */
-function pool(middle: string, edge: string): CanvasTexture {
-  return painted(256, (g, size) => {
-    const fade = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-    fade.addColorStop(0, middle);
-    fade.addColorStop(0.55, edge);
-    fade.addColorStop(1, edge);
-    g.fillStyle = fade;
-    g.fillRect(0, 0, size, size);
-  });
+/**
+ * The floor: lit under the table and falling away to the room's darkness.
+ * It is a disc shaded from its middle to its rim, with no picture to sample:
+ * it covers most of the screen, and every pixel of it costs time where there
+ * is no graphics card.
+ */
+function floorDisc(radius: number, middle: string, edge: string): CircleGeometry {
+  const g = new CircleGeometry(radius, 48);
+  const count = g.getAttribute("position").count;
+  const colors = new Float32Array(count * 3);
+  const from = new Color(middle);
+  const to = new Color(edge);
+  // The first vertex is the middle; the rest are the rim.
+  for (let i = 0; i < count; i++) (i === 0 ? from : to).toArray(colors, i * 3);
+  g.setAttribute("color", new Float32BufferAttribute(colors, 3));
+  return g;
 }
 
 // ---- Styles ---------------------------------------------------------------------
@@ -154,8 +159,8 @@ const LOOKS: Record<TableStyle, Look> = {
 const TOP_THICKNESS = 0.9;
 const TABLE_HEIGHT = 20;
 const LEG_INSET = 2.2;
-/** The floor is a disc this many times the table's size. */
-const FLOOR_REACH = 9;
+/** The lit floor is a disc this many times the table's size; past it is the room's own colour. */
+const FLOOR_REACH = 5;
 
 export function tableRoom(style: TableStyle): string {
   return LOOKS[style].room;
@@ -187,15 +192,13 @@ function grow(b: Bounds, by: number): Bounds {
 export function GamingTable({ layout, style }: { layout: TableLayout; style: TableStyle }) {
   const look = LOOKS[style];
   const top = useMemo(() => look.top(), [look]);
-  const floor = useMemo(() => pool(look.floor[0], look.floor[1]), [look]);
   const matSurface = useMemo(() => (look.mat ? speckled(look.mat.color, "#4a4f57", "#0e0f11", 41) : null), [look]);
   useEffect(
     () => () => {
       top.dispose();
-      floor.dispose();
       matSurface?.dispose();
     },
-    [top, floor, matSurface],
+    [top, matSurface],
   );
 
   // A rail goes round the outside, so the cards still have the whole top.
@@ -218,7 +221,12 @@ export function GamingTable({ layout, style }: { layout: TableLayout; style: Tab
     [matShapes],
   );
 
-  const still = { raycast: () => null };
+  const floor = useMemo(() => floorDisc(Math.max(width, depth) * FLOOR_REACH, look.floor[0], look.floor[1]), [width, depth, look]);
+  useEffect(() => () => floor.dispose(), [floor]);
+
+  // Drawn after the board and the figures, so the pixels they hide are never filled: the table
+  // and the floor cover most of the screen, which is slow where there is no graphics card.
+  const still = { raycast: () => null, renderOrder: 1 };
   const legX = width / 2 - LEG_INSET;
   const legZ = depth / 2 - LEG_INSET;
   const rail = look.rail;
@@ -227,22 +235,22 @@ export function GamingTable({ layout, style }: { layout: TableLayout; style: Tab
       {/* The top's surface, just under the board, and the slab it belongs to. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]} {...still}>
         <planeGeometry args={[width, depth]} />
-        <meshStandardMaterial map={top} roughness={0.85} />
+        <meshLambertMaterial map={top} />
       </mesh>
       <mesh position={[0, -TOP_THICKNESS / 2 - 0.04, 0]} {...still}>
         <boxGeometry args={[width, TOP_THICKNESS, depth]} />
-        <meshStandardMaterial color={look.edge} roughness={0.8} />
+        <meshLambertMaterial color={look.edge} />
       </mesh>
       {/* The frame under the top, and the legs. */}
       <mesh position={[0, -TOP_THICKNESS - 1.1, 0]} {...still}>
         <boxGeometry args={[legX * 2, 2.2, legZ * 2]} />
-        <meshStandardMaterial color={look.legs} roughness={0.85} />
+        <meshLambertMaterial color={look.legs} />
       </mesh>
       {[-1, 1].flatMap((sx) =>
         [-1, 1].map((sz) => (
           <mesh key={`${sx}:${sz}`} position={[sx * legX, -TABLE_HEIGHT / 2 - TOP_THICKNESS / 2, sz * legZ]} {...still}>
             <boxGeometry args={[look.legWidth, TABLE_HEIGHT - TOP_THICKNESS, look.legWidth]} />
-            <meshStandardMaterial color={look.legs} roughness={0.85} />
+            <meshLambertMaterial color={look.legs} />
           </mesh>
         )),
       )}
@@ -255,22 +263,21 @@ export function GamingTable({ layout, style }: { layout: TableLayout; style: Tab
         ].map((r, i) => (
           <mesh key={i} position={[r.at[0]!, rail.height / 2, r.at[2]!]} {...still}>
             <boxGeometry args={[r.size[0]!, r.size[1]!, r.size[2]!]} />
-            <meshStandardMaterial color={rail.color} roughness={0.45} />
+            <meshLambertMaterial color={rail.color} />
           </mesh>
         ))}
       {look.mat && matShapes && (
         <group position={[(layout.mat.minX + layout.mat.maxX) / 2 - cx, 0, (layout.mat.minZ + layout.mat.maxZ) / 2 - cz]} rotation={[-Math.PI / 2, 0, 0]}>
           <mesh geometry={matShapes.trim} position={[0, 0, -0.012]} {...still}>
-            <meshStandardMaterial color={look.mat.trim} roughness={0.9} />
+            <meshLambertMaterial color={look.mat.trim} />
           </mesh>
           <mesh geometry={matShapes.cloth} position={[0, 0, 0.004]} {...still}>
-            <meshStandardMaterial map={matSurface} roughness={0.95} />
+            <meshLambertMaterial map={matSurface} />
           </mesh>
         </group>
       )}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -TABLE_HEIGHT, 0]} {...still}>
-        <circleGeometry args={[Math.max(width, depth) * FLOOR_REACH, 48]} />
-        <meshBasicMaterial map={floor} />
+      <mesh geometry={floor} rotation={[-Math.PI / 2, 0, 0]} position={[0, -TABLE_HEIGHT, 0]} raycast={() => null} renderOrder={2}>
+        <meshBasicMaterial vertexColors />
       </mesh>
     </group>
   );
@@ -379,7 +386,7 @@ function TableCard({
         onPointerOut={() => onHover?.(null)}
       >
         {/* Until the picture is painted the card shows its faction's colour. */}
-        {picture ? <meshStandardMaterial key="picture" map={picture} roughness={0.8} /> : <meshStandardMaterial key="plain" color={theme.primary} roughness={0.8} />}
+        {picture ? <meshLambertMaterial key="picture" map={picture} /> : <meshLambertMaterial key="plain" color={theme.primary} />}
       </mesh>
       {onCard.map((i) => {
         const slot = cardSlot(i, unit.figures);
