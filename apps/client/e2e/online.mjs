@@ -1,6 +1,9 @@
-// Plays a full online game between two browsers through the real game server,
-// with a third browser watching. Checks reconnecting after a reload and the
-// replay at the end.
+// The client side of online play, through the real game server: the lobby, a
+// spectator, coming back to your seat after a reload, a few turns on the board,
+// host-only saving, leaving (which concedes), the replay, and resuming a saved
+// game in a new room. Each player has their own browser, as on three devices.
+// Whole games are played over the protocol by the server's unit tests
+// (apps/server/test), so this test stops after a few turns.
 // Usage: node e2e/online.mjs   (needs apps/client/dist and apps/server/dist built)
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -40,13 +43,16 @@ for (let i = 0; ; i++) {
 
 const web = await preview({ preview: { port: 4181, strictPort: true }, logLevel: "error" });
 const url = web.resolvedUrls.local[0];
-const browser = await chromium.launch({
-  args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
-});
+/** One browser per player: in one shared browser their boards queue behind each other to be drawn. */
+const browsers = [];
 
 const errors = [];
 const everyone = [];
 async function newPlayer(label) {
+  const browser = await chromium.launch({
+    args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+  });
+  browsers.push(browser);
   const context = await browser.newContext({ viewport: { width: 1280, height: 820 }, acceptDownloads: true });
   const page = await context.newPage();
   page.on("console", (m) => {
@@ -55,7 +61,7 @@ async function newPlayer(label) {
   });
   page.on("pageerror", (e) => errors.push(`${label} (${elapsed()}): ${e.stack ?? e.message}`));
   page.on("dialog", (d) => d.accept());
-  const player = { label, page, handled: new Set(), turnKey: "" };
+  const player = { label, browser, page, handled: new Set(), turnKey: "" };
   everyone.push(player);
   return player;
 }
@@ -235,6 +241,8 @@ try {
   await shot(bob, "2-draft");
   const drafted = (p) => p.page.locator(".armies li").count();
   const inDraft = () => alice.page.getByRole("heading", { name: "Draft" }).count();
+  const canDraft = (p) => p.page.locator(".draft-card button.primary:not([disabled])").count();
+  let reloaded = false;
   for (let i = 0; i < 40 && (await inDraft()); i++) {
     // Wait until every device has seen the last pick before deciding whose turn it is.
     const counts = await Promise.all([alice, bob, carol].map(drafted));
@@ -242,12 +250,23 @@ try {
       await alice.page.waitForTimeout(50);
       continue;
     }
+    if (!reloaded && counts[0] > 0) {
+      // Drop Bob's connection mid-draft: the page must come back to his seat, with every pick so far.
+      // The draft has no 3D board, so this is quick even without a graphics card.
+      reloaded = true;
+      phase("reloading Bob's page");
+      await bob.page.reload();
+      await bob.page.getByText("Playing as Bob").waitFor();
+      await bob.page.getByRole("heading", { name: "Draft" }).waitFor();
+      if ((await drafted(bob)) !== counts[0]) fail(`After the reload Bob sees ${await drafted(bob)} drafted units, not ${counts[0]}`);
+      continue;
+    }
     const open = [];
     for (const p of [alice, bob]) {
-      if (await p.page.locator(".draft-card button.primary:not([disabled])").count()) open.push(p);
+      if (await canDraft(p)) open.push(p);
     }
     if (open.length > 1) fail("Both players could draft at once");
-    if (await carol.page.locator(".draft-card button.primary:not([disabled])").count()) fail("The spectator could draft");
+    if (await canDraft(carol)) fail("The spectator could draft");
     if (open.length === 0) {
       await alice.page.waitForTimeout(50);
       continue;
@@ -257,7 +276,8 @@ try {
       await alice.page.waitForTimeout(30);
     }
   }
-  if (await carol.page.locator(".draft-card button.primary:not([disabled])").count()) fail("The spectator could draft");
+  if (!reloaded) fail("Bob was never reloaded during the draft");
+  if (await canDraft(carol)) fail("The spectator could draft");
 
   // ---- Deployment -------------------------------------------------------
   phase("deployment");
@@ -276,15 +296,20 @@ try {
     if (!placed) await alice.page.waitForTimeout(100);
   }
 
-  // ---- Play ---------------------------------------------------------------
+  // The spectator sees the board but no controls. Her browser is closed after that,
+  // so that two boards, not three, share the machine.
+  await carol.page.locator(".round-label").waitFor();
+  await shot(carol, "3-watching");
+  if (await carol.page.getByRole("button", { name: /Lock in tokens|End turn/ }).count()) fail("The spectator has game controls");
+  await carol.browser.close();
+  everyone.splice(everyone.indexOf(carol), 1);
+
+  // ---- Play a few turns ---------------------------------------------------
   phase("play");
-  let reloaded = false;
-  let saveFile = null;
-  let savedAt = null;
+  let ended = 0;
   let idle = 0;
   let retries = 0;
-  for (let step = 0; step < 3000; step++) {
-    if (await alice.page.getByRole("dialog", { name: "Game over" }).count()) break;
+  for (let step = 0; step < 400 && !(moves > 0 && ended >= 2); step++) {
     let did = false;
     for (const p of [alice, bob]) {
       const what = await act(p);
@@ -296,44 +321,39 @@ try {
         did = true;
         retries = 0;
       }
-      if (what === "tokens" && p === bob && !reloaded) {
-        // Drop Bob's connection mid-game: the page must come back to his seat.
-        reloaded = true;
-        await shot(carol, "3-watching");
-        phase("reloading Bob's page");
-        await bob.page.reload();
-        await bob.page.getByText("Playing as Bob").waitFor({ timeout: 15000 });
-        // The catch-up brings the whole log back, not just the board. The log comes after the
-        // board's first frame, which can take several seconds in software WebGL.
-        await bob.page.locator(".log-lines li").filter({ hasText: "drafts" }).first().waitFor({ timeout: 15000 });
-
-        // The host saves the game as a file; nobody else can.
-        phase("saving");
-        if (await bob.page.getByRole("button", { name: "Save game" }).count()) fail("A guest could save the game");
-        await alice.page.getByRole("button", { name: "Save game" }).click();
-        const dialog = alice.page.getByRole("dialog", { name: "Save game" });
-        await dialog.getByLabel("Save name").fill("Online test save");
-        const [saveDownload] = await Promise.all([
-          alice.page.waitForEvent("download"),
-          dialog.getByRole("button", { name: "Download file" }).click(),
-        ]);
-        saveFile = await saveDownload.path();
-        savedAt = { round: await alice.page.locator(".round-label").innerText(), log: await alice.page.locator(".log-lines").innerText() };
-      }
+      if (what === "end") ended++;
     }
     if (did) idle = 0;
     else if (++idle > 300) fail("The game stopped making progress");
     else await alice.page.waitForTimeout(50);
   }
-  if (!reloaded) fail("Bob never placed tokens, so the reload was not tested");
+  if (moves === 0) fail("No figure moved");
+  if (ended < 2) fail(`Only ${ended} turns were ended`);
+  // The catch-up after the reload brought the whole log back, not just the state:
+  // the first pick happened before his reload, so his page only has it from the catch-up.
+  await bob.page.locator(".log-lines li").filter({ hasText: "drafts" }).first().waitFor();
 
-  for (const p of [alice, bob, carol]) {
-    await p.page.getByRole("dialog", { name: "Game over" }).waitFor({ timeout: 10000 });
-  }
+  // ---- Save, then leave ---------------------------------------------------
+  // The host saves the game as a file; nobody else can.
+  phase("saving");
+  if (await bob.page.getByRole("button", { name: "Save game" }).count()) fail("A guest could save the game");
+  await alice.page.waitForFunction(() => !document.querySelector("[data-pending]"));
+  await alice.page.getByRole("button", { name: "Save game" }).click();
+  const dialog = alice.page.getByRole("dialog", { name: "Save game" });
+  await dialog.getByLabel("Save name").fill("Online test save");
+  const [saveDownload] = await Promise.all([alice.page.waitForEvent("download"), dialog.getByRole("button", { name: "Download file" }).click()]);
+  const saveFile = await saveDownload.path();
+  const savedAt = { round: await alice.page.locator(".round-label").innerText(), log: await alice.page.locator(".log-lines").innerText() };
+
+  // Leaving concedes: with one player left, the game is over.
+  phase("leaving");
+  await bob.page.getByRole("button", { name: "Leave game" }).click();
+  await bob.page.getByRole("radio", { name: "Online" }).waitFor();
+  const over = alice.page.getByRole("dialog", { name: "Game over" });
+  await over.waitFor();
   await shot(alice, "4-game-over");
-  const heading = await alice.page.getByRole("dialog", { name: "Game over" }).getByRole("heading").innerText();
-  if (!/wins|share the win|Nobody/.test(heading)) fail(`Unexpected result: ${heading}`);
-  if (moves === 0) fail("No figure moved during the game");
+  const heading = await over.getByRole("heading").innerText();
+  if (!/Alice wins/.test(heading)) fail(`Unexpected result after Bob left: ${heading}`);
 
   // ---- Replay -------------------------------------------------------------
   phase("replay");
@@ -342,7 +362,8 @@ try {
   const [download] = await Promise.all([alice.page.waitForEvent("download"), downloadButton.click()]);
   const file = await download.path();
   const replay = JSON.parse(await readFile(file, "utf8"));
-  if (replay.formatVersion !== 1 || replay.commands.length < 10) fail("The replay file looks wrong");
+  if (replay.formatVersion !== 1) fail("The replay file looks wrong");
+  if (replay.commands.at(-1)?.type !== "concede") fail("The replay does not end with Bob leaving");
   if (!replay.setup.seed) fail("The replay is missing the game's seed");
 
   await alice.page.getByRole("button", { name: "New game" }).click();
@@ -366,7 +387,7 @@ try {
   if (newCode === code) fail("Resuming reused the old room code");
   if (!(await alice.page.getByRole("button", { name: /Waiting for Bob/ }).isDisabled())) fail("The host could continue without Bob");
 
-  await bob.page.getByRole("button", { name: "New game" }).click();
+  // Bob left the first game, so his page is already back at the menu.
   await bob.page.getByRole("radio", { name: "Online" }).click();
   await bob.page.getByLabel("Room code").fill(newCode);
   await bob.page.getByRole("button", { name: "Join", exact: true }).click();
@@ -387,14 +408,14 @@ try {
 
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(
-    `Online game played in room ${code}: ${moves} moves, ${attacks} attacks, ${replay.commands.length} commands. Result: ${heading} Saved at ${savedAt.round} and resumed in room ${newCode}.`,
+    `Online game in room ${code}: ${moves} moves, ${attacks} attacks, ${replay.commands.length} commands. Result: ${heading} Saved at ${savedAt.round} and resumed in room ${newCode}.`,
   );
 } catch (err) {
   for (const p of everyone) await shot(p, "failure").catch(() => {});
   if (errors.length > 0) console.error(`Console errors:\n${errors.join("\n")}`);
   throw err;
 } finally {
-  await browser.close();
+  await Promise.all(browsers.map((b) => b.close()));
   await new Promise((r) => web.httpServer.close(r));
   gameServer.kill();
 }

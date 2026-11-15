@@ -2,7 +2,10 @@
 
 A record for whoever picks this up next. Delete this page once the open questions are settled.
 
-## Where things stand
+## Fixed: the online test
+The online test no longer plays a whole game across three 3D boards; the server's unit tests already play whole games over the protocol. It now reloads Bob's page during the draft, which has no 3D board, plays a few turns, saves, has Bob leave (which concedes), and checks the replay and resuming. Each player has their own browser, and the spectator's is closed once she has seen the board. Locally it takes about 2 minutes. The rest of this page is the record from before that change; points 2 and 6 below are done.
+
+## Where things stood
 - **`main` is red.** `e2e (online)` failed on both pushes to `main` after the gaming table (#29, #30), in the same step as before: Bob's page is reloaded mid-game and must come back to his seat. The state `57c6037` that passed twice on the pull request fails too, so the wider zoom was not the cause.
 - **It reproduces locally**, first try, failing in the same step.
 - **CI time on `main`:** `full-game` takes 7.5 to 9 minutes; every other browser test takes under a minute (`models` 15 s, `menu` and `editor` 30 s, `gallery` 45 s, `saves` 50 s; `online` fails at about 95 s). Installing Playwright takes 12 to 29 s in each of the 7 browser jobs. Typecheck, unit tests and build take about 20 s.
@@ -17,11 +20,11 @@ A record for whoever picks this up next. Delete this page once the open question
 
 ## What to do, most useful first
 1. **Draw only when something changes.** Render the play and replay screens on demand (`frameloop="demand"`, calling `invalidate` from the camera glide, hops, drags and label updates), or drop to a low frame rate when nothing moves. This speeds up every browser test and helps players without a graphics card. It touches every `useFrame` animation, so it needs care.
-2. **Online test:** launch one browser per player, and wait on state with a longer limit for the reload. Measured above; test only.
+2. **Online test (done):** one browser per player, and the reload moved to the draft.
 3. **A cheaper overview:** bring back the cheaper table drawing (`225a7ca`, `f85528a`, below), or open a reloaded page with the camera on the player's own start zone.
 4. **`full-game`:** play fewer rounds (3 would do) or concede once every one-off check has passed. Replace frame counting with state from `window.__aoh`: a flag for the camera at rest and one for the table cards painted.
 5. **CI:** cache the Playwright browser download, and upload screenshots when a browser test fails (`E2E_SCREENSHOTS` plus `actions/upload-artifact`).
-6. **Smaller window for the online test.** It does not check layout, and drawing is fill bound.
+6. **Online test, fewer boards (done):** a few turns instead of a whole game, and the spectator's browser closed once she has seen the board.
 
 ## History: what failed on pull request #29
 | Commit | Change | Failure |
