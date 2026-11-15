@@ -36,7 +36,7 @@ Dependencies only point downwards: `client` and `server` use `protocol`, `conten
 | `editor.ts` | Pure map-editing operations used by the map editor: placing and removing pieces, side placement, start zones, fixing problems, and seeded random fills |
 | `game/types.ts` | `GameState`, `Command`, `GameEvent`, `PlayerView` and friends |
 | `game/engine.ts` | `createGame`, `applyCommand`, `replayGame`, `waitingOn` and the turn flow |
-| `game/draft.ts`, `game/deploy.ts` | Snake draft (card count or points budget, faction-pure) and deployment. Zones that grow to fit an army are stored in `GameState.zones`; read a player's zone with `playerZone` |
+| `game/draft.ts`, `game/deploy.ts` | Snake draft to a points budget (optionally faction-pure) and deployment. Zones that grow to fit an army are stored in `GameState.zones`; read a player's zone with `playerZone` |
 | `game/rounds.ts` | Token placement, initiative, turn order, wounds, elimination and game over |
 | `game/placement.ts`, `game/movement.ts` | Multi-hex footprints, reachable placements (Dijkstra with hazard tie-breaks), moving, falling, passing strikes, flying, trample |
 | `game/engagement.ts`, `game/combat.ts` | Engagement, attack legality, dice, height bonuses, special actions, mind control |
@@ -71,6 +71,7 @@ State lives in small stores read with `useSyncExternalStore`:
 - `session.ts`: the game being played. Local (hot-seat) sessions run the engine in the browser; online sessions send commands through `online.ts` and apply server views (`pending` blocks double sends).
 - `online.ts`: the WebSocket connection, lobby state, automatic reconnect and rejoin, host save requests.
 - `saves.ts`: named saves in browser storage, summaries and file downloads. `maps.ts`: custom maps in browser storage.
+- `testMode.ts`: `TEST_MODE`, set only by the browser tests (`window.__aohTest`). It draws a simpler gaming table and keeps the camera's narrower zoom limits; players never have it.
 
 Screens (`screens/`): `SetupScreen` (the main menu: hot-seat or online setup, saved games, resume), `LobbyScreen`, `DraftScreen`, `PlayScreen` (deployment, tokens, turns, game over), `EditorScreen`, `ReplayScreen`. `App.tsx` picks the screen from the session and online state. On the play screen the right-hand column shows the acting unit's card (`.unit-card-main`, shown again at each new turn) and below it, smaller, the card of a unit the pointer has rested on for half a second or that was clicked (`.unit-card-other`); `useDelayedHover` in `PlayScreen.tsx` keeps the hover card from flickering as the pointer crosses a figure's parts. The camera follows the action through `BoardScene`'s `focus` prop: a new turn, or a squad passing the selection to its next figure, asks for a framed glide to that figure, which stops as soon as the player turns or zooms the camera.
 
@@ -101,6 +102,8 @@ Browser storage keys (all `localStorage`, each wrapped so the game works without
 
 ## Testing
 
-- `pnpm test` (Vitest): engine unit tests (`packages/rules/test`, with fixtures in `fixtures.ts`), content and balance tests, 8 random full-game simulations that check invariants and exact replays, protocol tests, and server tests over real WebSockets.
-- `pnpm e2e` (Playwright, needs `pnpm build` first): a full hot-seat game (its one-off checks in the first rounds, then turns ended at once until the round limit), the map editor, saved games, online play through the real server (the lobby, a spectator, a reload during the draft, a few turns, host-only saving, leaving, the replay, and resuming in a new room; whole online games are played by the server's unit tests), the figure model page, the unit gallery, and the main menu in all four styles. Browser tests drive the canvas through `window.__aoh` (projection and draw stats) and `window.__aohUi` (current moves and targets, and the figure being dragged). They render WebGL in software, so frames are slow (a board at rest draws none): tests wait for state (a changed draw count, a settled camera), never for time, and never for many frames in a row.
-- CI (`.github/workflows/ci.yml`) runs only the checks a pull request's changes affect, chosen by `scripts/affected.mjs`, with each browser test as its own parallel job. Pushes to `main` run everything. See [TESTING.md](TESTING.md). `deploy.yml` publishes the client to GitHub Pages on every merge to `main`, with `VITE_SERVER_URL` from the `GAME_SERVER_URL` repository variable.
+- `pnpm test` (Vitest): engine unit tests (`packages/rules/test`, with fixtures in `fixtures.ts`), content and balance tests, 8 random full-game simulations that check invariants and exact replays, protocol tests, server tests over real WebSockets (whole online games), and the client's figure model and table layout tests.
+- `pnpm e2e` (Playwright, needs `pnpm build` first): seven browser tests that drive the real interface. They reach the canvas through `window.__aoh` (projection, draw stats and a frame count; `scene/TestHook.tsx`) and `window.__aohUi` (current moves and targets, and the figure being dragged; `PlayScreen.tsx`).
+- CI (`.github/workflows/ci.yml`) runs only the checks a pull request's changes affect, chosen by `scripts/affected.mjs`, with each browser test as its own parallel job; pushes to `main` run everything. `deploy.yml` publishes the client to GitHub Pages on every merge to `main`, with `VITE_SERVER_URL` from the `GAME_SERVER_URL` repository variable.
+
+[TESTING.md](TESTING.md) has what each browser test covers, what each kind of change runs, and how to write a browser test.

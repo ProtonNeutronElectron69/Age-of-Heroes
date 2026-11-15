@@ -42,7 +42,7 @@ for (let i = 0; ; i++) {
   await new Promise((r) => setTimeout(r, 100));
 }
 
-const web = await preview({ preview: { port: 4181, strictPort: true }, logLevel: "error" });
+const web = await preview({ preview: { port: 4183, strictPort: true }, logLevel: "error" });
 const url = web.resolvedUrls.local[0];
 /** One browser per player: in one shared browser their boards queue behind each other to be drawn. */
 const browsers = [];
