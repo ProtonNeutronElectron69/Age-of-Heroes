@@ -30,10 +30,10 @@ const ids = () => cards.evaluateAll((list) => list.map((c) => c.dataset.unit));
 const across = () =>
   page.getByRole("list", { name: "Unit cards" }).evaluate((grid) => getComputedStyle(grid).gridTemplateColumns.split(" ").length);
 
-/** Triangles in the last frame, once the scene has drawn at least `least`. */
+/** Triangles in the last frame, once the scene has drawn at least `least` (on a canvas on the page, not the menu's closing one). */
 async function drawn(least) {
   const handle = await page.waitForFunction((n) => {
-    const t = window.__aoh?.stats().triangles ?? 0;
+    const t = window.__aoh?.canvas.isConnected ? window.__aoh.stats().triangles : 0;
     return t >= n ? t : false;
   }, least);
   return handle.jsonValue();

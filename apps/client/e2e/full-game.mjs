@@ -193,7 +193,8 @@ try {
   phase("deployment");
   // Deployment: auto place each unit.
   await page.getByRole("region", { name: "Deployment" }).waitFor();
-  await page.waitForTimeout(800);
+  // The board's own canvas hook, once it has drawn a frame.
+  await page.waitForFunction(() => window.__aoh?.canvas.isConnected && window.__aoh.stats().frames > 0);
   await shot("3-deploy");
   // The board draws each terrain as one instanced mesh; one mesh per hex took over 1000 draw calls.
   const { calls } = await page.evaluate(() => window.__aoh.stats());

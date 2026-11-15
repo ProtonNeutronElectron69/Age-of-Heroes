@@ -55,7 +55,8 @@ try {
   await page.goto(url);
   await page.getByRole("button", { name: "Map editor" }).click();
   await page.getByRole("region", { name: "Tools" }).waitFor();
-  await page.waitForTimeout(800);
+  // The editor's own canvas hook (the menu's may still be closing), once it has drawn a frame.
+  await page.waitForFunction(() => window.__aoh?.canvas.isConnected && window.__aoh.stats().frames > 0);
 
   // Four 24-hex grass slabs.
   await page.getByRole("button", { name: "24-hex piece" }).click();
