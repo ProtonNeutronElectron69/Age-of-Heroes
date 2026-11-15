@@ -100,7 +100,6 @@ export function PlayScreen({ session }: { session: Session }) {
   const isOnline = session.kind === "online";
   /** Online: waiting for the server to answer the last command, so nothing else may be sent. */
   const busy = session.pending;
-  const mode = state.config.mode;
   const names = useMemo(() => new Names(state, ctx), [state, ctx]);
   const board = ctx.board;
   const center = useMemo(() => boardCenter(board), [board]);
@@ -319,7 +318,7 @@ export function PlayScreen({ session }: { session: Session }) {
     return figureSpots(f, card.footprint, card.height, ctx);
   };
   const engagedCount = (figureId: string): number => {
-    if (mode !== "advanced" || !activeUnit || !activeCard) return 0;
+    if (!activeUnit || !activeCard) return 0;
     return engagedEnemies(state, activeUnit.owner, spotsOf(activeUnit.id, figureId), activeCard.height, ctx).length;
   };
 
@@ -373,7 +372,7 @@ export function PlayScreen({ session }: { session: Session }) {
   for (const unit of state.units) {
     const card = ctx.cards.get(unit.cardId)!;
     const color = names.playerColor(unit.owner);
-    const life = statsOf(card, mode).life;
+    const life = statsOf(card).life;
     for (const f of unit.figures) {
       if (f.destroyed || !f.position) continue;
       // In eye view the camera is inside the viewer's own token, so leave it out.
@@ -398,7 +397,7 @@ export function PlayScreen({ session }: { session: Session }) {
         hero: card.figureCount === 1,
         status,
         ...(status === "selected" ? { arrow: true } : {}),
-        ...(mode === "advanced" && life > 1 ? { lifeLeft: life - f.wounds } : {}),
+        ...(life > 1 ? { lifeLeft: life - f.wounds } : {}),
       });
     }
   }
@@ -509,7 +508,6 @@ export function PlayScreen({ session }: { session: Session }) {
     <UnitCardView
       key={hit.unit.id}
       card={ctx.cards.get(hit.unit.cardId)!}
-      mode={mode}
       color={names.playerColor(hit.unit.owner)}
       alive={hit.unit.figures.filter((f) => !f.destroyed).length}
       wounds={hit.figure.wounds}
@@ -686,7 +684,7 @@ export function PlayScreen({ session }: { session: Session }) {
                       : targets.size > 0
                         ? "Red rings: attack."
                         : "No enemy in range and sight."
-                  } Orange hexes are risky (lava, ice${mode === "advanced" ? ", falls or passing strikes" : ""}).${
+                  } Orange hexes are risky (lava, ice, falls or passing strikes).${
                     state.pinned?.includes(selected) ? " This figure is pinned and cannot move this turn." : ""
                   }`
                 : "This unit has finished."}

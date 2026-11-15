@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { COLOR_SCHEMES, figureColors, type ColorScheme } from "../models";
 import { Camera, StandingUnit, Tiles, closeView, lineUp } from "../scene/standing";
 import { TestHook } from "../scene/TestHook";
-import { HexCard, type CardSide } from "../ui/HexCard";
+import { HexCard } from "../ui/HexCard";
 import { factionTheme } from "../ui/factionThemes";
 import "./unit-gallery.css";
 
@@ -40,42 +40,27 @@ export interface Filters {
   readonly attack: Attack;
 }
 
-/** The number a card sorts by. Points and Life are on the Advanced side only; the rest follow the side shown. */
-function sortValue(card: UnitCard, key: SortKey, side: CardSide): number {
-  const stats = side === "advanced" ? card.advanced : card.basic;
-  switch (key) {
-    case "points":
-      return card.advanced.points;
-    case "life":
-      return card.advanced.life;
-    case "height":
-      return card.height;
-    case "move":
-    case "range":
-    case "attack":
-    case "defense":
-      return stats[key];
-    default:
-      return 0;
-  }
+/** The number a card sorts by. */
+function sortValue(card: UnitCard, key: Exclude<SortKey, "faction" | "name">): number {
+  return card[key];
 }
 
 /** The cards that pass the filters, in the chosen order. Ties go by name. */
-export function galleryCards(filters: Filters, sort: SortKey, descending: boolean, side: CardSide): UnitCard[] {
+export function galleryCards(filters: Filters, sort: SortKey, descending: boolean): UnitCard[] {
   const text = filters.text.trim().toLowerCase();
   const shown = CARDS.filter(
     (c) =>
       (filters.faction === "all" || c.faction === filters.faction) &&
       (filters.kind === "all" || (filters.kind === "squad") === isSquad(c)) &&
-      (filters.attack === "all" || (filters.attack === "ranged") === c.advanced.range > 1) &&
+      (filters.attack === "all" || (filters.attack === "ranged") === c.range > 1) &&
       (!text ||
-        [c.name, c.faction, c.species, c.unitClass, c.personality, ...c.advanced.abilities.map((a) => a.name)].some((s) => s.toLowerCase().includes(text))),
+        [c.name, c.faction, c.species, c.unitClass, c.personality, ...c.abilities.map((a) => a.name)].some((s) => s.toLowerCase().includes(text))),
   );
   const byName = (a: UnitCard, b: UnitCard) => a.name.localeCompare(b.name);
   const compare = (a: UnitCard, b: UnitCard): number => {
     if (sort === "name") return byName(a, b);
     if (sort === "faction") return FACTIONS.indexOf(a.faction) - FACTIONS.indexOf(b.faction);
-    return sortValue(a, sort, side) - sortValue(b, sort, side);
+    return sortValue(a, sort) - sortValue(b, sort);
   };
   return shown.sort((a, b) => (descending ? -compare(a, b) : compare(a, b)) || byName(a, b));
 }
@@ -108,11 +93,10 @@ export function UnitGalleryScreen({ onClose }: { onClose: () => void }) {
   const [filters, setFilters] = useState<Filters>(ALL_FILTERS);
   const [sort, setSort] = useState<SortKey>(() => remembered("sort", SORTS.map((s) => s.id), "faction"));
   const [descending, setDescending] = useState(false);
-  const [side, setSide] = useState<CardSide>(() => remembered("side", ["basic", "advanced"], "advanced"));
   const [size, setSize] = useState<CardSize>(() => remembered("size", SIZES.map((s) => s.id), "medium"));
   const [chosen, setChosen] = useState<string | null>(null);
 
-  const cards = useMemo(() => galleryCards(filters, sort, descending, side), [filters, sort, descending, side]);
+  const cards = useMemo(() => galleryCards(filters, sort, descending), [filters, sort, descending]);
   const filtered = filters.text !== "" || filters.faction !== "all" || filters.kind !== "all" || filters.attack !== "all";
   const update = (change: Partial<Filters>) => setFilters((f) => ({ ...f, ...change }));
   const chosenCard = cards.find((c) => c.id === chosen) ?? CARDS.find((c) => c.id === chosen) ?? null;
@@ -198,26 +182,6 @@ export function UnitGalleryScreen({ onClose }: { onClose: () => void }) {
           </span>
         </label>
         <div className="field">
-          <span>Side</span>
-          <div className="segmented" role="radiogroup" aria-label="Card side">
-            {(["basic", "advanced"] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                role="radio"
-                aria-checked={side === s}
-                className={side === s ? "on" : ""}
-                onClick={() => {
-                  setSide(s);
-                  remember("side", s);
-                }}
-              >
-                {s === "basic" ? "Basic" : "Advanced"}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="field">
           <span>Size</span>
           <div className="segmented" role="radiogroup" aria-label="Card size">
             {SIZES.map((s) => (
@@ -253,7 +217,7 @@ export function UnitGalleryScreen({ onClose }: { onClose: () => void }) {
             {cards.map((card) => (
               <li key={card.id}>
                 <button type="button" className="unit-gallery-card" data-unit={card.id} aria-label={card.name} onClick={() => setChosen(card.id)}>
-                  <HexCard card={card} side={side} />
+                  <HexCard card={card} />
                 </button>
               </li>
             ))}
@@ -264,7 +228,6 @@ export function UnitGalleryScreen({ onClose }: { onClose: () => void }) {
       {chosenCard && (
         <ModelViewer
           card={chosenCard}
-          side={side}
           onClose={() => setChosen(null)}
           onStep={(step) => {
             if (cards.length === 0) return;
@@ -278,7 +241,7 @@ export function UnitGalleryScreen({ onClose }: { onClose: () => void }) {
 }
 
 /** One unit's figure model on a small board, to turn with the mouse or a finger, beside its card. */
-function ModelViewer({ card, side, onClose, onStep }: { card: UnitCard; side: CardSide; onClose: () => void; onStep: (step: number) => void }) {
+function ModelViewer({ card, onClose, onStep }: { card: UnitCard; onClose: () => void; onStep: (step: number) => void }) {
   const [scheme, setScheme] = useState<ColorScheme>(() => remembered("scheme", COLOR_SCHEMES.map((s) => s.id), "faction"));
   const [player, setPlayer] = useState(0);
   const standings = useMemo(() => lineUp([card]), [card]);
@@ -333,7 +296,7 @@ function ModelViewer({ card, side, onClose, onStep }: { card: UnitCard; side: Ca
             </Canvas>
           </div>
           <aside className="unit-viewer-side">
-            <HexCard card={card} side={side} ownerColor={SEAT_COLORS[player]} />
+            <HexCard card={card} ownerColor={SEAT_COLORS[player]} />
             <label className="field">
               <span>Colours</span>
               <select

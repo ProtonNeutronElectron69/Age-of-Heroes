@@ -21,32 +21,32 @@ import { CARDS, apply, makeCtx, rowMap, setup, testCard, turnState, withOutcome 
 
 const ab = (id: string, params?: Record<string, number>): Ability => ({ id, name: id, text: `${id} ability`, ...(params ? { params } : {}) });
 const hero = (id: string, abilities: Ability[], extra: Partial<UnitCard> = {}) =>
-  testCard(id, { advanced: { life: 4, move: 5, range: 1, attack: 3, defense: 3, points: 100, abilities }, ...extra });
+  testCard(id, { life: 4, move: 5, range: 1, attack: 3, defense: 3, points: 100, abilities, ...extra });
 const squad = (id: string, abilities: Ability[], extra: Partial<UnitCard> = {}) =>
   testCard(id, {
     unitType: "commonSquad",
     figureCount: 3,
-    advanced: { life: 1, move: 5, range: 6, attack: 2, defense: 2, points: 60, abilities },
+    life: 1, move: 5, range: 6, attack: 2, defense: 2, points: 60, abilities,
     ...extra,
   });
 
 const NEW_CARDS: UnitCard[] = [
   ...CARDS,
-  hero("archer", [ab("pin")], { advanced: { life: 4, move: 5, range: 6, attack: 3, defense: 3, points: 100, abilities: [ab("pin")] } }),
+  hero("archer", [ab("pin")], { life: 4, move: 5, range: 6, attack: 3, defense: 3, points: 100, abilities: [ab("pin")] }),
   hero("sapper", [ab("shove")]),
   hero("grappler", [ab("grapple-line", { range: 3 })]),
-  squad("ronin", [ab("last-stand")], { advanced: { life: 1, move: 5, range: 1, attack: 3, defense: 0, points: 60, abilities: [ab("last-stand")] } }),
+  squad("ronin", [ab("last-stand")], { life: 1, move: 5, range: 1, attack: 3, defense: 0, points: 60, abilities: [ab("last-stand")] }),
   hero("fae", [ab("fae-step", { range: 5 })]),
   squad("sprites", [ab("will-o-wisp", { maxDistance: 4 })]),
-  squad("trees", [ab("regrowth", { heal: 1 })], { figureCount: 2, advanced: { life: 3, move: 3, range: 1, attack: 4, defense: 4, points: 120, abilities: [ab("regrowth", { heal: 1 })] } }),
-  squad("drones", [ab("volatile-core", { defenseDice: 1 })], { advanced: { life: 1, move: 6, range: 1, attack: 2, defense: 0, points: 60, abilities: [ab("volatile-core", { defenseDice: 1 })] } }),
+  squad("trees", [ab("regrowth", { heal: 1 })], { figureCount: 2, life: 3, move: 3, range: 1, attack: 4, defense: 4, points: 120, abilities: [ab("regrowth", { heal: 1 })] }),
+  squad("drones", [ab("volatile-core", { defenseDice: 1 })], { life: 1, move: 6, range: 1, attack: 2, defense: 0, points: 60, abilities: [ab("volatile-core", { defenseDice: 1 })] }),
   hero("drummer", [ab("war-drums", { range: 3, move: 2 })], { species: "Orc" }),
   squad("orcs", [], { species: "Orc" }),
-  squad("ghouls", [ab("corpse-feast", { move: 2 })], { advanced: { life: 1, move: 6, range: 1, attack: 4, defense: 1, points: 60, abilities: [ab("corpse-feast", { move: 2 })] } }),
+  squad("ghouls", [ab("corpse-feast", { move: 2 })], { life: 1, move: 6, range: 1, attack: 4, defense: 1, points: 60, abilities: [ab("corpse-feast", { move: 2 })] }),
   hero("paladin", [ab("challenge")]),
   squad("xbows", [ab("piercing", { reduce: 1 })]),
   squad("acolytes", [ab("mending-hymn", { range: 3, heal: 1 })], { figureCount: 2 }),
-  hero("weak", [], { advanced: { life: 1, move: 5, range: 1, attack: 3, defense: 0, points: 50, abilities: [] } }),
+  hero("weak", [], { life: 1, move: 5, range: 1, attack: 3, defense: 0, points: 50, abilities: [] }),
 ];
 
 const flat = (n: number, terrain = "grass"): [string, number][] => Array.from({ length: n }, () => [terrain, 1]);
@@ -58,10 +58,9 @@ function game(
   armies: { p1: string[]; p2: string[] },
   positions: Record<string, { q: number; r: number; elevation: number }>,
   active = "p1:0",
-  mode: "basic" | "advanced" = "advanced",
 ): { ctx: RulesContext; state: GameState } {
   const ctx = makeCtx(rowMap(columns), NEW_CARDS);
-  const base = createGame(setup(2, { mapId: "test-row", mode, armies }), ctx).state;
+  const base = createGame(setup(2, { mapId: "test-row", armies }), ctx).state;
   return { ctx, state: turnState(base, active, positions) };
 }
 
@@ -169,8 +168,6 @@ describe("will-o'-the-wisp and challenge", () => {
     expect(attackProblem(g.state, "p1:0#1", "p2:0#1", g.ctx)).toMatch(/more than 4 hexes/);
     const near = game(flat(9), { p1: ["squad"], p2: ["sprites"] }, { "p1:0#1": at(0), "p2:0#1": at(4) });
     expect(attackProblem(near.state, "p1:0#1", "p2:0#1", near.ctx)).toBeNull();
-    const basic = game(flat(9), { p1: ["squad"], p2: ["sprites"] }, { "p1:0#1": at(0), "p2:0#1": at(5) }, "p1:0", "basic");
-    expect(attackProblem(basic.state, "p1:0#1", "p2:0#1", basic.ctx)).toBeNull();
   });
 
   it("makes neighbours of the challenger attack only the challenger", () => {

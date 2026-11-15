@@ -20,13 +20,10 @@ Units are JSON in `packages/content/src/cards/` (`starter.json`, `legends.json`;
   "size": "medium",                     // small | medium | large | huge
   "height": 5,                          // in terrain levels
   "footprint": "1",                     // 1 | 2x1 | 3x1 | 2x2
-  "basic": { "move": 5, "range": 1, "attack": 3, "defense": 4 },
-  "advanced": {
-    "life": 2, "move": 5, "range": 1, "attack": 3, "defense": 3, "points": 140,
-    "abilities": [
-      { "id": "charge", "name": "Charge", "text": "A Knight that has moved this turn rolls 1 extra attack die when it attacks an adjacent enemy.", "params": { "bonus": 1 } }
-    ]
-  }
+  "life": 2, "move": 5, "range": 1, "attack": 3, "defense": 3, "points": 140,
+  "abilities": [
+    { "id": "charge", "name": "Charge", "text": "A Knight that has moved this turn rolls 1 extra attack die when it attacks an adjacent enemy.", "params": { "bonus": 1 } }
+  ]
 }
 ```
 
@@ -39,11 +36,10 @@ Rules the content tests enforce (`packages/content/test`):
 - **Points:** every unit's points must be within 0.7 to 1.3 of what the balance model suggests. Aim for about 1.0. Run `BALANCE_REPORT=1 pnpm test balance` and set points near the "Fair" column, rounded to 5. Adding units shifts the scale a little for everyone, so check the whole table.
 - **Roster shape:** the test currently expects 48 units in 6 factions of 8. Heroes and squads, and ranged and melee units, should each stay within about 60/40 of each other (the test allows 35% to 65%), and every faction must have heroes, squads, ranged and melee units. Update the expected counts in `content.test.ts` when the roster grows.
 - **Card colours:** a new faction needs a colour theme and an emblem in `apps/client/src/ui/factionThemes.ts` (emblem glyphs are in `hexCardArt.tsx`); without one its cards are grey. Open the game with `?cards` in the address to check how a new card looks: the name and rules text shrink to fit, so very long text ends up small.
-- **Unit art:** a unit's drawing goes in its faction's file in `apps/client/src/ui/art/drawings/`, under the card's id. A figure is a list of shapes in a box 200 wide and 250 tall, feet on y = 244, drawn back to front; each shape has a role (armour, cloth, blade and so on) that picks its colour, and `tint` overrides colours for one figure. Use the helpers in `build.ts` (`arm`, `leg`, `torso`, `limb`, `pts`) rather than writing paths by hand where you can. List the roles that are gear in `gear`, so the hit zone picture leaves them grey. Use `solo` for a hero and `squad` for a squad; `squad` arranges the figures for both card sides. Give `solo` the figure's `span` when it reaches far to the side, so it still fits the narrow window on the Advanced side, and give a flying figure a `hover` height. Soldiers aiming a long gun can use the shared `STANDING_AIM` and `KNEELING_AIM` stances, and a squad of unusual shapes, such as beasts, can pass `squad` its own figure positions. Check the result with `?cards=` and the unit's id. Every unit needs a drawing: the full-game browser test fails if a card in the draft has none.
+- **Unit art:** a unit's drawing goes in its faction's file in `apps/client/src/ui/art/drawings/`, under the card's id. A figure is a list of shapes in a box 200 wide and 250 tall, feet on y = 244, drawn back to front; each shape has a role (armour, cloth, blade and so on) that picks its colour, and `tint` overrides colours for one figure. Use the helpers in `build.ts` (`arm`, `leg`, `torso`, `limb`, `pts`) rather than writing paths by hand where you can. List the roles that are gear in `gear`, so the hit zone picture leaves them grey. Use `solo` for a hero and `squad` for a squad; `squad` arranges the figures to fit the card's art window. Give `solo` the figure's `span` when it reaches far to the side, so it still fits that narrow window, and give a flying figure a `hover` height. Soldiers aiming a long gun can use the shared `STANDING_AIM` and `KNEELING_AIM` stances, and a squad of unusual shapes, such as beasts, can pass `squad` its own figure positions. Check the result with `?cards=` and the unit's id. Every unit needs a drawing: the full-game browser test fails if a card in the draft has none.
 - **Figure model:** a unit's 3D model goes in its faction's file in `apps/client/src/models/units/`, under the card's id (see below). Units without one are drawn as tokens, on the board too.
 
 Conventions:
-- **Basic side:** heroes, and squads with more than 1 Life, usually get +1 Basic defense, because a single wound destroys a figure in the Basic game.
 - **Ability text:** write it with the unit's name, in plain words. Numbers in the text must match `params`.
 - **Reusing a rule:** to reuse an existing rule under a new name, keep the `id` and change `name` and `text`. Then add the mapping to the list under the abilities table in [RULES.md](RULES.md).
 
@@ -71,7 +67,7 @@ An ability is engine code named by an id. To add one:
    - movement (`movement.ts`) for things like flying and trample;
    - `AREA_IDS` / `MIND_IDS` for special actions.
 
-   Read numbers with `param(ability, "name", default)`. Abilities apply only in the Advanced game (`hasAbility` and `abilityModifiers` already check). Update the id list in the comment at the top of the file.
+   Read numbers with `param(ability, "name", default)`. Update the id list in the comment at the top of the file.
 2. Add a test in `packages/rules/test/abilities.test.ts`: a test card in `ABILITY_CARDS` and a case for when it applies and when it does not. Use `withOutcome` for rolls.
 3. Add the id to the implemented list in `packages/content/test/content.test.ts`.
 4. Give it a value multiplier in `ABILITY_VALUE` in `packages/content/src/balance.ts`. Support auras are worth more than their holder's stats suggest.

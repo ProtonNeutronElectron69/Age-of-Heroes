@@ -65,11 +65,10 @@ try {
       await page.getByRole("button", { name: "Load a save file" }).waitFor();
       await fits(page, `${style} saved games at ${size}`);
       await page.getByRole("radio", { name: "Play on this device" }).click();
-      await page.getByRole("radio", { name: "Advanced" }).click();
       await page.getByRole("radio", { name: "6", exact: true }).click();
       await fits(page, `${style} with six players at ${size}`);
       if (shots && size === "1280x720") await page.screenshot({ path: `${shots}/menu-${id}.png` });
-      await page.getByRole("radio", { name: "Basic" }).click();
+      await page.getByRole("radio", { name: "2", exact: true }).click();
     }
     await page.context().close();
   }

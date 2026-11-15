@@ -1,10 +1,11 @@
 // Plays a complete 2-player game through the real UI in headless Chromium.
-// Usage: node e2e/full-game.mjs [basic|advanced]   (serves the build in apps/client/dist)
+// Usage: node e2e/full-game.mjs   (serves the build in apps/client/dist)
 import { chromium } from "playwright";
 import { preview } from "vite";
 
-const MODE = process.argv[2] === "advanced" ? "advanced" : "basic";
-const ROUNDS = MODE === "advanced" ? 8 : 5;
+/** A short game: small armies and a round limit. */
+const POINTS = 300;
+const ROUNDS = 8;
 const shotsDir = process.env.E2E_SCREENSHOTS; // optional folder for screenshots
 /** Draw calls allowed for the board during deployment. */
 const MAX_DRAW_CALLS = 300;
@@ -24,7 +25,7 @@ page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("dialog", (d) => d.accept());
 
-const shot = async (name) => shotsDir && page.screenshot({ path: `${shotsDir}/${MODE}-${name}.png` });
+const shot = async (name) => shotsDir && page.screenshot({ path: `${shotsDir}/full-game-${name}.png` });
 const hexDistance = (a, b) => {
   const dq = a.q - b.q;
   const dr = a.r - b.r;
@@ -109,15 +110,9 @@ let cycled = 0;
 
 try {
   await page.goto(url);
-  if (MODE === "advanced") {
-    await page.getByRole("radio", { name: "Advanced" }).click();
-    // A small army keeps the game short; the buttons start at 500.
-    await page.getByLabel("Points per player").fill("300");
-    await page.getByLabel("Points per player").blur();
-  } else {
-    await page.getByRole("radio", { name: "Basic" }).click();
-    await page.getByRole("radio", { name: "2 cards" }).click();
-  }
+  // A small army keeps the game short; the buttons start at 500.
+  await page.getByLabel("Points per player").fill(String(POINTS));
+  await page.getByLabel("Points per player").blur();
   await page.getByRole("radio", { name: `${ROUNDS} rounds` }).click();
   await shot("1-setup");
   await page.getByRole("button", { name: "Start draft" }).click();
@@ -345,7 +340,7 @@ try {
   if (!eyeChecked) fail("Eye view was never tried");
   if (squadMoves > 0 && cycled === 0) fail("Squads never moved on to their next figure after a move");
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
-  console.log(`Full ${MODE} game played: ${moves} moves, ${attacks} attacks. Result: ${heading}`);
+  console.log(`Full game played: ${moves} moves, ${attacks} attacks. Result: ${heading}`);
 } catch (err) {
   await shot("failure");
   if (errors.length > 0) console.error(`Console errors:\n${errors.join("\n")}`);

@@ -64,25 +64,24 @@ describe("scenery on the board", () => {
     expect(codes([tree(1, 1)], lowGap)).toEqual(["sceneryTooTall"]);
   });
 
-  it("blocks line of sight in both rule sets", () => {
+  it("blocks line of sight", () => {
     const { board } = Board.fromMap(withScenery(rowMap(flat(3)), [tree(1)]), undefined, SCENERY);
-    expect(hasLineOfSight(board, token(0), token(2), { strict: false })).toBe(false);
-    expect(hasLineOfSight(board, token(0), token(2), { strict: true })).toBe(false);
+    expect(hasLineOfSight(board, token(0), token(2))).toBe(false);
     // A low wall does not block tall figures.
     const walled = Board.fromMap(
       withScenery(rowMap(flat(3)), [{ id: "w", kind: "wall", hex: hex(1, 0), elevation: 1 }]),
       undefined,
       SCENERY,
     ).board;
-    expect(hasLineOfSight(walled, token(0, 1, 9), token(2, 1, 9), { strict: false })).toBe(true);
-    expect(hasLineOfSight(walled, token(0, 1, 2), token(2, 1, 2), { strict: false })).toBe(false);
+    expect(hasLineOfSight(walled, token(0, 1, 9), token(2, 1, 9))).toBe(true);
+    expect(hasLineOfSight(walled, token(0, 1, 2), token(2, 1, 2))).toBe(false);
   });
 
   it("cannot be entered or deployed on", () => {
     // Scenery in a start zone is a map problem, but deployment must still skip it.
     const map = withScenery(rowMap(flat(5)), [tree(2), { id: "z", kind: "tree", hex: hex(0, 3), elevation: 1 }]);
     const ctx = { ...makeCtx(rowMap(flat(5))), board: Board.fromMap(map, undefined, SCENERY).board };
-    const base = createGame(setup(2, { mapId: "test-row", mode: "basic", armies: { p1: ["hero"], p2: ["hero"] } }), ctx).state;
+    const base = createGame(setup(2, { mapId: "test-row", armies: { p1: ["hero"], p2: ["hero"] } }), ctx).state;
     expect(deploymentSpots(base, "p1", 5, ctx).map((s) => s.hex)).not.toContainEqual(hex(0, 3));
     const state = turnState(base, "p1:0", { "p1:0#1": { q: 0, r: 0, elevation: 1 } });
     const options = moveOptions(state, "p1:0#1", ctx);

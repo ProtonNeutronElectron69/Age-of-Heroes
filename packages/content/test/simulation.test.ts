@@ -18,7 +18,6 @@ import {
   type GameSetup,
   type GameState,
   type RulesContext,
-  type RulesMode,
   type Step,
 } from "@aoh/rules";
 import { describe, expect, it } from "vitest";
@@ -126,18 +125,17 @@ function checkInvariants(state: GameState): void {
         spots.add(key);
         expect(ctx.board.surfaceAt(s.hex, s.elevation), `${f.id} is floating`).toBeDefined();
       }
-      if (state.config.mode === "advanced") expect(f.wounds).toBeLessThan(card.advanced.life);
+      expect(f.wounds).toBeLessThan(card.life);
     }
   }
 }
 
-function playRandomGame(seed: number, players: number, mode: RulesMode) {
+function playRandomGame(seed: number, players: number, budget: number) {
   const setup: GameSetup = {
-    mode,
     seed,
     mapId: map.id,
     roundLimit: 12,
-    ...(mode === "advanced" ? { budget: 400 } : { armySize: 3 }),
+    budget,
     players: Array.from({ length: players }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}`, color: "#fff" })),
   };
   const rng = new Rng(seed * 7919 + 1);
@@ -160,7 +158,7 @@ function playRandomGame(seed: number, players: number, mode: RulesMode) {
       if (e.type === "attackRolled" && e.notes) abilityEvents.push(...e.notes.map((n) => n.split(" +")[0]!.split(" -")[0]!));
       if (e.type === "figureMoved" && cmd.type === "move" && cmd.path.length === 1 && e.path.length === 1) {
         const unit = state.units.find((u) => u.figures.some((f) => f.id === e.figureId));
-        if (unit && ctx.cards.get(unit.cardId)!.advanced.abilities.some((a) => a.id === "flying") && mode === "advanced") {
+        if (unit && ctx.cards.get(unit.cardId)!.abilities.some((a) => a.id === "flying")) {
           abilityEvents.push("flying");
         }
       }
@@ -172,27 +170,27 @@ function playRandomGame(seed: number, players: number, mode: RulesMode) {
 }
 
 describe("random games on the Proving Grounds", () => {
-  for (const [seed, players, mode] of [
-    [1, 2, "basic"],
-    [2, 3, "basic"],
-    [3, 4, "basic"],
-    [4, 6, "basic"],
-    [5, 2, "advanced"],
-    [6, 3, "advanced"],
-    [7, 4, "advanced"],
-    [8, 6, "advanced"],
+  for (const [seed, players, budget] of [
+    [1, 2, 250],
+    [2, 3, 250],
+    [3, 4, 250],
+    [4, 6, 250],
+    [5, 2, 400],
+    [6, 3, 400],
+    [7, 4, 400],
+    [8, 6, 400],
   ] as const) {
-    it(`seed ${seed}, ${players} players, ${mode}: stays legal to the end and replays exactly`, () => {
-      const game = playRandomGame(seed, players, mode);
+    it(`seed ${seed}, ${players} players, ${budget} points: stays legal to the end and replays exactly`, () => {
+      const game = playRandomGame(seed, players, budget);
       expect(game.state.phase).toBe("gameOver");
       expect(game.moves).toBeGreaterThan(0);
       expect(game.attacks).toBeGreaterThan(0);
-      if (mode === "advanced") expect(game.state.config.budget).toBe(400);
+      expect(game.state.config.budget).toBe(budget);
       expect(replayGame(game.setup, game.commands, ctx).state).toEqual(game.state);
     });
   }
 
-  it("uses many different abilities across the Advanced games", () => {
+  it("uses many different abilities across the 400-point games", () => {
     const used = new Set<string>();
     for (const [seed, players] of [
       [5, 2],
@@ -200,7 +198,7 @@ describe("random games on the Proving Grounds", () => {
       [7, 4],
       [8, 6],
     ] as const) {
-      for (const a of playRandomGame(seed, players, "advanced").abilityEvents) used.add(a);
+      for (const a of playRandomGame(seed, players, 400).abilityEvents) used.add(a);
     }
     if ((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SIM_REPORT) {
       (globalThis as { console?: { log: (s: string) => void } }).console?.log([...used].sort().join(", "));

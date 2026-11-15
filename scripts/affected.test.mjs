@@ -93,7 +93,7 @@ describe("affected checks", () => {
     expect(pick(["apps/client/e2e/full-game.mjs"])).toEqual({
       check: true,
       unit: [],
-      e2e: ["full-basic", "full-advanced"],
+      e2e: ["full-game"],
     });
   });
 

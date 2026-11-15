@@ -11,7 +11,7 @@ import type { FigureState, GameEvent, GameState, RulesContext, Step, UnitState }
 /**
  * Special abilities. Cards name their abilities by id (with tunable numbers
  * in `params`); the code for each id lives here and is called from the rule
- * steps it changes. Abilities only exist in the Advanced game.
+ * steps it changes.
  *
  * Ability ids:
  * - Movement: flying, trample, smoke-step, war-drums (aura), corpse-feast (a move after a kill)
@@ -30,12 +30,12 @@ import type { FigureState, GameEvent, GameState, RulesContext, Step, UnitState }
 export const UNHOLY_SPECIES: readonly string[] = ["Undead", "Oni"];
 
 export function abilityOf(card: UnitCard, id: string): Ability | undefined {
-  return card.advanced.abilities.find((a) => a.id === id);
+  return card.abilities.find((a) => a.id === id);
 }
 
-/** Does this card have the ability, and is it in play (Advanced game)? */
+/** Does this card have the ability? */
 export function hasAbility(state: GameState, card: UnitCard, id: string): boolean {
-  return state.config.mode === "advanced" && abilityOf(card, id) !== undefined;
+  return abilityOf(card, id) !== undefined;
 }
 
 export function param(ability: Ability | undefined, key: string, fallback: number): number {
@@ -86,7 +86,7 @@ export interface Modifiers {
 }
 
 /**
- * Extra dice from abilities for one attack (Advanced only). Auras of the same
+ * Extra dice from abilities for one attack. Auras of the same
  * kind do not stack: a figure gets each named bonus at most once.
  */
 export function abilityModifiers(
@@ -97,7 +97,6 @@ export function abilityModifiers(
   distance: number,
 ): Modifiers {
   const mods: Modifiers = { attack: 0, defense: 0, notes: [] };
-  if (state.config.mode !== "advanced") return mods;
   const add = (kind: "attack" | "defense", amount: number, name: string) => {
     if (amount <= 0) return;
     mods[kind] += amount;
@@ -252,7 +251,6 @@ export function targetingProblem(
   target: Combatant,
   distance: number,
 ): string | null {
-  if (state.config.mode !== "advanced") return null;
   const wisp = abilityOf(target.card, "will-o-wisp");
   if (wisp && distance > param(wisp, "maxDistance", 4)) {
     return `${wisp.name}: it cannot be targeted from more than ${param(wisp, "maxDistance", 4)} hexes away`;
@@ -277,7 +275,6 @@ export function targetingProblem(
 
 /** Extra Move from auras (War Drums: other friendly Orcs that start a move near the drummer). */
 export function moveBonus(state: GameState, ctx: RulesContext, mover: Combatant): { bonus: number; notes: string[] } {
-  if (state.config.mode !== "advanced") return { bonus: 0, notes: [] };
   if (mover.card.species !== "Orc") return { bonus: 0, notes: [] };
   const drummer = friendsWith(state, mover.unit.owner, "war-drums", ctx, mover.figure.id).find(
     (s) => spotDistance(s.spots, mover.spots) <= param(abilityOf(s.card, "war-drums"), "range", 3),
@@ -322,7 +319,6 @@ export function afterAttack(
   wounds: number,
   events: GameEvent[],
 ): void {
-  if (state.config.mode !== "advanced") return;
 
   // Pin: a figure wounded (and still standing) cannot move on its next turn.
   const pin = abilityOf(attacker.card, "pin");
@@ -355,7 +351,7 @@ export function afterAttack(
           targetId: figure.id,
           detail: safe ? `${core.name}: ${card.name} shields itself` : `${core.name}: ${card.name} takes 1 wound`,
         });
-        if (!safe) woundFigure(state, unit, figure, param(core, "wounds", 1), card.advanced.life, "ability", events);
+        if (!safe) woundFigure(state, unit, figure, param(core, "wounds", 1), card.life, "ability", events);
       }
     }
   }
@@ -407,7 +403,7 @@ export function afterAttack(
       targetId: attacker.figure.id,
       detail: `${blade.name}: the attacker takes ${param(blade, "wounds", 1)} wound`,
     });
-    woundFigure(state, attacker.unit, attacker.figure, param(blade, "wounds", 1), attacker.card.advanced.life, "ability", events);
+    woundFigure(state, attacker.unit, attacker.figure, param(blade, "wounds", 1), attacker.card.life, "ability", events);
   }
 
   // Salvage Protocol: a kill brings a fallen squadmate back.
@@ -463,7 +459,6 @@ const key = (s: Step) => `${s.hex.q},${s.hex.r}@${s.elevation}`;
  * the squad may pull itself together).
  */
 export function endOfTurnAbilities(state: GameState, unitId: string, ctx: RulesContext, events: GameEvent[]): void {
-  if (state.config.mode !== "advanced") return;
   const unit = state.units.find((u) => u.id === unitId);
   const card = unit ? ctx.cards.get(unit.cardId) : undefined;
   if (!unit || !card) return;
@@ -610,7 +605,7 @@ export function trampleRoll(
     targetId: victim.figure.id,
     detail: safe ? `${ability.name}: dodged` : `${ability.name}: trampled for 1 wound`,
   });
-  if (!safe) woundFigure(state, victim.unit, victim.figure, 1, card.advanced.life, "ability", events);
+  if (!safe) woundFigure(state, victim.unit, victim.figure, 1, card.life, "ability", events);
 }
 
 // ---------------------------------------------------------------------------
@@ -693,11 +688,10 @@ export function mindControlOf(card: UnitCard, id: string): MindControlSpec | und
   return { id, name: a.name, range: param(a, "range", 4), needed: param(a, "needed", 16) };
 }
 
-/** Special actions a card can use instead of a normal attack (Advanced only). */
+/** Special actions a card can use instead of a normal attack. */
 export function specialActions(state: GameState, card: UnitCard): { id: string; name: string; kind: SpecialKind }[] {
-  if (state.config.mode !== "advanced") return [];
   const result: { id: string; name: string; kind: SpecialKind }[] = [];
-  for (const a of card.advanced.abilities) {
+  for (const a of card.abilities) {
     const kind = specialKind(card, a.id);
     if (kind) result.push({ id: a.id, name: a.name, kind });
   }

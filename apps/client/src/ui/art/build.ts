@@ -119,15 +119,14 @@ export type AimStance = Record<keyof typeof STANDING_AIM, P>;
 /**
  * A drawing of one figure. A figure that reaches far to either side gives its
  * `span`, the leftmost and rightmost x it draws to, so that it is moved or
- * shrunk to fit the narrow window of the Advanced side (x from 42 to 198).
+ * shrunk to fit the card's narrow art window (x from 42 to 198).
  */
 export const solo = (figure: Figure, span?: readonly [number, number]): Drawing => {
-  const wide = [{ figure, dx: 0, dy: 0, scale: 1 }];
-  if (!span || (span[0] >= 42 && span[1] <= 198)) return { tall: wide, wide };
+  if (!span || (span[0] >= 42 && span[1] <= 198)) return { tall: [{ figure, dx: 0, dy: 0, scale: 1 }] };
   const room = 156;
   const scale = Math.min(1, room / (span[1] - span[0]));
   const dx = 42 - span[0] * scale + (room - (span[1] - span[0]) * scale) / 2;
-  return { tall: [{ figure, dx, dy: 244 * (1 - scale), scale }], wide };
+  return { tall: [{ figure, dx, dy: 244 * (1 - scale), scale }] };
 };
 
 /** A figure standing with the middle of its box at `centre` and its feet at `feet`. */
@@ -147,22 +146,16 @@ const TALL: Record<number, readonly Spot[]> = {
   3: [[96, 140, 0.62], [152, 190, 0.66], [102, 246, 0.74]],
   4: [[118, 112, 0.54], [80, 162, 0.6], [156, 180, 0.62], [106, 246, 0.7]],
 };
-const WIDE: Record<number, readonly Spot[]> = {
-  2: [[20, 232, 0.9], [130, 244, 0.95]],
-  3: [[-4, 235, 0.8], [86, 229, 0.8], [148, 244, 0.9]],
-  4: [[-22, 230, 0.68], [40, 238, 0.7], [100, 226, 0.7], [152, 244, 0.78]],
-};
-
 /**
- * A squad's drawing: the figures in a column for the tall arrangement and in a
- * row for the wide one. Give them back to front; the last is nearest. Figures of
- * an unusual shape, such as beasts, can give their own spots for either.
+ * A squad's drawing: the figures in a column that fits the card's narrow art
+ * window. Give them back to front; the last is nearest. Figures of an unusual
+ * shape, such as beasts, can give their own spots.
  */
-export function squad(figures: readonly Figure[], own: { tall?: readonly Spot[]; wide?: readonly Spot[] } = {}): Drawing {
+export function squad(figures: readonly Figure[], own: { tall?: readonly Spot[] } = {}): Drawing {
   const place = (spots: readonly Spot[] | undefined) =>
     figures.map((figure, i) => {
       const [centre, feet, scale] = spots?.[i] ?? [100, 244, 0.7];
       return stand(figure, centre, feet, scale);
     });
-  return { tall: place(own.tall ?? TALL[figures.length]), wide: place(own.wide ?? WIDE[figures.length]) };
+  return { tall: place(own.tall ?? TALL[figures.length]) };
 }

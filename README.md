@@ -6,12 +6,12 @@ A turn-based 3D tactics game for 2 to 6 players in the browser. Heroes and squad
 
 ## What's in the game
 
-- **Two rule sets.** In the Basic game, any wound destroys a figure and the front of each card is used. The Advanced game uses the back of each card:
-  - Life;
+- **Deep rules:**
+  - Life and wounds;
   - a points-budget draft;
   - height bonuses, falling and engagement;
   - strict line of sight;
-  - special abilities.
+  - special abilities on every unit.
 - **48 original units** in 6 factions of 8: 21 heroes and 27 squads, 24 ranged and 24 melee. Some figures cover 2 to 4 hexes.
 - **Turns driven by secret tokens:** each player hides activation tokens on their units, rolls for initiative, then takes three turns a round.
 - **3D battlefields** with ten terrain types, bridges, overhangs and scenery, a figure's-eye camera, and four premade maps.

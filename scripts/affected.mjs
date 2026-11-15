@@ -22,8 +22,7 @@ const UNIT = {
 
 /** Browser tests. Each runs from apps/client against the build. */
 export const E2E = {
-  "full-basic": "node e2e/full-game.mjs basic",
-  "full-advanced": "node e2e/full-game.mjs advanced",
+  "full-game": "node e2e/full-game.mjs",
   editor: "node e2e/editor.mjs",
   saves: "node e2e/saves.mjs",
   online: "node e2e/online.mjs",
@@ -69,7 +68,7 @@ export const RULES = [
   { area: "server", match: /^apps\/server\//, check: true, unit: [UNIT.server], e2e: ["online"] },
 
   // A browser test script runs itself.
-  { area: "browser test", match: /^apps\/client\/e2e\/full-game\.mjs$/, check: false, unit: [], e2e: ["full-basic", "full-advanced"] },
+  { area: "browser test", match: /^apps\/client\/e2e\/full-game\.mjs$/, check: false, unit: [], e2e: ["full-game"] },
   { area: "browser test", match: /^apps\/client\/e2e\/editor\.mjs$/, check: false, unit: [], e2e: ["editor"] },
   { area: "browser test", match: /^apps\/client\/e2e\/saves\.mjs$/, check: false, unit: [], e2e: ["saves"] },
   { area: "browser test", match: /^apps\/client\/e2e\/online\.mjs$/, check: false, unit: [], e2e: ["online"] },

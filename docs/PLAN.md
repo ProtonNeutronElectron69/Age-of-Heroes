@@ -4,11 +4,11 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable: the Basic and Advanced rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. Over 450 unit and simulation tests and 8 browser tests run in CI, each pull request running only the ones its changes affect ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable: one full set of rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. Over 450 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 - **Needs the repository owner:** create the online game server on Render and set the `GAME_SERVER_URL` repository variable (about 10 minutes; see [HOSTING.md](HOSTING.md)). Until then the published site can only play online against a server whose address is typed in.
-- **On hold (Phase 6):** a computer opponent, and a tutorial built on the Basic game.
+- **On hold (Phase 6):** a computer opponent, and a tutorial.
 - **In progress (Phase 7):** 3D figure models, in stages. Stage 1 gives every unit a low polygon model of the right size and shape, in flat colour. All 48 units have one, and the owner has approved their look; see them at `?models`. Each figure stands on a light brown base with a coloured ring round its edge, and there are three colour schemes to choose between. The models now stand on the game board in place of tokens; the Display button (or the T key) switches back to tokens, which show the hit band, and picks the colour scheme. **Next:** later stages add detail and colour.
 - **On hold (Phase 7):** sound and music, terrain and scenery art.
 
@@ -17,6 +17,8 @@ The core game is complete and playable: the Basic and Advanced rules, a 48-unit 
 - **Done (Phase 7):** a reworked main menu in four styles to choose from under **Menu style**: War Table (the board and its armies drift behind the menu), Atlas (an inked atlas on parchment), Banner Hall (house banners in a torchlit hall) and Hex Command (a honeycomb of faction hexes). Each fits a landscape window without scrolling and animates its buttons on hover.
 
 - **Done:** the play screen follows the action. Each turn, on every player's turn, the camera glides to the acting unit at a standard zoom and angle and its card comes up; after a squad figure acts, the camera moves on to the next figure. Resting the pointer on another unit for half a second shows its card, smaller, below the acting unit's card until the pointer leaves; clicking a unit keeps its card there.
+
+- **Done:** one set of rules. The simpler second rule set was removed, with its card fronts and its card-count drafts: every game now has Life, abilities, height bonuses, engagement and strict line of sight, and armies are drafted to a points budget. Saves and replays of games under the removed rules are refused with a message.
 
 ### Ideas, not scheduled
 - More premade maps.
@@ -34,7 +36,7 @@ Each phase or drop is one pull request from a working branch, with CI green befo
 | Players | 2 to 6 in every mode |
 | Play modes | Hot-seat and online (done); computer opponent on hold |
 | Online hosting | Game server in a Docker image; Render recommended (free tier, deploys from `render.yaml`). The server keeps rooms in memory only; the host saves a game to a file to resume it later. See [HOSTING.md](HOSTING.md) |
-| Line of sight | Advanced: automatic check from eye point to hit band, plus a figure's-eye camera. Basic: forgiving |
+| Line of sight | Automatic check from eye point to hit band, plus a figure's-eye camera |
 | Art | Unit cards are seven-hex cards in faction colours. Unit art is drawn, not rendered from models, in an ink and colour style; every unit has a drawing and a red and grey hit zone picture. Otherwise none for now: units are figure models on the board (or tokens as tall as their Height, if a player prefers), terrain is flat colour, hovering or clicking a figure shows its card, and a red arrow marks the figure chosen to act. Figure models are built in code from a few solid shapes, like the drawings, and arrive in stages: size and shape first, detail later. A figure stands on a round base a little smaller than its hex; a larger footprint gets one base with a lobe on each hex, thinner where it passes from hex to hex. Figure and base together are as tall as the card's Height; in a squad, a figure that kneels or crouches may be shorter. Flying figures stand on flight stands, as tabletop miniatures do. The body may reach a fifth of a hex past its hexes; a unit that reaches further gets a larger footprint on its card. Bases are light brown, with a ring of colour round the bevelled edge. Model and ring are coloured in one of three schemes: faction models with player rings, player models with faction rings, or every model in the same medium grey with player rings. In every scheme only the ring takes the second colour; the rest of the base stays brown. The Brass Hussars stay at Height 6 for now, on horses a little under life size, rather than growing to Height 7. On the board a single-hex figure faces the nearest enemy figure, across a side of its hex; a larger figure faces along its base. Line of sight keeps using the token shape. Sound and the rest of the art come in Phase 7 |
 | Unit roster | Original units only, across all eras and myths. Squads have 1 special ability and heroes 2 (Flying not counted); heroes have 2 to 8 Life, most squads 1 (tough squads of 2 or 3 figures up to 3). Heroes and squads, and ranged and melee, stay within about 60/40. Point costs set with the balance model |
 | Involvement | Hands-off: work arrives as pull requests with a playable build; the owner decides when to merge |
@@ -56,7 +58,7 @@ Each phase or drop is one pull request from a working branch, with CI green befo
 - [x] CI (typecheck, test, build) and GitHub Pages deployment
 - [x] Rules written up in `docs/RULES.md`
 
-### Phase 1: Basic game (done, #2)
+### Phase 1: First playable game (done, #2)
 - [x] 8 original starter units across 4 factions, with both card sides filled in
 - [x] Game setup screen: 2 to 6 players, names, army size, round limit, map
 - [x] Snake draft by card count, with unique cards exclusive and start zone room checked
@@ -66,7 +68,7 @@ Each phase or drop is one pull request from a working branch, with CI green befo
 - [x] Token placement with a pass-the-device screen between players
 - [x] Initiative and round bar showing revealed tokens
 - [x] Movement: reachable hexes, path preview and cost, climbing and headroom, friendly pass-through, water and swamp, lava, ice, road bonus
-- [x] Basic line of sight against terrain
+- [x] Simple line of sight against terrain
 - [x] Attacks with dice results; destruction on any wound; swamp damage at the end of a turn
 - [x] Round limit and elimination victory screens
 - [x] Game log, and games saved in the browser so a reload can continue them
@@ -83,9 +85,9 @@ Each phase or drop is one pull request from a working branch, with CI green befo
 - [x] Setup screen offers only the player counts a map supports
 - [x] Browser test that builds, exports, imports and plays a custom map
 
-### Phase 3: Advanced rules core (done, #4)
-- [x] Advanced mode selectable at setup; drafts by card count until the Phase 4 points budget
-- [x] Card backs shown in the Advanced game; Life and wounds tracked, with life badges on tokens
+### Phase 3: Full rules core (done, #4)
+- [x] The full rules as a second rule set at setup; drafts by card count until the Phase 4 points budget (the simpler rule set has since been removed)
+- [x] Card backs with Life and abilities; Life and wounds tracked, with life badges on tokens
 - [x] Elevation bonuses, the Height climbing limit, and falling damage on every step
 - [x] Engagement, the engaged-attack restriction, melee needing engagement, and passing strikes
 - [x] Strict 3D line of sight against hit bands, with figures blocking, plus a figure's-eye camera
@@ -94,7 +96,7 @@ Each phase or drop is one pull request from a working branch, with CI green befo
 - [x] Risky paths (lava, ice, falls, passing strikes) shown in orange and avoided by the suggested path
 - [x] Rule numbers (falling dice, passing strike dice, height bonuses, straddle) as tuning data
 - [x] One original 2x1 unit, Old Rootback, to bring big figures into play
-- [x] Tests: Advanced rule and multi-hex unit tests, random Advanced games, and an Advanced browser game
+- [x] Tests: rule and multi-hex unit tests, random games, and a browser game
 
 ### Phase 4: Abilities and armies (done, #5)
 - [x] Ability system: abilities named on cards with tunable params, implemented as hooks into attacks, defense, movement, reactions and end of turn
@@ -141,7 +143,7 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
   - [x] The client waits up to 90 seconds for a sleeping server to wake, and says so
   - [x] Tests: host-only saving, resuming and claiming armies on the server; browser tests that save, quit, reload and load a hot-seat game three ways, and save an online game mid-battle and resume it in a new room with both players
 - [ ] Computer opponent (on hold)
-- [ ] Tutorial built on the Basic game (on hold)
+- [ ] Tutorial (on hold)
 
 ### Playtest fixes
 - [x] Eye view must be closed before ending a turn, and it closes itself when a turn ends any other way. Ending a turn in eye view used to crash the play screen to a grey page
@@ -159,7 +161,7 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 - [x] After a squad figure moves or attacks, the next figure that has not acted is selected
 
 ### Editor tools and custom points
-- [x] Advanced games take any points budget from 50 to 9999, or no limit
+- [x] Games take any points budget from 50 to 9999, or no limit
 - [x] Editor: "Show next problem" moves the camera to each problem in turn, and "Remove problem pieces" deletes every floating piece and every piece of scenery with a problem
 - [x] Editor: drag a box in the Erase tool to remove everything in it, at every level
 - [x] Editor: the grid is about 10 times larger and square; special terrain buttons explain their effect after a second

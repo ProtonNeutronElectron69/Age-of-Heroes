@@ -40,8 +40,9 @@ async function expectSameGame(before, how) {
 
 try {
   await page.goto(url);
-  await page.getByRole("radio", { name: "Basic" }).click();
-  await page.getByRole("radio", { name: "1 card" }).click();
+  // 100 points: one unit each, for a short game.
+  await page.getByLabel("Points per player").fill("100");
+  await page.getByLabel("Points per player").blur();
   await page.getByRole("radio", { name: "5 rounds" }).click();
   await page.getByRole("button", { name: "Start draft" }).click();
 

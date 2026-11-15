@@ -1,6 +1,6 @@
 import { CARDS, MAPS, buildBoard, contextFor } from "@aoh/content";
 import { MAX_NAME_LENGTH, parseReplay, type Replay, type RoomSettings } from "@aoh/protocol";
-import { MAX_BUDGET, MAX_PLAYERS, MIN_PLAYERS, replayGame, seedFromString, type MapDefinition, type RulesMode } from "@aoh/rules";
+import { MAX_BUDGET, MAX_PLAYERS, MIN_PLAYERS, replayGame, seedFromString, type MapDefinition } from "@aoh/rules";
 import { useMemo, useRef, useState } from "react";
 import { customMaps, deleteCustomMap, findMap } from "../maps";
 import {
@@ -22,7 +22,7 @@ import { MenuFrame, type MenuCommand } from "./menu/MenuFrame";
 
 const ROUND_LIMITS = [null, 5, 8, 12] as const;
 const BUDGETS = [500, 750, 1000, 1500] as const;
-/** A new game starts as an Advanced game of 1000 points a side, with no round limit. */
+/** A new game starts with 1000 points a side and no round limit. */
 const DEFAULT_BUDGET = 1000;
 const MIN_POINTS = 50;
 /** How many players each premade map hosts, for its button. */
@@ -62,10 +62,8 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
   const resumeInput = useRef<HTMLInputElement>(null);
   const [resumeChoice, setResumeChoice] = useState<ResumeChoice | null>(null);
   const [resumeError, setResumeError] = useState<string | null>(null);
-  const [mode, setMode] = useState<RulesMode>("advanced");
   const [count, setCount] = useState(2);
   const [names, setNames] = useState<string[]>(SEAT_COLOR_NAMES.map((c) => `${c} Player`));
-  const [armySize, setArmySize] = useState(3);
   const [budget, setBudget] = useState(DEFAULT_BUDGET);
   const [budgetText, setBudgetText] = useState(String(DEFAULT_BUDGET));
   const [noLimit, setNoLimit] = useState(false);
@@ -81,7 +79,7 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
   const isCustom = mine.some((m) => m.id === map.id);
   const nameOk = myName.trim().length > 0;
   const codeOk = /^[A-Za-z]{4,8}$/.test(code.trim());
-  const budgetOk = mode !== "advanced" || noLimit || (budget >= MIN_POINTS && budget <= MAX_BUDGET);
+  const budgetOk = noLimit || (budget >= MIN_POINTS && budget <= MAX_BUDGET);
   const pickBudget = (n: number) => {
     setBudget(n);
     setBudgetText(String(n));
@@ -90,9 +88,9 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
 
   const create = () => {
     const settings: RoomSettings = {
-      mode,
       roundLimit,
-      ...(mode === "advanced" ? { budget: noLimit ? null : budget, factionPure } : { armySize }),
+      budget: noLimit ? null : budget,
+      factionPure,
       map,
     };
     createRoom(serverUrl, myName.trim(), settings);
@@ -172,11 +170,11 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
   const start = () => {
     startGame(
       {
-        mode,
         seed: seedFromString(`${Date.now()}:${Math.random()}`),
         mapId: map.id,
         roundLimit,
-        ...(mode === "advanced" ? { budget: noLimit ? null : budget, factionPure } : { armySize }),
+        budget: noLimit ? null : budget,
+        factionPure,
         players: Array.from({ length: players }, (_, i) => ({
           id: `p${i + 1}`,
           name: names[i]!.trim() || `Player ${i + 1}`,
@@ -188,24 +186,6 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
   };
 
   // ---- Settings shared by both ways to play --------------------------------
-  const rules = (
-    <section className="mp-sec mp-rules">
-      <h3 className="mp-label">Rules</h3>
-      <div className="mp-seg" role="radiogroup" aria-label="Rule set">
-        {(["basic", "advanced"] as const).map((m) => (
-          <button key={m} type="button" role="radio" aria-checked={mode === m} className={mode === m ? "on" : ""} onClick={() => setMode(m)}>
-            {m === "basic" ? "Basic" : "Advanced"}
-          </button>
-        ))}
-      </div>
-      <p className="mp-hint">
-        {mode === "basic"
-          ? "The front of each card: move, range, attack and defense. Any wound destroys a figure."
-          : "The back of each card: Life, points, abilities, height bonuses, falling, engagement and strict line of sight."}
-      </p>
-    </section>
-  );
-
   const playersSection =
     where === "online" ? (
       <section className="mp-sec mp-players">
@@ -252,77 +232,65 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
       </section>
     );
 
-  const army =
-    mode === "advanced" ? (
-      <section className="mp-sec mp-army">
-        <h3 className="mp-label">Army points</h3>
-        <div className="mp-seg" role="radiogroup" aria-label="Points budget">
-          {BUDGETS.map((n) => (
-            <button
-              key={n}
-              type="button"
-              role="radio"
-              aria-label={`${n} points`}
-              aria-checked={!noLimit && budget === n}
-              className={!noLimit && budget === n ? "on" : ""}
-              disabled={noLimit}
-              onClick={() => pickBudget(n)}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-        <div className="mp-row">
-          <label className="mp-inline">
-            Other
-            <input
-              className="mp-input mp-number"
-              type="number"
-              inputMode="numeric"
-              aria-label="Points per player"
-              min={MIN_POINTS}
-              max={MAX_BUDGET}
-              step={25}
-              value={budgetText}
-              disabled={noLimit}
-              onChange={(e) => {
-                setBudgetText(e.target.value);
-                const n = Number(e.target.value);
-                setBudget(Number.isInteger(n) ? n : NaN);
-              }}
-              onBlur={() => {
-                if (Number.isInteger(budget)) pickBudget(Math.min(MAX_BUDGET, Math.max(MIN_POINTS, budget)));
-                else pickBudget(DEFAULT_BUDGET);
-              }}
-            />
-          </label>
-          <label className="mp-check">
-            <input type="checkbox" checked={noLimit} onChange={(e) => setNoLimit(e.target.checked)} />
-            No limit
-          </label>
-          <label className="mp-check">
-            <input type="checkbox" checked={factionPure} onChange={(e) => setFactionPure(e.target.checked)} />
-            One faction per army
-          </label>
-        </div>
-        {(noLimit || !budgetOk) && (
-          <p className={`mp-hint${budgetOk ? "" : " bad"}`}>
-            {noLimit ? "Players draft until they stop or their start zone is full." : `Any whole number from ${MIN_POINTS} to ${MAX_BUDGET}.`}
-          </p>
-        )}
-      </section>
-    ) : (
-      <section className="mp-sec mp-army">
-        <h3 className="mp-label">Army size</h3>
-        <div className="mp-seg" role="radiogroup" aria-label="Cards per player">
-          {[1, 2, 3, 4].map((n) => (
-            <button key={n} type="button" role="radio" aria-checked={armySize === n} className={armySize === n ? "on" : ""} onClick={() => setArmySize(n)}>
-              {n} {n === 1 ? "card" : "cards"}
-            </button>
-          ))}
-        </div>
-      </section>
-    );
+  const army = (
+    <section className="mp-sec mp-army">
+      <h3 className="mp-label">Army points</h3>
+      <div className="mp-seg" role="radiogroup" aria-label="Points budget">
+        {BUDGETS.map((n) => (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-label={`${n} points`}
+            aria-checked={!noLimit && budget === n}
+            className={!noLimit && budget === n ? "on" : ""}
+            disabled={noLimit}
+            onClick={() => pickBudget(n)}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+      <div className="mp-row">
+        <label className="mp-inline">
+          Other
+          <input
+            className="mp-input mp-number"
+            type="number"
+            inputMode="numeric"
+            aria-label="Points per player"
+            min={MIN_POINTS}
+            max={MAX_BUDGET}
+            step={25}
+            value={budgetText}
+            disabled={noLimit}
+            onChange={(e) => {
+              setBudgetText(e.target.value);
+              const n = Number(e.target.value);
+              setBudget(Number.isInteger(n) ? n : NaN);
+            }}
+            onBlur={() => {
+              if (Number.isInteger(budget)) pickBudget(Math.min(MAX_BUDGET, Math.max(MIN_POINTS, budget)));
+              else pickBudget(DEFAULT_BUDGET);
+            }}
+          />
+        </label>
+        <label className="mp-check">
+          <input type="checkbox" checked={noLimit} onChange={(e) => setNoLimit(e.target.checked)} />
+          No limit
+        </label>
+        <label className="mp-check">
+          <input type="checkbox" checked={factionPure} onChange={(e) => setFactionPure(e.target.checked)} />
+          One faction per army
+        </label>
+      </div>
+      {(noLimit || !budgetOk) && (
+        <p className={`mp-hint${budgetOk ? "" : " bad"}`}>
+          {noLimit ? "Players draft until they stop or their start zone is full." : `Any whole number from ${MIN_POINTS} to ${MAX_BUDGET}.`}
+        </p>
+      )}
+    </section>
+  );
 
   const battlefield = (
     <section className="mp-sec mp-map">
@@ -483,7 +451,6 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
       {where === "online" && connection}
       <div className="mp-cols">
         <div className="mp-col mp-col1">
-          {rules}
           {playersSection}
           {rounds}
         </div>

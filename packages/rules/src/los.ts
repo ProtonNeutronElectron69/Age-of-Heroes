@@ -24,12 +24,7 @@ export interface Token {
 }
 
 export interface SightOptions {
-  /**
-   * Strict (Advanced): aim at the hit band, and other figures block.
-   * Forgiving (Basic): aim at any part of the target, only terrain blocks.
-   */
-  readonly strict: boolean;
-  /** Figures that can block the view (ignored when not strict). Exclude attacker and target. */
+  /** Figures that can block the view. Exclude the attacker and the target. */
   readonly blockers?: readonly Token[];
 }
 
@@ -47,10 +42,10 @@ export function eyePoint(t: Token): Vec3 {
   return { x, y: (t.elevation + t.height) * LEVEL_HEIGHT - 0.02, z };
 }
 
-/** Points on the target that the attacker tries to see. */
-export function targetPoints(t: Token, strict: boolean): Vec3[] {
+/** Points on the target's hit band that the attacker tries to see. */
+export function targetPoints(t: Token): Vec3[] {
   const { x, z } = hexToWorld(t.hex, HEX_SIZE);
-  const fractions = strict ? [HIT_BAND_FROM + 0.05, 0.8, 0.95] : [0.1, 0.35, 0.6, 0.85, 0.98];
+  const fractions = [HIT_BAND_FROM + 0.05, 0.8, 0.95];
   const r = TOKEN_RADIUS * 0.75;
   const offsets: [number, number][] = [[0, 0]];
   for (let k = 0; k < 6; k++) {
@@ -158,7 +153,7 @@ function segmentBlocked(
         return true;
       }
     }
-    // Scenery counts as terrain: it blocks in both rule sets.
+    // Scenery counts as terrain.
     for (const { placement, rules } of board.sceneryIn(h)) {
       const y0 = placement.elevation * LEVEL_HEIGHT;
       const y1 = y0 + rules.height * LEVEL_HEIGHT;
@@ -169,12 +164,10 @@ function segmentBlocked(
       if (hit) return true;
     }
   }
-  if (opts.strict) {
-    for (const t of opts.blockers ?? []) {
-      const { x, z } = hexToWorld(t.hex, HEX_SIZE);
-      const y0 = t.elevation * LEVEL_HEIGHT;
-      if (segmentHitsCylinder(eye, target, x, z, TOKEN_RADIUS, y0, y0 + t.height * LEVEL_HEIGHT)) return true;
-    }
+  for (const t of opts.blockers ?? []) {
+    const { x, z } = hexToWorld(t.hex, HEX_SIZE);
+    const y0 = t.elevation * LEVEL_HEIGHT;
+    if (segmentHitsCylinder(eye, target, x, z, TOKEN_RADIUS, y0, y0 + t.height * LEVEL_HEIGHT)) return true;
   }
   return false;
 }
@@ -182,13 +175,13 @@ function segmentBlocked(
 /**
  * Can `from` see `to`? Each side is one token, or one token per hex for a
  * multi-hex figure: the attacker may look from any of its hexes and needs to
- * see any part of the target (its hit band, when strict).
+ * see part of the target's hit band. Other figures in `blockers` block the view.
  */
 export function hasLineOfSight(
   board: Board,
   from: Token | readonly Token[],
   to: Token | readonly Token[],
-  opts: SightOptions,
+  opts: SightOptions = {},
 ): boolean {
   const viewers: readonly Token[] = Array.isArray(from) ? from : [from as Token];
   const targets: readonly Token[] = Array.isArray(to) ? to : [to as Token];
@@ -197,7 +190,7 @@ export function hasLineOfSight(
     const eye = eyePoint(v);
     for (const t of targets) {
       const cells = corridor(v.hex, t.hex);
-      if (targetPoints(t, opts.strict).some((p) => !segmentBlocked(board, ground, eye, p, cells, opts))) return true;
+      if (targetPoints(t).some((p) => !segmentBlocked(board, ground, eye, p, cells, opts))) return true;
     }
   }
   return false;

@@ -14,7 +14,7 @@ import { apply, fieldMap, makeCtx, setup, testCard } from "./fixtures";
 const card = (id: string, faction: string, points: number, extra: Partial<UnitCard> = {}) =>
   testCard(id, {
     faction,
-    advanced: { life: 4, move: 5, range: 1, attack: 3, defense: 3, points, abilities: [] },
+    life: 4, move: 5, range: 1, attack: 3, defense: 3, points, abilities: [],
     ...extra,
   });
 
@@ -28,17 +28,17 @@ const CARDS = [
 const ctx = makeCtx(fieldMap(), CARDS);
 
 function pointsGame(budget = 200, factionPure = false): GameState {
-  return createGame(setup(2, { mode: "advanced", armies: undefined, budget, factionPure }), ctx).state;
+  return createGame(setup(2, { armies: undefined, budget, factionPure }), ctx).state;
 }
 
 const pick = (s: GameState, cardId: string) => apply(s, { type: "draftPick", player: currentDrafter(s)!, cardId }, ctx).state;
 const pass = (s: GameState) => apply(s, { type: "draftPass", player: currentDrafter(s)! }, ctx).state;
 
 describe("points draft", () => {
-  it("starts in Advanced games given a budget", () => {
+  it("starts a points draft given a budget", () => {
     const s = pointsGame();
     expect(s.phase).toBe("draft");
-    expect(s.config).toMatchObject({ budget: 200, armySize: null, factionPure: false });
+    expect(s.config).toMatchObject({ budget: 200, factionPure: false });
   });
 
   it("refuses cards a player cannot afford", () => {
@@ -70,25 +70,20 @@ describe("points draft", () => {
   });
 
   it("drafts with no points limit until each start zone is full", () => {
-    let s = createGame(setup(2, { mode: "advanced", armies: undefined, budget: null }), ctx).state;
-    expect(s.config).toMatchObject({ budget: null, armySize: null });
+    let s = createGame(setup(2, { armies: undefined, budget: null }), ctx).state;
+    expect(s.config).toMatchObject({ budget: null });
     expect(pickProblem(s, ctx, "red-a", currentDrafter(s)!)).toBeNull();
     while (s.phase === "draft") s = pick(s, draftableCards(s, ctx, currentDrafter(s)!)[0]!);
     // The test field's start zones hold 4 single-hex figures each.
     for (const p of s.players) expect(s.units.filter((u) => u.owner === p.id)).toHaveLength(4);
     expect(pointsGame(200).config.budget).toBe(200);
-    const open = createGame(setup(2, { mode: "advanced", armies: undefined, budget: null }), ctx).state;
+    const open = createGame(setup(2, { armies: undefined, budget: null }), ctx).state;
     expect(applyCommand(open, { type: "draftPass", player: currentDrafter(open)! }, ctx).ok).toBe(true);
   });
 
   it("accepts budgets up to 9999", () => {
     expect(pointsGame(9999).config.budget).toBe(9999);
     expect(() => pointsGame(10000)).toThrow(/1 to 9999/);
-  });
-
-  it("has no passing in a card-count draft", () => {
-    const s = createGame(setup(2, { mode: "basic", armies: undefined, armySize: 2 }), ctx).state;
-    expect(applyCommand(s, { type: "draftPass", player: currentDrafter(s)! }, ctx).error).toMatch(/no passing/);
   });
 
   it("locks each army to the faction of its first pick in faction-pure mode", () => {

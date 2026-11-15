@@ -28,7 +28,7 @@ export function DisplayMenu() {
               </button>
             ))}
           </div>
-          <p className="muted small">Tokens show the hit band that Advanced line of sight checks. Press T to switch.</p>
+          <p className="muted small">Tokens show the hit band that line of sight checks. Press T to switch.</p>
           <label className="field">
             <span>Model colours</span>
             <select

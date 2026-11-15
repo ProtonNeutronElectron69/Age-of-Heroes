@@ -189,8 +189,7 @@ try {
   await page.getByRole("button", { name: "Start draft" }).waitFor();
   const chosen = await page.getByRole("combobox", { name: "Map" }).evaluate((s) => s.selectedOptions[0].textContent);
   if (chosen !== "Test Bridge") fail(`Setup did not select the new map: ${chosen}`);
-  // An Advanced game with no points limit.
-  await page.getByRole("radio", { name: "Advanced" }).click();
+  // A game with no points limit.
   await page.getByRole("checkbox", { name: "No limit" }).check();
   await page.getByRole("button", { name: "Start draft" }).click();
   await page.getByRole("heading", { name: "Draft" }).waitFor();

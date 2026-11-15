@@ -28,8 +28,8 @@ describe("point costs", () => {
     const host = globalThis as { process?: { env?: Record<string, string | undefined> }; console?: { log: (s: string) => void } };
     if (host.process?.env?.BALANCE_REPORT) host.console?.log(formatBalanceReport(rows));
     for (const r of rows) {
-      expect(r.ratio, `${r.card.name}: ${r.card.advanced.points} points, model says ${Math.round(r.fair)}`).toBeGreaterThan(0.7);
-      expect(r.ratio, `${r.card.name}: ${r.card.advanced.points} points, model says ${Math.round(r.fair)}`).toBeLessThan(1.3);
+      expect(r.ratio, `${r.card.name}: ${r.card.points} points, model says ${Math.round(r.fair)}`).toBeGreaterThan(0.7);
+      expect(r.ratio, `${r.card.name}: ${r.card.points} points, model says ${Math.round(r.fair)}`).toBeLessThan(1.3);
     }
   });
 });

@@ -31,7 +31,7 @@ import { checkGameOver, woundFigure } from "./rounds";
 import type { GameEvent, GameState, PlayerId, RulesContext, Step } from "./types";
 
 /**
- * Extra dice for higher ground (Advanced). The figure standing higher gets
+ * Extra dice for higher ground. The figure standing higher gets
  * +1 (attack if attacking, defense if defending), and another +1 when the
  * difference is at least the lower figure's Height.
  */
@@ -69,11 +69,10 @@ function actionProblem(state: GameState, attackerId: string, targetId: string, c
   if (!t || t.figure.destroyed || !t.figure.position) return "That target is not on the battlefield";
   if (t.unit.owner === a.unit.owner) return "You cannot attack your own figures";
 
-  const mode = state.config.mode;
   const aCard = cardOf(a.unit, ctx);
   const tCard = cardOf(t.unit, ctx);
-  const aHeight = statsOf(aCard, mode).height;
-  const tHeight = statsOf(tCard, mode).height;
+  const aHeight = statsOf(aCard).height;
+  const tHeight = statsOf(tCard).height;
   const aSpots = figureSpots(a.figure, aCard.footprint, aHeight, ctx);
   const tSpots = figureSpots(t.figure, tCard.footprint, tHeight, ctx);
   const distance = spotDistance(aSpots, tSpots);
@@ -82,27 +81,22 @@ function actionProblem(state: GameState, attackerId: string, targetId: string, c
   const blocked = targetingProblem(state, ctx, combatant(a.unit, a.figure, ctx), combatant(t.unit, t.figure, ctx), distance);
   if (blocked) return blocked;
 
-  const strict = mode === "advanced";
-  if (strict) {
-    const engaged = engagedEnemies(state, a.unit.owner, aSpots, aHeight, ctx);
-    const withTarget = spotsEngaged(aSpots, aHeight, tSpots, tHeight);
-    if (engaged.length > 0 && !withTarget) return "An engaged figure can only attack enemies it is engaged with";
-    if (reach.range === 1 && !withTarget) return "Too far above or below to reach";
-  }
+  const engaged = engagedEnemies(state, a.unit.owner, aSpots, aHeight, ctx);
+  const withTarget = spotsEngaged(aSpots, aHeight, tSpots, tHeight);
+  if (engaged.length > 0 && !withTarget) return "An engaged figure can only attack enemies it is engaged with";
+  if (reach.range === 1 && !withTarget) return "Too far above or below to reach";
   if (reach.ignoresSight) return null;
 
   const blockers: Token[] = [];
-  if (strict) {
-    for (const unit of state.units) {
-      const card = ctx.cards.get(unit.cardId);
-      if (!card) continue;
-      for (const figure of unit.figures) {
-        if (figure.id === attackerId || figure.id === targetId) continue;
-        blockers.push(...tokens(figureSpots(figure, card.footprint, card.height, ctx), card.height));
-      }
+  for (const unit of state.units) {
+    const card = ctx.cards.get(unit.cardId);
+    if (!card) continue;
+    for (const figure of unit.figures) {
+      if (figure.id === attackerId || figure.id === targetId) continue;
+      blockers.push(...tokens(figureSpots(figure, card.footprint, card.height, ctx), card.height));
     }
   }
-  if (!hasLineOfSight(ctx.board, tokens(aSpots, aHeight), tokens(tSpots, tHeight), { strict, blockers })) {
+  if (!hasLineOfSight(ctx.board, tokens(aSpots, aHeight), tokens(tSpots, tHeight), { blockers })) {
     return "No line of sight";
   }
   return null;
@@ -124,12 +118,12 @@ export function attackProblem(
   const card = cardOf(a.unit, ctx);
   if (!ability) {
     return actionProblem(state, attackerId, targetId, ctx, {
-      range: statsOf(card, state.config.mode).range,
+      range: statsOf(card).range,
       minRange: 1,
       ignoresSight: false,
     });
   }
-  if (state.config.mode !== "advanced" || !abilityOf(card, ability)) return "That figure has no such power";
+  if (!abilityOf(card, ability)) return "That figure has no such power";
   const area = areaAttackOf(card, ability);
   if (area) return actionProblem(state, attackerId, targetId, ctx, area);
   const mind = mindControlOf(card, ability);
@@ -228,23 +222,19 @@ function shoveSpot(state: GameState, ctx: RulesContext, attacker: Combatant, tar
 
 /** Can a figure (even one just destroyed) reach another with a normal attack? Used by Last Stand. */
 function canReach(state: GameState, ctx: RulesContext, from: Combatant, to: Combatant): boolean {
-  const mode = state.config.mode;
-  const range = statsOf(from.card, mode).range;
+  const range = statsOf(from.card).range;
   if (spotDistance(from.spots, to.spots) > range) return false;
-  const strict = mode === "advanced";
-  if (strict && range === 1 && !spotsEngaged(from.spots, from.card.height, to.spots, to.card.height)) return false;
+  if (range === 1 && !spotsEngaged(from.spots, from.card.height, to.spots, to.card.height)) return false;
   const blockers: Token[] = [];
-  if (strict) {
-    for (const unit of state.units) {
-      const card = ctx.cards.get(unit.cardId);
-      if (!card) continue;
-      for (const figure of unit.figures) {
-        if (figure.id === from.figure.id || figure.id === to.figure.id) continue;
-        blockers.push(...tokens(figureSpots(figure, card.footprint, card.height, ctx), card.height));
-      }
+  for (const unit of state.units) {
+    const card = ctx.cards.get(unit.cardId);
+    if (!card) continue;
+    for (const figure of unit.figures) {
+      if (figure.id === from.figure.id || figure.id === to.figure.id) continue;
+      blockers.push(...tokens(figureSpots(figure, card.footprint, card.height, ctx), card.height));
     }
   }
-  return hasLineOfSight(ctx.board, tokens(from.spots, from.card.height), tokens(to.spots, to.card.height), { strict, blockers });
+  return hasLineOfSight(ctx.board, tokens(from.spots, from.card.height), tokens(to.spots, to.card.height), { blockers });
 }
 
 /** Enemy figures this figure could attack right now (with a special action, if given). */
@@ -277,27 +267,22 @@ export function attackDice(
 }
 
 function diceFor(state: GameState, ctx: RulesContext, attacker: Combatant, defender: Combatant, baseAttack?: number) {
-  const mode = state.config.mode;
-  const aStats = statsOf(attacker.card, mode);
-  const tStats = statsOf(defender.card, mode);
-  let attackBonus = 0;
-  let defenseBonus = 0;
+  const aStats = statsOf(attacker.card);
+  const tStats = statsOf(defender.card);
   const notes: string[] = [];
-  if (mode === "advanced") {
-    const height = elevationBonus(
-      standingElevation(attacker.spots),
-      aStats.height,
-      standingElevation(defender.spots),
-      tStats.height,
-      tuningOf(ctx),
-    );
-    if (height.attackBonus > 0) notes.push(`Higher ground +${height.attackBonus} attack`);
-    if (height.defenseBonus > 0) notes.push(`Higher ground +${height.defenseBonus} defense`);
-    const mods = abilityModifiers(state, ctx, attacker, defender, spotDistance(attacker.spots, defender.spots));
-    attackBonus = height.attackBonus + mods.attack;
-    defenseBonus = height.defenseBonus + mods.defense;
-    notes.push(...mods.notes);
-  }
+  const height = elevationBonus(
+    standingElevation(attacker.spots),
+    aStats.height,
+    standingElevation(defender.spots),
+    tStats.height,
+    tuningOf(ctx),
+  );
+  if (height.attackBonus > 0) notes.push(`Higher ground +${height.attackBonus} attack`);
+  if (height.defenseBonus > 0) notes.push(`Higher ground +${height.defenseBonus} defense`);
+  const mods = abilityModifiers(state, ctx, attacker, defender, spotDistance(attacker.spots, defender.spots));
+  const attackBonus = height.attackBonus + mods.attack;
+  const defenseBonus = height.defenseBonus + mods.defense;
+  notes.push(...mods.notes);
   return {
     attack: (baseAttack ?? aStats.attack) + attackBonus,
     defense: Math.max(0, tStats.defense + defenseBonus),
@@ -338,7 +323,7 @@ function resolve(
     ...(notes.length > 0 ? { notes } : {}),
     ...(ability ? { ability } : {}),
   });
-  const life = statsOf(defender.card, state.config.mode).life;
+  const life = statsOf(defender.card).life;
   woundFigure(state, defender.unit, defender.figure, wounds, life, "attack", events);
   afterAttack(state, ctx, rng, attacker, defender, distance, roll.hits, roll.blocks, wounds, events);
 
@@ -352,7 +337,7 @@ function resolve(
       targetId: attacker.figure.id,
       detail: `${stand.name}: strikes back as it falls`,
     });
-    resolve(state, ctx, rng, defender, attacker, statsOf(defender.card, state.config.mode).attack, stand.id, events);
+    resolve(state, ctx, rng, defender, attacker, statsOf(defender.card).attack, stand.id, events);
   }
 }
 
@@ -421,7 +406,7 @@ export function attack(
       detail: `${swap.name}: swaps places with ${defender.card.name}`,
     });
   } else {
-    resolve(state, ctx, rng, attacker, defender, statsOf(attacker.card, state.config.mode).attack, undefined, events);
+    resolve(state, ctx, rng, attacker, defender, statsOf(attacker.card).attack, undefined, events);
     // Shoulder Barge: a melee hit shoves the target one hex back.
     const shove = hasAbility(state, attacker.card, "shove") ? abilityOf(attacker.card, "shove") : undefined;
     if (shove && !attacker.figure.destroyed && !defender.figure.destroyed && defender.card.size !== "huge" && spotDistance(attacker.spots, defender.spots) <= 1) {
@@ -468,7 +453,7 @@ export function endOfTurnTerrain(state: GameState, unitId: string, events: GameE
   const unit = state.units.find((u) => u.id === unitId);
   if (!unit) return;
   const card = cardOf(unit, ctx);
-  const stats = statsOf(card, state.config.mode);
+  const stats = statsOf(card);
   const rng = new Rng(state.rng);
   for (const figure of unit.figures) {
     const spots = figureSpots(figure, card.footprint, stats.height, ctx);

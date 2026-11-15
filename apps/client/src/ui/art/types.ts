@@ -55,11 +55,9 @@ export interface Placed {
 }
 
 /**
- * A unit's drawing: its figures, back to front, arranged two ways. `tall` fits
- * the narrow art window of the Advanced side and the hit zone window; `wide`
- * spreads out across the Basic side. Both are laid out in the 200 by 250 box.
+ * A unit's drawing: its figures, back to front, arranged to fit the card's
+ * narrow art window and the hit zone window, in the 200 by 250 box.
  */
 export interface Drawing {
   tall: readonly Placed[];
-  wide: readonly Placed[];
 }

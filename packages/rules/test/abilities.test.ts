@@ -19,12 +19,12 @@ import { CARDS, apply, makeCtx, rowMap, setup, testCard, turnState, withOutcome 
 
 const ab = (id: string, params?: Record<string, number>): Ability => ({ id, name: id, text: `${id} ability`, ...(params ? { params } : {}) });
 const hero = (id: string, abilities: Ability[], extra: Partial<UnitCard> = {}) =>
-  testCard(id, { advanced: { life: 4, move: 5, range: 1, attack: 3, defense: 3, points: 100, abilities }, ...extra });
+  testCard(id, { life: 4, move: 5, range: 1, attack: 3, defense: 3, points: 100, abilities, ...extra });
 const squad = (id: string, abilities: Ability[], extra: Partial<UnitCard> = {}) =>
   testCard(id, {
     unitType: "commonSquad",
     figureCount: 3,
-    advanced: { life: 1, move: 5, range: 6, attack: 2, defense: 2, points: 60, abilities },
+    life: 1, move: 5, range: 6, attack: 2, defense: 2, points: 60, abilities,
     ...extra,
   });
 
@@ -77,10 +77,9 @@ function game(
   armies: { p1: string[]; p2: string[] },
   positions: Record<string, { q: number; r: number; elevation: number }>,
   active = "p1:0",
-  mode: "basic" | "advanced" = "advanced",
 ): { ctx: RulesContext; state: GameState } {
   const ctx = makeCtx(rowMap(columns), ABILITY_CARDS);
-  const base = createGame(setup(2, { mapId: "test-row", mode, armies }), ctx).state;
+  const base = createGame(setup(2, { mapId: "test-row", armies }), ctx).state;
   return { ctx, state: turnState(base, active, positions) };
 }
 
@@ -88,14 +87,12 @@ const ofType = <T extends GameEvent["type"]>(events: GameEvent[], type: T) =>
   events.filter((e): e is Extract<GameEvent, { type: T }> => e.type === type);
 
 describe("defense and attack auras", () => {
-  it("Rally the Line shields nearby Disciplined squads, only in the Advanced game", () => {
+  it("Rally the Line shields nearby Disciplined squads", () => {
     const pos = { "p1:0#1": at(0), "p2:0#1": at(4), "p2:1#1": at(1) };
     const g = game(flat(9), { p1: ["hero"], p2: ["leader", "disc"] }, pos);
     expect(attackDice(g.state, "p1:0#1", "p2:1#1", g.ctx)).toMatchObject({ defenseBonus: 1, notes: ["rally-the-line +1 defense"] });
     const far = game(flat(9), { p1: ["hero"], p2: ["leader", "disc"] }, { ...pos, "p2:0#1": at(8) });
     expect(attackDice(far.state, "p1:0#1", "p2:1#1", far.ctx).defenseBonus).toBe(0);
-    const basic = game(flat(9), { p1: ["hero"], p2: ["leader", "disc"] }, pos, "p1:0", "basic");
-    expect(attackDice(basic.state, "p1:0#1", "p2:1#1", basic.ctx).defenseBonus).toBe(0);
   });
 
   it("Grove Song strengthens other friendly Elves nearby", () => {
@@ -161,9 +158,9 @@ describe("reactions", () => {
   });
 
   it("Salvage Protocol brings back a fallen squadmate after a kill", () => {
-    const setupGame = (mode: "basic" | "advanced") => {
+    const setupGame = () => {
       // p2 has two heroes so the game goes on after the kill.
-      const g = game(flat(6), { p1: ["salvage"], p2: ["hero", "hero"] }, { "p1:0#1": at(0), "p2:0#1": at(1), "p2:1#1": at(5) }, "p1:0", mode);
+      const g = game(flat(6), { p1: ["salvage"], p2: ["hero", "hero"] }, { "p1:0#1": at(0), "p2:0#1": at(1), "p2:1#1": at(5) });
       const fallen = g.state.units[0]!.figures[1]!;
       fallen.destroyed = true;
       fallen.position = null;
@@ -173,10 +170,7 @@ describe("reactions", () => {
     const cmd = { type: "attack" as const, player: "p1", figureId: "p1:0#1", targetId: "p2:0#1" };
     const kills = (ev: GameEvent[]) => ev.some((e) => e.type === "figureDestroyed");
 
-    const basic = setupGame("basic");
-    expect(ofType(withOutcome(basic.state, cmd, basic.ctx, kills).events, "figureRevived")).toHaveLength(0);
-
-    const adv = setupGame("advanced");
+    const adv = setupGame();
     const kill = withOutcome(adv.state, cmd, adv.ctx, kills);
     const revived = ofType(kill.events, "figureRevived");
     expect(revived).toHaveLength(1);
@@ -208,13 +202,11 @@ describe("movement abilities", () => {
     expect(applyCommand(g.state, { type: "move", player: "p1", figureId: "p1:0#1", path: [step(1, 14), step(2)] }, g.ctx).ok).toBe(false);
   });
 
-  it("Flying lands on lava with a roll, and walks in the Basic game", () => {
+  it("Flying lands on lava with a roll", () => {
     const cols: [string, number][] = [["grass", 1], ["rock", 9], ["lava", 1]];
     const g = game(cols, { p1: ["flyer"], p2: ["hero"] }, { "p1:0#1": at(0) });
     const r = apply(g.state, { type: "move", player: "p1", figureId: "p1:0#1", path: [step(2)] }, g.ctx);
     expect(ofType(r.events, "terrainRoll")).toHaveLength(1);
-    const basic = game(cols, { p1: ["flyer"], p2: ["hero"] }, { "p1:0#1": at(0) }, "p1:0", "basic");
-    expect(moveOptions(basic.state, "p1:0#1", basic.ctx).has(placementKey(step(2)))).toBe(false);
   });
 
   it("Smoke Step allows one short move after attacking, without passing strikes", () => {
@@ -249,12 +241,10 @@ describe("movement abilities", () => {
 });
 
 describe("special actions", () => {
-  it("lists a card's special actions only in the Advanced game", () => {
+  it("lists a card's special actions", () => {
     const card = ABILITY_CARDS.find((c) => c.id === "spitter")!;
     const g = game(flat(3), { p1: ["spitter"], p2: ["hero"] }, {});
     expect(specialActions(g.state, card)).toEqual([{ id: "ember-spit", name: "ember-spit", kind: "area" }]);
-    const basic = game(flat(3), { p1: ["spitter"], p2: ["hero"] }, {}, "p1:0", "basic");
-    expect(specialActions(basic.state, card)).toEqual([]);
   });
 
   it("Ember Spit hits the target and every other figure next to it", () => {
@@ -400,10 +390,6 @@ describe("abilities added with the larger roster", () => {
     expect(up.state.units.find((u) => u.id === "p2:0")!.figures[0]!.position!.hex.q).toBe(1);
     const down = withOutcome(g.state, cmd, g.ctx, (ev) => ev.some((e) => e.type === "abilityRoll" && !e.success));
     expect(down.state.units.find((u) => u.id === "p2:0")!.figures[0]!.destroyed).toBe(true);
-    // Basic game: no abilities, no roll.
-    const basic = game(flat(6), { p1: ["hero"], p2: ["bots", "hero"] }, { "p1:0#1": at(0), "p2:0#1": at(1), "p2:1#1": at(5) }, "p1:0", "basic");
-    const plain = withOutcome(basic.state, cmd, basic.ctx, (ev) => ev.some((e) => e.type === "figureDestroyed"));
-    expect(ofType(plain.events, "abilityRoll")).toHaveLength(0);
   });
 
   it("Reassemble may bring back a fallen figure at the end of the squad's turn", () => {

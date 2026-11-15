@@ -2,7 +2,7 @@ import type { UnitCard } from "@aoh/rules";
 import { footprintSize } from "@aoh/rules";
 
 /**
- * A simple, exact model of how strong a unit is in the Advanced game, used to
+ * A simple, exact model of how strong a unit is, used to
  * set and check point costs. It uses dice probabilities (no randomness):
  *
  * - Offense: expected wounds per attack against an average defender
@@ -105,11 +105,10 @@ export interface UnitValue {
 }
 
 export function unitValue(card: UnitCard): UnitValue {
-  const a = card.advanced;
-  const offense = expectedWounds(a.attack, REFERENCE_DEFENSE) * (1 + 0.08 * Math.min(a.range - 1, 7));
-  const durability = a.life / Math.max(0.05, expectedWounds(REFERENCE_ATTACK, a.defense));
-  const mobility = (1 + 0.07 * (a.move - 5)) * (footprintSize(card.footprint) > 1 ? 0.95 : 1);
-  const abilities = a.abilities.reduce((m, ab) => m * (ABILITY_VALUE[ab.id] ?? 1.1), 1);
+  const offense = expectedWounds(card.attack, REFERENCE_DEFENSE) * (1 + 0.08 * Math.min(card.range - 1, 7));
+  const durability = card.life / Math.max(0.05, expectedWounds(REFERENCE_ATTACK, card.defense));
+  const mobility = (1 + 0.07 * (card.move - 5)) * (footprintSize(card.footprint) > 1 ? 0.95 : 1);
+  const abilities = card.abilities.reduce((m, ab) => m * (ABILITY_VALUE[ab.id] ?? 1.1), 1);
   const value = card.figureCount * Math.sqrt(offense * durability) * mobility * abilities;
   return { offense, durability, mobility, abilities, value };
 }
@@ -126,10 +125,10 @@ export interface BalanceRow {
 /** Compare every card's points with the model, scaled so the roster's total is unchanged. */
 export function balanceReport(cards: readonly UnitCard[]): BalanceRow[] {
   const values = cards.map((c) => unitValue(c).value);
-  const scale = cards.reduce((s, c) => s + c.advanced.points, 0) / values.reduce((s, v) => s + v, 0);
+  const scale = cards.reduce((s, c) => s + c.points, 0) / values.reduce((s, v) => s + v, 0);
   return cards.map((card, i) => {
     const fair = values[i]! * scale;
-    return { card, value: values[i]!, fair, ratio: card.advanced.points / fair };
+    return { card, value: values[i]!, fair, ratio: card.points / fair };
   });
 }
 
@@ -138,7 +137,7 @@ export function formatBalanceReport(rows: readonly BalanceRow[]): string {
   const lines = ["Unit                              Points   Fair   Ratio"];
   for (const r of [...rows].sort((a, b) => b.ratio - a.ratio)) {
     lines.push(
-      `${r.card.name.padEnd(34)}${String(r.card.advanced.points).padStart(6)}${Math.round(r.fair)
+      `${r.card.name.padEnd(34)}${String(r.card.points).padStart(6)}${Math.round(r.fair)
         .toString()
         .padStart(7)}${r.ratio.toFixed(2).padStart(8)}`,
     );

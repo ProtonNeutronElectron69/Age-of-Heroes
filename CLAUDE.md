@@ -12,7 +12,7 @@
 - The engine is a reducer: `applyCommand(state, command, ctx)` never mutates its input and returns events. New player actions are new `Command` variants. Validate them, fail with `RulesError`, and add them to `commandSchema` in `packages/protocol`.
 - Anything secret must be removed in `viewFor`. The server only ever sends views.
 - Rule numbers that may need tuning belong in data (`packages/content`), not in engine code.
-- Abilities exist only in the Advanced game and are implemented in `packages/rules/src/game/abilities.ts`.
+- Abilities are implemented in `packages/rules/src/game/abilities.ts`.
 
 ## Content rules
 - Unit content must be original: no names, characters, card text or stat lines copied from existing games.

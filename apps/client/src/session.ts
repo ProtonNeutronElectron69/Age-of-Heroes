@@ -1,5 +1,5 @@
 import { contextFor } from "@aoh/content";
-import { stateFromView, type Replay } from "@aoh/protocol";
+import { BASIC_RULES_GONE, CARD_DRAFT_GONE, parseReplay, stateFromView, type Replay } from "@aoh/protocol";
 import {
   applyCommand,
   createGame,
@@ -116,7 +116,6 @@ export function applyServerGame(
   if (!session || session.kind !== "online") {
     const ctx = contextFor(map).ctx;
     const setup: GameSetup = {
-      mode: state.config.mode,
       seed: 0,
       mapId: map.id,
       roundLimit: state.config.roundLimit,
@@ -241,7 +240,10 @@ interface SavedGame {
 export function savedGame(): SavedGame | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    return raw ? (JSON.parse(raw) as SavedGame) : null;
+    const saved = raw ? (JSON.parse(raw) as SavedGame) : null;
+    // A game kept from the Basic rules, which are no longer in the game, cannot be continued.
+    if (saved && (saved.setup as { mode?: string }).mode === "basic") return null;
+    return saved;
   } catch {
     return null;
   }
@@ -268,8 +270,10 @@ export function resumeSavedGame(): boolean {
  * The loaded game becomes the one kept automatically. Returns an error
  * message, or null when it worked.
  */
-export function loadGame(record: { setup: GameSetup; map: MapDefinition; commands: readonly Command[] }): string | null {
+export function loadGame(given: { setup: GameSetup; map: MapDefinition; commands: readonly Command[] }): string | null {
   try {
+    // Read it as a game file, which refuses games from rules that are no longer in the game.
+    const record = parseReplay({ formatVersion: 1, setup: given.setup, map: given.map, commands: given.commands });
     const ctx = contextFor(record.map).ctx;
     const { state, events } = replayGame(record.setup, record.commands, ctx);
     session = {
@@ -291,6 +295,7 @@ export function loadGame(record: { setup: GameSetup; map: MapDefinition; command
     return null;
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);
+    if (detail === BASIC_RULES_GONE || detail === CARD_DRAFT_GONE) return detail;
     return `This game could not be loaded. It may come from an older version of the rules. (${detail})`;
   }
 }

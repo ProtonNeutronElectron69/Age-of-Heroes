@@ -309,7 +309,7 @@ export function GameOver({
 }) {
   const result = state.result!;
   const winners = result.winners.map((w) => names.player(w));
-  const scoreLabel = state.config.mode === "basic" ? "Figures left" : "Points left";
+  const scoreLabel = "Points left";
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label="Game over">
       <div className="panel game-over">

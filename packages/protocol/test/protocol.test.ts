@@ -1,7 +1,7 @@
 import { CARD_CATALOG, MAPS, contextFor } from "@aoh/content";
 import { applyCommand, createGame, deepClone, replayGame, viewFor, type GameSetup } from "@aoh/rules";
 import { describe, expect, it } from "vitest";
-import { clientMessageSchema, commandSchema, parseReplay, stateFromView } from "../src";
+import { BASIC_RULES_GONE, CARD_DRAFT_GONE, clientMessageSchema, commandSchema, parseReplay, stateFromView } from "../src";
 
 const map = MAPS[0]!;
 
@@ -32,7 +32,7 @@ describe("message validation", () => {
   });
 
   it("validates the map inside create requests", () => {
-    const settings = { mode: "basic", roundLimit: 5, armySize: 2, map };
+    const settings = { roundLimit: 5, budget: 300, map };
     expect(clientMessageSchema.safeParse({ t: "create", name: "A", settings }).success).toBe(true);
     const broken = { ...settings, map: { ...map, pieces: [] } };
     expect(clientMessageSchema.safeParse({ t: "create", name: "A", settings: broken }).success).toBe(false);
@@ -41,7 +41,6 @@ describe("message validation", () => {
 
 describe("views and replays", () => {
   const setup: GameSetup = {
-    mode: "basic",
     seed: 99,
     mapId: map.id,
     roundLimit: 2,
@@ -85,5 +84,17 @@ describe("views and replays", () => {
     expect(replayGame(replay.setup, replay.commands, ctx).state.phase).toBe("gameOver");
     expect(() => parseReplay({ formatVersion: 2, setup, map, commands: [] })).toThrow(/not a valid game file/);
     expect(() => parseReplay({ formatVersion: 1, setup: { ...setup, players: [] }, map, commands: [] })).toThrow();
+  });
+
+  it("refuses older games under rules that are no longer in the game, and reads the rest", () => {
+    const { armies: _armies, ...drafted } = setup;
+    const old = (extra: object) => ({ formatVersion: 1, setup: { ...drafted, ...extra }, map, commands: [] });
+    expect(() => parseReplay(old({ mode: "basic", armySize: 2 }))).toThrow(BASIC_RULES_GONE);
+    expect(() => parseReplay(old({ mode: "advanced", armySize: 2 }))).toThrow(CARD_DRAFT_GONE);
+    // An older points game still loads, without the old rule set field.
+    const kept = parseReplay(old({ mode: "advanced", budget: 300 }));
+    expect(kept.setup).not.toHaveProperty("mode");
+    expect(kept.setup.budget).toBe(300);
+    expect(createGame(kept.setup, ctx).state.phase).toBe("draft");
   });
 });
