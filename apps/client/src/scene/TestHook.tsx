@@ -19,6 +19,8 @@ declare global {
     /** Read-only summary of the current turn, for browser tests. */
     __aohUi?: {
       selected: string | null;
+      /** The figure the pointer is dragging, and the move it would make if let go. */
+      dragging: { id: string; over: UiStep | null } | null;
       moves: UiStep[];
       targets: (UiStep & { id: string; height: number })[];
       enemies: UiStep[];

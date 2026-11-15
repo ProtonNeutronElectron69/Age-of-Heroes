@@ -12,7 +12,17 @@ export interface DisplaySettings {
   readonly scheme: ColorScheme;
   /** The look of the main menu. */
   readonly menu: MenuStyle;
+  /** The gaming table the board stands on. */
+  readonly table: TableStyle;
 }
+
+/** The three gaming tables. */
+export type TableStyle = "tavern" | "felt" | "mat";
+export const TABLE_STYLES: readonly { readonly id: TableStyle; readonly name: string }[] = [
+  { id: "tavern", name: "Tavern oak" },
+  { id: "felt", name: "Felt gaming table" },
+  { id: "mat", name: "Play mat on a workbench" },
+];
 
 /** The main menu's four looks, all with the same choices. */
 export type MenuStyle = "war-table" | "atlas" | "banner-hall" | "hex-command";
@@ -24,7 +34,7 @@ export const MENU_STYLES: readonly { readonly id: MenuStyle; readonly name: stri
 ];
 
 const KEY = "aoh.display";
-const DEFAULTS: DisplaySettings = { figures: "models", scheme: "faction", menu: "war-table" };
+const DEFAULTS: DisplaySettings = { figures: "models", scheme: "faction", menu: "war-table", table: "tavern" };
 
 function load(): DisplaySettings {
   try {
@@ -33,6 +43,7 @@ function load(): DisplaySettings {
       figures: saved.figures === "tokens" ? "tokens" : "models",
       scheme: COLOR_SCHEMES.some((s) => s.id === saved.scheme) ? saved.scheme! : DEFAULTS.scheme,
       menu: MENU_STYLES.some((m) => m.id === saved.menu) ? saved.menu! : DEFAULTS.menu,
+      table: TABLE_STYLES.some((t) => t.id === saved.table) ? saved.table! : DEFAULTS.table,
     };
   } catch {
     return DEFAULTS;

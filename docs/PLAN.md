@@ -11,6 +11,7 @@ The core game is complete and playable: one full set of rules, a 48-unit roster 
 - **On hold (Phase 6):** a computer opponent, and a tutorial.
 - **Phase 7, figure models:** stage 1 is done. Every unit has a low polygon model in flat colour, drawn on the board in place of tokens (the Display button or the T key switches back to tokens and picks one of three colour schemes; see every model at `?models`). **Next, when the owner asks:** later stages add detail and colour.
 - **On hold (Phase 7):** sound and music, terrain and scenery art.
+- **Phase 8, tabletop feel:** part 1 is done: the board stands on a gaming table with the unit cards round it, and figures hop, can be dragged, and jump with H. **Next:** part 2, the attack scene with animated dice and a D20 to click for initiative.
 
 ### Ideas, not scheduled
 - More premade maps.
@@ -29,6 +30,7 @@ Each phase or drop is one pull request from a working branch, with CI green befo
 | Play modes | Hot-seat and online (done); computer opponent on hold |
 | Online hosting | Game server in a Docker image; Render recommended (free tier, deploys from `render.yaml`). The server keeps rooms in memory only; the host saves a game to a file to resume it later. See [HOSTING.md](HOSTING.md) |
 | Line of sight | Automatic check from eye point to hit band, plus a figure's-eye camera |
+| Table | The board stands on a gaming table sized to the board and the unit cards, in one of three styles each player picks for their own screen. Cards lie on the side of the table nearest their player's start zone and face that side, as they would for a player sitting there. A card is seven hexes of the board's own size, so its figures fit on it: they stand on it before deployment and lie on it once destroyed |
 | Art | Unit cards are seven-hex cards in faction colours. Unit art is drawn, not rendered from models, in an ink and colour style; every unit has a drawing and a red and grey hit zone picture. Otherwise none for now: units are figure models on the board (or tokens as tall as their Height, if a player prefers), terrain is flat colour, hovering or clicking a figure shows its card, and a red arrow marks the figure chosen to act. Figure models are built in code from a few solid shapes, like the drawings, and arrive in stages: size and shape first, detail later. A figure stands on a round base a little smaller than its hex; a larger footprint gets one base with a lobe on each hex, thinner where it passes from hex to hex. Figure and base together are as tall as the card's Height; in a squad, a figure that kneels or crouches may be shorter. Flying figures stand on flight stands, as tabletop miniatures do. The body may reach a fifth of a hex past its hexes; a unit that reaches further gets a larger footprint on its card. Bases are light brown, with a ring of colour round the bevelled edge. Model and ring are coloured in one of three schemes: faction models with player rings, player models with faction rings, or every model in the same medium grey with player rings. In every scheme only the ring takes the second colour; the rest of the base stays brown. The Brass Hussars stay at Height 6 for now, on horses a little under life size, rather than growing to Height 7. On the board a single-hex figure faces the nearest enemy figure, across a side of its hex; a larger figure faces along its base. Line of sight keeps using the token shape. Sound and the rest of the art come in Phase 7 |
 | Unit roster | Original units only, across all eras and myths. Squads have 1 special ability and heroes 2 (Flying not counted); heroes have 2 to 8 Life, most squads 1 (tough squads of 2 or 3 figures up to 3). Heroes and squads, and ranged and melee, stay within about 60/40. Point costs set with the balance model |
 | Involvement | Hands-off: work arrives as pull requests with a playable build; the owner decides when to merge |
@@ -205,3 +207,15 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
     - [x] Draw the models on the board in place of tokens, with Models or Tokens and the colour scheme as settings under Display (T switches). Line of sight and the hit band keep using the token shape
   - [ ] Later stages: more detail and colour
 - [ ] Terrain textures and scenery art
+
+### Phase 8: Tabletop feel (part 1 done; part 2 next)
+The game should feel like a game played on a table. Nothing here changes the rules: the engine, saves, replays and online play are untouched.
+- [x] Part 1: the table and the figures
+  - [x] The board stands on a gaming table that is as large as the board and the cards need. Three tables to choose from under Display: Tavern oak, Felt gaming table, and Play mat on a workbench
+  - [x] Every unit's card lies on the table, on the side nearest its player's start zone, facing that side. Figures wait on their card until they are deployed, and destroyed figures are laid on it. Resting the pointer on a card, or clicking it, shows the card beside the board
+  - [x] A figure that moves hops hex by hex along its path; a slide, shove or swap glides. Online and in replays too
+  - [x] A figure can be dragged with the left button onto the hex it should move to, as well as moved by clicking the hex
+  - [x] H makes the acting unit jump, so it is easy to find
+- [ ] Part 2: dice
+  - [ ] An attack zooms in on the fight, shows both unit cards and models over a dimmed board, then rolls animated attack dice and defense dice. A click skips it; a Display setting chooses the full scene, dice only, or none
+  - [ ] Initiative: each player clicks a D20, which tumbles and lands on their roll. The engine still rolls everything in one step; only the showing changes

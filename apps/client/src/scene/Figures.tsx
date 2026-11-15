@@ -1,7 +1,7 @@
 import type { ThreeEvent } from "@react-three/fiber";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS, hex, hexKey, hexToWorld, type Footprint, type Step } from "@aoh/rules";
-import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, type RefObject } from "react";
 import { BufferGeometry, Color, ExtrudeGeometry, Shape, ShapeGeometry, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import { BASE_COLOR, BASE_RADIUS, UNIT_MODELS, baseFrame, baseGeometry, figureColors, figureGeometry } from "../models";
 import { useDisplay } from "../settings";
@@ -32,10 +32,40 @@ export interface FigureView {
   readonly arrow?: boolean;
 }
 
+/** Figures that moved with the last command; a new `key` sets them hopping along their paths. */
+export interface FigureMotions {
+  readonly key: number;
+  readonly moves: readonly { readonly figureId: string; readonly from: Step; readonly path: readonly Step[] }[];
+}
+
+/** A figure picked up by the pointer: it hangs over `to`, or over its own hex. Once let go it settles there. */
+export interface FigureCarry {
+  readonly id: string;
+  /** Where the figure stands. */
+  readonly from: Step;
+  readonly to: Step | null;
+  readonly held: boolean;
+}
+
+/** Figures to jump on the spot, so they are easy to find; a new `key` starts a jump. */
+export interface FigureJump {
+  readonly key: number;
+  readonly ids: readonly string[];
+}
+
 interface Props {
   figures: readonly FigureView[];
   onClick?: (id: string) => void;
   onHover?: (id: string | null) => void;
+  motions?: FigureMotions | null;
+  jump?: FigureJump | null;
+  carry?: FigureCarry | null;
+  /** Figures the pointer may pick up and drag. While one is held the camera stays still. */
+  canDrag?: (id: string) => boolean;
+  /** The pointer has pulled a figure off its spot. */
+  onDragStart?: (id: string) => void;
+  /** The pointer let go of the figure it was dragging. */
+  onDragEnd?: () => void;
   /** The <FigureLabels> layer drawn over the canvas, kept in step with the camera. */
   labels?: RefObject<HTMLDivElement | null>;
   /** Draw models or tokens whatever the display setting says (the menu backdrop always shows models). */
@@ -76,6 +106,132 @@ function SelectionArrow({ top }: { top: number }) {
       </mesh>
     </group>
   );
+}
+
+// ---- Movement ------------------------------------------------------------------
+
+/** A hop from one hex to the next: how long it takes and how high it goes. A long path speeds up to fit. */
+const HOP_SECONDS = 0.22;
+const HOP_MAX_SECONDS = 2.4;
+const HOP_HEIGHT = 0.55;
+/** How high a figure hangs while the pointer carries it. */
+const CARRY_LIFT = 0.7;
+/** The jump that shows where a figure is: one high leap and a small bounce. */
+const JUMP_SECONDS = 0.95;
+const JUMP_HEIGHT = 3.2;
+/** How quickly a figure settles where it belongs: the share of the way left covered each second is 1 - e^-rate. */
+const SETTLE_RATE = 14;
+
+interface Animation {
+  readonly motions: FigureMotions | null;
+  readonly jump: FigureJump | null;
+  readonly carry: FigureCarry | null;
+  /** How far each figure is drawn from where it stands, for the name tags. */
+  readonly offsets: Map<string, Vector3>;
+  readonly onDown: (id: string, e: ThreeEvent<PointerEvent>) => void;
+}
+
+const AnimationContext = createContext<Animation | null>(null);
+
+function worldOf(step: Step, out: Vector3): Vector3 {
+  const { x, z } = hexToWorld(step.hex, HEX_SIZE);
+  return out.set(x, step.elevation * LEVEL_HEIGHT, z);
+}
+
+const scratch = new Vector3();
+const scratch2 = new Vector3();
+
+/**
+ * Moves a figure's drawing about its place on the board: hopping hex by hex
+ * along a move, hanging from the pointer while dragged, jumping to be found.
+ * Any other change of place (a slide, a shove, a swap) glides. The rules
+ * already have the figure on its new hex; only the drawing lags behind.
+ */
+function useFigureAnimation(f: FigureView): RefObject<Group | null> {
+  const group = useRef<Group>(null);
+  const anim = useContext(AnimationContext);
+  const live = useRef({
+    offset: new Vector3(),
+    anchor: null as Vector3 | null,
+    // Moves and jumps already made when the figure is first drawn are not played again.
+    seenMotions: anim?.motions?.key,
+    seenJump: anim?.jump?.key,
+    hop: null as { points: Vector3[]; t: number } | null,
+    jumpT: -1,
+  });
+  useEffect(() => {
+    const offsets = anim?.offsets;
+    if (!offsets) return;
+    const g = group.current;
+    if (g) offsets.set(f.id, g.position);
+    return () => void offsets.delete(f.id);
+  }, [anim?.offsets, f.id]);
+  useFrame((_, frameDelta) => {
+    const g = group.current;
+    if (!g || !anim) return;
+    const st = live.current;
+    const delta = Math.min(frameDelta, 0.1);
+    // Stay where it was drawn when its place changes, then catch up.
+    const anchor = worldOf(f.spots[0]!, scratch);
+    if (!st.anchor) st.anchor = anchor.clone();
+    else if (!st.anchor.equals(anchor)) {
+      st.offset.add(st.anchor).sub(anchor);
+      st.anchor.copy(anchor);
+    }
+    const m = anim.motions;
+    if (m && m.key !== st.seenMotions) {
+      st.seenMotions = m.key;
+      const mine = m.moves.find((x) => x.figureId === f.id);
+      if (mine && mine.path.length > 0) {
+        const end = worldOf(mine.path[mine.path.length - 1]!, new Vector3());
+        const points: Vector3[] = [];
+        for (const step of [mine.from, ...mine.path]) {
+          const p = worldOf(step, new Vector3()).sub(end);
+          if (points.length === 0 || !points[points.length - 1]!.equals(p)) points.push(p);
+        }
+        st.hop = points.length > 1 ? { points, t: 0 } : null;
+      }
+    }
+    if (st.hop) {
+      const hops = st.hop.points.length - 1;
+      const each = Math.min(HOP_SECONDS, HOP_MAX_SECONDS / hops);
+      st.hop.t += delta;
+      const at = st.hop.t / each;
+      if (at >= hops) {
+        st.hop = null;
+        st.offset.set(0, 0, 0);
+      } else {
+        const i = Math.floor(at);
+        const u = at - i;
+        st.offset.lerpVectors(st.hop.points[i]!, st.hop.points[i + 1]!, u);
+        st.offset.y += HOP_HEIGHT * 4 * u * (1 - u);
+      }
+    } else {
+      const carry = anim.carry?.id === f.id ? anim.carry : null;
+      const target = scratch2.set(0, 0, 0);
+      if (carry) {
+        if (carry.to) worldOf(carry.to, target).sub(worldOf(carry.from, scratch));
+        if (carry.held) target.y += CARRY_LIFT;
+      }
+      if (st.offset.distanceToSquared(target) < 1e-6) st.offset.copy(target);
+      else st.offset.lerp(target, 1 - Math.exp(-SETTLE_RATE * delta));
+    }
+    const j = anim.jump;
+    if (j && j.key !== st.seenJump) {
+      st.seenJump = j.key;
+      if (j.ids.includes(f.id)) st.jumpT = 0;
+    }
+    let up = 0;
+    if (st.jumpT >= 0) {
+      st.jumpT += delta;
+      const u = st.jumpT / JUMP_SECONDS;
+      if (u >= 1) st.jumpT = -1;
+      else if (u < 0.72) up = JUMP_HEIGHT * 4 * (u / 0.72) * (1 - u / 0.72);
+      else up = JUMP_HEIGHT * 0.16 * 4 * ((u - 0.72) / 0.28) * (1 - (u - 0.72) / 0.28);
+    }
+    g.position.set(st.offset.x, st.offset.y + up, st.offset.z);
+  });
+  return group;
 }
 
 interface Point {
@@ -287,9 +443,11 @@ function ModelFigure({
   scheme: Parameters<typeof figureColors>[0];
 }) {
   const ring = useRef<MeshBasicMaterial>(null);
+  const moving = useFigureAnimation(f);
+  const down = useContext(AnimationContext)?.onDown;
   const meshes = unitMeshes(f.cardId, f.footprint);
   const geometry = meshes.poses[f.pose % meshes.poses.length]!;
-  const handlers = pointerHandlers(f.id, onClick, onHover);
+  const handlers = pointerHandlers(f.id, onClick, onHover, down);
   const h = f.height * LEVEL_HEIGHT;
   const ground = Math.max(...f.spots.map((s) => s.elevation)) * LEVEL_HEIGHT;
   const cells = f.spots.map((s) => hexToWorld(s.hex, HEX_SIZE));
@@ -324,6 +482,7 @@ function ModelFigure({
 
   return (
     <>
+      <group ref={moving}>
       <group position={[centre.x, ground, centre.z]}>
         <group rotation={[0, turn, 0]}>
           <mesh geometry={geometry} raycast={() => null}>
@@ -343,7 +502,8 @@ function ModelFigure({
         )}
         {f.arrow && <SelectionArrow top={h} />}
       </group>
-      {/* Clicks and hovers land on the token's shape, which is what the rules measure. It is hidden, but rays still find it. */}
+      </group>
+      {/* Clicks and hovers land on the token's shape, which is what the rules measure. It is hidden, but rays still find it, and it stays on the figure's hex while the model hops there. */}
       {f.spots.map((s) => {
         const { x, z } = hexToWorld(s.hex, HEX_SIZE);
         return (
@@ -357,8 +517,9 @@ function ModelFigure({
 }
 
 /** Click and hover for a figure's meshes. A drag that turns the camera is not a click. */
-function pointerHandlers(id: string, onClick?: Props["onClick"], onHover?: Props["onHover"]) {
+function pointerHandlers(id: string, onClick?: Props["onClick"], onHover?: Props["onHover"], onDown?: Animation["onDown"]) {
   return {
+    onPointerDown: (e: ThreeEvent<PointerEvent>) => onDown?.(id, e),
     onClick: (e: ThreeEvent<MouseEvent>) => {
       if (e.delta > 5) return;
       e.stopPropagation();
@@ -379,6 +540,8 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
   const ringColor = RING[f.status];
   const front = f.spots[0]!;
   const frontPos = hexToWorld(front.hex, HEX_SIZE);
+  const moving = useFigureAnimation(f);
+  const down = useContext(AnimationContext)?.onDown;
 
   useFrame(({ clock }) => {
     if (ring.current) {
@@ -387,12 +550,18 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
     }
   });
 
-  const handlers = pointerHandlers(f.id, onClick, onHover);
+  const handlers = pointerHandlers(f.id, onClick, onHover, down);
 
-  if (f.spots.length > 1) return <BigToken f={f} handlers={handlers} />;
+  if (f.spots.length > 1) {
+    return (
+      <group ref={moving}>
+        <BigToken f={f} handlers={handlers} />
+      </group>
+    );
+  }
 
   return (
-    <>
+    <group ref={moving}>
       {f.spots.map((s, i) => {
         const { x, z } = hexToWorld(s.hex, HEX_SIZE);
         return (
@@ -433,16 +602,61 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
         )}
         {f.arrow && <SelectionArrow top={f.height * LEVEL_HEIGHT} />}
       </group>
-    </>
+    </group>
   );
 }
 
-export function Figures({ figures, onClick, onHover, labels, style }: Props) {
+/** Pointer travel (pixels) that turns a press on a figure into a drag. */
+const DRAG_PIXELS = 5;
+
+export function Figures({ figures, onClick, onHover, labels, style, motions = null, jump = null, carry = null, canDrag, onDragStart, onDragEnd }: Props) {
   const display = useDisplay();
   const drawn = style ?? display.figures;
   const facing = useMemo(() => facings(figures), [figures]);
+  const controls = useThree((s) => s.controls) as unknown as { enabled: boolean } | null;
+  const offsets = useMemo(() => new Map<string, Vector3>(), []);
+
+  // A press on a figure that may be dragged holds the camera still; moving the pointer then picks the figure up.
+  const drag = useRef({ canDrag, onDragStart, onDragEnd, controls });
+  drag.current = { canDrag, onDragStart, onDragEnd, controls };
+  const press = useRef<{ id: string; x: number; y: number; started: boolean; held: { enabled: boolean } | null } | null>(null);
+  const onDown = useMemo<Animation["onDown"]>(
+    () => (id, e) => {
+      if (e.nativeEvent.button !== 0 || !drag.current.canDrag?.(id) || press.current) return;
+      const held = drag.current.controls?.enabled ? drag.current.controls : null;
+      if (held) held.enabled = false;
+      press.current = { id, x: e.nativeEvent.clientX, y: e.nativeEvent.clientY, started: false, held };
+    },
+    [],
+  );
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const p = press.current;
+      if (!p || p.started || Math.hypot(e.clientX - p.x, e.clientY - p.y) <= DRAG_PIXELS) return;
+      p.started = true;
+      drag.current.onDragStart?.(p.id);
+    };
+    const up = () => {
+      const p = press.current;
+      if (!p) return;
+      press.current = null;
+      if (p.held) p.held.enabled = true;
+      if (p.started) drag.current.onDragEnd?.();
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      up();
+    };
+  }, []);
+
+  const animation = useMemo<Animation>(() => ({ motions, jump, carry, offsets, onDown }), [motions, jump, carry, offsets, onDown]);
   return (
-    <>
+    <AnimationContext.Provider value={animation}>
       {figures.map((f) =>
         drawn === "models" && UNIT_MODELS[f.cardId] ? (
           <ModelFigure key={f.id} f={f} onClick={onClick} onHover={onHover} yaw={facing.get(f.id) ?? SIDES[0]!} scheme={display.scheme} />
@@ -450,8 +664,8 @@ export function Figures({ figures, onClick, onHover, labels, style }: Props) {
           <Token key={f.id} f={f} onClick={onClick} onHover={onHover} />
         ),
       )}
-      {labels && <LabelTracker figures={figures} layer={labels} />}
-    </>
+      {labels && <LabelTracker figures={figures} layer={labels} offsets={offsets} />}
+    </AnimationContext.Provider>
   );
 }
 
@@ -465,7 +679,15 @@ function labelAnchor(f: FigureView): Vector3 {
 }
 
 /** Moves the DOM name tags to follow their figures on screen, every frame. */
-function LabelTracker({ figures, layer }: { figures: readonly FigureView[]; layer: RefObject<HTMLDivElement | null> }) {
+function LabelTracker({
+  figures,
+  layer,
+  offsets,
+}: {
+  figures: readonly FigureView[];
+  layer: RefObject<HTMLDivElement | null>;
+  offsets: Map<string, Vector3>;
+}) {
   const anchors = useMemo(() => new Map(figures.map((f) => [f.id, labelAnchor(f)])), [figures]);
   const v = useMemo(() => new Vector3(), []);
   // Anchors are in board coordinates; this group shares the figures' parent, so it maps them to the world.
@@ -474,8 +696,15 @@ function LabelTracker({ figures, layer }: { figures: readonly FigureView[]; laye
     const el = layer.current;
     if (!el || !frame.current) return;
     for (const child of Array.from(el.children) as HTMLElement[]) {
-      const anchor = anchors.get(child.dataset.id ?? "");
-      if (anchor) frame.current.localToWorld(v.copy(anchor)).project(camera);
+      const id = child.dataset.id ?? "";
+      const anchor = anchors.get(id);
+      const offset = offsets.get(id);
+      if (anchor) {
+        v.copy(anchor);
+        // The tag stays over a figure that is hopping, carried or jumping.
+        if (offset) v.add(offset);
+        frame.current.localToWorld(v).project(camera);
+      }
       if (!anchor || v.z < -1 || v.z > 1) {
         child.style.visibility = "hidden";
         continue;
@@ -513,5 +742,77 @@ export function FigureLabels({
         </div>
       ))}
     </div>
+  );
+}
+
+/** How far a figure lying on its card is tipped: it rests on the edge of its base and the top of its head. */
+function lyingTilt(height: number): number {
+  return Math.PI / 2 - Math.atan(BASE_RADIUS / Math.max(height, 0.1));
+}
+
+/**
+ * A figure off the board, drawn at its parent's origin: standing on its unit
+ * card while it waits to deploy, or lying there once it has been destroyed.
+ */
+export function CardFigure({
+  cardId,
+  footprint,
+  pose,
+  faction,
+  color,
+  height,
+  lying,
+}: {
+  cardId: string;
+  footprint: Footprint;
+  pose: number;
+  faction: string;
+  /** The owning player's colour. */
+  color: string;
+  /** The card's Height. */
+  height: number;
+  lying: boolean;
+}) {
+  const display = useDisplay();
+  const h = height * LEVEL_HEIGHT;
+  const colors = figureColors(display.scheme, factionTheme(faction).primary, color);
+  const modelColor = useMemo(() => (lying ? new Color(colors.model).lerp(SPENT_SHADE, 0.3) : new Color(colors.model)), [colors.model, lying]);
+  if (display.figures === "models" && UNIT_MODELS[cardId]) {
+    const meshes = unitMeshes(cardId, footprint);
+    const body = (
+      <>
+        <mesh geometry={meshes.poses[pose % meshes.poses.length]!} raycast={() => null}>
+          <meshStandardMaterial color={modelColor} roughness={0.7} />
+        </mesh>
+        <mesh geometry={meshes.base.top} raycast={() => null}>
+          <meshStandardMaterial color={BASE_COLOR} roughness={0.75} />
+        </mesh>
+        <mesh geometry={meshes.base.rim} raycast={() => null}>
+          <meshStandardMaterial color={colors.ring} roughness={0.55} />
+        </mesh>
+      </>
+    );
+    if (!lying) return <group>{body}</group>;
+    // Tip it over the edge of its base, towards the foot of the card.
+    return (
+      <group position={[0, 0, BASE_RADIUS]}>
+        <group rotation={[lyingTilt(h), 0, 0]}>
+          <group position={[0, 0, -BASE_RADIUS]}>{body}</group>
+        </group>
+      </group>
+    );
+  }
+  const bandStart = h * HIT_BAND_FROM;
+  return (
+    <group position={[0, lying ? TOKEN_RADIUS : 0, 0]} rotation={[lying ? Math.PI / 2 : 0, 0, 0]}>
+      <mesh position={[0, bandStart / 2, 0]} raycast={() => null}>
+        <cylinderGeometry args={[TOKEN_RADIUS, TOKEN_RADIUS, bandStart, 24]} />
+        <meshStandardMaterial color={color} roughness={0.6} />
+      </mesh>
+      <mesh position={[0, bandStart + (h - bandStart) / 2, 0]} raycast={() => null}>
+        <cylinderGeometry args={[TOKEN_RADIUS, TOKEN_RADIUS, h - bandStart, 24]} />
+        <meshStandardMaterial color="#f4f1ea" roughness={0.5} />
+      </mesh>
+    </group>
   );
 }
