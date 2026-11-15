@@ -100,8 +100,8 @@ function moverFor(state: GameState, figureId: string, ctx: RulesContext): Mover 
     startSpots: figureSpots(figure, card.footprint, stats.height, ctx),
     budget: bonus ?? stats.move + drums,
     noStrikes: bonus !== undefined,
-    flying: card.footprint === "1" && hasAbility(state, card, "flying"),
-    trample: hasAbility(state, card, "trample"),
+    flying: card.footprint === "1" && hasAbility(card, "flying"),
+    trample: hasAbility(card, "trample"),
   };
 }
 
@@ -143,14 +143,14 @@ interface StepInfo {
   readonly trampled: Occupant[];
 }
 
-function fallDice(drop: number, height: number, state: GameState, ctx: RulesContext): number {
+function fallDice(drop: number, height: number, ctx: RulesContext): number {
   if (drop < height) return 0;
   const { minorDice, majorDice } = tuningOf(ctx).falling;
   return drop >= height * 2 ? majorDice : minorDice;
 }
 
-function hazardsOf(info: StepInfo, mover: Mover, state: GameState, ctx: RulesContext): number {
-  return info.lava + info.ice + info.strikes.length + (fallDice(info.drop, mover.stats.height, state, ctx) > 0 ? 1 : 0);
+function hazardsOf(info: StepInfo, mover: Mover, ctx: RulesContext): number {
+  return info.lava + info.ice + info.strikes.length + (fallDice(info.drop, mover.stats.height, ctx) > 0 ? 1 : 0);
 }
 
 /**
@@ -159,7 +159,6 @@ function hazardsOf(info: StepInfo, mover: Mover, state: GameState, ctx: RulesCon
  * degrees in place. Returns a reason string when the step is not allowed.
  */
 function evaluateStep(
-  state: GameState,
   mover: Mover,
   from: Placement,
   fromSpots: readonly Step[],
@@ -189,7 +188,7 @@ function evaluateStep(
     const o = occ.get(stepKey(s));
     if (o && o.figure.id !== mover.figure.id && o.unit.owner !== mover.unit.owner) {
       const victim = ctx.cards.get(o.unit.cardId);
-      if (!victim || !canTrample(state, mover.card, victim)) return "The path goes through an enemy figure";
+      if (!victim || !canTrample(mover.card, victim)) return "The path goes through an enemy figure";
       if (!fromSpots.some((f) => hexEquals(f.hex, s.hex)) && !trampled.some((t) => t.figure.id === o.figure.id)) {
         trampled.push(o);
       }
@@ -273,7 +272,7 @@ function search(
     for (const label of buckets[c]!) {
       if (label.stopped) continue;
       for (const to of nextPlacements(label.placement, mover.footprint, ctx)) {
-        const info = evaluateStep(state, mover, label.placement, label.spots, to, occ, enemies, ctx);
+        const info = evaluateStep(mover, label.placement, label.spots, to, occ, enemies, ctx);
         if (typeof info === "string") continue;
         if (onlyTerrain && !info.spots.every((s) => terrainOf(s, ctx)?.id === onlyTerrain)) continue;
         const cost = c + info.cost;
@@ -282,7 +281,7 @@ function search(
           placement: to,
           spots: info.spots,
           cost,
-          hazards: label.hazards + hazardsOf(info, mover, state, ctx),
+          hazards: label.hazards + hazardsOf(info, mover, ctx),
           stopped: info.stops,
           prev: label,
         };
@@ -416,7 +415,7 @@ function validatePath(state: GameState, mover: Mover, path: readonly PathStep[],
   const bonus = stayOnBonus(mover.startSpots, ctx);
   path.forEach((raw, i) => {
     const to = toPlacement(raw, from, mover.footprint);
-    const info = evaluateStep(state, mover, from, fromSpots, to, occ, enemies, ctx);
+    const info = evaluateStep(mover, from, fromSpots, to, occ, enemies, ctx);
     if (typeof info === "string") fail(info);
     if (info.stops && i < path.length - 1) fail("Entering water or swamp ends movement");
     if (bonus && !info.spots.every((s) => terrainOf(s, ctx)?.id === bonus.terrain)) allBonusTerrain = false;
@@ -511,7 +510,7 @@ export function moveFigure(
   const self = { unit, figure, card: mover.card, spots: fromSpots };
   for (const raw of path) {
     const to = toPlacement(raw, from, mover.footprint);
-    const info = evaluateStep(state, mover, from, fromSpots, to, occ, enemies, ctx);
+    const info = evaluateStep(mover, from, fromSpots, to, occ, enemies, ctx);
     if (typeof info === "string") break; // validated above; cannot happen
 
     // 1. Enemies left behind strike as the figure walks away.
@@ -531,7 +530,7 @@ export function moveFigure(
     }
 
     // 3. Falling.
-    const dice = fallDice(info.drop, mover.stats.height, state, ctx);
+    const dice = fallDice(info.drop, mover.stats.height, ctx);
     if (dice > 0) {
       unblockable(state, rng, dice, mover, "fall", null, after);
       if (figure.destroyed) break;
@@ -646,7 +645,7 @@ export function forcedMove(
   const from = figure.position;
   if (!from) return;
   figure.position = { hex: to.hex, elevation: to.elevation, rotation: 0 };
-  const dice = fallDice(from.elevation - to.elevation, stats.height, state, ctx);
+  const dice = fallDice(from.elevation - to.elevation, stats.height, ctx);
   if (dice > 0) {
     const attack = rollDice(rng, ATTACK_DIE, dice);
     const hits = countFaces(attack, "skull");

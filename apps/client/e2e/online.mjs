@@ -303,8 +303,9 @@ try {
         phase("reloading Bob's page");
         await bob.page.reload();
         await bob.page.getByText("Playing as Bob").waitFor({ timeout: 15000 });
-        // The catch-up brings the whole log back, not just the board.
-        await bob.page.locator(".log-lines li").filter({ hasText: "drafts" }).first().waitFor({ timeout: 5000 });
+        // The catch-up brings the whole log back, not just the board. The log comes after the
+        // board's first frame, which can take several seconds in software WebGL.
+        await bob.page.locator(".log-lines li").filter({ hasText: "drafts" }).first().waitFor({ timeout: 15000 });
 
         // The host saves the game as a file; nobody else can.
         phase("saving");

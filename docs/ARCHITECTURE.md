@@ -92,9 +92,11 @@ Browser storage keys (all `localStorage`, each wrapped so the game works without
 | `age-of-heroes:online:v1` | The online seat (server, room code, rejoin token) |
 | `age-of-heroes:server:v1`, `age-of-heroes:name:v1` | Last server address and player name |
 | `age-of-heroes:show-card:v1` | Whether the selected unit's card stays on screen |
+| `aoh.display` | Display settings: models or tokens, the colour scheme and the menu style (`settings.ts`) |
+| `aoh.gallery.*` | The unit gallery's card size, sort and model colours |
 
 ## Testing
 
 - `pnpm test` (Vitest): engine unit tests (`packages/rules/test`, with fixtures in `fixtures.ts`), content and balance tests, 8 random full-game simulations that check invariants and exact replays, protocol tests, and server tests over real WebSockets.
-- `pnpm e2e` (Playwright, needs `pnpm build` first): a full hot-seat game, the map editor, saved games, and an online game between two browsers with a spectator, a reload, and a save and resume. Browser tests drive the canvas through `window.__aoh` (projection) and `window.__aohUi` (current moves and targets). They render WebGL in software, so the suite takes about 10 minutes.
+- `pnpm e2e` (Playwright, needs `pnpm build` first): a full hot-seat game, the map editor, saved games, an online game between two browsers with a spectator, a reload, and a save and resume, the figure model page, the unit gallery, and the main menu in all four styles. Browser tests drive the canvas through `window.__aoh` (projection and draw stats) and `window.__aohUi` (current moves and targets). They render WebGL in software, so the suite takes about 15 minutes; frames are slow, so tests wait for state (steady draw counts, a settled camera), never for time.
 - CI (`.github/workflows/ci.yml`) runs only the checks a pull request's changes affect, chosen by `scripts/affected.mjs`, with each browser test as its own parallel job. Pushes to `main` run everything. See [TESTING.md](TESTING.md). `deploy.yml` publishes the client to GitHub Pages on every merge to `main`, with `VITE_SERVER_URL` from the `GAME_SERVER_URL` repository variable.

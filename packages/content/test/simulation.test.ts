@@ -81,7 +81,7 @@ function randomCommand(state: GameState, rng: Rng, c: RulesContext): Command {
         }
         if (!active.attacked.includes(f.id)) {
           // Sometimes use a special action (area attack or mind control) instead.
-          const specials = specialActions(state, c.cards.get(unit.cardId)!);
+          const specials = specialActions(c.cards.get(unit.cardId)!);
           if (specials.length > 0 && rng.float() < 0.5) {
             const ability = pick(rng, specials).id;
             const targets = attackTargets(state, f.id, c, ability);
