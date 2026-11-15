@@ -44,7 +44,23 @@ function lettering(card: UnitCard): string {
   return out.join("");
 }
 
+/**
+ * Cards are painted one at a time, with a pause after each, so a table full of
+ * cards does not hold up the board's first frames or the rest of the page.
+ */
+let queue: Promise<unknown> = Promise.resolve();
+const PAUSE_MS = 30;
+
 function paint(card: UnitCard, ownerColor: string): Promise<Texture> {
+  const painted = queue.then(() => paintNow(card, ownerColor));
+  queue = painted.then(
+    () => undefined,
+    () => undefined,
+  );
+  return painted;
+}
+
+function paintNow(card: UnitCard, ownerColor: string): Promise<Texture> {
   return new Promise((resolve, reject) => {
     // Outside React's own work, so drawing the card at once is allowed.
     window.setTimeout(() => {
@@ -77,7 +93,7 @@ function paint(card: UnitCard, ownerColor: string): Promise<Texture> {
       } catch (e) {
         reject(e as Error);
       }
-    }, 0);
+    }, PAUSE_MS);
   });
 }
 
