@@ -14,6 +14,7 @@ import { preview } from "vite";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const shotsDir = process.env.E2E_SCREENSHOTS;
+const failureShots = process.env.E2E_FAILURE_SCREENSHOTS ?? shotsDir;
 const GAME_PORT = 8097;
 const SERVER = `ws://localhost:${GAME_PORT}/ws`;
 
@@ -56,6 +57,10 @@ async function newPlayer(label) {
   // Reduced motion stills the board's endless decorations (the arrow's bob, the rings' pulse),
   // so the board rests between actions instead of drawing every frame in software.
   const context = await browser.newContext({ viewport: { width: 1280, height: 820 }, acceptDownloads: true, reducedMotion: "reduce" });
+  // Test mode (src/testMode.ts): a simpler gaming table to draw, and the narrower zoom limits.
+  await context.addInitScript(() => {
+    window.__aohTest = true;
+  });
   const page = await context.newPage();
   page.on("console", (m) => {
     // A reload drops the socket on purpose; the browser logs that, which is fine.
@@ -413,7 +418,9 @@ try {
     `Online game in room ${code}: ${moves} moves, ${attacks} attacks, ${replay.commands.length} commands. Result: ${heading} Saved at ${savedAt.round} and resumed in room ${newCode}.`,
   );
 } catch (err) {
-  for (const p of everyone) await shot(p, "failure").catch(() => {});
+  if (failureShots) {
+    for (const p of everyone) await p.page.screenshot({ path: `${failureShots}/online-${p.label}-failure.png` }).catch(() => {});
+  }
   if (errors.length > 0) console.error(`Console errors:\n${errors.join("\n")}`);
   throw err;
 } finally {

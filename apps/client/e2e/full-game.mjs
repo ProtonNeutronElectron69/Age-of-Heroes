@@ -13,6 +13,7 @@ const ROUNDS = 5;
 /** Attacks to make before the rest of the turns are ended at once. */
 const ATTACKS_WANTED = 3;
 const shotsDir = process.env.E2E_SCREENSHOTS; // optional folder for screenshots
+const failureShots = process.env.E2E_FAILURE_SCREENSHOTS ?? shotsDir; // or just for a failure
 /** Draw calls allowed for the board during deployment. */
 const MAX_DRAW_CALLS = 300;
 
@@ -31,6 +32,10 @@ const browser = await chromium.launch({
 // Reduced motion stills the board's endless decorations (the arrow's bob, the rings' pulse),
 // so the board rests between actions instead of drawing every frame in software.
 const page = await browser.newPage({ viewport: { width: 1400, height: 860 }, reducedMotion: "reduce" });
+// Test mode (src/testMode.ts): a simpler gaming table to draw, and the narrower zoom limits.
+await page.addInitScript(() => {
+  window.__aohTest = true;
+});
 const errors = [];
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 page.on("pageerror", (e) => errors.push(e.message));
@@ -493,7 +498,7 @@ try {
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(`Full game played: ${moves} moves, ${attacks} attacks. Result: ${heading}`);
 } catch (err) {
-  await shot("failure");
+  if (failureShots) await page.screenshot({ path: `${failureShots}/full-game-failure.png` }).catch(() => {});
   if (errors.length > 0) console.error(`Console errors:\n${errors.join("\n")}`);
   throw err;
 } finally {

@@ -5,6 +5,7 @@ import { chromium } from "playwright";
 import { preview } from "vite";
 
 const shotsDir = process.env.E2E_SCREENSHOTS;
+const failureShots = process.env.E2E_FAILURE_SCREENSHOTS ?? shotsDir;
 
 function fail(message) {
   throw new Error(message);
@@ -18,6 +19,10 @@ const browser = await chromium.launch({
 // Reduced motion stills the board's endless decorations (the arrow's bob, the rings' pulse),
 // so the board rests between actions instead of drawing every frame in software.
 const context = await browser.newContext({ viewport: { width: 1280, height: 820 }, acceptDownloads: true, reducedMotion: "reduce" });
+// Test mode (src/testMode.ts): a simpler gaming table to draw, and the narrower zoom limits.
+await context.addInitScript(() => {
+  window.__aohTest = true;
+});
 const page = await context.newPage();
 const errors = [];
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
@@ -135,7 +140,7 @@ try {
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(`Saves test passed: saved at ${before.round}, loaded from the list, after a reload and from a file.`);
 } catch (err) {
-  await shot("failure");
+  if (failureShots) await page.screenshot({ path: `${failureShots}/saves-failure.png` }).catch(() => {});
   if (errors.length > 0) console.error(`Console errors:\n${errors.join("\n")}`);
   throw err;
 } finally {
