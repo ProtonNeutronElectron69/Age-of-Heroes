@@ -5,7 +5,10 @@ import { Canvas } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Names } from "../describe";
 import { BoardScene, boardCenter } from "../scene/BoardScene";
-import { FigureLabels, Figures, type FigureView } from "../scene/Figures";
+import { FigureLabels, Figures, type FigureMotions, type FigureView } from "../scene/Figures";
+import { GamingTable, TableCards, tableRoom } from "../scene/Table";
+import { tableFor, tableUnits } from "../scene/tableData";
+import { useDisplay } from "../settings";
 import { DisplayMenu } from "../ui/DisplayMenu";
 import { DiceOverlay, EventLog, RoundBar } from "../ui/panels";
 import { UnitCardView } from "../ui/UnitCardView";
@@ -55,6 +58,7 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
   const [hovered, setHovered] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string | null>(null);
   const labelLayer = useRef<HTMLDivElement>(null);
+  const display = useDisplay();
 
   const frames = "frames" in built ? built.frames : [];
   const last = Math.max(0, frames.length - 1);
@@ -83,8 +87,18 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
   }, [last]);
 
   const center = useMemo(() => ("ctx" in built ? boardCenter(built.ctx.board) : null), [built]);
+  // The table is the finished game's: every unit that was drafted has its card out from the start.
+  const table = useMemo(() => ("ctx" in built ? tableFor(built.frames[built.frames.length - 1]!.state, built.ctx) : null), [built]);
+  const stepEvents = frames[index]?.last;
+  const motions = useMemo<FigureMotions>(
+    () => ({
+      key: index,
+      moves: (stepEvents ?? []).flatMap((e) => (e.type === "figureMoved" ? [{ figureId: e.figureId, from: e.from, path: e.path }] : [])),
+    }),
+    [index, stepEvents],
+  );
 
-  if (!("ctx" in built) || !center) {
+  if (!("ctx" in built) || !center || !table) {
     return (
       <div className="screen setup">
         <section className="panel setup-panel" aria-label="Replay">
@@ -131,6 +145,7 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
     }
   }
 
+  const firstFigure = (unitId: string | null) => (unitId ? state.units.find((u) => u.id === unitId)?.figures[0]?.id ?? null : null);
   const shown = hovered ?? pinned;
   const found = shown ? findFigure(state, shown) : undefined;
   const winners = state.result?.winners.map((w) => names.player(w)) ?? [];
@@ -143,8 +158,22 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
         dpr={[1, 2]}
         onPointerMissed={() => setPinned(null)}
       >
-        <BoardScene board={ctx.board} terrain={ctx.terrain}>
-          <Figures figures={figures} onClick={(id) => setPinned(pinned === id ? null : id)} onHover={setHovered} labels={labelLayer} />
+        <BoardScene
+          board={ctx.board}
+          terrain={ctx.terrain}
+          backdrop={tableRoom(display.table)}
+        >
+          <GamingTable layout={table} style={display.table} />
+          <TableCards
+            layout={table}
+            units={tableUnits(state, ctx, (p) => names.playerColor(p))}
+            onHover={(unitId) => setHovered(firstFigure(unitId))}
+            onClick={(unitId) => {
+              const id = firstFigure(unitId);
+              setPinned(pinned === id ? null : id);
+            }}
+          />
+          <Figures figures={figures} onClick={(id) => setPinned(pinned === id ? null : id)} onHover={setHovered} labels={labelLayer} motions={motions} />
         </BoardScene>
       </Canvas>
       <FigureLabels figures={figures} layer={labelLayer} />

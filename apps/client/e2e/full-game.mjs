@@ -107,6 +107,8 @@ let attacks = 0;
 let eyeChecked = false;
 let squadMoves = 0;
 let cycled = 0;
+let dragged = false;
+let jumpChecked = false;
 
 try {
   await page.goto(url);
@@ -161,6 +163,15 @@ try {
       await page.getByRole("radio", { name: "Models" }).click();
       const back = await steadyTriangles();
       if (back !== models) fail(`The models did not come back: ${back} triangles, not ${models}`);
+      // The board stands on a gaming table, in one of three styles.
+      const tables = new Set([back]);
+      for (const table of ["felt", "mat"]) {
+        await page.getByLabel("Table").selectOption(table);
+        tables.add(await steadyTriangles());
+      }
+      if (tables.size !== 3) fail(`The three tables should differ, but drew ${[...tables].join(", ")} triangles`);
+      await page.getByLabel("Table").selectOption("tavern");
+      if ((await steadyTriangles()) !== back) fail("The first table did not come back");
       await page.getByRole("button", { name: "Display" }).click();
     }
     await page.getByRole("button", { name: "Confirm" }).click();
@@ -259,11 +270,64 @@ try {
         continue;
       }
     }
+    // H makes the acting unit jump, so it can be found: its name tag rises and comes back down.
+    if (ui?.selected && !jumpChecked) {
+      await steadyCamera();
+      const tagTop = (id) => document.querySelector(`.label-anchor[data-id="${id}"]`)?.getBoundingClientRect().y;
+      const rest = await page.evaluate(tagTop, ui.selected);
+      if (rest !== undefined && (await tagOf(ui.selected))) {
+        await page.keyboard.press("h");
+        const rose = await page
+          .waitForFunction(({ id, rest }) => document.querySelector(`.label-anchor[data-id="${id}"]`)?.getBoundingClientRect().y < rest - 25, { id: ui.selected, rest }, { timeout: 5000 })
+          .then(() => true, () => false);
+        if (!rose) fail("H did not make the acting figure jump");
+        jumpChecked = true;
+        // Back on its hex before anything is clicked.
+        await page.waitForFunction(({ id, rest }) => Math.abs(document.querySelector(`.label-anchor[data-id="${id}"]`)?.getBoundingClientRect().y - rest) < 2, { id: ui.selected, rest });
+      }
+    }
     // Move the selected figure toward the nearest enemy, once.
     if (ui?.selected && !handled.has(`m:${ui.selected}`) && ui.moves.length > 0) {
       handled.add(`m:${ui.selected}`);
       const score = (m) => Math.min(...ui.enemies.map((e) => hexDistance(m.hex, e.hex)));
       const ranked = [...ui.moves].sort((a, b) => score(a) - score(b));
+      // Until it has worked once, move by dragging the figure onto the hex. The camera must stay still meanwhile.
+      if (!dragged) {
+        const tag = await tagOf(ui.selected);
+        const grip = tag && { x: tag.x, y: tag.y + 30 };
+        const onCanvas = grip && (await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.tagName === "CANVAS", grip));
+        let drop = null;
+        for (const m of ranked.slice(0, 8)) {
+          drop = await screenPoint(m.hex.q, m.hex.r, m.elevation);
+          if (drop) break;
+        }
+        if (onCanvas && drop) {
+          const camera = await page.evaluate(() => JSON.stringify(window.__aoh.project(0, 0, 0)));
+          await page.mouse.move(grip.x, grip.y);
+          await page.mouse.down();
+          await page.mouse.move(grip.x + 8, grip.y + 8, { steps: 2 });
+          const held = await page.waitForFunction(() => window.__aohUi?.dragging, null, { timeout: 3000 }).then(() => true, () => false);
+          if (held) {
+            await page.mouse.move(drop.x, drop.y, { steps: 6 });
+            const over = await page.waitForFunction(() => window.__aohUi?.dragging?.over, null, { timeout: 3000 }).then(() => true, () => false);
+            if (over && moves === 0) await shot("5-dragging");
+            // Checked while the figure is still held: once it lands, the camera may follow the squad's next figure.
+            if ((await page.evaluate(() => JSON.stringify(window.__aoh.project(0, 0, 0)))) !== camera) fail("Dragging a figure turned the camera");
+            await page.mouse.up();
+            if (over) {
+              await page.waitForFunction((was) => JSON.stringify(window.__aohUi.moves) !== was, JSON.stringify(ui.moves));
+              const after = await page.evaluate(() => window.__aohUi);
+              dragged = true;
+              moves++;
+              if (squad) squadMoves++;
+              if (squad && after.selected && after.selected !== ui.selected) cycled++;
+              continue;
+            }
+          } else {
+            await page.mouse.up();
+          }
+        }
+      }
       for (const m of ranked.slice(0, 8)) {
         const p = await screenPoint(m.hex.q, m.hex.r, m.elevation);
         if (!p) continue;
@@ -335,6 +399,8 @@ try {
   const heading = await over.getByRole("heading").innerText();
   if (!/wins|share the win|Nobody/.test(heading)) fail(`Unexpected result: ${heading}`);
   if (moves === 0) fail("No figure moved during the game");
+  if (!dragged) fail("No figure was ever moved by dragging it");
+  if (!jumpChecked) fail("The H key was never tried");
   if (!followChecked) fail("The camera was never checked following the acting figure");
   if (!hoverChecked) fail("Resting the pointer on another unit never showed its card");
   if (!eyeChecked) fail("Eye view was never tried");

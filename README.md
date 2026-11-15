@@ -19,6 +19,7 @@ A turn-based 3D tactics game for 2 to 6 players in the browser. Heroes and squad
 - **Hot-seat play** on one device, with a pass-the-device screen for the secret tokens.
 - **Online play:** room codes, each device sees only what its player may see, reconnecting, spectators, and an authoritative server.
 - **Saved games and replays:** named saves, save files, and online games the host can save and resume later. Finished games can be watched move by move.
+- **A gaming table** under the board, in three styles, with every unit's card laid out round it and destroyed figures stood on their cards. Figures hop from hex to hex, can be dragged to where they should go, and jump when you press H to find them.
 - **3D figure models** for all 48 units on the board, in three colour schemes, or plain tokens that show the hit band (Display, or the T key). The camera follows the acting unit, and resting the pointer on another unit shows its card beside the acting unit's.
 - **Main menu in four styles** (War Table, Atlas, Banner Hall and Hex Command), each fitting a landscape window without scrolling, and a **unit gallery** of every card, filterable and sortable, with each unit's 3D model to turn and zoom.
 

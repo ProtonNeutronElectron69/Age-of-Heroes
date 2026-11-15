@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { COLOR_SCHEMES, type ColorScheme } from "../models";
-import { setDisplay, useDisplay } from "../settings";
+import { TABLE_STYLES, setDisplay, useDisplay, type TableStyle } from "../settings";
 
 /**
- * How figures are drawn on this screen: models or tokens, and the colour
- * scheme for models. A small button opens the choices.
+ * How this screen draws the game: figure models or tokens, the colour scheme
+ * for models, and the gaming table. A small button opens the choices.
  */
 export function DisplayMenu() {
   const display = useDisplay();
@@ -40,6 +40,16 @@ export function DisplayMenu() {
               {COLOR_SCHEMES.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Table</span>
+            <select aria-label="Table" value={display.table} onChange={(e) => setDisplay({ table: e.target.value as TableStyle })}>
+              {TABLE_STYLES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
                 </option>
               ))}
             </select>

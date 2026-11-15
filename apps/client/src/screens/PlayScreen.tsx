@@ -27,13 +27,15 @@ import { Canvas } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Names } from "../describe";
 import { BoardScene, boardCenter, type CameraFocusRequest, type Marker } from "../scene/BoardScene";
-import { FigureLabels, Figures, type FigureView } from "../scene/Figures";
+import { FigureLabels, Figures, type FigureCarry, type FigureJump, type FigureMotions, type FigureView } from "../scene/Figures";
+import { GamingTable, TableCards, tableRoom } from "../scene/Table";
+import { tableFor, tableKey, tableUnits } from "../scene/tableData";
 import { TestHook } from "../scene/TestHook";
 import { closeOnline } from "../online";
 import { downloadGameFile } from "../saves";
 import { canControl, clearError, dispatch, endSession, replayOf, type Session } from "../session";
 import { DisplayMenu } from "../ui/DisplayMenu";
-import { toggleFigures } from "../settings";
+import { toggleFigures, useDisplay } from "../settings";
 import { GameMenu } from "../ui/GameMenu";
 import { OnlineBar } from "../ui/OnlineBar";
 import { DiceOverlay, EventLog, GameOver, PassScreen, RoundBar, TokenPanel } from "../ui/panels";
@@ -132,6 +134,11 @@ export function PlayScreen({ session }: { session: Session }) {
       return !v;
     });
   const labelLayer = useRef<HTMLDivElement>(null);
+  const display = useDisplay();
+  /** The figure the pointer is dragging to a new hex; `dropped` once it has been let go there. */
+  const [drag, setDrag] = useState<{ id: string; dropped: Step | null } | null>(null);
+  /** The unit jumping on the spot so it can be found (the H key). */
+  const [jump, setJump] = useState<FigureJump | null>(null);
 
   // ---- Deployment -------------------------------------------------------
   const nextDeployment = state.phase === "deploy" ? currentDeployment(state) : null;
@@ -275,7 +282,7 @@ export function PlayScreen({ session }: { session: Session }) {
   const hoverOption = optionAt(hoverStep);
 
   // Keys: R turns a big figure, 1-4 pick a squad figure, E toggles eye view, C the unit card,
-  // T models or tokens, Space ends the turn. WASD pans the map (in BoardScene).
+  // T models or tokens, H makes the acting unit jump, Space ends the turn. WASD pans the map (in BoardScene).
   const keys = useRef<(e: KeyboardEvent) => void>(() => {});
   keys.current = (e: KeyboardEvent) => {
     const t = e.target;
@@ -289,6 +296,10 @@ export function PlayScreen({ session }: { session: Session }) {
       setRotation((r) => (r + (e.shiftKey ? 5 : 1)) % 6);
     } else if (key === "c") {
       toggleCard();
+    } else if (key === "h" && activeUnit && !eyeView) {
+      // The acting unit jumps, so it is easy to find on a crowded board.
+      const ids = activeUnit.figures.filter((f) => !f.destroyed && f.position).map((f) => f.id);
+      setJump((j) => ({ key: (j?.key ?? 0) + 1, ids }));
     } else if (key === "e" && active && myTurn && (selected || eyeView)) {
       setEyeView(!eyeView);
     } else if (/^[1-4]$/.test(key) && active && activeUnit && myTurn) {
@@ -329,13 +340,14 @@ export function PlayScreen({ session }: { session: Session }) {
     );
     window.__aohUi = {
       selected,
+      dragging: drag && !drag.dropped ? { id: drag.id, over: hoverOption?.to ?? null } : null,
       moves: [...options.values()].map((o) => o.to),
       targets: positioned
         .filter((x) => targets.has(x.f.id))
         .map((x) => ({ id: x.f.id, hex: x.pos.hex, elevation: x.pos.elevation, height: ctx.cards.get(x.unit.cardId)!.height })),
       enemies: positioned.filter((x) => active && x.unit.owner !== active.player).map((x) => x.pos),
     };
-  }, [state, ctx, selected, options, targets, active]);
+  }, [state, ctx, selected, options, targets, active, drag, hoverOption]);
 
   // ---- Figure's-eye view -------------------------------------------------
   const eye = useMemo(() => {
@@ -491,6 +503,51 @@ export function PlayScreen({ session }: { session: Session }) {
     setPinnedFigure(pinnedFigure === id ? null : id);
   };
 
+  // ---- Moving figures: hops, and dragging a figure to its hex ---------------
+  /** A figure that was dragged to its hex is already there: it does not hop the path as well. */
+  const carried = useRef<string | null>(null);
+  const motions = useMemo<FigureMotions>(
+    () => ({
+      key: session.events.length,
+      moves: session.lastEvents.flatMap((e) => (e.type === "figureMoved" && e.figureId !== carried.current ? [{ figureId: e.figureId, from: e.from, path: e.path }] : [])),
+    }),
+    [session.lastEvents],
+  );
+  useEffect(() => {
+    carried.current = null;
+  }, [session.lastEvents, session.error]);
+  // A dropped figure waits on its new hex until the move is made (online, until the server answers).
+  useEffect(() => {
+    if (drag?.dropped && !session.pending) setDrag(null);
+  }, [drag, session.state, session.pending, session.error]);
+  const canDrag = (id: string) => !busy && !eyeView && !deploying && canAct(id);
+  const onDragStart = (id: string) => {
+    if (!canDrag(id)) return;
+    setSelected(id);
+    setDrag({ id, dropped: null });
+  };
+  const onDragEnd = () => {
+    if (!drag || drag.dropped) return;
+    // The move options are the selected figure's, which a drag makes the dragged one.
+    if (active && hoverOption && selected === drag.id && !busy) {
+      carried.current = drag.id;
+      setDrag({ id: drag.id, dropped: hoverOption.to });
+      dispatch({ type: "move", player: active.player, figureId: drag.id, path: hoverOption.path });
+    } else {
+      setDrag(null);
+    }
+  };
+  const dragFrom = drag ? findFigure(state, drag.id)?.figure.position : null;
+  const carry: FigureCarry | null =
+    drag && dragFrom ? { id: drag.id, from: dragFrom, to: drag.dropped ?? (selected === drag.id ? hoverOption?.to : null) ?? null, held: !drag.dropped } : null;
+
+  // ---- The table: every unit's card, with the figures that are off the board ----
+  const tableShape = tableKey(state);
+  const table = useMemo(() => tableFor(state, ctx), [tableShape, ctx]);
+  const placing = new Set(deployUnit ? deployUnit.figures.slice(0, pending.length).map((f) => f.id) : []);
+  const cardsOnTable = tableUnits(state, ctx, (p) => names.playerColor(p), placing);
+  const firstFigure = (unitId: string | null) => (unitId ? state.units.find((u) => u.id === unitId)?.figures[0]?.id ?? null : null);
+
   const replay = state.phase === "gameOver" ? replayOf(session) : null;
 
   // ---- Unit cards: the acting unit's, and below it the one under the pointer or clicked ----
@@ -551,8 +608,31 @@ export function PlayScreen({ session }: { session: Session }) {
           onSurfaceHover={setHoverStep}
           eyeView={eye}
           focus={focusRequest}
+          backdrop={tableRoom(display.table)}
+          dragging={!!drag && !drag.dropped}
         >
-          <Figures figures={figures} onClick={onFigureClick} onHover={hoverFigure} labels={labelLayer} />
+          <GamingTable layout={table} style={display.table} />
+          <TableCards
+            layout={table}
+            units={cardsOnTable}
+            onHover={(unitId) => hoverFigure(firstFigure(unitId))}
+            onClick={(unitId) => {
+              const id = firstFigure(unitId);
+              setPinnedFigure(pinnedFigure === id ? null : id);
+            }}
+          />
+          <Figures
+            figures={figures}
+            onClick={onFigureClick}
+            onHover={hoverFigure}
+            labels={labelLayer}
+            motions={motions}
+            jump={jump}
+            carry={carry}
+            canDrag={canDrag}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+          />
         </BoardScene>
         <TestHook offset={center} />
       </Canvas>
@@ -676,7 +756,7 @@ export function PlayScreen({ session }: { session: Session }) {
               {!myTurn
                 ? `Waiting for ${names.player(active.player)} to play this turn.`
                 : selected
-                ? `Green hexes: move there. ${
+                ? `Green hexes: click one to move there, or drag the figure onto it. ${
                     modeKind === "swap"
                       ? targets.size > 0
                         ? "Rings: friends to swap places with."
@@ -689,7 +769,7 @@ export function PlayScreen({ session }: { session: Session }) {
                   }`
                 : "This unit has finished."}
               {moveBig ? " Press R to turn." : ""}
-              {myTurn ? ` Keys: ${activeUnit.figures.length > 1 ? "1-4 pick a figure, " : ""}E eye view, Space ends the turn, WASD moves the map.` : ""}
+              {myTurn ? ` Keys: ${activeUnit.figures.length > 1 ? "1-4 pick a figure, " : ""}E eye view, H shows where the unit is, Space ends the turn, WASD moves the map.` : ""}
               {hoverOption ? ` Move cost ${hoverOption.cost}.` : ""}
               {eyeView && myTurn ? " Drag or use the arrow keys to look around. Clicking an enemy faces it (a red-ringed one is attacked). Exit eye view to end the turn." : ""}
             </p>

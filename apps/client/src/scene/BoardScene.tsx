@@ -64,6 +64,10 @@ interface Props {
   eyeView?: { eye: Vec3; look: Vec3 } | null;
   /** A backdrop only: no camera controls or keyboard panning; the caller moves the camera. */
   still?: boolean;
+  /** The colour behind everything (the room a gaming table stands in). */
+  backdrop?: string;
+  /** A figure is being dragged: report the hex under the pointer although a button is held. */
+  dragging?: boolean;
   children?: ReactNode;
 }
 
@@ -380,6 +384,7 @@ interface CellHandlers {
   onSurfaceClick?: Props["onSurfaceClick"];
   onSurfaceHover?: Props["onSurfaceHover"];
   onCellPointer?: Props["onCellPointer"];
+  dragging?: boolean;
 }
 
 /** Hexes of a bridge span are drawn full width, so the span reads as one piece; its outlines stay. */
@@ -399,6 +404,7 @@ function TerrainCells({
   onSurfaceClick,
   onSurfaceHover,
   onCellPointer,
+  dragging,
   center,
 }: CellHandlers & {
   board: Board;
@@ -439,7 +445,7 @@ function TerrainCells({
       onPointerMove={(e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
         // While a button is held the camera is being dragged: skip hover work until it stops.
-        if (e.buttons !== 0) return;
+        if (e.buttons !== 0 && !dragging) return;
         if (onCellPointer) {
           const cell = cellAt(e);
           if (cell) onCellPointer(cell, { x: e.point.x + center.x, z: e.point.z + center.z });
@@ -534,6 +540,8 @@ export function BoardScene({
   focus,
   eyeView,
   still = false,
+  backdrop = "#18202c",
+  dragging = false,
   children,
 }: Props) {
   const cells = useMemo(() => board.cells(), [board]);
@@ -565,7 +573,7 @@ export function BoardScene({
 
   return (
     <>
-      <color attach="background" args={["#18202c"]} />
+      <color attach="background" args={[backdrop]} />
       <hemisphereLight args={["#dfe9ff", "#3a3128", 0.9]} />
       <directionalLight position={[12, 24, 10]} intensity={1.6} />
       <group position={[-center.x, 0, -center.z]}>
@@ -602,6 +610,7 @@ export function BoardScene({
             onSurfaceClick={onSurfaceClick}
             onSurfaceHover={onSurfaceHover}
             onCellPointer={onCellPointer}
+            dragging={dragging}
             center={center}
           />
         ))}
