@@ -3,7 +3,7 @@ import { HEX_SIZE } from "@aoh/rules";
 /**
  * Where everything sits on the gaming table: the board in the middle, each
  * player's unit cards in a band along the side of the table nearest their
- * start zone. The table is as large as the board and the cards need.
+ * start zone. The table is a square as large as the board and the cards need.
  * All distances are in board units (a hex is HEX_SIZE from centre to corner).
  */
 
@@ -137,8 +137,12 @@ export function layoutTable(board: Bounds, players: readonly TablePlayer[]): Tab
     });
   }
 
+  // The table is square, with the board in the middle: a board of any shape sits well on it.
+  const midX = (mat.minX + mat.maxX) / 2;
+  const midZ = (mat.minZ + mat.maxZ) / 2;
+  const half = Math.max((mat.maxX - mat.minX) / 2 + bandX, (mat.maxZ - mat.minZ) / 2 + bandZ);
   return {
-    table: { minX: mat.minX - bandX, maxX: mat.maxX + bandX, minZ: mat.minZ - bandZ, maxZ: mat.maxZ + bandZ },
+    table: { minX: midX - half, maxX: midX + half, minZ: midZ - half, maxZ: midZ + half },
     mat,
     cards,
   };

@@ -57,6 +57,13 @@ describe("the gaming table", () => {
     }
   });
 
+  it("is square", () => {
+    for (const board of [BOARD, { minX: -8, maxX: 8, minZ: -20, maxZ: 20 }]) {
+      const { table } = layoutTable(board, players(3, 4, []));
+      expect(table.maxX - table.minX).toBeCloseTo(table.maxZ - table.minZ);
+    }
+  });
+
   it("grows with the board, which stays in the middle", () => {
     const small = layoutTable(BOARD, players(2, 3, []));
     const large = layoutTable({ minX: -30, maxX: 30, minZ: -24, maxZ: 24 }, players(2, 3, []));

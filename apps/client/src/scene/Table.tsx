@@ -288,7 +288,7 @@ export interface TableUnit {
   readonly figures: number;
   /** Figures (by their place in the unit) waiting on the card to be deployed. */
   readonly waiting: readonly number[];
-  /** Figures destroyed and put back on the card. */
+  /** Figures destroyed and stood back on the card. */
   readonly destroyed: readonly number[];
 }
 
@@ -361,10 +361,7 @@ function TableCard({
   sharedCardShape ??= cardShape();
   const theme = factionTheme(unit.card.faction);
   const footprint: Footprint = unit.card.footprint;
-  const onCard = [
-    ...unit.waiting.map((i) => ({ i, lying: false })),
-    ...unit.destroyed.map((i) => ({ i, lying: true })),
-  ];
+  const onCard = [...unit.waiting, ...unit.destroyed];
   return (
     <group position={[spot.x, CARD_LIFT, spot.z]} rotation={[0, spot.yaw, 0]}>
       <mesh
@@ -384,7 +381,7 @@ function TableCard({
         {/* Until the picture is painted the card shows its faction's colour. */}
         {picture ? <meshStandardMaterial key="picture" map={picture} roughness={0.8} /> : <meshStandardMaterial key="plain" color={theme.primary} roughness={0.8} />}
       </mesh>
-      {onCard.map(({ i, lying }) => {
+      {onCard.map((i) => {
         const slot = cardSlot(i, unit.figures);
         return (
           <group key={i} position={[slot.x, 0.01, slot.z]}>
@@ -395,7 +392,6 @@ function TableCard({
               faction={unit.card.faction}
               color={unit.color}
               height={unit.card.height}
-              lying={lying}
             />
           </group>
         );

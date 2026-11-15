@@ -66,8 +66,6 @@ interface Props {
   still?: boolean;
   /** The colour behind everything (the room a gaming table stands in). */
   backdrop?: string;
-  /** How wide the scene is with its table, so the camera can pull back to see all of it. */
-  reach?: number;
   /** A figure is being dragged: report the hex under the pointer although a button is held. */
   dragging?: boolean;
   children?: ReactNode;
@@ -543,7 +541,6 @@ export function BoardScene({
   eyeView,
   still = false,
   backdrop = "#18202c",
-  reach,
   dragging = false,
   children,
 }: Props) {
@@ -648,7 +645,7 @@ export function BoardScene({
         maxPolarAngle={Math.PI / 2.15}
         minDistance={6}
         // The editor can pull back far enough to see its whole grid.
-        maxDistance={ground ? 260 : Math.max(fitted.span * 2, (reach ?? 0) * 1.6, 60)}
+        maxDistance={ground ? 260 : Math.max(fitted.span * 2, 60)}
         mouseButtons={
           leftButton === "select"
             ? { LEFT: -1 as MOUSE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE }

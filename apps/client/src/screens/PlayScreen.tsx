@@ -609,7 +609,6 @@ export function PlayScreen({ session }: { session: Session }) {
           eyeView={eye}
           focus={focusRequest}
           backdrop={tableRoom(display.table)}
-          reach={Math.max(table.table.maxX - table.table.minX, table.table.maxZ - table.table.minZ)}
           dragging={!!drag && !drag.dropped}
         >
           <GamingTable layout={table} style={display.table} />

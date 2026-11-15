@@ -162,7 +162,6 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
           board={ctx.board}
           terrain={ctx.terrain}
           backdrop={tableRoom(display.table)}
-          reach={Math.max(table.table.maxX - table.table.minX, table.table.maxZ - table.table.minZ)}
         >
           <GamingTable layout={table} style={display.table} />
           <TableCards

@@ -745,14 +745,10 @@ export function FigureLabels({
   );
 }
 
-/** How far a figure lying on its card is tipped: it rests on the edge of its base and the top of its head. */
-function lyingTilt(height: number): number {
-  return Math.PI / 2 - Math.atan(BASE_RADIUS / Math.max(height, 0.1));
-}
-
 /**
- * A figure off the board, drawn at its parent's origin: standing on its unit
- * card while it waits to deploy, or lying there once it has been destroyed.
+ * A figure off the board, drawn at its parent's origin: the same model (or
+ * token) as on the board, standing on its unit card. It waits there to be
+ * deployed, and goes back there once destroyed.
  */
 export function CardFigure({
   cardId,
@@ -761,7 +757,6 @@ export function CardFigure({
   faction,
   color,
   height,
-  lying,
 }: {
   cardId: string;
   footprint: Footprint;
@@ -771,18 +766,16 @@ export function CardFigure({
   color: string;
   /** The card's Height. */
   height: number;
-  lying: boolean;
 }) {
   const display = useDisplay();
   const h = height * LEVEL_HEIGHT;
   const colors = figureColors(display.scheme, factionTheme(faction).primary, color);
-  const modelColor = useMemo(() => (lying ? new Color(colors.model).lerp(SPENT_SHADE, 0.3) : new Color(colors.model)), [colors.model, lying]);
   if (display.figures === "models" && UNIT_MODELS[cardId]) {
     const meshes = unitMeshes(cardId, footprint);
-    const body = (
-      <>
+    return (
+      <group>
         <mesh geometry={meshes.poses[pose % meshes.poses.length]!} raycast={() => null}>
-          <meshStandardMaterial color={modelColor} roughness={0.7} />
+          <meshStandardMaterial color={colors.model} roughness={0.7} />
         </mesh>
         <mesh geometry={meshes.base.top} raycast={() => null}>
           <meshStandardMaterial color={BASE_COLOR} roughness={0.75} />
@@ -790,21 +783,12 @@ export function CardFigure({
         <mesh geometry={meshes.base.rim} raycast={() => null}>
           <meshStandardMaterial color={colors.ring} roughness={0.55} />
         </mesh>
-      </>
-    );
-    if (!lying) return <group>{body}</group>;
-    // Tip it over the edge of its base, towards the foot of the card.
-    return (
-      <group position={[0, 0, BASE_RADIUS]}>
-        <group rotation={[lyingTilt(h), 0, 0]}>
-          <group position={[0, 0, -BASE_RADIUS]}>{body}</group>
-        </group>
       </group>
     );
   }
   const bandStart = h * HIT_BAND_FROM;
   return (
-    <group position={[0, lying ? TOKEN_RADIUS : 0, 0]} rotation={[lying ? Math.PI / 2 : 0, 0, 0]}>
+    <group>
       <mesh position={[0, bandStart / 2, 0]} raycast={() => null}>
         <cylinderGeometry args={[TOKEN_RADIUS, TOKEN_RADIUS, bandStart, 24]} />
         <meshStandardMaterial color={color} roughness={0.6} />
