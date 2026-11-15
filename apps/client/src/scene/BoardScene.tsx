@@ -311,10 +311,6 @@ function CameraFocus({ focus, center }: { focus: CameraFocusRequest; center: { x
 /** Camera smoothing: the share of the remaining movement applied each frame (1 means none). */
 const CAMERA_DAMPING = 0.25;
 const CAMERA_ZOOM_SPEED = 1.4;
-/** How near the camera may come to the point it looks at, and how far it may pull back: so many board widths, or this far on a small board. */
-const CAMERA_NEAREST = 2.5;
-const CAMERA_FURTHEST_SPANS = 4;
-const CAMERA_FURTHEST_LEAST = 140;
 
 /** Pointer travel (pixels) beyond which a click is treated as a camera drag. */
 const DRAG_PIXELS = 5;
@@ -647,10 +643,9 @@ export function BoardScene({
         zoomSpeed={CAMERA_ZOOM_SPEED}
         target={origin ? [0, 0, 0] : [-fitted.span * 0.1, 0, 0]}
         maxPolarAngle={Math.PI / 2.15}
-        // Close enough to look a figure in the face, and far enough to see the whole table in its room.
-        minDistance={CAMERA_NEAREST}
+        minDistance={6}
         // The editor can pull back far enough to see its whole grid.
-        maxDistance={ground ? 260 : Math.max(fitted.span * CAMERA_FURTHEST_SPANS, CAMERA_FURTHEST_LEAST)}
+        maxDistance={ground ? 260 : Math.max(fitted.span * 2, 60)}
         mouseButtons={
           leftButton === "select"
             ? { LEFT: -1 as MOUSE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE }

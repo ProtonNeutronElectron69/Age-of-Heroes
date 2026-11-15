@@ -49,8 +49,6 @@ try {
   await page.getByRole("button", { name: "Map editor" }).click();
   await page.getByRole("region", { name: "Tools" }).waitFor();
   await page.waitForTimeout(800);
-  // The editor's canvas can take longer than that to start on a busy machine.
-  await page.waitForFunction(() => window.__aoh);
 
   // Four 24-hex grass slabs.
   await page.getByRole("button", { name: "24-hex piece" }).click();
