@@ -28,7 +28,9 @@ const url = server.resolvedUrls.local[0];
 const browser = await chromium.launch({
   args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
 });
-const page = await browser.newPage({ viewport: { width: 1400, height: 860 } });
+// Reduced motion stills the board's endless decorations (the arrow's bob, the rings' pulse),
+// so the board rests between actions instead of drawing every frame in software.
+const page = await browser.newPage({ viewport: { width: 1400, height: 860 }, reducedMotion: "reduce" });
 const errors = [];
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 page.on("pageerror", (e) => errors.push(e.message));
@@ -116,7 +118,31 @@ async function steadyCamera(frames = 5) {
   );
 }
 
+/** True once the board draws no frame for 1.5 seconds; false if it is still drawing after 15. */
+async function boardRests() {
+  return page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const end = performance.now() + 15000;
+        let last = window.__aoh.stats().frames;
+        let since = performance.now();
+        const check = () => {
+          const now = window.__aoh.stats().frames;
+          if (now !== last) {
+            last = now;
+            since = performance.now();
+          }
+          if (performance.now() - since > 1500) resolve(true);
+          else if (performance.now() > end) resolve(false);
+          else setTimeout(check, 100);
+        };
+        check();
+      }),
+  );
+}
+
 let moves = 0;
+let motionChecked = false;
 let hoverChecked = false;
 let followChecked = false;
 let attacks = 0;
@@ -193,27 +219,8 @@ try {
       await page.getByLabel("Table").selectOption("tavern");
       if ((await trianglesAfter({ expect: back })) !== back) fail("The first table did not come back");
       await page.getByRole("button", { name: "Display" }).click();
-      // The board is drawn only when something changes: once its short animations end, it rests.
-      const resting = await page.evaluate(
-        () =>
-          new Promise((resolve) => {
-            const end = performance.now() + 15000;
-            let last = window.__aoh.stats().frames;
-            let since = performance.now();
-            const check = () => {
-              const now = window.__aoh.stats().frames;
-              if (now !== last) {
-                last = now;
-                since = performance.now();
-              }
-              if (performance.now() - since > 1500) resolve(true);
-              else if (performance.now() > end) resolve(false);
-              else setTimeout(check, 100);
-            };
-            check();
-          }),
-      );
-      if (!resting) fail("The board kept drawing while nothing moved");
+      // The board is drawn only when something changes: with reduced motion, once its short animations end, it rests.
+      if (!(await boardRests())) fail("The board kept drawing while nothing moved");
     }
     await page.getByRole("button", { name: "Confirm" }).click();
   }
@@ -323,6 +330,28 @@ try {
         }
         continue;
       }
+    }
+    // Without reduced motion the arrow bobs and the rings pulse for good, so the board keeps drawing;
+    // with it they stand still and the board rests.
+    if (ui?.selected && !motionChecked) {
+      motionChecked = true;
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      const drew = await page.evaluate(
+        () =>
+          new Promise((resolve) => {
+            const start = window.__aoh.stats().frames;
+            const end = performance.now() + 15000;
+            const check = () => {
+              if (window.__aoh.stats().frames - start >= 5) resolve(true);
+              else if (performance.now() > end) resolve(false);
+              else setTimeout(check, 100);
+            };
+            check();
+          }),
+      );
+      if (!drew) fail("The arrow and rings did not move without reduced motion");
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      if (!(await boardRests())) fail("The board kept drawing with reduced motion");
     }
     // H makes the acting unit jump, so it can be found: its name tag rises and comes back down.
     if (ui?.selected && !jumpChecked) {
@@ -459,6 +488,7 @@ try {
   if (!followChecked) fail("The camera was never checked following the acting figure");
   if (!hoverChecked) fail("Resting the pointer on another unit never showed its card");
   if (!eyeChecked) fail("Eye view was never tried");
+  if (!motionChecked) fail("The arrow and rings were never checked with and without reduced motion");
   if (squadMoves > 0 && cycled === 0) fail("Squads never moved on to their next figure after a move");
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(`Full game played: ${moves} moves, ${attacks} attacks. Result: ${heading}`);

@@ -53,7 +53,9 @@ async function newPlayer(label) {
     args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
   });
   browsers.push(browser);
-  const context = await browser.newContext({ viewport: { width: 1280, height: 820 }, acceptDownloads: true });
+  // Reduced motion stills the board's endless decorations (the arrow's bob, the rings' pulse),
+  // so the board rests between actions instead of drawing every frame in software.
+  const context = await browser.newContext({ viewport: { width: 1280, height: 820 }, acceptDownloads: true, reducedMotion: "reduce" });
   const page = await context.newPage();
   page.on("console", (m) => {
     // A reload drops the socket on purpose; the browser logs that, which is fine.

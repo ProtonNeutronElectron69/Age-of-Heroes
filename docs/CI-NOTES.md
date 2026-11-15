@@ -9,7 +9,7 @@ The online test no longer plays a whole game across three 3D boards; the server'
 `full-game` now plays to the lowest round limit (5) and ends each turn at once after its one-off checks and three attacks. Its display checks wait for the triangle count to change and then hold for 3 frames, instead of holding for 20. Locally it takes about 3.5 minutes instead of 9. Each browser job now installs only Chromium's headless shell, cached, with no system packages; that step took 16 to 33 s.
 
 ## Fixed: drawing on demand
-The play and replay boards draw only when something changes. A resting board draws nothing, so pages that wait (the other players in the online test, a test waiting on the interface) cost nothing. The selection arrow and the ready and target rings move for a moment and then rest, since anything that ran forever would keep the board drawing. Locally `full-game` went from 3.5 to about 2.5 minutes and `online` from about 130 to 106 seconds.
+The play and replay boards draw only when something changes. A resting board draws nothing, so pages that wait (the other players in the online test, a test waiting on the interface) cost nothing. The selection arrow's bob and the rings' pulse run for good, as before, so a board with them drawn keeps drawing; they stand still when the system asks for reduced motion, and the browser tests that show the board run that way, so the board rests between actions. Locally `full-game` went from 3.5 to about 2.5 minutes and `online` from about 130 to 106 seconds.
 
 Points 1, 2, 4, 5 (the cache) and 6 below are done.
 

@@ -1,7 +1,7 @@
 import type { ThreeEvent } from "@react-three/fiber";
 import { useFrame, useThree } from "@react-three/fiber";
 import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS, hex, hexKey, hexToWorld, type Footprint, type Step } from "@aoh/rules";
-import { createContext, useContext, useEffect, useMemo, useRef, type RefObject } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type RefObject } from "react";
 import { BufferGeometry, Color, ExtrudeGeometry, Shape, ShapeGeometry, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import { BASE_COLOR, BASE_RADIUS, UNIT_MODELS, baseFrame, baseGeometry, figureColors, figureGeometry } from "../models";
 import { useDisplay } from "../settings";
@@ -83,60 +83,57 @@ const RING: Record<FigureView["status"], string | null> = {
 
 /** Gap between the top of a token and the tip of its selection arrow, leaving room for the name tag. */
 const ARROW_GAP = 0.8;
-/** How long the arrow bobs and spins once it appears: one full bob, so it comes to rest where it started. */
-const ARROW_SECONDS = (2 * Math.PI) / 3;
-/** How long a ready or target ring pulses after it lights up: one and a quarter pulses, ending at full strength. */
-const PULSE_SECONDS = (2.5 * Math.PI) / 4;
+const REDUCE_MOTION = "(prefers-reduced-motion: reduce)";
+const subscribeMotion = (onChange: () => void) => {
+  const query = window.matchMedia?.(REDUCE_MOTION);
+  query?.addEventListener("change", onChange);
+  return () => query?.removeEventListener("change", onChange);
+};
+const motionReduced = () => window.matchMedia?.(REDUCE_MOTION).matches ?? false;
 
 /**
- * A short animation. The board is only drawn when something changes, so an
- * animation that ran forever would keep it drawing. Call the returned function
- * in useFrame with the clock time: it gives the seconds since the animation
- * began (asking for the next frame), or null once `seconds` have passed or
- * while `active` is false. A new `restart` value starts it again.
+ * A decorative loop: the arrow's bob and spin, a ready or target ring's pulse.
+ * The board is only drawn when something changes, so a running loop asks for
+ * every frame. It runs while `active`, unless the player's system asks for
+ * reduced motion; then it stands still and the board can rest (browser tests
+ * run that way). Returns whether it runs; call the returned `next` in useFrame
+ * to ask for the following frame.
  */
-function useBriefAnimation(active: boolean, seconds: number, restart?: unknown): (time: number) => number | null {
+function useLoop(active: boolean): { running: boolean; next: () => void } {
+  const reduced = useSyncExternalStore(subscribeMotion, motionReduced);
+  const running = active && !reduced;
   const invalidate = useThree((s) => s.invalidate);
   const wake = useWake();
-  const start = useRef<number | null>(null);
   useEffect(() => {
-    start.current = null;
-    if (active) wake();
-  }, [active, restart, wake]);
-  return (time: number) => {
-    if (!active) return null;
-    start.current ??= time;
-    const age = time - start.current;
-    if (age >= seconds) return null;
-    invalidate();
-    return age;
-  };
+    if (running) wake();
+  }, [running, wake]);
+  return { running, next: invalidate };
 }
 
-/** The pulse of a ready or target ring, from 0 to 1; it rests at 1 once it has pulsed for a moment. */
+/** The pulse of a ready or target ring, from -1 to 1, or null when it does not pulse (or motion is reduced). */
 function useRingPulse(status: FigureView["status"]): (time: number) => number | null {
-  const pulsing = status === "ready" || status === "target";
-  const age = useBriefAnimation(pulsing, PULSE_SECONDS, status);
+  const { running, next } = useLoop(status === "ready" || status === "target");
   return (time: number) => {
-    if (!pulsing) return null;
-    const a = age(time);
-    return a === null ? 1 : 0.5 + 0.5 * Math.sin(a * 4);
+    if (!running) return null;
+    next();
+    return Math.sin(time * 4);
   };
 }
 
-/** A red arrow that bobs and spins above a figure, pointing down at it, then comes to rest. */
+/** A red arrow that bobs and spins above a figure, pointing down at it. */
 function SelectionArrow({ top }: { top: number }) {
   const arrow = useRef<Group>(null);
-  const age = useBriefAnimation(true, ARROW_SECONDS, top);
+  const { running, next } = useLoop(true);
   useFrame(({ clock }) => {
     if (!arrow.current) return;
-    const t = age(clock.elapsedTime);
-    if (t === null) {
+    if (!running) {
       arrow.current.position.y = top + ARROW_GAP;
       return;
     }
+    const t = clock.elapsedTime;
     arrow.current.rotation.y = t * 2;
     arrow.current.position.y = top + ARROW_GAP + 0.18 * Math.sin(t * 3);
+    next();
   });
   return (
     <group ref={arrow} position={[0, top + ARROW_GAP, 0]} scale={1.8}>
@@ -377,7 +374,7 @@ function BigToken({ f, handlers }: { f: FigureView; handlers: object }) {
   const pulse = useRingPulse(f.status);
   useFrame(({ clock }) => {
     const p = pulse(clock.elapsedTime);
-    if (ring.current && p !== null) ring.current.opacity = 0.2 + 0.7 * p;
+    if (ring.current) ring.current.opacity = p === null ? 0.9 : 0.55 + 0.35 * p;
   });
   const centre = points.reduce((c, p) => ({ x: c.x + p.x / points.length, y: c.y + p.y / points.length }), { x: 0, y: 0 });
   return (
@@ -532,7 +529,7 @@ function ModelFigure({
   const pulse = useRingPulse(f.status);
   useFrame(({ clock }) => {
     const p = pulse(clock.elapsedTime);
-    if (ring.current) ring.current.opacity = p === null ? 0.95 : 0.25 + 0.7 * p;
+    if (ring.current) ring.current.opacity = p === null ? 0.95 : 0.6 + 0.35 * p;
   });
 
   return (
@@ -601,7 +598,7 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
   const pulse = useRingPulse(f.status);
   useFrame(({ clock }) => {
     const p = pulse(clock.elapsedTime);
-    const scale = p === null ? 1 : 0.5 + 0.5 * p;
+    const scale = p === null ? 1 : 0.75 + 0.25 * p;
     if (ring.current) ring.current.scale.set(scale, 1, scale);
   });
 

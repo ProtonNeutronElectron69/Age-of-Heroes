@@ -39,6 +39,10 @@ Unit tests follow the package graph: `rules` is used by everything, `content` by
 
 Figure models (`apps/client/src/models`) are drawn on the game board too, so a model change runs every browser test, like the rest of the client.
 
+## Reduced motion
+
+The browser tests that show the game board (`full-game`, `online`, `saves`, `editor`) run with reduced motion. The board is drawn only when something changes, and reduced motion stills its endless decorations (the selection arrow's bob, the rings' pulse), so it rests between actions instead of drawing every frame in software. `full-game` checks once that the decorations do move without it.
+
 ## Safety nets
 
 - Every push to `main` runs every check, so anything a narrow pull request run missed shows up at once.

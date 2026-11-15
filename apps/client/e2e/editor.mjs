@@ -18,7 +18,9 @@ const url = server.resolvedUrls.local[0];
 const browser = await chromium.launch({
   args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
 });
-const context = await browser.newContext({ viewport: { width: 1400, height: 860 }, acceptDownloads: true });
+// Reduced motion stills the board's endless decorations (the arrow's bob, the rings' pulse),
+// so the board rests between actions instead of drawing every frame in software.
+const context = await browser.newContext({ viewport: { width: 1400, height: 860 }, acceptDownloads: true, reducedMotion: "reduce" });
 const page = await context.newPage();
 const errors = [];
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
