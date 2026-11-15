@@ -110,7 +110,7 @@ describe("shove", () => {
 describe("grapple line", () => {
   it("pulls a Small or Medium enemy into the nearest free hex next to the puller", () => {
     const g = game(flat(9), { p1: ["grappler"], p2: ["hero"] }, { "p1:0#1": at(0), "p2:0#1": at(3) });
-    expect(specialActions(g.state, NEW_CARDS.find((c) => c.id === "grappler")!)).toEqual([{ id: "grapple-line", name: "grapple-line", kind: "pull" }]);
+    expect(specialActions(NEW_CARDS.find((c) => c.id === "grappler")!)).toEqual([{ id: "grapple-line", name: "grapple-line", kind: "pull" }]);
     expect(attackTargets(g.state, "p1:0#1", g.ctx, "grapple-line")).toEqual(["p2:0#1"]);
     const r = apply(g.state, attack("p1", "p1:0#1", "p2:0#1", "grapple-line"), g.ctx);
     expect(r.state.units[1]!.figures[0]!.position?.hex).toEqual(hex(1, 0));

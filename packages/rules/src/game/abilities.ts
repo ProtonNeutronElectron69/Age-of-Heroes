@@ -34,7 +34,7 @@ export function abilityOf(card: UnitCard, id: string): Ability | undefined {
 }
 
 /** Does this card have the ability? */
-export function hasAbility(state: GameState, card: UnitCard, id: string): boolean {
+export function hasAbility(card: UnitCard, id: string): boolean {
   return abilityOf(card, id) !== undefined;
 }
 
@@ -67,7 +67,7 @@ function friendsWith(state: GameState, owner: string, id: string, ctx: RulesCont
   for (const unit of state.units) {
     if (unit.owner !== owner) continue;
     const card = ctx.cards.get(unit.cardId);
-    if (!card || !hasAbility(state, card, id)) continue;
+    if (!card || !hasAbility(card, id)) continue;
     for (const figure of unit.figures) {
       if (figure.destroyed || !figure.position || figure.id === except) continue;
       result.push(combatant(unit, figure, ctx));
@@ -259,7 +259,7 @@ export function targetingProblem(
   for (const unit of state.units) {
     if (unit.owner === attacker.unit.owner) continue;
     const card = ctx.cards.get(unit.cardId);
-    if (!card || !hasAbility(state, card, "challenge")) continue;
+    if (!card || !hasAbility(card, "challenge")) continue;
     for (const figure of unit.figures) {
       if (figure.destroyed || !figure.position) continue;
       const c = combatant(unit, figure, ctx);
@@ -291,13 +291,12 @@ export function isPinned(state: GameState, figureId: string): boolean {
 
 /** Wounds after defensive abilities that reduce damage (Thick Hide). */
 export function reduceWounds(
-  state: GameState,
   defender: Combatant,
   distance: number,
   wounds: number,
   notes: string[],
 ): number {
-  const hide = hasAbility(state, defender.card, "thick-hide") ? abilityOf(defender.card, "thick-hide") : undefined;
+  const hide = hasAbility(defender.card, "thick-hide") ? abilityOf(defender.card, "thick-hide") : undefined;
   if (hide && wounds > 0 && distance >= param(hide, "minDistance", 3)) {
     const cut = Math.min(wounds, param(hide, "reduce", 1));
     notes.push(`${hide.name} -${cut} wound${cut === 1 ? "" : "s"}`);
@@ -469,7 +468,7 @@ export function endOfTurnAbilities(state: GameState, unitId: string, ctx: RulesC
     if (state.pinned.length === 0) delete state.pinned;
   }
   reassemble(state, unit, card, ctx, events);
-  regrowth(state, unit, card, ctx, events);
+  regrowth(unit, card, ctx, events);
   mendingHymn(state, unit, card, ctx, events);
   const dressing = abilityOf(card, "field-dressing");
   if (!dressing) return;
@@ -519,7 +518,7 @@ function heal(figure: FigureState, amount: number, ability: Ability, by: string,
 }
 
 /** Regrowth: each wounded figure of the unit standing on the right terrain (forest) heals. */
-function regrowth(state: GameState, unit: UnitState, card: UnitCard, ctx: RulesContext, events: GameEvent[]): void {
+function regrowth(unit: UnitState, card: UnitCard, ctx: RulesContext, events: GameEvent[]): void {
   const ability = abilityOf(card, "regrowth");
   if (!ability) return;
   for (const f of unit.figures) {
@@ -582,8 +581,8 @@ function reassemble(state: GameState, unit: UnitState, card: UnitCard, ctx: Rule
 // Trample
 
 /** Trample: each Small or Medium enemy the behemoth moves through rolls 1 defense die; a blank is a wound. */
-export function canTrample(state: GameState, mover: UnitCard, victim: UnitCard): boolean {
-  return hasAbility(state, mover, "trample") && (victim.size === "small" || victim.size === "medium");
+export function canTrample(mover: UnitCard, victim: UnitCard): boolean {
+  return hasAbility(mover, "trample") && (victim.size === "small" || victim.size === "medium");
 }
 
 export function trampleRoll(
@@ -689,7 +688,7 @@ export function mindControlOf(card: UnitCard, id: string): MindControlSpec | und
 }
 
 /** Special actions a card can use instead of a normal attack. */
-export function specialActions(state: GameState, card: UnitCard): { id: string; name: string; kind: SpecialKind }[] {
+export function specialActions(card: UnitCard): { id: string; name: string; kind: SpecialKind }[] {
   const result: { id: string; name: string; kind: SpecialKind }[] = [];
   for (const a of card.abilities) {
     const kind = specialKind(card, a.id);

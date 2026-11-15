@@ -244,7 +244,7 @@ export function PlayScreen({ session }: { session: Session }) {
     setRotation(f?.position?.rotation ?? 0);
     setAttackMode(null);
   }, [selected, turnKey]);
-  const specials = activeCard ? specialActions(state, activeCard) : [];
+  const specials = activeCard ? specialActions(activeCard) : [];
   const modeKind = specials.find((s) => s.id === attackMode)?.kind ?? null;
 
   const options = useMemo<Map<string, MoveOption>>(() => {

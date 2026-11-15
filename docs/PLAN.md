@@ -4,21 +4,13 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable: one full set of rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. Over 450 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable: one full set of rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. About 475 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 - **Needs the repository owner:** create the online game server on Render and set the `GAME_SERVER_URL` repository variable (about 10 minutes; see [HOSTING.md](HOSTING.md)). Until then the published site can only play online against a server whose address is typed in.
 - **On hold (Phase 6):** a computer opponent, and a tutorial.
-- **In progress (Phase 7):** 3D figure models, in stages. Stage 1 gives every unit a low polygon model of the right size and shape, in flat colour. All 48 units have one, and the owner has approved their look; see them at `?models`. Each figure stands on a light brown base with a coloured ring round its edge, and there are three colour schemes to choose between. The models now stand on the game board in place of tokens; the Display button (or the T key) switches back to tokens, which show the hit band, and picks the colour scheme. **Next:** later stages add detail and colour.
+- **Phase 7, figure models:** stage 1 is done. Every unit has a low polygon model in flat colour, drawn on the board in place of tokens (the Display button or the T key switches back to tokens and picks one of three colour schemes; see every model at `?models`). **Next, when the owner asks:** later stages add detail and colour.
 - **On hold (Phase 7):** sound and music, terrain and scenery art.
-
-- **Done (Phase 7):** a unit gallery on the main menu. It shows every unit card in a scrolling grid, 5, 3 or 1 across, filtered by faction, type, attack and a search and sorted by name, faction or a stat. Choosing a card opens its figure model to turn and zoom.
-
-- **Done (Phase 7):** a reworked main menu in four styles to choose from under **Menu style**: War Table (the board and its armies drift behind the menu), Atlas (an inked atlas on parchment), Banner Hall (house banners in a torchlit hall) and Hex Command (a honeycomb of faction hexes). Each fits a landscape window without scrolling and animates its buttons on hover.
-
-- **Done:** the play screen follows the action. Each turn, on every player's turn, the camera glides to the acting unit at a standard zoom and angle and its card comes up; after a squad figure acts, the camera moves on to the next figure. Resting the pointer on another unit for half a second shows its card, smaller, below the acting unit's card until the pointer leaves; clicking a unit keeps its card there.
-
-- **Done:** one set of rules. The simpler second rule set was removed, with its card fronts and its card-count drafts: every game now has Life, abilities, height bonuses, engagement and strict line of sight, and armies are drafted to a points budget. Saves and replays of games under the removed rules are refused with a message.
 
 ### Ideas, not scheduled
 - More premade maps.
@@ -183,7 +175,15 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 ### Faster checks
 - [x] CI runs only the checks a change affects: docs run nothing, unit card data runs the content tests, and each browser test runs only for the code it covers, in parallel. Pushes to `main` still run everything. `pnpm check:affected` does the same locally. See [TESTING.md](TESTING.md)
 
-### Phase 7: Sound, models and art (on hold until the core game is complete)
+### Menus, gallery and play screen (done, #22 to #27)
+- [x] A unit gallery on the main menu: every unit card in a scrolling grid, 5, 3 or 1 across, filtered by faction, type, attack and a search, and sorted by name, faction or a stat. Choosing a card opens its figure model to turn and zoom (#22)
+- [x] Figure models drawn on the board (#23)
+- [x] A reworked main menu in four styles chosen under **Menu style**: War Table (the board and its armies drift behind the menu), Atlas (an inked atlas on parchment), Banner Hall (house banners in a torchlit hall) and Hex Command (a honeycomb of faction hexes). Each fits a landscape window without scrolling and animates its buttons on hover (#24)
+- [x] Menu defaults: no round limit, a 1000 point army, Proving Grounds and 2 players, with army buttons for 500, 750, 1000 and 1500 points. Gallery cards lift and glow gold on hover (#25)
+- [x] The play screen follows the action. On every player's turn the camera glides to the acting unit at a standard zoom and angle and its card comes up; after a squad figure acts, the camera moves on to the next figure. Resting the pointer on another unit for half a second shows its card, smaller, below the acting unit's card until the pointer leaves; clicking a unit keeps its card there (#26)
+- [x] One set of rules. The simpler second rule set was removed, with its card fronts and its card-count drafts: every game has Life, abilities, height bonuses, engagement and strict line of sight, and armies are drafted to a points budget. Saves and replays of games under the removed rules are refused with a message (#27)
+
+### Phase 7: Sound, models and art (models in progress; sound and art on hold)
 - [x] Unit cards redrawn as seven-hex cards in faction colours, for the whole roster, on the draft, play and replay screens. Each faction has a colour theme and an emblem. The card shows the unit's token label in its owner's colour and counts down Life as wounds land; clicking a card shows it large. Open the game with `?cards` in the address to see every card
 - [x] Unit art and hit zone pictures for all 48 cards, drawn in five batches. The art style is ink and colour: dark outlines, flat natural colours and hatched shadows. The hit zone picture is the same drawing in greys, with the hit band (the top 40% of the body) in red and gear left grey. The faint emblem that stood in for art is gone. Open the game with `?cards` in the address to see every card
   - [x] Batch 1 (10 of 48): Captain Marisol Vance, Harrow Line Riflemen, Lady Asagiri, Glade Wardens, Sentinel K-7, Nexus Breachers, Vorhal, Barrow Legion, Dame Rowena Ashgrove, Stormwake Huscarls
@@ -193,7 +193,7 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
   - [x] Batch 5 (48 of 48): Brass Hussars, Hollow Reed Shinobi, Old Rootback, Hollowsteel Hunters, Siege Walker Atlas, Marrowcoil, Sunbound Archers, Dawn Acolytes
 - [ ] Sound effects and music
 - [ ] 3D models for the figures in place of tokens
-  - [ ] Stage 1: a low polygon model for every unit, sized to its Height and its base. Open the game with `?models` in the address to see them
+  - [x] Stage 1: a low polygon model for every unit, sized to its Height and its base. Open the game with `?models` in the address to see them
     - [x] Mockup (4 of 48): Captain Marisol Vance, Brass Hussars, Glade Wardens, Old Rootback
     - [x] Light brown bases with a coloured ring round the edge, waisted between hexes on larger footprints, and two colour schemes to switch between: faction models with player rings, or player models with faction rings
     - [x] A hero and a squad for every faction (12 of 48): Lady Asagiri, Hollow Reed Shinobi, Siege Walker Atlas, Nexus Reclaimers, Marrowcoil, Barrow Legion, Solenne, Stormwake Huscarls

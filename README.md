@@ -19,10 +19,12 @@ A turn-based 3D tactics game for 2 to 6 players in the browser. Heroes and squad
 - **Hot-seat play** on one device, with a pass-the-device screen for the secret tokens.
 - **Online play:** room codes, each device sees only what its player may see, reconnecting, spectators, and an authoritative server.
 - **Saved games and replays:** named saves, save files, and online games the host can save and resume later. Finished games can be watched move by move.
+- **3D figure models** for all 48 units on the board, in three colour schemes, or plain tokens that show the hit band (Display, or the T key). The camera follows the acting unit, and resting the pointer on another unit shows its card beside the acting unit's.
+- **Main menu in four styles** (War Table, Atlas, Banner Hall and Hex Command), each fitting a landscape window without scrolling, and a **unit gallery** of every card, filterable and sortable, with each unit's 3D model to turn and zoom.
 
-**Keys in play:** WASD pans the map, 1 to 4 pick a squad's figures, E opens and closes eye view, Space ends the turn, R turns a multi-hex figure, C shows or hides the unit card.
+**Keys in play:** WASD pans the map, 1 to 4 pick a squad's figures, E opens and closes eye view, Space ends the turn, R turns a multi-hex figure, C shows or hides the unit card, T switches between figure models and tokens.
 
-**Preview pages:** add `?cards` to the address to see every unit card, and `?models` to see the 3D figure models that will replace the tokens on the board.
+**Design pages:** add `?cards` to the address to see every unit card, and `?models` to see every figure model lined up on a board, with their fit to their bases.
 
 The rules are in [docs/RULES.md](docs/RULES.md). Progress and what's next are in [docs/PLAN.md](docs/PLAN.md).
 
@@ -34,6 +36,7 @@ The rules are in [docs/RULES.md](docs/RULES.md). Progress and what's next are in
 | [docs/PLAN.md](docs/PLAN.md) | Status, roadmap and design decisions |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code is organised and how a game flows through it |
 | [docs/CONTENT.md](docs/CONTENT.md) | Adding units, abilities and maps, and the rules the tests enforce |
+| [docs/TESTING.md](docs/TESTING.md) | Which checks each kind of change runs, locally and in CI |
 | [docs/HOSTING.md](docs/HOSTING.md) | Running and hosting the online game server |
 | [CLAUDE.md](CLAUDE.md) | Working rules for contributors and coding agents |
 
@@ -48,7 +51,7 @@ pnpm server     # the online game server at ws://localhost:8080/ws (the dev buil
 pnpm typecheck  # type-check every package
 pnpm test       # unit, content, balance, protocol, server and random full-game tests
 pnpm build      # production builds: the game in apps/client/dist, the server in apps/server/dist
-pnpm e2e        # browser tests (run pnpm build first; about 10 minutes)
+pnpm e2e        # browser tests (run pnpm build first; about 15 minutes)
 pnpm affected   # which checks this branch's changes need
 pnpm check:affected  # run just those checks
 ```
@@ -66,7 +69,7 @@ Before pushing, run `pnpm check:affected`. CI runs the checks a pull request's c
 | `packages/rules` | The rules engine: hex math, the stacked map model, dice, line of sight, draft, movement, combat and abilities. Pure, deterministic TypeScript, so it runs the same in the browser and on the server. |
 | `packages/content` | Game data: the 48 units, four premade maps, terrain, scenery, tunable rule numbers, and the balance model for point costs. |
 | `packages/protocol` | The online message format (checked with schemas) and the game record format used for saves and replays. |
-| `apps/client` | The browser game: setup, draft, battle, map editor, online lobby, saved games and replay viewer, built with React and Three.js. Browser tests live in `apps/client/e2e`. |
+| `apps/client` | The browser game: main menu, unit gallery, draft, battle, map editor, online lobby, saved games and replay viewer, built with React and Three.js. Figure models are built in code in `src/models`. Browser tests live in `apps/client/e2e`. |
 | `apps/server` | The online game server: rooms, room codes, seats and reconnecting, spectators, and saving and resuming games. It runs the rules engine and sends each player only their own view. |
 | `docs` | Rules, roadmap, architecture, content guide and hosting guide. |
 

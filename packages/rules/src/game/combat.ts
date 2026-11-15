@@ -307,7 +307,7 @@ function resolve(
   const roll = rollCombat(rng, dice.attack, dice.defense);
   const distance = spotDistance(attacker.spots, defender.spots);
   const notes = [...dice.notes];
-  const wounds = reduceWounds(state, defender, distance, roll.wounds, notes);
+  const wounds = reduceWounds(defender, distance, roll.wounds, notes);
   events.push({
     type: "attackRolled",
     source: "attack",
@@ -328,7 +328,7 @@ function resolve(
   afterAttack(state, ctx, rng, attacker, defender, distance, roll.hits, roll.blocks, wounds, events);
 
   // Last Stand: a destroyed figure strikes back at its attacker as it falls.
-  const stand = hasAbility(state, defender.card, "last-stand") ? abilityOf(defender.card, "last-stand") : undefined;
+  const stand = hasAbility(defender.card, "last-stand") ? abilityOf(defender.card, "last-stand") : undefined;
   if (stand && defender.figure.destroyed && !attacker.figure.destroyed && attacker.figure.position && canReach(state, ctx, defender, attacker)) {
     events.push({
       type: "abilityUsed",
@@ -408,7 +408,7 @@ export function attack(
   } else {
     resolve(state, ctx, rng, attacker, defender, statsOf(attacker.card).attack, undefined, events);
     // Shoulder Barge: a melee hit shoves the target one hex back.
-    const shove = hasAbility(state, attacker.card, "shove") ? abilityOf(attacker.card, "shove") : undefined;
+    const shove = hasAbility(attacker.card, "shove") ? abilityOf(attacker.card, "shove") : undefined;
     if (shove && !attacker.figure.destroyed && !defender.figure.destroyed && defender.card.size !== "huge" && spotDistance(attacker.spots, defender.spots) <= 1) {
       const spot = shoveSpot(state, ctx, attacker, defender);
       events.push({
@@ -427,11 +427,11 @@ export function attack(
   active.attacked.push(figureId);
   active.attackLog.push({ attackerId: figureId, targetId });
   // Smoke Step: a short move after attacking.
-  if (!attacker.figure.destroyed && hasAbility(state, attacker.card, "smoke-step")) {
+  if (!attacker.figure.destroyed && hasAbility(attacker.card, "smoke-step")) {
     active.bonusMoves[figureId] = param(abilityOf(attacker.card, "smoke-step"), "move", 2);
   }
   // Corpse Feast: a kill earns a short move.
-  if (!attacker.figure.destroyed && t.figure.destroyed && !ability && hasAbility(state, attacker.card, "corpse-feast")) {
+  if (!attacker.figure.destroyed && t.figure.destroyed && !ability && hasAbility(attacker.card, "corpse-feast")) {
     active.bonusMoves[figureId] = param(abilityOf(attacker.card, "corpse-feast"), "move", 2);
   }
   checkGameOver(state, events, ctx);

@@ -16,7 +16,7 @@ import {
 import { fail, RulesError } from "./errors";
 import { moveFigure } from "./movement";
 import { findUnit, isUnitAlive } from "./queries";
-import { advance, checkGameOver, eliminate, maybeStartTurns, startRound, stepPointer } from "./rounds";
+import { advance, checkGameOver, eliminate, maybeStartTurns, stepPointer } from "./rounds";
 import {
   TOKEN_IDS,
   type Command,

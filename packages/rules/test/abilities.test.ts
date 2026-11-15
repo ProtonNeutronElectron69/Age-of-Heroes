@@ -243,8 +243,7 @@ describe("movement abilities", () => {
 describe("special actions", () => {
   it("lists a card's special actions", () => {
     const card = ABILITY_CARDS.find((c) => c.id === "spitter")!;
-    const g = game(flat(3), { p1: ["spitter"], p2: ["hero"] }, {});
-    expect(specialActions(g.state, card)).toEqual([{ id: "ember-spit", name: "ember-spit", kind: "area" }]);
+    expect(specialActions(card)).toEqual([{ id: "ember-spit", name: "ember-spit", kind: "area" }]);
   });
 
   it("Ember Spit hits the target and every other figure next to it", () => {
@@ -410,7 +409,7 @@ describe("abilities added with the larger roster", () => {
   it("Arc Lightning is an area attack: the target and everything next to it", () => {
     const card = ABILITY_CARDS.find((c) => c.id === "mage")!;
     const g = game(flat(8), { p1: ["mage"], p2: ["hero", "hero"] }, { "p1:0#1": at(0), "p2:0#1": at(4), "p2:1#1": at(5) });
-    expect(specialActions(g.state, card)).toEqual([{ id: "arc-lightning", name: "arc-lightning", kind: "area" }]);
+    expect(specialActions(card)).toEqual([{ id: "arc-lightning", name: "arc-lightning", kind: "area" }]);
     const r = apply(g.state, { type: "attack", player: "p1", figureId: "p1:0#1", targetId: "p2:0#1", ability: "arc-lightning" }, g.ctx);
     expect(ofType(r.events, "attackRolled").map((e) => [e.targetId, e.attack.length])).toEqual([
       ["p2:0#1", 3],
