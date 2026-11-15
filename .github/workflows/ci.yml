@@ -80,7 +80,16 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm --filter @aoh/client exec playwright install --with-deps chromium
+      # The tests run headless, so only Chromium's headless shell is needed. It is cached by
+      # Playwright version. GitHub's Ubuntu machines already have the libraries it needs, so
+      # `--with-deps` (about 25 s of apt, mostly fonts the game does not use) is left out.
+      - id: playwright
+        run: echo "version=$(node -p "require('./apps/client/node_modules/playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-shell-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - run: pnpm --filter @aoh/client exec playwright install --only-shell chromium
       - name: ${{ matrix.test.id }}
         working-directory: apps/client
         run: ${{ matrix.test.cmd }}

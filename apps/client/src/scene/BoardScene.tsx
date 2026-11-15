@@ -30,6 +30,7 @@ import {
   type PerspectiveCamera,
 } from "three";
 import { HEX_GAP } from "./scale";
+import { useWake } from "./wake";
 
 export interface Marker {
   readonly step: Step;
@@ -89,6 +90,8 @@ const EYE_FOV = 70;
 function EyeCamera({ view, center }: { view: { eye: Vec3; look: Vec3 }; center: { x: number; z: number } }) {
   const camera = useThree((s) => s.camera);
   const dom = useThree((s) => s.gl.domElement);
+  const invalidate = useThree((s) => s.invalidate);
+  const wake = useWake();
   const saved = useRef<{ position: Vector3; fov: number } | null>(null);
   const angles = useRef({ yaw: 0, pitch: 0 });
   const keys = useRef(new Set<string>());
@@ -116,7 +119,8 @@ function EyeCamera({ view, center }: { view: { eye: Vec3; look: Vec3 }; center: 
     const dy = look.y - eye.y;
     const dz = look.z - eye.z;
     angles.current = { yaw: Math.atan2(dx, dz), pitch: Math.atan2(dy, Math.hypot(dx, dz)) };
-  }, [eye.x, eye.y, eye.z, look.x, look.y, look.z]);
+    invalidate();
+  }, [eye.x, eye.y, eye.z, look.x, look.y, look.z, invalidate]);
 
   // Drag anywhere on the board, or hold the arrow keys, to look around.
   useEffect(() => {
@@ -125,6 +129,7 @@ function EyeCamera({ view, center }: { view: { eye: Vec3; look: Vec3 }; center: 
       const a = angles.current;
       a.yaw += dYaw;
       a.pitch = Math.max(-LOOK_PITCH_LIMIT, Math.min(LOOK_PITCH_LIMIT, a.pitch + dPitch));
+      invalidate();
     };
     const down = (e: PointerEvent) => {
       last = { x: e.clientX, y: e.clientY };
@@ -146,6 +151,7 @@ function EyeCamera({ view, center }: { view: { eye: Vec3; look: Vec3 }; center: 
       if (!ARROWS.includes(e.key) || e.target instanceof HTMLInputElement) return;
       e.preventDefault();
       keys.current.add(e.key);
+      wake();
     };
     const keyUp = (e: KeyboardEvent) => keys.current.delete(e.key);
     const held = keys.current;
@@ -162,9 +168,10 @@ function EyeCamera({ view, center }: { view: { eye: Vec3; look: Vec3 }; center: 
       window.removeEventListener("keyup", keyUp);
       held.clear();
     };
-  }, [dom]);
+  }, [dom, invalidate, wake]);
 
   const target = useMemo(() => new Vector3(), []);
+  const drawn = useRef({ yaw: NaN, pitch: NaN });
   useFrame((_, delta) => {
     const k = keys.current;
     const a = angles.current;
@@ -179,6 +186,11 @@ function EyeCamera({ view, center }: { view: { eye: Vec3; look: Vec3 }; center: 
     const flat = Math.cos(a.pitch);
     target.set(x + Math.sin(a.yaw) * flat, eye.y + Math.sin(a.pitch), z + Math.cos(a.yaw) * flat);
     camera.lookAt(target);
+    // Keep turning while an arrow key is held, and draw once more after the view last turned,
+    // so the name tags (placed in the same frame, perhaps before the camera moved) catch up.
+    const turned = a.yaw !== drawn.current.yaw || a.pitch !== drawn.current.pitch;
+    drawn.current = { yaw: a.yaw, pitch: a.pitch };
+    if (k.size > 0 || turned) invalidate();
   });
   return null;
 }
@@ -191,6 +203,8 @@ const PAN_KEYS: Record<string, [number, number]> = { w: [0, 1], s: [0, -1], a: [
 function KeyboardPan() {
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls) as unknown as { target: Vector3; update: () => void } | null;
+  const invalidate = useThree((s) => s.invalidate);
+  const wake = useWake();
   const held = useRef(new Set<string>());
   useEffect(() => {
     const typing = (e: KeyboardEvent) =>
@@ -199,6 +213,7 @@ function KeyboardPan() {
       const k = e.key.toLowerCase();
       if (!(k in PAN_KEYS) || typing(e) || e.ctrlKey || e.metaKey || e.altKey) return;
       held.current.add(k);
+      wake();
     };
     const up = (e: KeyboardEvent) => held.current.delete(e.key.toLowerCase());
     const clear = () => held.current.clear();
@@ -210,7 +225,7 @@ function KeyboardPan() {
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", clear);
     };
-  }, []);
+  }, [wake]);
   const forward = useMemo(() => new Vector3(), []);
   const right = useMemo(() => new Vector3(), []);
   const move = useMemo(() => new Vector3(), []);
@@ -233,6 +248,8 @@ function KeyboardPan() {
     camera.position.add(move);
     controls.target.add(move);
     controls.update();
+    // Keep panning while a key is held.
+    invalidate();
   });
   return null;
 }
@@ -268,12 +285,15 @@ function CameraFocus({ focus, center }: { focus: CameraFocusRequest; center: { x
     addEventListener?: (type: string, fn: () => void) => void;
     removeEventListener?: (type: string, fn: () => void) => void;
   } | null;
+  const invalidate = useThree((s) => s.invalidate);
+  const wake = useWake();
   const goal = useRef<{ target: Vector3; eye: Vector3 | null; age: number } | null>(null);
   const { point, key, frame } = focus;
   useEffect(() => {
     const target = new Vector3(point.x - center.x, point.y, point.z - center.z);
     const eye = frame ? new Vector3(frame.from.x, frame.from.y, frame.from.z).setLength(frame.distance).add(target) : null;
     goal.current = { target, eye, age: 0 };
+    wake();
     // Only a new key starts a move; the point is read when it does.
   }, [key]);
   useEffect(() => {
@@ -294,6 +314,7 @@ function CameraFocus({ focus, center }: { focus: CameraFocusRequest; center: { x
       camera.position.lerp(g.eye, ease);
       controls.update();
       if (last || (controls.target.distanceTo(g.target) < 0.02 && camera.position.distanceTo(g.eye) < 0.02)) goal.current = null;
+      else invalidate();
       return;
     }
     offset.copy(camera.position).sub(controls.target);
@@ -304,6 +325,7 @@ function CameraFocus({ focus, center }: { focus: CameraFocusRequest; center: { x
     camera.position.copy(controls.target).add(offset);
     controls.update();
     if (last || (controls.target.distanceTo(g.target) < 0.02 && Math.abs(distance - wanted) < 0.02)) goal.current = null;
+    else invalidate();
   });
   return null;
 }

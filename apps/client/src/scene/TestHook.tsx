@@ -13,8 +13,8 @@ declare global {
     /** Lets browser tests find where a hex is drawn on screen. */
     __aoh?: {
       project: (q: number, r: number, elevation: number) => { x: number; y: number };
-      /** What the last frame drew, for performance checks. */
-      stats: () => { calls: number; triangles: number; lines: number };
+      /** What the last frame drew, and how many frames have been drawn, for performance checks. */
+      stats: () => { calls: number; triangles: number; lines: number; frames: number };
     };
     /** Read-only summary of the current turn, for browser tests. */
     __aohUi?: {
@@ -41,7 +41,7 @@ export function TestHook({ offset }: { offset: { x: number; z: number } }) {
       },
       stats() {
         const r = gl.info.render;
-        return { calls: r.calls, triangles: r.triangles, lines: r.lines };
+        return { calls: r.calls, triangles: r.triangles, lines: r.lines, frames: r.frame };
       },
     };
     window.__aoh = hook;

@@ -1,10 +1,11 @@
 import type { ThreeEvent } from "@react-three/fiber";
 import { useFrame, useThree } from "@react-three/fiber";
 import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS, hex, hexKey, hexToWorld, type Footprint, type Step } from "@aoh/rules";
-import { createContext, useContext, useEffect, useMemo, useRef, type RefObject } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type RefObject } from "react";
 import { BufferGeometry, Color, ExtrudeGeometry, Shape, ShapeGeometry, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import { BASE_COLOR, BASE_RADIUS, UNIT_MODELS, baseFrame, baseGeometry, figureColors, figureGeometry } from "../models";
 import { useDisplay } from "../settings";
+import { useWake } from "./wake";
 import { factionTheme } from "../ui/factionThemes";
 
 export interface FigureView {
@@ -82,15 +83,57 @@ const RING: Record<FigureView["status"], string | null> = {
 
 /** Gap between the top of a token and the tip of its selection arrow, leaving room for the name tag. */
 const ARROW_GAP = 0.8;
+const REDUCE_MOTION = "(prefers-reduced-motion: reduce)";
+const subscribeMotion = (onChange: () => void) => {
+  const query = window.matchMedia?.(REDUCE_MOTION);
+  query?.addEventListener("change", onChange);
+  return () => query?.removeEventListener("change", onChange);
+};
+const motionReduced = () => window.matchMedia?.(REDUCE_MOTION).matches ?? false;
+
+/**
+ * A decorative loop: the arrow's bob and spin, a ready or target ring's pulse.
+ * The board is only drawn when something changes, so a running loop asks for
+ * every frame. It runs while `active`, unless the player's system asks for
+ * reduced motion; then it stands still and the board can rest (browser tests
+ * run that way). Returns whether it runs; call the returned `next` in useFrame
+ * to ask for the following frame.
+ */
+function useLoop(active: boolean): { running: boolean; next: () => void } {
+  const reduced = useSyncExternalStore(subscribeMotion, motionReduced);
+  const running = active && !reduced;
+  const invalidate = useThree((s) => s.invalidate);
+  const wake = useWake();
+  useEffect(() => {
+    if (running) wake();
+  }, [running, wake]);
+  return { running, next: invalidate };
+}
+
+/** The pulse of a ready or target ring, from -1 to 1, or null when it does not pulse (or motion is reduced). */
+function useRingPulse(status: FigureView["status"]): (time: number) => number | null {
+  const { running, next } = useLoop(status === "ready" || status === "target");
+  return (time: number) => {
+    if (!running) return null;
+    next();
+    return Math.sin(time * 4);
+  };
+}
 
 /** A red arrow that bobs and spins above a figure, pointing down at it. */
 function SelectionArrow({ top }: { top: number }) {
   const arrow = useRef<Group>(null);
+  const { running, next } = useLoop(true);
   useFrame(({ clock }) => {
     if (!arrow.current) return;
+    if (!running) {
+      arrow.current.position.y = top + ARROW_GAP;
+      return;
+    }
     const t = clock.elapsedTime;
     arrow.current.rotation.y = t * 2;
     arrow.current.position.y = top + ARROW_GAP + 0.18 * Math.sin(t * 3);
+    next();
   });
   return (
     <group ref={arrow} position={[0, top + ARROW_GAP, 0]} scale={1.8}>
@@ -140,6 +183,7 @@ function worldOf(step: Step, out: Vector3): Vector3 {
 
 const scratch = new Vector3();
 const scratch2 = new Vector3();
+const lastDrawn = new Vector3();
 
 /**
  * Moves a figure's drawing about its place on the board: hopping hex by hex
@@ -159,6 +203,10 @@ function useFigureAnimation(f: FigureView): RefObject<Group | null> {
     hop: null as { points: Vector3[]; t: number } | null,
     jumpT: -1,
   });
+  const invalidate = useThree((s) => s.invalidate);
+  const wake = useWake();
+  // A new move, jump, drag or place needs a frame to start from.
+  useEffect(() => wake(), [anim?.motions, anim?.jump, anim?.carry, f.spots, wake]);
   useEffect(() => {
     const offsets = anim?.offsets;
     if (!offsets) return;
@@ -229,7 +277,11 @@ function useFigureAnimation(f: FigureView): RefObject<Group | null> {
       else if (u < 0.72) up = JUMP_HEIGHT * 4 * (u / 0.72) * (1 - u / 0.72);
       else up = JUMP_HEIGHT * 0.16 * 4 * ((u - 0.72) / 0.28) * (1 - (u - 0.72) / 0.28);
     }
+    const was = lastDrawn.copy(g.position);
     g.position.set(st.offset.x, st.offset.y + up, st.offset.z);
+    // Keep drawing while the figure moves, and once more after it stops, so its name tag
+    // (placed in the same frame, perhaps before it moved) catches up.
+    if (!was.equals(g.position) || st.hop || st.jumpT >= 0) invalidate();
   });
   return group;
 }
@@ -319,10 +371,10 @@ function BigToken({ f, handlers }: { f: FigureView; handlers: object }) {
     [geometries],
   );
   const ringColor = RING[f.status];
+  const pulse = useRingPulse(f.status);
   useFrame(({ clock }) => {
-    if (ring.current && (f.status === "ready" || f.status === "target")) {
-      ring.current.opacity = 0.55 + 0.35 * Math.sin(clock.elapsedTime * 4);
-    }
+    const p = pulse(clock.elapsedTime);
+    if (ring.current) ring.current.opacity = p === null ? 0.9 : 0.55 + 0.35 * p;
   });
   const centre = points.reduce((c, p) => ({ x: c.x + p.x / points.length, y: c.y + p.y / points.length }), { x: 0, y: 0 });
   return (
@@ -474,10 +526,10 @@ function ModelFigure({
     // The ring follows the hexes the figure covers.
   }, [ringColor, f.spots]);
   useEffect(() => () => ringGeometry?.dispose(), [ringGeometry]);
+  const pulse = useRingPulse(f.status);
   useFrame(({ clock }) => {
-    if (ring.current) {
-      ring.current.opacity = f.status === "ready" || f.status === "target" ? 0.6 + 0.35 * Math.sin(clock.elapsedTime * 4) : 0.95;
-    }
+    const p = pulse(clock.elapsedTime);
+    if (ring.current) ring.current.opacity = p === null ? 0.95 : 0.6 + 0.35 * p;
   });
 
   return (
@@ -543,11 +595,11 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
   const moving = useFigureAnimation(f);
   const down = useContext(AnimationContext)?.onDown;
 
+  const pulse = useRingPulse(f.status);
   useFrame(({ clock }) => {
-    if (ring.current) {
-      const pulse = f.status === "ready" || f.status === "target" ? 0.75 + 0.25 * Math.sin(clock.elapsedTime * 4) : 1;
-      ring.current.scale.set(pulse, 1, pulse);
-    }
+    const p = pulse(clock.elapsedTime);
+    const scale = p === null ? 1 : 0.75 + 0.25 * p;
+    if (ring.current) ring.current.scale.set(scale, 1, scale);
   });
 
   const handlers = pointerHandlers(f.id, onClick, onHover, down);
@@ -678,7 +730,7 @@ function labelAnchor(f: FigureView): Vector3 {
   return new Vector3(x, top * LEVEL_HEIGHT + 0.35, z);
 }
 
-/** Moves the DOM name tags to follow their figures on screen, every frame. */
+/** Moves the DOM name tags to follow their figures on screen, every frame that is drawn. */
 function LabelTracker({
   figures,
   layer,
@@ -689,6 +741,9 @@ function LabelTracker({
   offsets: Map<string, Vector3>;
 }) {
   const anchors = useMemo(() => new Map(figures.map((f) => [f.id, labelAnchor(f)])), [figures]);
+  const invalidate = useThree((s) => s.invalidate);
+  // New or changed figures have new tags to place.
+  useEffect(() => invalidate(), [anchors, invalidate]);
   const v = useMemo(() => new Vector3(), []);
   // Anchors are in board coordinates; this group shares the figures' parent, so it maps them to the world.
   const frame = useRef<Group>(null);
