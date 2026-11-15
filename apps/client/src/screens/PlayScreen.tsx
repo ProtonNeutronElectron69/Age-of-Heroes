@@ -18,6 +18,7 @@ import {
   statsOf,
   waitingOn,
   type FigurePlacement,
+  type GameEvent,
   type MoveOption,
   type Placement,
   type Step,
@@ -39,6 +40,7 @@ import { toggleFigures, useDisplay } from "../settings";
 import { GameMenu } from "../ui/GameMenu";
 import { OnlineBar } from "../ui/OnlineBar";
 import { DiceOverlay, EventLog, GameOver, PassScreen, RoundBar, TokenPanel } from "../ui/panels";
+import { AttackShow, InitiativeShow, attackRollsIn, initiativeIn } from "../ui/RollShow";
 import { UnitCardView } from "../ui/UnitCardView";
 
 interface Pending {
@@ -107,11 +109,13 @@ export function PlayScreen({ session }: { session: Session }) {
   const center = useMemo(() => boardCenter(board), [board]);
 
   const [hoveredFigure, hoverFigure] = useDelayedHover();
-  /** The figure the camera last glided to; a new key starts a glide. */
-  const [follow, setFollow] = useState<{ id: string; key: number } | null>(null);
+  /** The figure the camera last glided to (or a fight, between it and `with`); a new key starts a glide. */
+  const [follow, setFollow] = useState<{ id: string; key: number; with?: string } | null>(null);
   const followFigure = (id: string | null | undefined) => {
     if (id) setFollow((f) => ({ id, key: (f?.key ?? 0) + 1 }));
   };
+  /** A squad's next figure to follow once the attack scene closes: the scene shows the fight first. */
+  const pendingFollow = useRef<string | null>(null);
   const [pinnedFigure, setPinnedFigure] = useState<string | null>(null);
   const [hoverStep, setHoverStep] = useState<Step | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -210,6 +214,7 @@ export function PlayScreen({ session }: { session: Session }) {
     const first = (living.find((f) => canAct(f.id)) ?? living[0])?.id;
     // The turn starts with this figure chosen, so the arrow and the camera agree.
     if (first && canAct(first)) setSelected(first);
+    pendingFollow.current = null;
     followFigure(first);
     setShowCard(true);
   }, [turnKey]);
@@ -243,9 +248,38 @@ export function PlayScreen({ session }: { session: Session }) {
     const fresh = after.find((id) => canAct(id) && !active.moved.includes(id) && !active.attacked.includes(id));
     const next = fresh ?? after.find((id) => canAct(id)) ?? (canAct(actor.id) ? actor.id : null);
     if (next) setSelected(next);
-    // The camera follows the selection to the squad's next figure.
-    if (next && next !== actor.id) followFigure(next);
+    // The camera follows the selection to the squad's next figure; after the attack scene, if one plays.
+    if (next && next !== actor.id) {
+      if (display.dice === "scene" && attackRollsIn(session.lastEvents).length > 0) pendingFollow.current = next;
+      else followFigure(next);
+    }
   }, [session.lastEvents]);
+
+  // ---- The dice show: the attack scene and the initiative d20s (presentation only) ----
+  const [show, setShow] = useState<{ stamp: number; kind: "attack" | "initiative"; events: readonly GameEvent[] } | null>(null);
+  useEffect(() => {
+    const events = session.lastEvents;
+    if (display.dice === "none" || events.length === 0) return;
+    const stamp = session.events.length;
+    if (initiativeIn(events)) return setShow({ stamp, kind: "initiative", events });
+    const rolls = attackRollsIn(events);
+    if (rolls.length > 0) {
+      setShow({ stamp, kind: "attack", events });
+      // The full scene zooms in on the fight.
+      if (display.dice === "scene") setFollow((f) => ({ id: rolls[0]!.attackerId, with: rolls[0]!.targetId, key: (f?.key ?? 0) + 1 }));
+      return;
+    }
+    // Anything else that happens ends an attack show; the initiative dice stay until closed.
+    setShow((s) => (s?.kind === "attack" ? null : s));
+  }, [session.lastEvents]);
+  useEffect(() => {
+    if (display.dice === "none") setShow(null);
+  }, [display.dice]);
+  const closeShow = () => {
+    setShow(null);
+    if (pendingFollow.current) followFigure(pendingFollow.current);
+    pendingFollow.current = null;
+  };
   useEffect(() => {
     const f = activeUnit?.figures.find((x) => x.id === selected);
     setRotation(f?.position?.rotation ?? 0);
@@ -574,21 +608,32 @@ export function PlayScreen({ session }: { session: Session }) {
   // ---- Camera: glide to the figure being followed, read when the request is made ----
   const focusRequest = useMemo((): CameraFocusRequest | null => {
     if (!follow) return null;
-    const hit = findFigure(state, follow.id);
-    if (!hit?.figure.position) return null;
-    const card = ctx.cards.get(hit.unit.cardId)!;
-    const spots = figureSpots(hit.figure, card.footprint, card.height, ctx);
-    const at = spots.map((s) => hexToWorld(s.hex));
-    const ground = Math.max(...spots.map((s) => s.elevation));
-    return {
-      key: follow.key,
-      point: {
+    const centre = (id: string): Vec3 | null => {
+      const hit = findFigure(state, id);
+      if (!hit?.figure.position) return null;
+      const card = ctx.cards.get(hit.unit.cardId)!;
+      const spots = figureSpots(hit.figure, card.footprint, card.height, ctx);
+      const at = spots.map((s) => hexToWorld(s.hex));
+      const ground = Math.max(...spots.map((s) => s.elevation));
+      return {
         x: at.reduce((n, p) => n + p.x, 0) / at.length,
         y: (ground + card.height * 0.4) * LEVEL_HEIGHT,
         z: at.reduce((n, p) => n + p.z, 0) / at.length,
-      },
-      frame: FOLLOW_FRAME,
+      };
     };
+    const point = centre(follow.id);
+    if (!point) return null;
+    const other = follow.with ? centre(follow.with) : null;
+    if (other) {
+      // A fight: look at the middle of the two figures, from far enough back to see both.
+      const apart = Math.hypot(other.x - point.x, other.z - point.z);
+      return {
+        key: follow.key,
+        point: { x: (point.x + other.x) / 2, y: (point.y + other.y) / 2, z: (point.z + other.z) / 2 },
+        frame: { from: FOLLOW_FRAME.from, distance: Math.max(FOLLOW_FRAME.distance, apart * 1.5 + 6) },
+      };
+    }
+    return { key: follow.key, point, frame: FOLLOW_FRAME };
     // Only a new follow request moves the camera; later state changes must not.
   }, [follow]);
 
@@ -840,7 +885,20 @@ export function PlayScreen({ session }: { session: Session }) {
         </div>
       )}
 
-      <DiceOverlay events={session.lastEvents} names={names} stamp={session.events.length} />
+      {/* While the dice show plays, the dice panel waits; it keeps the result afterwards. */}
+      {!show && <DiceOverlay events={session.lastEvents} names={names} stamp={session.events.length} />}
+      {show?.kind === "attack" && display.dice !== "none" && (
+        <AttackShow key={show.stamp} rolls={attackRollsIn(show.events)} mode={display.dice} state={state} ctx={ctx} names={names} onClose={closeShow} />
+      )}
+      {show?.kind === "initiative" && display.dice !== "none" && (
+        <InitiativeShow
+          key={show.stamp}
+          event={initiativeIn(show.events)!}
+          names={names}
+          mayRoll={(p) => session.kind !== "online" || p === session.me}
+          onClose={closeShow}
+        />
+      )}
 
       {tokenPlayer && !tokenPanelOpen && (
         <PassScreen

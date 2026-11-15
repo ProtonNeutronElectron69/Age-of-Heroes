@@ -1,9 +1,10 @@
 import type { ThreeEvent } from "@react-three/fiber";
 import { useFrame, useThree } from "@react-three/fiber";
 import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS, hex, hexKey, hexToWorld, type Footprint, type Step } from "@aoh/rules";
-import { createContext, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type RefObject } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, type RefObject } from "react";
 import { BufferGeometry, Color, ExtrudeGeometry, Shape, ShapeGeometry, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import { BASE_COLOR, BASE_RADIUS, UNIT_MODELS, baseFrame, baseGeometry, figureColors, figureGeometry } from "../models";
+import { useReducedMotion } from "../motion";
 import { useDisplay } from "../settings";
 import { useWake } from "./wake";
 import { factionTheme } from "../ui/factionThemes";
@@ -83,14 +84,6 @@ const RING: Record<FigureView["status"], string | null> = {
 
 /** Gap between the top of a token and the tip of its selection arrow, leaving room for the name tag. */
 const ARROW_GAP = 0.8;
-const REDUCE_MOTION = "(prefers-reduced-motion: reduce)";
-const subscribeMotion = (onChange: () => void) => {
-  const query = window.matchMedia?.(REDUCE_MOTION);
-  query?.addEventListener("change", onChange);
-  return () => query?.removeEventListener("change", onChange);
-};
-const motionReduced = () => window.matchMedia?.(REDUCE_MOTION).matches ?? false;
-
 /**
  * A decorative loop: the arrow's bob and spin, a ready or target ring's pulse.
  * The board is only drawn when something changes, so a running loop asks for
@@ -100,7 +93,7 @@ const motionReduced = () => window.matchMedia?.(REDUCE_MOTION).matches ?? false;
  * to ask for the following frame.
  */
 function useLoop(active: boolean): { running: boolean; next: () => void } {
-  const reduced = useSyncExternalStore(subscribeMotion, motionReduced);
+  const reduced = useReducedMotion();
   const running = active && !reduced;
   const invalidate = useThree((s) => s.invalidate);
   const wake = useWake();

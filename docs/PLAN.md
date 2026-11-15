@@ -4,14 +4,14 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable: one full set of rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. 482 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable: one full set of rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. 488 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 - **Needs the repository owner:** create the online game server on Render and set the `GAME_SERVER_URL` repository variable (about 10 minutes; see [HOSTING.md](HOSTING.md)). Until then the published site can only play online against a server whose address is typed in.
 - **On hold (Phase 6):** a computer opponent, and a tutorial.
 - **Phase 7, figure models:** stage 1 is done. Every unit has a low polygon model in flat colour, drawn on the board in place of tokens (the Display button or the T key switches back to tokens and picks one of three colour schemes; see every model at `?models`). **Next, when the owner asks:** later stages add detail and colour.
 - **On hold (Phase 7):** sound and music, terrain and scenery art.
-- **Phase 8, tabletop feel:** part 1 is done: the board stands on a gaming table with the unit cards round it, figures hop, can be dragged, and jump with H, and the camera zooms in closer and pulls back further. **On hold:** part 2, the attack scene with animated dice and a D20 to click for initiative.
+- **Phase 8, tabletop feel:** done. The board stands on a gaming table with the unit cards round it; figures hop, can be dragged, and jump with H; the camera zooms in closer and pulls back further; attacks play a scene with 3D dice, and each player clicks a d20 for initiative.
 
 ### Ideas, not scheduled
 - More premade maps.
@@ -215,7 +215,7 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
   - [ ] Later stages: more detail and colour
 - [ ] Terrain textures and scenery art
 
-### Phase 8: Tabletop feel (part 1 done; part 2 on hold)
+### Phase 8: Tabletop feel (done)
 The game should feel like a game played on a table. Nothing here changes the rules: the engine, saves, replays and online play are untouched.
 - [x] Part 1: the table and the figures
   - [x] The board stands in the middle of a square gaming table that is as large as the board and the cards need. The camera is as it was without the table. Three tables to choose from under Display: Tavern oak, Felt gaming table, and Play mat on a workbench
@@ -224,6 +224,7 @@ The game should feel like a game played on a table. Nothing here changes the rul
   - [x] A figure can be dragged with the left button onto the hex it should move to, as well as moved by clicking the hex
   - [x] H makes the acting unit jump, so it is easy to find
   - [x] The camera zooms in close enough to look a figure in the face and pulls back far enough to see the whole table in its room (#34)
-- [ ] Part 2: dice (on hold)
-  - [ ] An attack zooms in on the fight, shows both unit cards and models over a dimmed board, then rolls animated attack dice and defense dice. A click skips it; a Display setting chooses the full scene, dice only, or none
-  - [ ] Initiative: each player clicks a D20, which tumbles and lands on their roll. The engine still rolls everything in one step; only the showing changes
+- [x] Part 2: dice
+  - [x] An attack zooms in on the fight: the camera glides to the two figures and both unit cards and models come up over a dimmed board, then 3D attack and defense dice tumble and land on the faces the rules rolled. A command with several rolls (an area attack) plays them in turn. A click skips it, and the dice panel keeps the result afterwards. **Dice rolls** under Display chooses the full scene, dice only (just the 3D dice, in a small tray), or none
+  - [x] Initiative: each player clicks a d20, which tumbles and lands on their roll; a tie rolls again. Online, each device rolls its own player's die and the others roll by themselves. Skip shows every result at once
+  - [x] The engine still rolls everything in one step; only the showing changes. With reduced motion the dice appear already landed. Replays show the dice panel as before

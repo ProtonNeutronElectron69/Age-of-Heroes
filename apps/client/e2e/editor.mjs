@@ -25,6 +25,12 @@ const context = await browser.newContext({ viewport: { width: 1400, height: 860 
 // Test mode (src/testMode.ts): a simpler gaming table to draw, and the narrower zoom limits.
 await context.addInitScript(() => {
   window.__aohTest = true;
+  // No dice show: this test does not look at it, and it would cover the board (full-game checks it).
+  try {
+    localStorage.setItem("aoh.display", JSON.stringify({ ...JSON.parse(localStorage.getItem("aoh.display") ?? "{}"), dice: "none" }));
+  } catch {
+    // No storage: nothing to set.
+  }
 });
 const page = await context.newPage();
 const errors = [];

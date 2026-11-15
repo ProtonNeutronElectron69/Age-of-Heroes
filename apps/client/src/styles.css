@@ -1221,3 +1221,172 @@ p.bad {
     animation: none;
   }
 }
+
+/* ---- The dice show: the attack scene, dice only, and initiative (ui/RollShow.tsx) ---- */
+
+.roll-show {
+  position: absolute;
+  z-index: 18;
+  color: var(--text);
+}
+
+.attack-show.full {
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: rgba(8, 11, 16, 0.72);
+  cursor: pointer;
+  animation: scene-in 0.35s ease-out;
+}
+
+/* The fight comes up from the board: a short zoom in. */
+@keyframes scene-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+
+.attack-show.dice-only {
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(460px, calc(100% - 32px));
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--panel-solid);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+}
+
+.scene-card {
+  justify-self: center;
+  width: min(100%, 300px);
+}
+
+.scene-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.attack-show.full .scene-stage .scene-canvas {
+  width: 100% !important;
+  height: min(46vh, 380px) !important;
+  border-radius: 12px;
+}
+
+.attack-show.dice-only .scene-canvas {
+  width: 100% !important;
+  height: 170px !important;
+  border-radius: 8px;
+}
+
+.scene-title {
+  font-weight: 700;
+  font-size: 18px;
+  text-align: center;
+}
+
+.attack-show.dice-only .scene-title {
+  font-size: 15px;
+}
+
+.scene-faces {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--muted, #9aa6b8);
+}
+
+.scene-result {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.scene-result.hit {
+  color: var(--skull);
+}
+
+.scene-result.miss {
+  color: var(--shield);
+}
+
+.scene-hint {
+  font-size: 12px;
+  color: var(--muted, #9aa6b8);
+}
+
+.initiative-show {
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 11, 16, 0.6);
+}
+
+.initiative-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 22px;
+  max-width: calc(100% - 32px);
+  background: var(--panel-solid);
+}
+
+.initiative-panel h2 {
+  margin: 0;
+}
+
+.initiative-stage {
+  max-width: 100%;
+}
+
+.initiative-stage .scene-canvas {
+  width: 100% !important;
+  height: 200px !important;
+}
+
+.initiative-players {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 22px;
+}
+
+.initiative-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.initiative-value {
+  font-weight: 700;
+  min-width: 2ch;
+}
+
+@media (max-width: 900px) {
+  .attack-show.full {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    align-content: center;
+  }
+  .attack-show.full .scene-stage {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .scene-card {
+    width: min(100%, 220px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attack-show.full {
+    animation: none;
+  }
+}

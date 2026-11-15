@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { COLOR_SCHEMES, type ColorScheme } from "../models";
-import { TABLE_STYLES, setDisplay, useDisplay, type TableStyle } from "../settings";
+import { DICE_SHOWS, TABLE_STYLES, setDisplay, useDisplay, type DiceShow, type TableStyle } from "../settings";
 
 /**
  * How this screen draws the game: figure models or tokens, the colour scheme
- * for models, and the gaming table. A small button opens the choices.
+ * for models, the gaming table and how dice rolls are shown. A small button opens the choices.
  */
 export function DisplayMenu() {
   const display = useDisplay();
@@ -54,6 +54,17 @@ export function DisplayMenu() {
               ))}
             </select>
           </label>
+          <label className="field">
+            <span>Dice rolls</span>
+            <select aria-label="Dice rolls" value={display.dice} onChange={(e) => setDisplay({ dice: e.target.value as DiceShow })}>
+              {DICE_SHOWS.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="muted small">The full scene zooms in on each attack; a click skips it.</p>
         </section>
       )}
       <button type="button" className="display-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
