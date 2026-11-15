@@ -148,6 +148,75 @@ async function boardRests() {
 
 let moves = 0;
 let motionChecked = false;
+let initiativeChecked = false;
+let sceneChecked = false;
+let diceOnlyChecked = false;
+
+/** Chooses how dice rolls are shown, under Display. */
+async function setDiceRolls(value) {
+  await page.getByRole("button", { name: "Display" }).click();
+  await page.getByLabel("Dice rolls").selectOption(value);
+  await page.getByRole("button", { name: "Display" }).click();
+}
+
+/** The initiative d20s. The first time, each player rolls their own and the values must match the log. */
+async function handleInitiative() {
+  const dialog = page.getByRole("dialog", { name: "Initiative" });
+  if (!(await dialog.count())) return false;
+  if (!initiativeChecked) {
+    const buttons = dialog.getByRole("button", { name: /^Roll for / });
+    const n = await buttons.count();
+    if (n < 2) fail(`Each hot-seat player should roll their own d20, but only ${n} could`);
+    while (await buttons.count()) await buttons.first().click();
+    await page.locator('.initiative-show[data-done="true"]').waitFor({ timeout: 15000 });
+    const values = await dialog.locator(".initiative-value").allInnerTexts();
+    const log = (await page.locator(".log-lines li").filter({ hasText: "Initiative:" }).last().innerText()).trim();
+    for (const v of values) if (!log.includes(v.trim())) fail(`The d20 showed ${v}, but the log says "${log}"`);
+    await shot("4b-initiative");
+    initiativeChecked = true;
+  } else if (await dialog.getByRole("button", { name: "Skip" }).count()) {
+    await dialog.getByRole("button", { name: "Skip" }).click();
+  }
+  await dialog.getByRole("button", { name: "Continue" }).click();
+  await dialog.waitFor({ state: "detached" });
+  return true;
+}
+
+/**
+ * The attack show. The first is the full scene: both units' cards over a dimmed board and dice
+ * that land on the rolled faces, with the same result the dice panel keeps afterwards. The next
+ * is dice only. After that, dice rolls are switched off. A click closes it (it also closes itself).
+ */
+async function handleAttackShow() {
+  const dialog = page.getByRole("dialog", { name: "Attack" });
+  if (!(await dialog.count())) return false;
+  const close = async () => {
+    await dialog.click({ timeout: 2000 }).catch(() => {});
+    await dialog.waitFor({ state: "detached" });
+  };
+  if (!sceneChecked) {
+    if ((await dialog.locator(".scene-card").count()) !== 2) fail("The attack scene should show both units' cards");
+    await page.locator('.attack-show[data-done="true"]').waitFor({ timeout: 15000 });
+    const result = (await dialog.locator(".scene-result").innerText()).trim();
+    await shot("6-attack-scene");
+    await close();
+    const panel = (await page.getByRole("status", { name: "Dice" }).innerText()).replace(/\s+/g, " ");
+    if (!panel.includes(result)) fail(`The scene showed "${result}", but the dice panel says "${panel}"`);
+    sceneChecked = true;
+    await setDiceRolls("dice");
+  } else if (!diceOnlyChecked) {
+    if (!(await page.locator(".attack-show.dice-only").count())) fail("Dice only should roll the dice without the scene");
+    if (await dialog.locator(".scene-card").count()) fail("Dice only should not show the units' cards");
+    await page.locator('.attack-show[data-done="true"]').waitFor({ timeout: 15000 });
+    await shot("6b-dice-only");
+    await close();
+    diceOnlyChecked = true;
+    await setDiceRolls("none");
+  } else {
+    await close();
+  }
+  return true;
+}
 let hoverChecked = false;
 let followChecked = false;
 let attacks = 0;
@@ -237,9 +306,11 @@ try {
   let roundSeen = "";
   /** Every one-off check is done: from here on, turns are ended at once. */
   const checksDone = () =>
-    dragged && jumpChecked && followChecked && hoverChecked && eyeChecked && attacks >= ATTACKS_WANTED && (squadMoves === 0 || cycled > 0);
+    dragged && jumpChecked && followChecked && hoverChecked && eyeChecked && sceneChecked && diceOnlyChecked && attacks >= ATTACKS_WANTED && (squadMoves === 0 || cycled > 0);
   for (let step = 0; step < 2000; step++) {
     if (await page.getByRole("dialog", { name: "Game over" }).count()) break;
+    // The dice show covers the board: deal with it before anything else.
+    if ((await handleInitiative()) || (await handleAttackShow())) continue;
 
     // Secret token placement behind the pass screen.
     if (await page.locator(".pass-card").count()) {
@@ -328,6 +399,10 @@ try {
         await page.waitForTimeout(150);
         const after = await page.evaluate(() => window.__aohUi);
         if (after.selected !== ui.selected || after.targets.length === 0) attacks++;
+        // The attack show comes up at once, until dice rolls are switched off.
+        if (!diceOnlyChecked && (await page.getByRole("dialog", { name: "Attack" }).waitFor({ timeout: 5000 }).then(() => true, () => false))) {
+          await handleAttackShow();
+        }
         if (attacks === 1) {
           await shot("6-attack");
           // The roll stays on screen: it no longer clears itself after a few seconds.
@@ -495,6 +570,8 @@ try {
   if (!hoverChecked) fail("Resting the pointer on another unit never showed its card");
   if (!eyeChecked) fail("Eye view was never tried");
   if (!motionChecked) fail("The arrow and rings were never checked with and without reduced motion");
+  if (!initiativeChecked) fail("The initiative d20s were never rolled");
+  if (!sceneChecked || !diceOnlyChecked) fail("The attack scene and dice only were not both seen");
   if (squadMoves > 0 && cycled === 0) fail("Squads never moved on to their next figure after a move");
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(`Full game played: ${moves} moves, ${attacks} attacks. Result: ${heading}`);

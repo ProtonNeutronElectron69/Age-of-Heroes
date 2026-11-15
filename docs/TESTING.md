@@ -14,7 +14,7 @@ Checks run only for the parts of the game a change can affect. The browser tests
 
 | Test | What it plays through |
 |---|---|
-| `full-game` | A hot-seat game: draft, deployment (models and tokens, the three tables, the board coming to rest), dragging a figure, H, the hover card, eye view, the camera following, squads, the dice; then each turn is ended at once until the 5-round limit and the game-over screen |
+| `full-game` | A hot-seat game: draft, deployment (models and tokens, the three tables, the board coming to rest), the initiative d20s, dragging a figure, H, the hover card, eye view, the camera following, squads, the attack scene and dice only (then **Dice rolls** set to None), the dice panel; then each turn is ended at once until the 5-round limit and the game-over screen |
 | `online` | Through the real game server, one browser per player: the lobby, a spectator, a reload during the draft, a few turns, host-only saving, leaving (which concedes), the replay, and resuming in a new room. Whole online games are played by the server's unit tests |
 | `saves` | Saving a hot-seat game and bringing it back from the saved games list, after a reload, and from a file; the file in the replay viewer |
 | `editor` | Building a map, exporting and importing it, and playing on it |
@@ -47,7 +47,7 @@ The first matching row decides for each file; a change runs everything its files
 | Shared setup: `package.json`, the lockfile, `tsconfig.base.json`, `vitest.config.ts`, `ci.yml`, `scripts/` | yes | all | all |
 | Anything else | yes | all | all |
 
-Unit tests follow the package graph: `rules` is used by everything, `content` by the protocol, the server and the client, and the protocol by the server. The client's own tests (`apps/client/test`) cover the figure models (each one must be as tall as its card's Height, fit its base and stay low polygon) and the gaming table's layout (every card on the table, clear of the board and of the other cards).
+Unit tests follow the package graph: `rules` is used by everything, `content` by the protocol, the server and the client, and the protocol by the server. The client's own tests (`apps/client/test`) cover the figure models (each one must be as tall as its card's Height, fit its base and stay low polygon) the gaming table's layout (every card on the table, clear of the board and of the other cards), and the 3D dice (each lands showing the result it was given).
 
 Figure models (`apps/client/src/models`) are drawn on the game board too, so a model change runs every browser test, like the rest of the client.
 
@@ -61,7 +61,7 @@ The browser tests that show the game board (`full-game`, `online`, `saves`, `edi
 
 - **Frames are slow.** CI has no graphics card, so WebGL is drawn in software: the gaming table view draws at about 2 frames a second. Wait for state (a button, `window.__aohUi`, a changed draw count, a settled camera), never for a fixed time or for many frames in a row.
 - **After changing screens, wait for the new canvas's hook:** `window.__aoh?.canvas.isConnected`. The old screen's canvas can still be closing, with its hook in place; a fixed pause before the first click made the editor test fail on `main` once.
-- **Set test mode and reduced motion.** Call `addInitScript(() => { window.__aohTest = true; })` on the page or context before the first `goto`, and pass `reducedMotion: "reduce"` if the test shows the board. Copy the start of an existing test.
+- **Set test mode and reduced motion.** Call `addInitScript(() => { window.__aohTest = true; })` on the page or context before the first `goto`, and pass `reducedMotion: "reduce"` if the test shows the board. A test that plays turns but does not check the dice show sets **Dice rolls** to None in the same script (`aoh.display` in `localStorage`), so the show cannot cover the board. Copy the start of an existing test.
 - **Give each browser test its own preview port**, so the jobs can run side by side locally too.
 - **One browser per player** in a test with several players: pages in one browser share one software renderer and slow each other down.
 - **Keep the heavy 3D work small.** Reload or wait on screens without a 3D board where you can, and leave long games to the unit tests and simulations, which play them in seconds.

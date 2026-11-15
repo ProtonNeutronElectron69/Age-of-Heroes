@@ -14,7 +14,22 @@ export interface DisplaySettings {
   readonly menu: MenuStyle;
   /** The gaming table the board stands on. */
   readonly table: TableStyle;
+  /** How attacks and initiative show their dice. */
+  readonly dice: DiceShow;
 }
+
+/**
+ * How dice are shown: an attack zooms in on the fight with both units' cards and
+ * models over a dimmed board and rolls 3D dice ("scene"), only the 3D dice roll
+ * ("dice"), or the results appear at once ("none"). Initiative rolls a d20 for
+ * each player unless this is "none".
+ */
+export type DiceShow = "scene" | "dice" | "none";
+export const DICE_SHOWS: readonly { readonly id: DiceShow; readonly name: string }[] = [
+  { id: "scene", name: "Full scene" },
+  { id: "dice", name: "Dice only" },
+  { id: "none", name: "None" },
+];
 
 /** The three gaming tables. */
 export type TableStyle = "tavern" | "felt" | "mat";
@@ -34,7 +49,7 @@ export const MENU_STYLES: readonly { readonly id: MenuStyle; readonly name: stri
 ];
 
 const KEY = "aoh.display";
-const DEFAULTS: DisplaySettings = { figures: "models", scheme: "faction", menu: "war-table", table: "tavern" };
+const DEFAULTS: DisplaySettings = { figures: "models", scheme: "faction", menu: "war-table", table: "tavern", dice: "scene" };
 
 function load(): DisplaySettings {
   try {
@@ -44,6 +59,7 @@ function load(): DisplaySettings {
       scheme: COLOR_SCHEMES.some((s) => s.id === saved.scheme) ? saved.scheme! : DEFAULTS.scheme,
       menu: MENU_STYLES.some((m) => m.id === saved.menu) ? saved.menu! : DEFAULTS.menu,
       table: TABLE_STYLES.some((t) => t.id === saved.table) ? saved.table! : DEFAULTS.table,
+      dice: DICE_SHOWS.some((d) => d.id === saved.dice) ? saved.dice! : DEFAULTS.dice,
     };
   } catch {
     return DEFAULTS;
