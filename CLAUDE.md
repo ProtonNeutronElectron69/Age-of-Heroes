@@ -4,7 +4,7 @@
 - [docs/PLAN.md](docs/PLAN.md) has the current status, what is next and what is on hold. [docs/RULES.md](docs/RULES.md) has the rules the engine implements.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) maps the code.
 - [docs/CONTENT.md](docs/CONTENT.md) explains how to add units, abilities and maps.
-- [docs/TESTING.md](docs/TESTING.md) explains which checks each kind of change runs.
+- [docs/TESTING.md](docs/TESTING.md) explains which checks each kind of change runs, what each browser test covers and how to write one.
 - Keep the docs current: change RULES, PLAN and the other docs in the same pull request as the behaviour they describe.
 
 ## Engine rules
@@ -33,7 +33,7 @@
 - **Drawing on demand:** the play and replay boards draw only when something changes (`frameloop="demand"`), so a resting board costs nothing. An animation starts with `useWake()` (`scene/wake.ts`, which also stops the first step covering the whole rest) and calls `invalidate()` each frame while it runs, plus one frame after it stops so the name tags catch up. Only decorative loops run forever (the selection arrow's bob, the ready and target rings' pulse, through `useLoop`), and they stand still when the player's system asks for reduced motion. Browser tests that show the board run with `reducedMotion: "reduce"`, so the board rests between actions; `full-game` fails if it keeps drawing then (`window.__aoh.stats().frames`), and checks once that the loops do run without it.
 - **Main menu:** four styles (War Table, Atlas, Banner Hall, Hex Command) share one set of choices and panels; `SetupScreen.tsx` builds them and `screens/menu/MenuFrame.tsx` and `menu.css` dress them. A new menu choice or setting goes in every style, and must fit the 1280 by 720 stage without scrolling (`e2e/menu.mjs` checks).
 - **Camera follow:** the play screen glides the camera to the acting unit each turn (`CameraFocusRequest` in `scene/BoardScene.tsx`); the glide is time based and stops when the player grabs the camera. Browser tests wait for it to settle (`steadyCamera`) before clicking the canvas.
-- **Browser tests:** `apps/client/e2e` drives the canvas through `window.__aoh` and `window.__aohUi` (`scene/TestHook.tsx`, `PlayScreen.tsx`). Keep those hooks working when changing the play screen. A hook only removes `window.__aoh` if it still owns it, since a closing canvas can unmount after the next one mounts. Set `E2E_SCREENSHOTS=<folder>` to save screenshots from a run, or `E2E_FAILURE_SCREENSHOTS=<folder>` for only a failure's (CI does, and attaches them to a failed run).
+- **Browser tests:** `apps/client/e2e` drives the canvas through `window.__aoh` and `window.__aohUi` (`scene/TestHook.tsx`, `PlayScreen.tsx`). Keep those hooks working when changing the play screen, and follow "Writing a browser test" in [docs/TESTING.md](docs/TESTING.md) for a new one. A hook only removes `window.__aoh` if it still owns it, since a closing canvas can unmount after the next one mounts. Set `E2E_SCREENSHOTS=<folder>` to save screenshots from a run, or `E2E_FAILURE_SCREENSHOTS=<folder>` for only a failure's (CI does, and attaches them to a failed run).
 - **Test mode:** every browser test sets `window.__aohTest` before the page loads (`src/testMode.ts`, `TEST_MODE`). Under it the gaming table is drawn more simply, which is much quicker without a graphics card, and the camera keeps its older, narrower zoom limits. Players never have it, so they always get the full table and the wider zoom. Keep test-only differences to these and say so here.
 
 ## Checks and delivery
