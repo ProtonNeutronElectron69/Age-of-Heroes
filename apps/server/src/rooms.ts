@@ -216,10 +216,9 @@ export class RoomManager {
     const room: Room = {
       code: this.newCode(),
       settings: {
-        mode: s.mode,
         roundLimit: s.roundLimit ?? null,
-        ...(s.armySize !== undefined ? { armySize: s.armySize } : {}),
-        ...(s.budget !== undefined ? { budget: s.budget, factionPure: s.factionPure ?? false } : {}),
+        budget: s.budget ?? null,
+        factionPure: s.factionPure ?? false,
         map: record.map,
       },
       ctx,
@@ -319,14 +318,12 @@ export class RoomManager {
     }
     const s = room.settings;
     const setup: GameSetup = {
-      mode: s.mode,
       seed: randomInt(0, 2 ** 31),
       mapId: s.map.id,
       roundLimit: s.roundLimit,
       players: room.members.map((m, i) => ({ id: m.playerId, name: m.name, color: SEAT_COLORS[i]! })),
-      ...(s.mode === "advanced" && s.budget !== undefined
-        ? { budget: s.budget, factionPure: s.factionPure ?? false }
-        : { armySize: s.armySize ?? 3 }),
+      budget: s.budget ?? null,
+      factionPure: s.factionPure ?? false,
     };
     const { state, events } = createGame(setup, room.ctx);
     room.setup = setup;
@@ -459,11 +456,9 @@ export class RoomManager {
     return {
       code: room.code,
       mapName: s.map.name,
-      mode: s.mode,
       roundLimit: s.roundLimit,
-      armySize: s.mode === "advanced" && s.budget !== undefined ? null : (s.armySize ?? 3),
-      budget: s.mode === "advanced" ? (s.budget ?? null) : null,
-      factionPure: s.mode === "advanced" && (s.factionPure ?? false),
+      budget: s.budget ?? null,
+      factionPure: s.factionPure ?? false,
       members: room.members.map((m, i) => {
         const setupPlayers = (room.setup ?? room.resume?.record.setup)?.players;
         const seat = setupPlayers ? setupPlayers.findIndex((p) => p.id === m.playerId) : i;

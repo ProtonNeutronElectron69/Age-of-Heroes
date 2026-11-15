@@ -52,7 +52,7 @@ export class Names {
 
   /** An ability's printed name, from the figure's card. */
   ability(figureId: string, abilityId: string): string {
-    return this.cardOfFigure(figureId)?.advanced.abilities.find((a) => a.id === abilityId)?.name ?? abilityId;
+    return this.cardOfFigure(figureId)?.abilities.find((a) => a.id === abilityId)?.name ?? abilityId;
   }
 
   terrain(id: string): string {

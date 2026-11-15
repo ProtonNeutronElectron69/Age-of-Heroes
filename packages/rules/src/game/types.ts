@@ -6,7 +6,6 @@ import type { TerrainTable } from "../terrain";
 import type { Tuning } from "../tuning";
 
 export type PlayerId = string;
-export type RulesMode = "basic" | "advanced";
 
 /** The four activation tokens: three numbered turns and a bluff. */
 export type TokenId = "1" | "2" | "3" | "X";
@@ -113,22 +112,16 @@ export type VictoryReason = "elimination" | "roundLimit";
 export interface GameResult {
   readonly winners: PlayerId[];
   readonly reason: VictoryReason;
-  /** Points (Advanced) or surviving figures (Basic) still on the board. */
+  /** Points still on the board: each surviving figure is worth its share of its card's points. */
   readonly scores: Record<PlayerId, number>;
 }
 
 export interface GameConfig {
-  readonly mode: RulesMode;
   readonly seed: number;
   readonly mapId: string;
   /** Game ends after this round; null means play until one army remains. */
   readonly roundLimit: number | null;
-  /** Draft by card count: cards per player. */
-  readonly armySize: number | null;
-  /**
-   * Draft by points (Advanced): each player's budget. A points draft with no
-   * limit has a null budget and a null army size.
-   */
+  /** Each player's points budget for the draft; null means no limit. */
   readonly budget: number | null;
   /** Every unit in an army must share the faction of its first pick. */
   readonly factionPure: boolean;
@@ -174,7 +167,6 @@ export interface PlayerSetup {
 }
 
 export interface GameSetup {
-  readonly mode: RulesMode;
   readonly seed: number;
   /** Must match the board in the rules context. */
   readonly mapId: string;
@@ -183,12 +175,9 @@ export interface GameSetup {
   readonly players: readonly PlayerSetup[];
   /** Skip the draft and use these armies (card ids per player). */
   readonly armies?: Readonly<Record<PlayerId, readonly string[]>>;
-  /** Draft by card count: cards per player (default 4). */
-  readonly armySize?: number;
   /**
-   * Advanced only: draft by points with this budget per player instead of by
-   * card count. null drafts by points with no limit: players pick until they
-   * stop or their start zone is full.
+   * Each player's points budget for the draft. null (or leaving it out) means
+   * no limit: players pick until they stop or their start zone is full.
    */
   readonly budget?: number | null;
   /** Every unit in an army must share the faction of its first pick. */
@@ -273,7 +262,7 @@ export type GameEvent =
       readonly hits: number;
       readonly blocks: number;
       readonly wounds: number;
-      /** Extra attack and defense dice from height and abilities (Advanced). */
+      /** Extra attack and defense dice from height and abilities. */
       readonly attackBonus: number;
       readonly defenseBonus: number;
       /** Why the dice changed, e.g. "Rally the Line +1 defense". */

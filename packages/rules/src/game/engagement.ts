@@ -21,7 +21,6 @@ export function spotsEngaged(a: readonly Step[], aHeight: number, b: readonly St
 
 /**
  * Enemy figures engaged with a figure of `owner` standing on `spots`.
- * Engagement only exists in the Advanced game.
  */
 export function engagedEnemies(
   state: GameState,
@@ -30,7 +29,7 @@ export function engagedEnemies(
   height: number,
   ctx: RulesContext,
 ): Occupant[] {
-  if (state.config.mode !== "advanced" || spots.length === 0) return [];
+  if (spots.length === 0) return [];
   const result: Occupant[] = [];
   for (const unit of state.units) {
     if (unit.owner === owner) continue;

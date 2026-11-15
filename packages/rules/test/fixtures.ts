@@ -31,8 +31,13 @@ export function testCard(id: string, overrides: Partial<UnitCard> = {}): UnitCar
     size: "medium",
     height: 5,
     footprint: "1",
-    basic: { move: 5, range: 1, attack: 3, defense: 3 },
-    advanced: { life: 4, move: 5, range: 1, attack: 3, defense: 3, points: 100, abilities: [] },
+    life: 4,
+    move: 5,
+    range: 1,
+    attack: 3,
+    defense: 3,
+    points: 100,
+    abilities: [],
     ...overrides,
   };
 }
@@ -42,8 +47,13 @@ export const CARDS: UnitCard[] = [
   testCard("squad", {
     unitType: "commonSquad",
     figureCount: 3,
-    basic: { move: 5, range: 6, attack: 2, defense: 2 },
-    advanced: { life: 1, move: 5, range: 6, attack: 2, defense: 2, points: 60, abilities: [] },
+    life: 1,
+    move: 5,
+    range: 6,
+    attack: 2,
+    defense: 2,
+    points: 60,
+    abilities: [],
   }),
   testCard("unique", { unitType: "uniqueHero", name: "Test Unique" }),
   testCard("big", {
@@ -52,8 +62,13 @@ export const CARDS: UnitCard[] = [
     size: "huge",
     height: 9,
     footprint: "2x1",
-    basic: { move: 4, range: 1, attack: 4, defense: 4 },
-    advanced: { life: 8, move: 4, range: 1, attack: 4, defense: 4, points: 150, abilities: [] },
+    life: 8,
+    move: 4,
+    range: 1,
+    attack: 4,
+    defense: 4,
+    points: 150,
+    abilities: [],
   }),
 ];
 
@@ -154,7 +169,6 @@ export const ctx = makeCtx();
 export function setup(players = 2, overrides: Partial<GameSetup> = {}): GameSetup {
   const ids = Array.from({ length: players }, (_, i) => `p${i + 1}`);
   return {
-    mode: "advanced",
     seed: 12345,
     mapId: "test-field",
     roundLimit: null,

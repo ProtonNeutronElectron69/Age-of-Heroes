@@ -12,12 +12,8 @@ import "@fontsource/alegreya-sans/latin-500.css";
 import "@fontsource/alegreya-sans/latin-700.css";
 import "./hex-card.css";
 
-/** Which face of the card: the front is the Basic game, the back the Advanced game. */
-export type CardSide = "basic" | "advanced";
-
 interface Props {
   card: UnitCard;
-  side: CardSide;
   /** The owning player's colour, for the token disc. Without it the disc is in the faction's colours. */
   ownerColor?: string;
   /** Wounds on the figure being shown; the Life gem then counts what is left. */
@@ -143,7 +139,7 @@ const BEVEL_PATH = roundedPath(inset(OUTLINE, 1.6), 4);
 const PINLINE_PATH = roundedPath(inset(OUTLINE, 7), 3);
 const INNER_PATH = roundedPath(inset(OUTLINE, FRAME), 2.5);
 
-/** The line down the middle of the Advanced side: rules to the left, art and stats to the right. */
+/** The line down the middle of the card: rules to the left, art and stats to the right. */
 const SPINE_X = X3;
 /** Where the name banner ends. */
 const BANNER_BOTTOM = 138;
@@ -158,25 +154,15 @@ const PAPER: readonly Pt[] = [
   [80, 335 + (PAPER_LEFT - 80) * 0.5774],
   [PAPER_LEFT, 335],
 ];
-/** The caption panel on the Basic side. */
-const CAPTION_TOP = 408;
-
 const HIT_ZONE = { cx: 455, cy: 242, r: 61 };
 const TABS = { right: PAPER_LEFT - 7, first: 197, step: 26 };
 const ROWS = { x0: 283, x1: 409, top: 298, h: 30, gap: 4 };
-const PLATE_ADVANCED: readonly Pt[] = [
+const PLATE: readonly Pt[] = [
   [276, 290],
   [416, 290],
   [416, 440],
   [346, 481],
   [276, 440],
-];
-const PLATE_BASIC: readonly Pt[] = [
-  [276, 290],
-  [416, 290],
-  [416, 422],
-  [346, 462],
-  [276, 422],
 ];
 const LIFE_GEM = { cx: 346, cy: 271, r: 20 };
 /** The faction seal sits at the top of the upper-left hex, the unit's token at the top of the upper-right. */
@@ -244,30 +230,29 @@ const rulesFit = (el: HTMLElement) => el.scrollHeight <= el.clientHeight + 1;
 
 /**
  * A unit card in the shape of seven hexes, painted in its faction's colours.
- * The front shows the Basic game; the back adds the traits, abilities, Life and
- * points of the Advanced game. The art and hit zone windows are placeholders.
+ * It shows the unit's traits, abilities, stats, Life and points, with its art
+ * and hit zone picture.
  * Only the card's own shape takes clicks, so the corners of its box let the
  * board underneath be used.
  */
-export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
+export function HexCard({ card, ownerColor, wounds = 0 }: Props) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const id = (name: string) => `hc${uid}-${name}`;
   const url = (name: string) => `url(#${id(name)})`;
   const t = factionTheme(card.faction);
-  const advanced = side === "advanced";
-  const lifeLeft = Math.max(0, card.advanced.life - wounds);
+  const lifeLeft = Math.max(0, card.life - wounds);
   // Every unit in the roster has a drawing. A new unit without one yet gets a plain backdrop and labelled stand-ins.
   const figure = DRAWINGS[card.id];
   const hitBox = figure && castBounds(figure.tall);
   const hitScale = hitBox ? Math.min(98 / hitBox.height, 96 / hitBox.width) : 1;
-  const stats = advanced ? card.advanced : card.basic;
+  const stats = card;
   const squad = card.figureCount > 1;
 
   const [title, epithet] = splitName(card.name);
   const nameRef = useRef<HTMLDivElement>(null);
   const rulesRef = useRef<HTMLDivElement>(null);
   useFitText(nameRef, nameFits, 17, 8, card.name);
-  useFitText(rulesRef, rulesFit, 14, 7, `${card.id}:${side}`);
+  useFitText(rulesRef, rulesFit, 14, 7, card.id);
 
   const vars = {
     "--hc-on-primary": t.onPrimary,
@@ -283,18 +268,18 @@ export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
     card.personality,
   ];
   const sizeTabY = TABS.first + TABS.step * tabs.length;
-  const plate = advanced ? PLATE_ADVANCED : PLATE_BASIC;
-  const artCentre: Pt = advanced ? [346, 138] : [196, 286];
+  const plate = PLATE;
+  const artCentre: Pt = [346, 138];
 
   return (
-    <div className={`hex-card hc-${side}`} style={vars} data-card={card.id} data-side={side}>
-      <svg viewBox={`${-PAD} ${-PAD} ${W + PAD * 2} ${H + PAD * 2}`} role="img" aria-label={`${card.name}, ${side} side`}>
+    <div className="hex-card" style={vars} data-card={card.id}>
+      <svg viewBox={`${-PAD} ${-PAD} ${W + PAD * 2} ${H + PAD * 2}`} role="img" aria-label={`${card.name} unit card`}>
         <defs>
           <clipPath id={id("inner")}>
             <path d={INNER_PATH} />
           </clipPath>
           <clipPath id={id("window")}>
-            <rect x={advanced ? SPINE_X : -PAD} y={-PAD} width={W} height={H + PAD * 2} />
+            <rect x={SPINE_X} y={-PAD} width={W} height={H + PAD * 2} />
           </clipPath>
           <clipPath id={id("hit")}>
             <polygon points={poly(hexPoints(HIT_ZONE.cx, HIT_ZONE.cy, HIT_ZONE.r - 1))} />
@@ -343,57 +328,45 @@ export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
 
               {/* The art window: the unit's drawing over the faction's backdrop. */}
               <g className="hc-art">
-                <rect x={advanced ? SPINE_X : -PAD} y={-PAD} width={W} height={H + PAD * 2} fill={url("art")} />
-                <rect x={advanced ? SPINE_X : -PAD} y={-PAD} width={W} height={H + PAD * 2} fill={url("hexes")} />
+                <rect x={SPINE_X} y={-PAD} width={W} height={H + PAD * 2} fill={url("art")} />
+                <rect x={SPINE_X} y={-PAD} width={W} height={H + PAD * 2} fill={url("hexes")} />
                 {figure && (
                   <g clipPath={url("window")}>
-                    <g transform={advanced ? "translate(232,46) scale(0.84)" : "translate(88,130) scale(1.12)"}>
-                      <UnitArt cast={advanced ? figure.tall : figure.wide} theme={t} id={id} />
+                    <g transform="translate(232,46) scale(0.84)">
+                      <UnitArt cast={figure.tall} theme={t} id={id} />
                     </g>
                   </g>
                 )}
               </g>
 
-              {!advanced && (
-                <>
-                  {/* The banner is the upper-left hex. */}
-                  <polygon points={poly([[0, -PAD], [SPINE_X, -PAD], [SPINE_X, BANNER_BOTTOM], [0, BANNER_BOTTOM]])} fill={url("base")} />
-                  <path d={`M0,${BANNER_BOTTOM} H${SPINE_X} V0`} fill="none" stroke={t.accent} strokeWidth={1.4} />
-                  <rect x={0} y={CAPTION_TOP} width={SPINE_X} height={H} fill={url("paper")} />
-                  <path d={`M0,${CAPTION_TOP} H${SPINE_X} V${H}`} fill="none" stroke={t.accent} strokeWidth={1.4} />
-                </>
-              )}
+              <>
+                <polygon points={poly(PAPER)} fill={url("paper")} />
+                <polyline points={poly([PAPER[4]!, PAPER[5]!, PAPER[0]!, PAPER[1]!])} fill="none" stroke={t.accent} strokeWidth={1.4} />
+                <path d={`M${SPINE_X},40 V470`} stroke={t.primaryDark} strokeOpacity={0.55} strokeWidth={3.4} />
+                <path d={`M${SPINE_X},40 V470`} stroke={t.accent} strokeWidth={1.4} />
 
-              {advanced && (
-                <>
-                  <polygon points={poly(PAPER)} fill={url("paper")} />
-                  <polyline points={poly([PAPER[4]!, PAPER[5]!, PAPER[0]!, PAPER[1]!])} fill="none" stroke={t.accent} strokeWidth={1.4} />
-                  <path d={`M${SPINE_X},40 V470`} stroke={t.primaryDark} strokeOpacity={0.55} strokeWidth={3.4} />
-                  <path d={`M${SPINE_X},40 V470`} stroke={t.accent} strokeWidth={1.4} />
+                {/* The size and height tab stands out from the other traits. */}
+                <rect x={0} y={sizeTabY - 15} width={PAPER_LEFT} height={26} fill={t.deep} />
+                {tabs.map((_, i) => (
+                  <path
+                    key={i}
+                    d={`M0,${TABS.first + TABS.step * i - 15} H${PAPER_LEFT}`}
+                    stroke={t.accent}
+                    strokeOpacity={0.55}
+                    strokeWidth={0.8}
+                  />
+                ))}
 
-                  {/* The size and height tab stands out from the other traits. */}
-                  <rect x={0} y={sizeTabY - 15} width={PAPER_LEFT} height={26} fill={t.deep} />
-                  {tabs.map((_, i) => (
-                    <path
-                      key={i}
-                      d={`M0,${TABS.first + TABS.step * i - 15} H${PAPER_LEFT}`}
-                      stroke={t.accent}
-                      strokeOpacity={0.55}
-                      strokeWidth={0.8}
-                    />
-                  ))}
-
-                  {/* The hit zone window. */}
-                  <polygon points={poly(hexPoints(HIT_ZONE.cx, HIT_ZONE.cy, HIT_ZONE.r))} fill={figure ? "#0c0c0e" : t.deep} stroke={t.accent} strokeWidth={1.6} strokeLinejoin="round" />
-                  {figure && hitBox && (
-                    <g clipPath={url("hit")}>
-                      <g transform={`translate(${HIT_ZONE.cx - (hitBox.x + hitBox.width / 2) * hitScale},${HIT_ZONE.cy - (hitBox.y + hitBox.height / 2) * hitScale}) scale(${hitScale})`}>
-                        <HitZoneArt cast={figure.tall} bandFrom={HIT_BAND_FROM} id={id} />
-                      </g>
+                {/* The hit zone window. */}
+                <polygon points={poly(hexPoints(HIT_ZONE.cx, HIT_ZONE.cy, HIT_ZONE.r))} fill={figure ? "#0c0c0e" : t.deep} stroke={t.accent} strokeWidth={1.6} strokeLinejoin="round" />
+                {figure && hitBox && (
+                  <g clipPath={url("hit")}>
+                    <g transform={`translate(${HIT_ZONE.cx - (hitBox.x + hitBox.width / 2) * hitScale},${HIT_ZONE.cy - (hitBox.y + hitBox.height / 2) * hitScale}) scale(${hitScale})`}>
+                      <HitZoneArt cast={figure.tall} bandFrom={HIT_BAND_FROM} id={id} />
                     </g>
-                  )}
-                </>
-              )}
+                  </g>
+                )}
+              </>
 
               {/* The stat plate. */}
               <polygon points={poly(plate)} fill={url("paper")} stroke={t.deep} strokeWidth={3.2} strokeLinejoin="round" />
@@ -411,15 +384,13 @@ export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
                 ];
                 return <polygon key={row.id} points={poly(bar)} fill={t.deep} />;
               })}
-              {advanced && (
-                <polygon
-                  points={poly(hexPoints(LIFE_GEM.cx, LIFE_GEM.cy, LIFE_GEM.r))}
-                  fill={url("life")}
-                  stroke={t.accentLight}
-                  strokeWidth={1.6}
-                  strokeLinejoin="round"
-                />
-              )}
+              <polygon
+                points={poly(hexPoints(LIFE_GEM.cx, LIFE_GEM.cy, LIFE_GEM.r))}
+                fill={url("life")}
+                stroke={t.accentLight}
+                strokeWidth={1.6}
+                strokeLinejoin="round"
+              />
             </g>
 
             <path d={INNER_PATH} fill="none" stroke={t.deep} strokeOpacity={0.6} strokeWidth={1.4} />
@@ -444,59 +415,44 @@ export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
           {card.faction.toUpperCase()}
         </text>
 
-        {!figure && <ArtNote x={artCentre[0]} y={artCentre[1] + (advanced ? 84 : 112)} text="Unit art" />}
+        {!figure && <ArtNote x={artCentre[0]} y={artCentre[1] + 84} text="Unit art" />}
 
-        {advanced ? (
-          <>
-            {tabs.map((label, i) => (
-              <text
-                key={i}
-                className="hc-text"
-                x={TABS.right}
-                y={TABS.first + TABS.step * i + 2.4}
-                fontSize={10}
-                fontWeight={700}
-                letterSpacing={0.5}
-                textAnchor="end"
-                fill={t.onPrimary}
-              >
-                {label.toUpperCase()}
-              </text>
-            ))}
-            <text className="hc-text" x={TABS.right} y={sizeTabY + 2.6} fontSize={11.5} fontWeight={700} letterSpacing={0.5} textAnchor="end" fill={t.accentLight}>
-              {`${SIZE_NAMES[card.size].toUpperCase()} ${card.height}`}
+        <>
+          {tabs.map((label, i) => (
+            <text
+              key={i}
+              className="hc-text"
+              x={TABS.right}
+              y={TABS.first + TABS.step * i + 2.4}
+              fontSize={10}
+              fontWeight={700}
+              letterSpacing={0.5}
+              textAnchor="end"
+              fill={t.onPrimary}
+            >
+              {label.toUpperCase()}
             </text>
+          ))}
+          <text className="hc-text" x={TABS.right} y={sizeTabY + 2.6} fontSize={11.5} fontWeight={700} letterSpacing={0.5} textAnchor="end" fill={t.accentLight}>
+            {`${SIZE_NAMES[card.size].toUpperCase()} ${card.height}`}
+          </text>
 
-            {!figure && <HitZoneNote theme={t} squad={squad} />}
+          {!figure && <HitZoneNote theme={t} squad={squad} />}
 
-            <text className="hc-display" x={LIFE_GEM.cx} y={LIFE_GEM.cy + 4.5} fontSize={19} fontWeight={800} textAnchor="middle" fill="#fff">
-              {lifeLeft}
-            </text>
-            <text className="hc-display" x={LIFE_GEM.cx} y={LIFE_GEM.cy + 13.5} fontSize={5.4} fontWeight={700} letterSpacing={0.9} textAnchor="middle" fill="#fff" fillOpacity={0.92}>
-              {wounds > 0 ? `OF ${card.advanced.life}` : "LIFE"}
-            </text>
+          <text className="hc-display" x={LIFE_GEM.cx} y={LIFE_GEM.cy + 4.5} fontSize={19} fontWeight={800} textAnchor="middle" fill="#fff">
+            {lifeLeft}
+          </text>
+          <text className="hc-display" x={LIFE_GEM.cx} y={LIFE_GEM.cy + 13.5} fontSize={5.4} fontWeight={700} letterSpacing={0.9} textAnchor="middle" fill="#fff" fillOpacity={0.92}>
+            {wounds > 0 ? `OF ${card.life}` : "LIFE"}
+          </text>
 
-            <text className="hc-display" x={346} y={457.5} fontSize={17.5} fontWeight={800} textAnchor="middle" fill={t.ink}>
-              {card.advanced.points}
-            </text>
-            <text className="hc-display" x={346} y={467.5} fontSize={6.6} fontWeight={700} letterSpacing={1.2} textAnchor="middle" fill={t.heading}>
-              POINTS
-            </text>
-          </>
-        ) : (
-          <>
-            <text className="hc-display" x={X2 + 3} y={427} fontSize={10} fontWeight={700} letterSpacing={0.9} textAnchor="middle" fill={t.heading}>
-              {TYPE_NAMES[card.unitType].toUpperCase()}
-            </text>
-            <text className="hc-text" x={X2 + 3} y={441} fontSize={10.5} fontWeight={500} textAnchor="middle" fill={t.ink}>
-              {`${card.species} ${card.unitClass}${squad ? `, ${card.figureCount} figures` : ""}`}
-            </text>
-            <text className="hc-text" x={X2 + 3} y={454} fontSize={8} fontWeight={700} letterSpacing={1} textAnchor="middle" fill={t.ink} fillOpacity={0.6}>
-              BASIC GAME
-            </text>
-            <path d="M346,438 l6,7 l-6,7 l-6,-7 Z" fill={t.accent} stroke={t.deep} strokeWidth={0.8} />
-          </>
-        )}
+          <text className="hc-display" x={346} y={457.5} fontSize={17.5} fontWeight={800} textAnchor="middle" fill={t.ink}>
+            {card.points}
+          </text>
+          <text className="hc-display" x={346} y={467.5} fontSize={6.6} fontWeight={700} letterSpacing={1.2} textAnchor="middle" fill={t.heading}>
+            POINTS
+          </text>
+        </>
 
         {STAT_ROWS.map((row, i) => {
           const y = ROWS.top + i * (ROWS.h + ROWS.gap) + ROWS.h / 2;
@@ -523,18 +479,16 @@ export function HexCard({ card, side, ownerColor, wounds = 0 }: Props) {
             {epithet && <span className="hc-epithet">{epithet}</span>}
           </div>
         </div>
-        {advanced && (
-          <div className="hc-rules" ref={rulesRef}>
-            <span className="hc-shape hc-shape-left" />
-            <span className="hc-shape hc-shape-right" />
-            {card.advanced.abilities.map((a) => (
-              <p key={a.id}>
-                <span className="hc-ability">{a.name}</span>
-                {a.text}
-              </p>
-            ))}
-          </div>
-        )}
+        <div className="hc-rules" ref={rulesRef}>
+          <span className="hc-shape hc-shape-left" />
+          <span className="hc-shape hc-shape-right" />
+          {card.abilities.map((a) => (
+            <p key={a.id}>
+              <span className="hc-ability">{a.name}</span>
+              {a.text}
+            </p>
+          ))}
+        </div>
       </div>
     </div>
   );

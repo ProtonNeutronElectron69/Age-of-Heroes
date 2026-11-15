@@ -105,13 +105,12 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
   const { ctx, events } = built;
   const frame = frames[index]!;
   const state = frame.state;
-  const mode = state.config.mode;
   const names = new Names(state, ctx);
 
   const figures: FigureView[] = [];
   for (const unit of state.units) {
     const card = ctx.cards.get(unit.cardId)!;
-    const life = statsOf(card, mode).life;
+    const life = statsOf(card).life;
     for (const f of unit.figures) {
       if (f.destroyed || !f.position) continue;
       figures.push({
@@ -127,7 +126,7 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
         label: names.tokenLabel(f.id),
         hero: card.figureCount === 1,
         status: state.active?.unitId === unit.id ? "ready" : "idle",
-        ...(mode === "advanced" && life > 1 ? { lifeLeft: life - f.wounds } : {}),
+        ...(life > 1 ? { lifeLeft: life - f.wounds } : {}),
       });
     }
   }
@@ -156,7 +155,7 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
         <section className="panel" aria-label="Replay controls">
           <h2>Replay</h2>
           <p className="muted small">
-            {replay.map.name}, {mode === "basic" ? "Basic" : "Advanced"} rules,{" "}
+            {replay.map.name},{" "}
             {state.players.map((p) => p.name).join(", ")}.
           </p>
           <input
@@ -216,7 +215,6 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
           <UnitCardView
             key={found.unit.id}
             card={ctx.cards.get(found.unit.cardId)!}
-            mode={mode}
             color={names.playerColor(found.unit.owner)}
             alive={found.unit.figures.filter((f) => !f.destroyed).length}
             wounds={found.figure.wounds}

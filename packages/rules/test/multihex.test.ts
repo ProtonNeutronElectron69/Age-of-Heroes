@@ -22,12 +22,11 @@ const flatRow = (n: number): [string, number][] => Array.from({ length: n }, () 
 
 function bigGame(
   positions: Record<string, { q: number; r: number; elevation: number }>,
-  mode: "basic" | "advanced" = "advanced",
   map = fieldMap(),
 ): { ctx: RulesContext; state: GameState } {
   const ctx = makeCtx(map, CARDS);
   const base = createGame(
-    setup(2, { mapId: map.id, mode, armies: { p1: ["big"], p2: ["hero", "hero"] } }),
+    setup(2, { mapId: map.id, armies: { p1: ["big"], p2: ["hero", "hero"] } }),
     ctx,
   ).state;
   return { ctx, state: turnState(base, "p1:0", positions) };
@@ -112,7 +111,7 @@ describe("multi-hex movement", () => {
   it("rolls for each lava hex it enters but never slips on ice", () => {
     const columns: [string, number][] = [...flatRow(3), ["lava", 1], ["ice", 1], ...flatRow(3)];
     const map = rowMap(columns);
-    const { ctx, state } = bigGame({ "p1:0#1": { q: 1, r: 0, elevation: 1 } }, "advanced", map);
+    const { ctx, state } = bigGame({ "p1:0#1": { q: 1, r: 0, elevation: 1 } }, map);
     const path = [2, 3, 4, 5].map((q) => ({ hex: hex(q, 0), elevation: 1, rotation: 0 }));
     for (let seed = 1; seed < 40; seed++) {
       const r = applyCommand({ ...state, rng: seed }, { type: "move", player: "p1", figureId: "p1:0#1", path }, ctx);
@@ -134,7 +133,7 @@ describe("multi-hex line of sight", () => {
     const viewer: Token = { hex: hex(0, 0), elevation: 1, height: 5 };
     const hidden: Token = { hex: hex(2, 0), elevation: 1, height: 5 };
     const open: Token = { hex: hex(0, 2), elevation: 1, height: 5 };
-    expect(hasLineOfSight(board, viewer, [hidden], { strict: false })).toBe(false);
-    expect(hasLineOfSight(board, viewer, [hidden, open], { strict: false })).toBe(true);
+    expect(hasLineOfSight(board, viewer, [hidden])).toBe(false);
+    expect(hasLineOfSight(board, viewer, [hidden, open])).toBe(true);
   });
 });

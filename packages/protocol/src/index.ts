@@ -9,7 +9,6 @@ import {
   type MapDefinition,
   type Phase,
   type PlayerView,
-  type RulesMode,
   type TokenAssignment,
 } from "@aoh/rules";
 import { z } from "zod";
@@ -58,10 +57,8 @@ export const commandSchema = z.discriminatedUnion("type", [
 // Rooms
 
 export const roomSettingsSchema = z.object({
-  mode: z.enum(["basic", "advanced"]),
   roundLimit: z.number().int().min(1).max(50).nullable(),
-  armySize: z.number().int().min(1).max(4).optional(),
-  /** Advanced points budget; null means no limit. */
+  /** Each player's points budget; null means no limit. */
   budget: z.number().int().min(50).max(MAX_BUDGET).nullable().optional(),
   factionPure: z.boolean().optional(),
   map: mapSchema,
@@ -71,17 +68,32 @@ export type RoomSettings = z.infer<typeof roomSettingsSchema>;
 // ---------------------------------------------------------------------------
 // Replays
 
-const setupSchema = z.object({
-  mode: z.enum(["basic", "advanced"]),
-  seed: z.number().int(),
-  mapId: z.string().min(1),
-  roundLimit: z.number().int().nullable().optional(),
-  players: z.array(z.object({ id, name: z.string().min(1), color: z.string().min(1) })).min(2).max(6),
-  armies: z.record(z.string(), z.array(z.string())).optional(),
-  armySize: z.number().int().optional(),
-  budget: z.number().int().nullable().optional(),
-  factionPure: z.boolean().optional(),
-});
+/** Why an older game file cannot be played any more. */
+export const BASIC_RULES_GONE = "This game used the Basic rules, which are no longer in the game.";
+export const CARD_DRAFT_GONE = "This game drafted a set number of cards per player, which is no longer in the game.";
+
+const setupSchema = z
+  .object({
+    /** Older files name their rule set: "basic" or "advanced". */
+    mode: z.string().optional(),
+    seed: z.number().int(),
+    mapId: z.string().min(1),
+    roundLimit: z.number().int().nullable().optional(),
+    players: z.array(z.object({ id, name: z.string().min(1), color: z.string().min(1) })).min(2).max(6),
+    armies: z.record(z.string(), z.array(z.string())).optional(),
+    /** Older files: cards per player in a card-count draft. */
+    armySize: z.number().int().optional(),
+    budget: z.number().int().nullable().optional(),
+    factionPure: z.boolean().optional(),
+  })
+  .superRefine((s, ctx) => {
+    if (s.mode === "basic") ctx.addIssue({ code: "custom", path: ["mode"], message: BASIC_RULES_GONE });
+    // An older file without a budget drafted by card count; files written now leave the rule set out.
+    else if (s.mode !== undefined && !s.armies && s.budget === undefined) {
+      ctx.addIssue({ code: "custom", path: ["armySize"], message: CARD_DRAFT_GONE });
+    }
+  })
+  .transform(({ mode: _mode, armySize: _armySize, ...setup }) => setup);
 
 export const replaySchema = z.object({
   formatVersion: z.literal(1),
@@ -134,9 +146,7 @@ export interface RoomMember {
 export interface RoomInfo {
   readonly code: string;
   readonly mapName: string;
-  readonly mode: RulesMode;
   readonly roundLimit: number | null;
-  readonly armySize: number | null;
   readonly budget: number | null;
   readonly factionPure: boolean;
   readonly members: RoomMember[];
@@ -212,6 +222,9 @@ export type ServerMessage =
 export function parseReplay(data: unknown): Replay {
   const parsed = replaySchema.safeParse(data);
   if (!parsed.success) {
+    // A game from rules that are no longer in the game gets its own plain message.
+    const gone = parsed.error.issues.find((i) => i.message === BASIC_RULES_GONE || i.message === CARD_DRAFT_GONE);
+    if (gone) throw new Error(gone.message);
     const details = parsed.error.issues.slice(0, 5).map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`);
     throw new Error(`This is not a valid game file:\n${details.join("\n")}`);
   }

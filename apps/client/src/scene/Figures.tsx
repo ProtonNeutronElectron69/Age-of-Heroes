@@ -26,7 +26,7 @@ export interface FigureView {
   readonly hero: boolean;
   /** Visual state. */
   readonly status: "idle" | "ready" | "selected" | "spent" | "target";
-  /** Advanced game: life left, shown for figures with more than 1 Life. */
+  /** Life left, shown for figures with more than 1 Life. */
   readonly lifeLeft?: number;
   /** Show a floating, spinning arrow above the figure (the figure chosen to act). */
   readonly arrow?: boolean;
@@ -407,7 +407,7 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
                 opacity={f.status === "spent" ? 0.6 : 1}
               />
             </mesh>
-            {/* Hit band: the part an Advanced attacker must see */}
+            {/* Hit band: the part an attacker must see */}
             <mesh position={[0, bandStart + (h - bandStart) / 2, 0]} {...handlers}>
               <cylinderGeometry args={[TOKEN_RADIUS, TOKEN_RADIUS, h - bandStart, 24]} />
               <meshStandardMaterial color="#f4f1ea" roughness={0.5} />

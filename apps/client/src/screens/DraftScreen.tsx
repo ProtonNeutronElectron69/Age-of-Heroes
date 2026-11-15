@@ -19,9 +19,6 @@ export function DraftScreen({ session }: { session: Session }) {
   const names = new Names(state, ctx);
   const drafter = currentDrafter(state);
   const budget = state.config.budget;
-  const pointsDraft = state.config.armySize === null;
-  const total = state.draft?.order.length ?? 0;
-  const pickNumber = Math.min((state.draft?.index ?? 0) + 1, total);
   const left = drafter && budget !== null ? budget - pointsSpent(state, drafter, ctx) : null;
   const faction = drafter ? lockedFaction(state, drafter, ctx) : null;
   const myPick = canControl(session, drafter);
@@ -32,11 +29,9 @@ export function DraftScreen({ session }: { session: Session }) {
         <div>
           <h1>Draft</h1>
           <p className="muted">
-            {!pointsDraft
-              ? `Pick ${pickNumber} of ${total}. `
-              : budget === null
-                ? "There is no points limit. Pick until your start zone is full or choose to stop. "
-                : `Each player has ${budget} points. Pick until you are out of points or choose to stop. `}
+            {budget === null
+              ? "There is no points limit. Pick until your start zone is full or choose to stop. "
+              : `Each player has ${budget} points. Pick until you are out of points or choose to stop. `}
             The order snakes: it reverses every round of picks.
           </p>
         </div>
@@ -57,7 +52,7 @@ export function DraftScreen({ session }: { session: Session }) {
               {left !== null && <span className="muted"> {left} points left.</span>}
               {faction && <span className="muted"> {faction} only.</span>}
             </span>
-            {pointsDraft && myPick && (
+            {myPick && (
               <button type="button" disabled={session.pending} onClick={() => dispatch({ type: "draftPass", player: drafter })}>
                 Done drafting
               </button>
@@ -74,7 +69,7 @@ export function DraftScreen({ session }: { session: Session }) {
             const ok = reason === null;
             return (
               <div key={card.id} className={`draft-card ${ok ? "" : "unavailable"}`}>
-                <UnitCardView card={card} mode={state.config.mode} />
+                <UnitCardView card={card} />
                 <button
                   type="button"
                   className="primary"
@@ -92,12 +87,12 @@ export function DraftScreen({ session }: { session: Session }) {
           <h2>Armies</h2>
           {state.players.map((p) => {
             const units = state.units.filter((u) => u.owner === p.id);
-            const points = units.reduce((n, u) => n + (ctx.cards.get(u.cardId)?.advanced.points ?? 0), 0);
+            const points = units.reduce((n, u) => n + (ctx.cards.get(u.cardId)?.points ?? 0), 0);
             return (
               <div key={p.id} className="army">
                 <h3>
                   <span className="swatch" style={{ background: p.color }} /> {p.name}
-                  {state.config.mode === "advanced" && <span className="muted small"> {points} points</span>}
+                  <span className="muted small"> {points} points</span>
                 </h3>
                 {units.length === 0 ? (
                   <p className="muted small">No units yet</p>

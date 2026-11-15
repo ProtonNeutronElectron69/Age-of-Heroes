@@ -136,12 +136,7 @@ export function LobbyScreen() {
 
         <h2>Game</h2>
         <p className="small">
-          {room.mapName}, {room.mode === "basic" ? "Basic" : "Advanced"} rules,{" "}
-          {room.budget !== null
-            ? `${room.budget} points`
-            : room.armySize === null
-              ? "No points limit"
-              : `${room.armySize} ${room.armySize === 1 ? "card" : "cards"} each`}
+          {room.mapName}, {room.budget !== null ? `${room.budget} points` : "no points limit"}
           {room.factionPure ? ", faction-pure" : ""}, {room.roundLimit === null ? "no round limit" : `${room.roundLimit} rounds`}.
         </p>
 

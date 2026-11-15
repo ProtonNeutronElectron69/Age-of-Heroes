@@ -107,23 +107,15 @@ export const unitCardSchema = z
     size: sizeSchema,
     height: z.number().int().min(1).max(30),
     footprint: footprintSchema,
-    /** Front of the card: the Basic game. */
-    basic: z.object({
-      move: stat,
-      range: z.number().int().min(1),
-      attack: stat,
-      defense: stat,
-    }),
-    /** Back of the card: the Advanced game. */
-    advanced: z.object({
-      life: z.number().int().min(1),
-      move: stat,
-      range: z.number().int().min(1),
-      attack: stat,
-      defense: stat,
-      points: z.number().int().min(1),
-      abilities: z.array(abilitySchema),
-    }),
+    /** Wounds needed to destroy one figure. */
+    life: z.number().int().min(1),
+    move: stat,
+    range: z.number().int().min(1),
+    attack: stat,
+    defense: stat,
+    /** What the unit costs to draft. */
+    points: z.number().int().min(1),
+    abilities: z.array(abilitySchema),
   })
   .superRefine((card, ctx) => {
     const isHero = card.unitType === "uniqueHero" || card.unitType === "commonHero";

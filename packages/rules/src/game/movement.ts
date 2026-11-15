@@ -63,10 +63,10 @@ export function stopsMovement(from: Step, to: Step, ctx: RulesContext): boolean 
 /**
  * Can a figure physically step between two adjacent spots? The destination
  * must have room for the figure and no scenery, climbing needs headroom in
- * the current hex, and dropping needs headroom in the destination. In the
- * Advanced game a single step may not climb more levels than the figure's Height.
+ * the current hex, and dropping needs headroom in the destination. A single
+ * step may not climb more levels than the figure's Height.
  */
-export function canStep(from: Step, to: Step, height: number, ctx: RulesContext, mode: GameState["config"]["mode"]): boolean {
+export function canStep(from: Step, to: Step, height: number, ctx: RulesContext): boolean {
   if (!isAdjacent(from.hex, to.hex)) return false;
   const dest = ctx.board.surfaceAt(to.hex, to.elevation);
   const here = ctx.board.surfaceAt(from.hex, from.elevation);
@@ -75,7 +75,7 @@ export function canStep(from: Step, to: Step, height: number, ctx: RulesContext,
   const rise = to.elevation - from.elevation;
   if (dest.clearance < Math.max(height, -rise)) return false;
   if (rise > 0 && here.clearance < rise) return false;
-  if (mode === "advanced" && rise > height) return false;
+  if (rise > height) return false;
   return true;
 }
 
@@ -84,7 +84,7 @@ function moverFor(state: GameState, figureId: string, ctx: RulesContext): Mover 
   const { unit, figure } = found;
   if (figure.destroyed || !figure.position) fail("That figure is not on the battlefield");
   const card = cardOf(unit, ctx);
-  const stats = statsOf(card, state.config.mode);
+  const stats = statsOf(card);
   const pos = figure.position;
   const start: Placement = { hex: pos.hex, elevation: pos.elevation, rotation: card.footprint === "1" ? 0 : pos.rotation };
   const active = state.active;
@@ -106,7 +106,6 @@ function moverFor(state: GameState, figureId: string, ctx: RulesContext): Mover 
 }
 
 function enemiesOf(state: GameState, mover: Mover, ctx: RulesContext): Enemy[] {
-  if (state.config.mode !== "advanced") return [];
   const result: Enemy[] = [];
   for (const unit of state.units) {
     if (unit.owner === mover.unit.owner) continue;
@@ -138,14 +137,14 @@ interface StepInfo {
   readonly ice: number;
   /** Levels dropped (positive) by the figure's highest hex. */
   readonly drop: number;
-  /** Enemies the figure walks away from (Advanced passing strikes). */
+  /** Enemies the figure walks away from (passing strikes). */
   readonly strikes: Enemy[];
   /** Enemies the figure moves through with Trample. */
   readonly trampled: Occupant[];
 }
 
 function fallDice(drop: number, height: number, state: GameState, ctx: RulesContext): number {
-  if (state.config.mode !== "advanced" || drop < height) return 0;
+  if (drop < height) return 0;
   const { minorDice, majorDice } = tuningOf(ctx).falling;
   return drop >= height * 2 ? majorDice : minorDice;
 }
@@ -182,7 +181,7 @@ function evaluateStep(
   if (!spots) return "The figure does not fit there";
   if (!turning) {
     for (let i = 0; i < spots.length; i++) {
-      if (!canStep(fromSpots[i]!, spots[i]!, height, ctx, state.config.mode)) return "The figure cannot move that way";
+      if (!canStep(fromSpots[i]!, spots[i]!, height, ctx)) return "The figure cannot move that way";
     }
   }
   const trampled: Occupant[] = [];
@@ -531,7 +530,7 @@ export function moveFigure(
       trampleRoll(state, rng, { ...self, spots: info.spots }, victim, ctx, after);
     }
 
-    // 3. Falling (Advanced).
+    // 3. Falling.
     const dice = fallDice(info.drop, mover.stats.height, state, ctx);
     if (dice > 0) {
       unblockable(state, rng, dice, mover, "fall", null, after);
@@ -643,7 +642,7 @@ export function forcedMove(
   ctx: RulesContext,
 ): void {
   const card = cardOf(unit, ctx);
-  const stats = statsOf(card, state.config.mode);
+  const stats = statsOf(card);
   const from = figure.position;
   if (!from) return;
   figure.position = { hex: to.hex, elevation: to.elevation, rotation: 0 };

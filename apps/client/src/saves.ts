@@ -1,5 +1,5 @@
 import type { Replay } from "@aoh/protocol";
-import type { GameState, MapDefinition, RulesMode } from "@aoh/rules";
+import type { GameState, MapDefinition } from "@aoh/rules";
 
 /**
  * Named saves of hot-seat games, kept in this browser. A save is the game's
@@ -11,7 +11,6 @@ import type { GameState, MapDefinition, RulesMode } from "@aoh/rules";
 /** What the saved games list shows without replaying the game. */
 export interface SaveSummary {
   readonly mapName: string;
-  readonly mode: RulesMode;
   readonly players: readonly { readonly name: string; readonly color: string }[];
   /** "Draft", "Deployment", "Round 3" or "Game over". */
   readonly progress: string;
@@ -44,7 +43,6 @@ export function progressOf(state: GameState): string {
 export function summarize(state: GameState, map: MapDefinition): SaveSummary {
   return {
     mapName: map.name,
-    mode: state.config.mode,
     players: state.players.map((p) => ({ name: p.name, color: p.color })),
     progress: progressOf(state),
   };
@@ -55,11 +53,10 @@ export function defaultSaveName(summary: SaveSummary): string {
   return `${summary.mapName}, ${summary.progress.toLowerCase()}`;
 }
 
-/** One line for lists: "Basic, Proving Grounds, Ann vs Bo, round 3". */
+/** One line for lists: "Proving Grounds, Ann vs Bo, round 3". */
 export function describeSummary(summary: SaveSummary): string {
-  const mode = summary.mode === "basic" ? "Basic" : "Advanced";
   const players = summary.players.map((p) => p.name).join(" vs ");
-  return `${mode}, ${summary.mapName}, ${players}, ${summary.progress.toLowerCase()}`;
+  return `${summary.mapName}, ${players}, ${summary.progress.toLowerCase()}`;
 }
 
 export function formatSavedAt(iso: string): string {

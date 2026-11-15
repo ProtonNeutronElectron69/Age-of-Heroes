@@ -20,10 +20,9 @@ function rowGame(
   columns: [string, number][],
   start: { q: number; r: number; elevation: number },
   others: Record<string, { q: number; r: number; elevation: number }> = {},
-  mode: "basic" | "advanced" = "basic",
 ): { ctx: RulesContext; state: GameState } {
   const ctx = makeCtx(rowMap(columns));
-  const base = createGame(setup(2, { mapId: "test-row", mode }), ctx).state;
+  const base = createGame(setup(2, { mapId: "test-row" }), ctx).state;
   return { ctx, state: turnState(base, "p1:0", { "p1:0#1": start, ...others }) };
 }
 
@@ -47,16 +46,12 @@ describe("movement options", () => {
     expect(options.get(placementKey(step(3, 1)))!.cost).toBe(5);
   });
 
-  it("limits a single climb to the figure's Height in the Advanced game only", () => {
+  it("limits a single climb to the figure's Height", () => {
     // A fast Height 5 hero facing a 6-level cliff (cost 1 + 6 = 7, within Move 10).
-    const fast = CARDS.map((c) =>
-      c.id === "hero" ? { ...c, basic: { ...c.basic, move: 10 }, advanced: { ...c.advanced, move: 10 } } : c,
-    );
+    const fast = CARDS.map((c) => (c.id === "hero" ? { ...c, move: 10 } : c));
     const ctx = makeCtx(rowMap([["grass", 1], ["rock", 7]]), fast);
-    const game = (mode: "basic" | "advanced") =>
-      turnState(createGame(setup(2, { mapId: "test-row", mode }), ctx).state, "p1:0", { "p1:0#1": at(0) });
-    expect(moveOptions(game("basic"), "p1:0#1", ctx).has(placementKey(step(1, 7)))).toBe(true);
-    expect(moveOptions(game("advanced"), "p1:0#1", ctx).has(placementKey(step(1, 7)))).toBe(false);
+    const state = turnState(createGame(setup(2, { mapId: "test-row" }), ctx).state, "p1:0", { "p1:0#1": at(0) });
+    expect(moveOptions(state, "p1:0#1", ctx).has(placementKey(step(1, 7)))).toBe(false);
   });
 
   it("stops in water or swamp and charges 2 per wet hex", () => {
@@ -96,7 +91,7 @@ describe("movement options", () => {
       { id: "s1", shape: "single", terrain: "grass", origin: hex(1, 1), rotation: 0, layer: 0 },
     );
     const ctx = makeCtx(map);
-    const base = createGame(setup(2, { mapId: "test-row", mode: "basic" }), ctx).state;
+    const base = createGame(setup(2, { mapId: "test-row" }), ctx).state;
     const state = turnState(base, "p1:0", { "p1:0#1": at(0) });
     const option = moveOptions(state, "p1:0#1", ctx).get(placementKey(step(2)))!;
     expect(option.hazards).toBe(0);
@@ -154,7 +149,7 @@ describe("move command", () => {
   it("moves play on when the active player's last figure dies on their own turn", () => {
     const ctx = makeCtx(rowMap([["grass", 1], ["lava", 1], ["grass", 1]]));
     const base = createGame(
-      setup(3, { mapId: "test-row", mode: "basic", armies: { p1: ["hero"], p2: ["hero"], p3: ["hero"] } }),
+      setup(3, { mapId: "test-row", armies: { p1: ["hero"], p2: ["hero"], p3: ["hero"] } }),
       ctx,
     ).state;
     const state = turnState(base, "p1:0", { "p1:0#1": at(0), "p2:0#1": at(2) });

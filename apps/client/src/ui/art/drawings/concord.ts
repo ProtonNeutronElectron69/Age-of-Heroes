@@ -368,13 +368,6 @@ export const CONCORD: Record<string, Drawing> = {
   "gatewarden-pikemen": squad([pikemanStanding, pikemanBraced, pikemanBraced]),
   brannock: solo(brannock),
   "concord-grenadiers": squad([grenadierLighting, grenadierLobbing, grenadierLobbing]),
-  // Horses are long: on the wide side the Hussars ride staggered, not in a row.
-  "brass-hussars": squad([hussar("#7a4a2a"), hussar("#9c9ca4", "#c99a72"), hussar("#3a2f2c")], {
-    wide: [
-      [44, 180, 0.62],
-      [132, 208, 0.64],
-      [72, 244, 0.76],
-    ],
-  }),
+  "brass-hussars": squad([hussar("#7a4a2a"), hussar("#9c9ca4", "#c99a72"), hussar("#3a2f2c")]),
   "concord-fusiliers": squad([fusilier(STANDING_AIM), fusilier(STANDING_AIM, "#c99a72"), fusilier(KNEELING_AIM, "#c99a72"), fusilier(KNEELING_AIM)]),
 };

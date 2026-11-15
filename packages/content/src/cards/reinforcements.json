@@ -12,37 +12,29 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": {
-      "move": 5,
-      "range": 1,
-      "attack": 4,
-      "defense": 3
-    },
-    "advanced": {
-      "life": 5,
-      "move": 5,
-      "range": 1,
-      "attack": 4,
-      "defense": 3,
-      "points": 110,
-      "abilities": [
-        {
-          "id": "ember-spit",
-          "name": "Satchel Charge",
-          "text": "Instead of a normal attack, Brannock may throw a satchel charge at a figure up to 2 hexes away with 3 attack dice. Every other figure next to the target, friend or foe, is also attacked with 1 die.",
-          "params": {
-            "range": 2,
-            "dice": 3,
-            "splashDice": 1
-          }
-        },
-        {
-          "id": "shove",
-          "name": "Shoulder Barge",
-          "text": "After Brannock makes a normal attack on an adjacent single-hex enemy that is not Huge and it survives, he shoves it 1 hex straight back onto ground no higher than it stands, if there is room. It can fall, and rolls for lava where it lands."
+    "life": 5,
+    "move": 5,
+    "range": 1,
+    "attack": 4,
+    "defense": 3,
+    "points": 110,
+    "abilities": [
+      {
+        "id": "ember-spit",
+        "name": "Satchel Charge",
+        "text": "Instead of a normal attack, Brannock may throw a satchel charge at a figure up to 2 hexes away with 3 attack dice. Every other figure next to the target, friend or foe, is also attacked with 1 die.",
+        "params": {
+          "range": 2,
+          "dice": 3,
+          "splashDice": 1
         }
-      ]
-    }
+      },
+      {
+        "id": "shove",
+        "name": "Shoulder Barge",
+        "text": "After Brannock makes a normal attack on an adjacent single-hex enemy that is not Huge and it survives, he shoves it 1 hex straight back onto ground no higher than it stands, if there is room. It can fall, and rolls for lava where it lands."
+      }
+    ]
   },
   {
     "id": "concord-grenadiers",
@@ -57,34 +49,26 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": {
-      "move": 5,
-      "range": 3,
-      "attack": 2,
-      "defense": 2
-    },
-    "advanced": {
-      "life": 1,
-      "move": 5,
-      "range": 3,
-      "attack": 2,
-      "defense": 2,
-      "points": 60,
-      "abilities": [
-        {
-          "id": "mortar-barrage",
-          "name": "Lobbed Grenade",
-          "text": "Instead of a normal attack, a Grenadier may lob a grenade at a figure up to 3 hexes away, even one out of sight, with 2 attack dice. Every other figure next to the target, friend or foe, is also attacked with 1 die.",
-          "params": {
-            "range": 3,
-            "minRange": 1,
-            "dice": 2,
-            "splashDice": 1,
-            "ignoresSight": 1
-          }
+    "life": 1,
+    "move": 5,
+    "range": 3,
+    "attack": 2,
+    "defense": 2,
+    "points": 60,
+    "abilities": [
+      {
+        "id": "mortar-barrage",
+        "name": "Lobbed Grenade",
+        "text": "Instead of a normal attack, a Grenadier may lob a grenade at a figure up to 3 hexes away, even one out of sight, with 2 attack dice. Every other figure next to the target, friend or foe, is also attacked with 1 die.",
+        "params": {
+          "range": 3,
+          "minRange": 1,
+          "dice": 2,
+          "splashDice": 1,
+          "ignoresSight": 1
         }
-      ]
-    }
+      }
+    ]
   },
   {
     "id": "brass-hussars",
@@ -99,30 +83,22 @@
     "size": "large",
     "height": 6,
     "footprint": "1",
-    "basic": {
-      "move": 7,
-      "range": 1,
-      "attack": 3,
-      "defense": 3
-    },
-    "advanced": {
-      "life": 2,
-      "move": 7,
-      "range": 1,
-      "attack": 3,
-      "defense": 2,
-      "points": 125,
-      "abilities": [
-        {
-          "id": "trample",
-          "name": "Ride Them Down",
-          "text": "Hussars may ride through Small and Medium enemy figures. Each figure they ride through rolls 1 defense die; on a blank it takes 1 wound.",
-          "params": {
-            "defenseDice": 1
-          }
+    "life": 2,
+    "move": 7,
+    "range": 1,
+    "attack": 3,
+    "defense": 2,
+    "points": 125,
+    "abilities": [
+      {
+        "id": "trample",
+        "name": "Ride Them Down",
+        "text": "Hussars may ride through Small and Medium enemy figures. Each figure they ride through rolls 1 defense die; on a blank it takes 1 wound.",
+        "params": {
+          "defenseDice": 1
         }
-      ]
-    }
+      }
+    ]
   },
   {
     "id": "lady-suzume",
@@ -137,36 +113,28 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": {
-      "move": 5,
-      "range": 7,
-      "attack": 3,
-      "defense": 2
-    },
-    "advanced": {
-      "life": 4,
-      "move": 5,
-      "range": 7,
-      "attack": 3,
-      "defense": 2,
-      "points": 70,
-      "abilities": [
-        {
-          "id": "longshot",
-          "name": "Whistling Arrow",
-          "text": "When Lady Suzume attacks a figure 5 or more hexes away, she rolls 1 extra attack die.",
-          "params": {
-            "minDistance": 5,
-            "bonus": 1
-          }
-        },
-        {
-          "id": "pin",
-          "name": "Pinning Shot",
-          "text": "A figure that Lady Suzume wounds but does not destroy cannot move on its unit's next turn. It can still attack."
+    "life": 4,
+    "move": 5,
+    "range": 7,
+    "attack": 3,
+    "defense": 2,
+    "points": 70,
+    "abilities": [
+      {
+        "id": "longshot",
+        "name": "Whistling Arrow",
+        "text": "When Lady Suzume attacks a figure 5 or more hexes away, she rolls 1 extra attack die.",
+        "params": {
+          "minDistance": 5,
+          "bonus": 1
         }
-      ]
-    }
+      },
+      {
+        "id": "pin",
+        "name": "Pinning Shot",
+        "text": "A figure that Lady Suzume wounds but does not destroy cannot move on its unit's next turn. It can still attack."
+      }
+    ]
   },
   {
     "id": "teppo-gunners",
@@ -181,31 +149,23 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": {
-      "move": 4,
-      "range": 6,
-      "attack": 3,
-      "defense": 1
-    },
-    "advanced": {
-      "life": 1,
-      "move": 4,
-      "range": 6,
-      "attack": 3,
-      "defense": 1,
-      "points": 75,
-      "abilities": [
-        {
-          "id": "massed-volley",
-          "name": "Volley Fire",
-          "text": "Each Gunner that is the second or later from its squad to attack the same target in a turn rolls 1 extra attack die.",
-          "params": {
-            "attacks": 2,
-            "bonus": 1
-          }
+    "life": 1,
+    "move": 4,
+    "range": 6,
+    "attack": 3,
+    "defense": 1,
+    "points": 75,
+    "abilities": [
+      {
+        "id": "massed-volley",
+        "name": "Volley Fire",
+        "text": "Each Gunner that is the second or later from its squad to attack the same target in a turn rolls 1 extra attack die.",
+        "params": {
+          "attacks": 2,
+          "bonus": 1
         }
-      ]
-    }
+      }
+    ]
   },
   {
     "id": "shirokage-ronin",
@@ -220,27 +180,19 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": {
-      "move": 5,
-      "range": 1,
-      "attack": 4,
-      "defense": 2
-    },
-    "advanced": {
-      "life": 1,
-      "move": 5,
-      "range": 1,
-      "attack": 4,
-      "defense": 2,
-      "points": 100,
-      "abilities": [
-        {
-          "id": "last-stand",
-          "name": "Last Stand",
-          "text": "When an attack destroys a Ronin, it strikes back as it falls: it makes a normal attack on its attacker, if the attacker is next to it."
-        }
-      ]
-    }
+    "life": 1,
+    "move": 5,
+    "range": 1,
+    "attack": 4,
+    "defense": 2,
+    "points": 100,
+    "abilities": [
+      {
+        "id": "last-stand",
+        "name": "Last Stand",
+        "text": "When an attack destroys a Ronin, it strikes back as it falls: it makes a normal attack on its attacker, if the attacker is next to it."
+      }
+    ]
   },
   {
     "id": "queen-ilyth",
@@ -255,45 +207,37 @@
     "size": "small",
     "height": 4,
     "footprint": "1",
-    "basic": {
-      "move": 5,
-      "range": 5,
-      "attack": 3,
-      "defense": 2
-    },
-    "advanced": {
-      "life": 4,
-      "move": 5,
-      "range": 5,
-      "attack": 3,
-      "defense": 2,
-      "points": 90,
-      "abilities": [
-        {
-          "id": "flying",
-          "name": "Flying",
-          "text": "Queen Ilyth flies: count her move in hexes straight to where she lands, ignoring terrain, height and figures on the way. Terrain only affects her where she lands, and she never takes falling damage."
-        },
-        {
-          "id": "arc-lightning",
-          "name": "Thornburst",
-          "text": "Instead of a normal attack, Queen Ilyth may loose a burst of thorns at a figure up to 4 hexes away in her line of sight with 2 attack dice. Every other figure next to the target, friend or foe, is also attacked with 1 die.",
-          "params": {
-            "range": 4,
-            "dice": 2,
-            "splashDice": 1
-          }
-        },
-        {
-          "id": "fae-step",
-          "name": "Fae Step",
-          "text": "Instead of attacking, Queen Ilyth may swap places with a friendly single-hex figure up to 5 hexes away, if each fits where the other stands and neither is pinned.",
-          "params": {
-            "range": 5
-          }
+    "life": 4,
+    "move": 5,
+    "range": 5,
+    "attack": 3,
+    "defense": 2,
+    "points": 90,
+    "abilities": [
+      {
+        "id": "flying",
+        "name": "Flying",
+        "text": "Queen Ilyth flies: count her move in hexes straight to where she lands, ignoring terrain, height and figures on the way. Terrain only affects her where she lands, and she never takes falling damage."
+      },
+      {
+        "id": "arc-lightning",
+        "name": "Thornburst",
+        "text": "Instead of a normal attack, Queen Ilyth may loose a burst of thorns at a figure up to 4 hexes away in her line of sight with 2 attack dice. Every other figure next to the target, friend or foe, is also attacked with 1 die.",
+        "params": {
+          "range": 4,
+          "dice": 2,
+          "splashDice": 1
         }
-      ]
-    }
+      },
+      {
+        "id": "fae-step",
+        "name": "Fae Step",
+        "text": "Instead of attacking, Queen Ilyth may swap places with a friendly single-hex figure up to 5 hexes away, if each fits where the other stands and neither is pinned.",
+        "params": {
+          "range": 5
+        }
+      }
+    ]
   },
   {
     "id": "briar-sprites",
@@ -308,35 +252,27 @@
     "size": "small",
     "height": 3,
     "footprint": "1",
-    "basic": {
-      "move": 6,
-      "range": 3,
-      "attack": 1,
-      "defense": 2
-    },
-    "advanced": {
-      "life": 1,
-      "move": 6,
-      "range": 3,
-      "attack": 1,
-      "defense": 2,
-      "points": 55,
-      "abilities": [
-        {
-          "id": "flying",
-          "name": "Flying",
-          "text": "Sprites fly: count their move in hexes straight to where they land, ignoring terrain, height and figures on the way. Terrain only affects them where they land, and they never take falling damage."
-        },
-        {
-          "id": "will-o-wisp",
-          "name": "Will-o'-the-Wisp",
-          "text": "A Sprite cannot be the target of an attack or special action from more than 4 hexes away. It can still be caught by blasts aimed at others.",
-          "params": {
-            "maxDistance": 4
-          }
+    "life": 1,
+    "move": 6,
+    "range": 3,
+    "attack": 1,
+    "defense": 2,
+    "points": 55,
+    "abilities": [
+      {
+        "id": "flying",
+        "name": "Flying",
+        "text": "Sprites fly: count their move in hexes straight to where they land, ignoring terrain, height and figures on the way. Terrain only affects them where they land, and they never take falling damage."
+      },
+      {
+        "id": "will-o-wisp",
+        "name": "Will-o'-the-Wisp",
+        "text": "A Sprite cannot be the target of an attack or special action from more than 4 hexes away. It can still be caught by blasts aimed at others.",
+        "params": {
+          "maxDistance": 4
         }
-      ]
-    }
+      }
+    ]
   },
   {
     "id": "mossback-treefolk",
@@ -351,30 +287,22 @@
     "size": "large",
     "height": 8,
     "footprint": "1",
-    "basic": {
-      "move": 3,
-      "range": 1,
-      "attack": 4,
-      "defense": 5
-    },
-    "advanced": {
-      "life": 3,
-      "move": 3,
-      "range": 1,
-      "attack": 4,
-      "defense": 4,
-      "points": 160,
-      "abilities": [
-        {
-          "id": "regrowth",
-          "name": "Regrowth",
-          "text": "At the end of the Treefolk's turn, each wounded Treefolk standing on forest removes 1 wound.",
-          "params": {
-            "heal": 1
-          }
+    "life": 3,
+    "move": 3,
+    "range": 1,
+    "attack": 4,
+    "defense": 4,
+    "points": 160,
+    "abilities": [
+      {
+        "id": "regrowth",
+        "name": "Regrowth",
+        "text": "At the end of the Treefolk's turn, each wounded Treefolk standing on forest removes 1 wound.",
+        "params": {
+          "heal": 1
         }
-      ]
-    }
+      }
+    ]
   },
   {
     "id": "proxima",
@@ -389,38 +317,30 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": {
-      "move": 6,
-      "range": 1,
-      "attack": 4,
-      "defense": 3
-    },
-    "advanced": {
-      "life": 5,
-      "move": 6,
-      "range": 1,
-      "attack": 4,
-      "defense": 3,
-      "points": 115,
-      "abilities": [
-        {
-          "id": "grapple-line",
-          "name": "Grapple Line",
-          "text": "Instead of attacking, Proxima may fire a grapple at a Small or Medium single-hex enemy 2 or 3 hexes away in her line of sight, and pull it into the free hex next to her nearest to where it stood. It can fall, and rolls for lava where it lands.",
-          "params": {
-            "range": 3
-          }
-        },
-        {
-          "id": "smoke-step",
-          "name": "Phase Shift",
-          "text": "After Proxima attacks or uses Grapple Line, she may move up to 2 hexes. She does not take passing strikes during this move.",
-          "params": {
-            "move": 2
-          }
+    "life": 5,
+    "move": 6,
+    "range": 1,
+    "attack": 4,
+    "defense": 3,
+    "points": 115,
+    "abilities": [
+      {
+        "id": "grapple-line",
+        "name": "Grapple Line",
+        "text": "Instead of attacking, Proxima may fire a grapple at a Small or Medium single-hex enemy 2 or 3 hexes away in her line of sight, and pull it into the free hex next to her nearest to where it stood. It can fall, and rolls for lava where it lands.",
+        "params": {
+          "range": 3
         }
-      ]
-    }
+      },
+      {
+        "id": "smoke-step",
+        "name": "Phase Shift",
+        "text": "After Proxima attacks or uses Grapple Line, she may move up to 2 hexes. She does not take passing strikes during this move.",
+        "params": {
+          "move": 2
+        }
+      }
+    ]
   },
   {
     "id": "nexus-breachers",
@@ -435,27 +355,19 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": {
-      "move": 5,
-      "range": 1,
-      "attack": 3,
-      "defense": 3
-    },
-    "advanced": {
-      "life": 1,
-      "move": 5,
-      "range": 1,
-      "attack": 3,
-      "defense": 3,
-      "points": 95,
-      "abilities": [
-        {
-          "id": "pin",
-          "name": "Shock Gauntlets",
-          "text": "An enemy that a Breacher wounds but does not destroy cannot move on its unit's next turn. It can still attack."
-        }
-      ]
-    }
+    "life": 1,
+    "move": 5,
+    "range": 1,
+    "attack": 3,
+    "defense": 3,
+    "points": 95,
+    "abilities": [
+      {
+        "id": "pin",
+        "name": "Shock Gauntlets",
+        "text": "An enemy that a Breacher wounds but does not destroy cannot move on its unit's next turn. It can still attack."
+      }
+    ]
   },
   {
     "id": "swarmling-drones",
@@ -470,36 +382,28 @@
     "size": "small",
     "height": 3,
     "footprint": "1",
-    "basic": {
-      "move": 6,
-      "range": 1,
-      "attack": 2,
-      "defense": 1
-    },
-    "advanced": {
-      "life": 1,
-      "move": 6,
-      "range": 1,
-      "attack": 2,
-      "defense": 1,
-      "points": 75,
-      "abilities": [
-        {
-          "id": "flying",
-          "name": "Flying",
-          "text": "Drones fly: count their move in hexes straight to where they land, ignoring terrain, height and figures on the way. Terrain only affects them where they land, and they never take falling damage."
-        },
-        {
-          "id": "volatile-core",
-          "name": "Volatile Core",
-          "text": "When an attack destroys a Drone, it bursts: every other figure next to it, friend or foe, rolls 1 defense die; on a blank it takes 1 wound.",
-          "params": {
-            "defenseDice": 1,
-            "wounds": 1
-          }
+    "life": 1,
+    "move": 6,
+    "range": 1,
+    "attack": 2,
+    "defense": 1,
+    "points": 75,
+    "abilities": [
+      {
+        "id": "flying",
+        "name": "Flying",
+        "text": "Drones fly: count their move in hexes straight to where they land, ignoring terrain, height and figures on the way. Terrain only affects them where they land, and they never take falling damage."
+      },
+      {
+        "id": "volatile-core",
+        "name": "Volatile Core",
+        "text": "When an attack destroys a Drone, it bursts: every other figure next to it, friend or foe, rolls 1 defense die; on a blank it takes 1 wound.",
+        "params": {
+          "defenseDice": 1,
+          "wounds": 1
         }
-      ]
-    }
+      }
+    ]
   },
   {
     "id": "grubnak",
@@ -514,41 +418,33 @@
     "size": "medium",
     "height": 6,
     "footprint": "1",
-    "basic": {
-      "move": 5,
-      "range": 4,
-      "attack": 3,
-      "defense": 2
-    },
-    "advanced": {
-      "life": 4,
-      "move": 5,
-      "range": 4,
-      "attack": 3,
-      "defense": 2,
-      "points": 80,
-      "abilities": [
-        {
-          "id": "war-drums",
-          "name": "War Drums",
-          "text": "Other friendly Orc figures that start a move within 3 hexes of Grubnak get +2 Move for that move.",
-          "params": {
-            "range": 3,
-            "move": 2
-          }
-        },
-        {
-          "id": "arc-lightning",
-          "name": "Hex Bolt",
-          "text": "Instead of a normal attack, Grubnak may hurl a hex bolt at a figure up to 4 hexes away in his line of sight with 2 attack dice. Every other figure next to the target, friend or foe, is also attacked with 1 die.",
-          "params": {
-            "range": 4,
-            "dice": 2,
-            "splashDice": 1
-          }
+    "life": 4,
+    "move": 5,
+    "range": 4,
+    "attack": 3,
+    "defense": 2,
+    "points": 80,
+    "abilities": [
+      {
+        "id": "war-drums",
+        "name": "War Drums",
+        "text": "Other friendly Orc figures that start a move within 3 hexes of Grubnak get +2 Move for that move.",
+        "params": {
+          "range": 3,
+          "move": 2
         }
-      ]
-    }
+      },
+      {
+        "id": "arc-lightning",
+        "name": "Hex Bolt",
+        "text": "Instead of a normal attack, Grubnak may hurl a hex bolt at a figure up to 4 hexes away in his line of sight with 2 attack dice. Every other figure next to the target, friend or foe, is also attacked with 1 die.",
+        "params": {
+          "range": 4,
+          "dice": 2,
+          "splashDice": 1
+        }
+      }
+    ]
   },
   {
     "id": "bonebow-archers",
@@ -563,27 +459,19 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": {
-      "move": 4,
-      "range": 6,
-      "attack": 2,
-      "defense": 2
-    },
-    "advanced": {
-      "life": 1,
-      "move": 4,
-      "range": 6,
-      "attack": 2,
-      "defense": 2,
-      "points": 60,
-      "abilities": [
-        {
-          "id": "last-stand",
-          "name": "Last Volley",
-          "text": "When an attack destroys an Archer, it shoots back as it falls: it makes a normal attack on its attacker, if the attacker is in its range and line of sight."
-        }
-      ]
-    }
+    "life": 1,
+    "move": 4,
+    "range": 6,
+    "attack": 2,
+    "defense": 2,
+    "points": 60,
+    "abilities": [
+      {
+        "id": "last-stand",
+        "name": "Last Volley",
+        "text": "When an attack destroys an Archer, it shoots back as it falls: it makes a normal attack on its attacker, if the attacker is in its range and line of sight."
+      }
+    ]
   },
   {
     "id": "ghoul-pack",
@@ -598,30 +486,22 @@
     "size": "medium",
     "height": 4,
     "footprint": "1",
-    "basic": {
-      "move": 6,
-      "range": 1,
-      "attack": 2,
-      "defense": 1
-    },
-    "advanced": {
-      "life": 1,
-      "move": 6,
-      "range": 1,
-      "attack": 2,
-      "defense": 1,
-      "points": 60,
-      "abilities": [
-        {
-          "id": "corpse-feast",
-          "name": "Corpse Feast",
-          "text": "When a Ghoul destroys a figure with a normal attack, it may move up to 2 hexes. It does not take passing strikes during this move.",
-          "params": {
-            "move": 2
-          }
+    "life": 1,
+    "move": 6,
+    "range": 1,
+    "attack": 2,
+    "defense": 1,
+    "points": 60,
+    "abilities": [
+      {
+        "id": "corpse-feast",
+        "name": "Corpse Feast",
+        "text": "When a Ghoul destroys a figure with a normal attack, it may move up to 2 hexes. It does not take passing strikes during this move.",
+        "params": {
+          "move": 2
         }
-      ]
-    }
+      }
+    ]
   },
   {
     "id": "dame-rowena",
@@ -636,35 +516,27 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": {
-      "move": 5,
-      "range": 1,
-      "attack": 4,
-      "defense": 4
-    },
-    "advanced": {
-      "life": 6,
-      "move": 5,
-      "range": 1,
-      "attack": 4,
-      "defense": 4,
-      "points": 145,
-      "abilities": [
-        {
-          "id": "challenge",
-          "name": "Challenge",
-          "text": "An enemy figure next to Dame Rowena may only target her with its attacks and special actions."
-        },
-        {
-          "id": "smite-the-unholy",
-          "name": "Righteous Fury",
-          "text": "When Dame Rowena attacks an Undead or Oni figure, she rolls 2 extra attack dice.",
-          "params": {
-            "bonus": 2
-          }
+    "life": 6,
+    "move": 5,
+    "range": 1,
+    "attack": 4,
+    "defense": 4,
+    "points": 145,
+    "abilities": [
+      {
+        "id": "challenge",
+        "name": "Challenge",
+        "text": "An enemy figure next to Dame Rowena may only target her with its attacks and special actions."
+      },
+      {
+        "id": "smite-the-unholy",
+        "name": "Righteous Fury",
+        "text": "When Dame Rowena attacks an Undead or Oni figure, she rolls 2 extra attack dice.",
+        "params": {
+          "bonus": 2
         }
-      ]
-    }
+      }
+    ]
   },
   {
     "id": "covenant-crossbowmen",
@@ -679,30 +551,22 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": {
-      "move": 4,
-      "range": 6,
-      "attack": 3,
-      "defense": 2
-    },
-    "advanced": {
-      "life": 1,
-      "move": 4,
-      "range": 6,
-      "attack": 3,
-      "defense": 2,
-      "points": 90,
-      "abilities": [
-        {
-          "id": "piercing",
-          "name": "Piercing Bolts",
-          "text": "A figure attacked by a Crossbowman rolls 1 fewer defense die.",
-          "params": {
-            "reduce": 1
-          }
+    "life": 1,
+    "move": 4,
+    "range": 6,
+    "attack": 3,
+    "defense": 2,
+    "points": 90,
+    "abilities": [
+      {
+        "id": "piercing",
+        "name": "Piercing Bolts",
+        "text": "A figure attacked by a Crossbowman rolls 1 fewer defense die.",
+        "params": {
+          "reduce": 1
         }
-      ]
-    }
+      }
+    ]
   },
   {
     "id": "dawn-acolytes",
@@ -717,30 +581,22 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "basic": {
-      "move": 5,
-      "range": 4,
-      "attack": 2,
-      "defense": 2
-    },
-    "advanced": {
-      "life": 1,
-      "move": 5,
-      "range": 4,
-      "attack": 2,
-      "defense": 2,
-      "points": 70,
-      "abilities": [
-        {
-          "id": "mending-hymn",
-          "name": "Mending Hymn",
-          "text": "At the end of the Acolytes' turn, the most wounded friendly hero within 3 hexes of an Acolyte removes 1 wound.",
-          "params": {
-            "range": 3,
-            "heal": 1
-          }
+    "life": 1,
+    "move": 5,
+    "range": 4,
+    "attack": 2,
+    "defense": 2,
+    "points": 70,
+    "abilities": [
+      {
+        "id": "mending-hymn",
+        "name": "Mending Hymn",
+        "text": "At the end of the Acolytes' turn, the most wounded friendly hero within 3 hexes of an Acolyte removes 1 wound.",
+        "params": {
+          "range": 3,
+          "heal": 1
         }
-      ]
-    }
+      }
+    ]
   }
 ]

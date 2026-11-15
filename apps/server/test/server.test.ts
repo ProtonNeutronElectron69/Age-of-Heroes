@@ -93,7 +93,8 @@ class Client {
   }
 }
 
-const settings = (extra: object = {}) => ({ mode: "basic", roundLimit: 3, armySize: 1, map, ...extra });
+/** 140 points: room for about one hero each, so the draft is short. */
+const settings = (extra: object = {}) => ({ roundLimit: 3, budget: 140, map, ...extra });
 
 async function room(players = 2) {
   const host = await Client.connect();
@@ -367,11 +368,10 @@ describe("saving and resuming an online game", () => {
   it("refuses saves it cannot continue", async () => {
     const c = await Client.connect();
     const setup = {
-      mode: "basic" as const,
       seed: 5,
       mapId: map.id,
       roundLimit: 3,
-      armySize: 1,
+      budget: 140,
       players: [
         { id: "p1", name: "Ana", color: "#e53935" },
         { id: "p2", name: "Bo", color: "#1e88e5" },

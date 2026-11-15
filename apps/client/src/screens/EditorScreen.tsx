@@ -801,8 +801,8 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
                 })}
               </div>
               <p className="muted small">
-                Click hexes to add them to the zone, or click again to remove. A Basic army of 4 cards can need 16
-                hexes; an Advanced army of 600 points up to 32.
+                Click hexes to add them to the zone, or click again to remove. An army of 600 points can need up to 32
+                hexes.
               </p>
               <label className="check">
                 <input

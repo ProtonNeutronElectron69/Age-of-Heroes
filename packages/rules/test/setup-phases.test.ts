@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { applyCommand, createGame, currentDrafter, draftableCards, hex, hexKey, snakeOrder, waitingOn } from "../src";
 import { apply, ctx, deployAll, fieldMap, makeCtx, nextDeploy, setup } from "./fixtures";
 
-function draftGame(players = 3, armySize = 2) {
-  return createGame(setup(players, { mode: "basic", armies: undefined, armySize }), ctx);
+/** A points draft. Test heroes cost 100, so the default 200 gives two picks of heroes each; null is no limit. */
+function draftGame(players = 3, budget: number | null = 200) {
+  return createGame(setup(players, { armies: undefined, budget }), ctx);
 }
 
 describe("snake draft", () => {
@@ -12,12 +13,12 @@ describe("snake draft", () => {
   });
 
   it("starts with a roll-off and follows the snake", () => {
-    const { state, events } = draftGame(3, 2);
+    const { state, events } = draftGame(3);
     expect(state.phase).toBe("draft");
     const started = events.find((e) => e.type === "draftStarted")!;
     expect(started.type === "draftStarted" && started.order[0]).toBe(state.draft!.order[0]);
     const first = state.draft!.order.slice(0, 3);
-    expect(state.draft!.order).toEqual([...first, ...[...first].reverse()]);
+    expect(state.draft!.order.slice(0, 6)).toEqual([...first, ...[...first].reverse()]);
     expect(waitingOn(state)).toEqual([first[0]]);
   });
 
@@ -39,7 +40,7 @@ describe("snake draft", () => {
   });
 
   it("moves to deployment in pick order once every pick is made", () => {
-    let { state } = draftGame(2, 2);
+    let { state } = draftGame(2);
     while (state.phase === "draft") {
       state = apply(state, { type: "draftPick", player: currentDrafter(state)!, cardId: "hero" }).state;
     }
@@ -49,7 +50,7 @@ describe("snake draft", () => {
 
   it("refuses picks that would not fit in the start zone, and skips players with no room", () => {
     // Test zones hold 4 figures: a 3-figure squad fits once, then only 1 more figure.
-    let { state } = draftGame(2, 3);
+    let { state } = draftGame(2, null);
     const first = currentDrafter(state)!;
     state = apply(state, { type: "draftPick", player: first, cardId: "squad" }).state;
     const second = currentDrafter(state)!;
@@ -68,7 +69,7 @@ describe("snake draft", () => {
   });
 
   it("skips a player who concedes during the draft", () => {
-    let { state } = draftGame(3, 2);
+    let { state } = draftGame(3);
     const quitter = state.draft!.order[1]!;
     state = apply(state, { type: "concede", player: quitter }).state;
     while (state.phase === "draft") {

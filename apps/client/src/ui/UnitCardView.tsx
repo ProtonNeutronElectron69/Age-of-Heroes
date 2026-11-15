@@ -1,34 +1,23 @@
-import type { RulesMode, UnitCard } from "@aoh/rules";
+import type { UnitCard } from "@aoh/rules";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { HexCard } from "./HexCard";
 
 interface Props {
   card: UnitCard;
-  /** Which side to show first. */
-  mode: RulesMode;
   /** The owning player's colour. */
   color?: string;
   /** Figures still alive, for squads. */
   alive?: number;
-  /** Wounds on the figure being shown (Advanced). */
+  /** Wounds on the figure being shown. */
   wounds?: number;
 }
 
-/**
- * A unit's hex card with its controls: turn it over between the Basic front and
- * the Advanced back, and click it to see it large.
- */
-export function UnitCardView({ card, mode, color, alive, wounds }: Props) {
-  const [side, setSide] = useState<RulesMode>(mode);
+/** A unit's hex card, with how many of a squad's figures are left. Click it to see it large. */
+export function UnitCardView({ card, color, alive, wounds }: Props) {
   const [large, setLarge] = useState(false);
   const squad = card.figureCount > 1;
-  const face = <HexCard card={card} side={side} ownerColor={color} wounds={mode === "advanced" ? wounds : undefined} />;
-  const flip = (
-    <button type="button" className="link-button" onClick={() => setSide(side === "basic" ? "advanced" : "basic")}>
-      {side === "basic" ? "Show Advanced side" : "Show Basic side"}
-    </button>
-  );
+  const face = <HexCard card={card} ownerColor={color} wounds={wounds} />;
 
   // Escape closes the large card before any other key handler sees it.
   useEffect(() => {
@@ -60,23 +49,19 @@ export function UnitCardView({ card, mode, color, alive, wounds }: Props) {
       >
         {face}
       </div>
-      <div className="unit-card-foot">
-        {alive !== undefined && squad ? (
+      {alive !== undefined && squad && (
+        <div className="unit-card-foot">
           <span className="small">
             {alive} of {card.figureCount} figures left
           </span>
-        ) : (
-          <span />
-        )}
-        {flip}
-      </div>
+        </div>
+      )}
       {large &&
         createPortal(
           <div className="overlay page-overlay card-zoom" role="dialog" aria-modal="true" aria-label={card.name} onClick={() => setLarge(false)}>
             <div className="card-zoom-body" onClick={(e) => e.stopPropagation()}>
               {face}
               <div className="unit-card-foot">
-                {flip}
                 <button type="button" onClick={() => setLarge(false)}>
                   Close
                 </button>

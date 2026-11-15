@@ -936,7 +936,7 @@ legend {
   }
 }
 
-/* ---- Advanced game ---------------------------------------------------- */
+/* ---- Life and engagement ----------------------------------------------- */
 
 .life-badge {
   display: inline-block;
@@ -1274,14 +1274,8 @@ p.bad {
 
 .card-gallery-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 720px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
   gap: 24px 32px;
-}
-
-.card-gallery-pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
 }
 
 /* ---- Display menu (ui/DisplayMenu.tsx) --------------------------------- */

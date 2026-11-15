@@ -104,8 +104,13 @@ describe("cards", () => {
       size: "medium",
       height: 5,
       footprint: "1",
-      basic: { move: 5, range: 1, attack: 3, defense: 3 },
-      advanced: { life: 1, move: 5, range: 1, attack: 3, defense: 3, points: 50, abilities: [] },
+      life: 1,
+      move: 5,
+      range: 1,
+      attack: 3,
+      defense: 3,
+      points: 50,
+      abilities: [],
     };
     expect(() => loadCard({ ...base, unitType: "commonSquad", figureCount: 1 })).toThrow(/at least 2/);
     expect(() => loadCard({ ...base, unitType: "uniqueHero", figureCount: 2 })).toThrow(/exactly 1/);
@@ -137,7 +142,7 @@ describe("cards", () => {
 
   it("keeps heroes and squads, and ranged and melee, within about 60/40 of each other", () => {
     const heroes = CARDS.filter((c) => c.figureCount === 1);
-    const ranged = CARDS.filter((c) => c.advanced.range > 1);
+    const ranged = CARDS.filter((c) => c.range > 1);
     for (const share of [heroes.length / CARDS.length, ranged.length / CARDS.length]) {
       expect(share).toBeGreaterThanOrEqual(0.35);
       expect(share).toBeLessThanOrEqual(0.65);
@@ -147,8 +152,8 @@ describe("cards", () => {
       const units = CARDS.filter((c) => c.faction === f);
       expect(units.some((c) => c.figureCount === 1), `${f} heroes`).toBe(true);
       expect(units.some((c) => c.figureCount > 1), `${f} squads`).toBe(true);
-      expect(units.some((c) => c.advanced.range > 1), `${f} ranged`).toBe(true);
-      expect(units.some((c) => c.advanced.range === 1), `${f} melee`).toBe(true);
+      expect(units.some((c) => c.range > 1), `${f} ranged`).toBe(true);
+      expect(units.some((c) => c.range === 1), `${f} melee`).toBe(true);
     }
   });
 
@@ -162,13 +167,13 @@ describe("cards", () => {
       "pin", "shove", "grapple-line", "last-stand", "fae-step", "will-o-wisp", "regrowth", "volatile-core",
       "war-drums", "corpse-feast", "challenge", "piercing", "mending-hymn",
     ]);
-    for (const c of CARDS) for (const a of c.advanced.abilities) expect(implemented.has(a.id), `${c.id} ${a.id}`).toBe(true);
+    for (const c of CARDS) for (const a of c.abilities) expect(implemented.has(a.id), `${c.id} ${a.id}`).toBe(true);
   });
 
   it("gives heroes 2 to 8 Life, and most squads 1 (tough squads of 2 or 3 figures up to 3)", () => {
     const squads = CARDS.filter((c) => c.figureCount > 1);
     for (const c of CARDS) {
-      const life = c.advanced.life;
+      const life = c.life;
       if (c.figureCount === 1) {
         expect(life, c.id).toBeGreaterThanOrEqual(2);
         expect(life, c.id).toBeLessThanOrEqual(8);
@@ -177,12 +182,12 @@ describe("cards", () => {
         expect(life, c.id).toBeLessThanOrEqual(3);
       }
     }
-    expect(squads.filter((c) => c.advanced.life === 1).length).toBeGreaterThan(squads.length / 2);
+    expect(squads.filter((c) => c.life === 1).length).toBeGreaterThan(squads.length / 2);
   });
 
   it("gives every squad 1 special ability and every hero 2, not counting Flying", () => {
     for (const c of CARDS) {
-      const special = c.advanced.abilities.filter((a) => a.id !== "flying");
+      const special = c.abilities.filter((a) => a.id !== "flying");
       expect(special.length, c.id).toBe(c.figureCount === 1 ? 2 : 1);
       expect(new Set(special.map((a) => a.id)).size, `${c.id} repeats an ability`).toBe(special.length);
     }
@@ -190,8 +195,8 @@ describe("cards", () => {
 
   it("gives every unit original, filled-in rules text on its back", () => {
     for (const c of CARDS) {
-      expect(c.advanced.abilities.length, c.id).toBeGreaterThan(0);
-      for (const a of c.advanced.abilities) expect(a.text.length, `${c.id} ${a.id}`).toBeGreaterThan(20);
+      expect(c.abilities.length, c.id).toBeGreaterThan(0);
+      for (const a of c.abilities) expect(a.text.length, `${c.id} ${a.id}`).toBeGreaterThan(20);
     }
   });
 
@@ -201,7 +206,7 @@ describe("cards", () => {
       const { ctx } = contextFor(m);
       for (const n of ctx.board.playerCounts()) {
         const players = Array.from({ length: n }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}`, color: "#fff" }));
-        const state = createGame({ mode: "advanced", seed: 1, mapId: m.id, players }, ctx).state;
+        const state = createGame({ seed: 1, mapId: m.id, players }, ctx).state;
         for (const p of state.players) {
           for (const card of big) {
             expect(deploymentPlacements(state, p.id, card, ctx).length, `${m.id}, ${n} players, ${p.id}, ${card.id}`).toBeGreaterThan(0);
@@ -258,7 +263,7 @@ describe("start zones that grow to fit the army", () => {
         for (const army of [swarm, giants]) {
           const players = Array.from({ length: n }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}`, color: "#fff" }));
           const armies = Object.fromEntries(players.map((p) => [p.id, army]));
-          const { state, events } = deployAll({ mode: "advanced", seed: 1, mapId: m.id, players, armies }, ctx);
+          const { state, events } = deployAll({ seed: 1, mapId: m.id, players, armies }, ctx);
           const where = `${m.id}, ${n} players, ${army === swarm ? "swarm" : "giants"}`;
           expect(events.filter((e) => e.type === "unitNotDeployed"), where).toEqual([]);
           expect(state.phase, where).toBe("placeTokens");
@@ -283,7 +288,7 @@ describe("start zones that grow to fit the army", () => {
       { id: "p1", name: "A", color: "#fff" },
       { id: "p2", name: "B", color: "#fff" },
     ];
-    const state = createGame({ mode: "advanced", seed: 1, mapId: m.id, players, armies: { p1: ["barrow-legion"], p2: ["barrow-legion"] } }, ctx).state;
+    const state = createGame({ seed: 1, mapId: m.id, players, armies: { p1: ["barrow-legion"], p2: ["barrow-legion"] } }, ctx).state;
     expect(state.zones).toBeUndefined();
     expect(playerZone(state, "p1", ctx)).toEqual(ctx.board.startZone(state.players[0]!.zone));
   });

@@ -6,32 +6,17 @@ This is the working rules specification. The rules engine (`packages/rules`) imp
 
 Age of Heroes is a turn-based tactics game for 2 to 6 players. Each player commands an army of heroes and squads drawn from every era and genre, fighting on a 3D battlefield built from stacked hex pieces.
 
-There are two rule sets, chosen when a game is set up:
-
-| | Basic game | Advanced game |
-|---|---|---|
-| Card side | Front | Back |
-| Stats | Move, Range, Attack, Defense | Life, Move, Range, Attack, Defense, Points, plus attributes and abilities |
-| Army building | Draft a set number of cards | Snake draft within a points budget |
-| Elevation | No combat bonus, no falling damage | Elevation bonuses, falling damage, Height limits on climbing |
-| Line of sight | Forgiving | Strict 3D line of sight |
-| Engagement | None | Engagement and passing strikes |
-| Special abilities | None | Every unit has abilities |
-| Terrain effects | Yes | Yes |
+In short:
+- Each unit card has Life, Move, Range, Attack, Defense, Points, traits and abilities.
+- Armies are built in a snake draft within a points budget.
+- Higher ground gives combat bonuses, long drops cause falling damage, and a figure cannot climb a single step taller than its Height.
+- Line of sight is a strict 3D check, and other figures block it.
+- Figures next to enemies are engaged and draw passing strikes when they leave.
+- Every unit has special abilities, and terrain has its own effects.
 
 ## 2. Unit cards
 
-Every unit has a two-sided card.
-
-### Front (Basic game)
-- **Move**: hexes the figure can travel per turn.
-- **Range**: how many hexes away it can attack. Range 1 means melee only.
-- **Attack**: attack dice rolled.
-- **Defense**: defense dice rolled.
-
-In the Basic game there is no Life stat: **a figure is destroyed by any attack that deals at least 1 wound.** **Assumption.**
-
-### Back (Advanced game)
+Every unit has one card.
 
 Left panel (identity and synergy tags):
 - **Faction**: the warlord or ideology the unit fights for.
@@ -46,7 +31,10 @@ Left panel (identity and synergy tags):
 
 Right panel (stats):
 - **Life**: wounds the figure can take; it is destroyed when its wounds reach its Life. Heroes have 2 to 8 Life. Most squad figures have 1; a few tough squads of only 2 or 3 figures have up to 3 Life per figure.
-- **Move**, **Range**, **Attack**, **Defense**: as on the front, possibly with different values.
+- **Move**: hexes the figure can travel per turn.
+- **Range**: how many hexes away it can attack. Range 1 means melee only.
+- **Attack**: attack dice rolled.
+- **Defense**: defense dice rolled.
 - **Points**: drafting cost.
 - **Abilities**: special powers that change or break the core rules.
 
@@ -85,8 +73,6 @@ A figure that starts its turn in water or swamp can keep moving through it, payi
 
 "Ends its turn" means the end of that unit's activation. Every figure of the unit that is standing on swamp at that point rolls, whether or not it moved. **Assumption.**
 
-All terrain effects apply in both the Basic and the Advanced game. **Assumption.**
-
 ### Scenery
 
 Scenery stands on a single hex, on top of the terrain there:
@@ -98,7 +84,7 @@ Scenery stands on a single hex, on top of the terrain there:
 | **Boulder** | 2 levels |
 
 - No figure can enter or stand on a hex where scenery stands (at that level).
-- Scenery blocks line of sight in both the Basic and the Advanced game, just like terrain. A short wall or boulder can be seen over by taller figures.
+- Scenery blocks line of sight just like terrain. A short wall or boulder can be seen over by taller figures.
 - Scenery must stand on terrain and fit under anything above it.
 - Flying figures fly over scenery but cannot land on it (see Flying in section 7).
 
@@ -108,17 +94,15 @@ Each map has up to 6 start zones. The map says which zones are used for each pla
 ## 4. Setting up a game
 
 Game options:
-- **Rule set**: Basic or Advanced (default Advanced).
 - **Players**: 2 to 6, each in a seat (default 2). Seat order is also the "to the left" order.
 - **Map** (default Proving Grounds).
-- **Army size**: Basic: number of cards per player, 1 to 4 (default 3). Advanced: a points budget per player (default 1000; the menu offers 500, 750, 1000 and 1500), any whole number from 50 to 9999, or **no limit**. With no limit, players draft until they choose to stop or their start zone is full.
-- **Faction-pure mode** (Advanced, optional): every unit in an army must share the faction of that player's first pick. There is no extra reward; it is a theme restriction. **Assumption.**
+- **Army points**: a points budget per player (default 1000; the menu offers 500, 750, 1000 and 1500), any whole number from 50 to 9999, or **no limit**. With no limit, players draft until they choose to stop or their start zone is full.
+- **Faction-pure mode** (optional): every unit in an army must share the faction of that player's first pick. There is no extra reward; it is a theme restriction. **Assumption.**
 - **Round limit**: none (the default), or a number of rounds.
 
 ### Drafting
 Armies are drafted from a shared pool in a **snake draft**: the pick order reverses each round of picks (seat 1, 2, 3, 3, 2, 1, 1, 2, 3 and so on). The first picker is decided by a d20 roll.
-- **Advanced**: each pick must fit within the player's remaining points. A player may press "Done drafting" to stop; a player who cannot afford anything that fits is skipped. The draft ends when nobody can or will pick.
-- **Basic**: each player picks cards until they have the agreed number.
+- **Points**: each pick must fit within the player's remaining points. A player may press "Done drafting" to stop; a player who cannot afford anything that fits is skipped. The draft ends when nobody can or will pick.
 - **Uniques**: a unique unit can be drafted by only one player. Common units can be drafted any number of times by anyone. **Assumption.**
 - **Room to deploy**: an army can never need more hexes than its start zone has (a multi-hex figure needs one hex per footprint hex). The draft does not allow a card that would not fit, and a player with no room left skips their remaining picks. On a map whose zones grow (all premade maps), a zone counts as 40 hexes here, since it grows at deployment.
 
@@ -170,7 +154,7 @@ The revealed unit **activates**. Each of its figures may make one move and one a
 - Moving down costs nothing extra.
 - A figure can only stand where the open space above the ground is at least its Height (this matters under bridges). Climbing needs that much headroom where the figure starts, and dropping down needs it where the figure lands.
 - A figure can move through hexes holding **friendly** figures but not **enemy** figures, and cannot end its move on an occupied hex.
-- **Advanced:** a figure cannot climb a single step taller than its Height. In the Basic game there is no step limit. **Assumption.**
+- A figure cannot climb a single step taller than its Height. **Assumption.**
 
 ### Multi-hex figures
 
@@ -182,24 +166,22 @@ Some figures cover 2 or more hexes (2x1, 3x1 or 2x2 footprints). **Assumption** 
 - **Other figures:** nothing can stand on any of its hexes. It can pass through friendly figures but not enemies, like any figure.
 - **Deploying:** all of its hexes must be in the start zone. It can face any direction.
 
-### Flying (Advanced ability)
+### Flying (ability)
 - A flying figure's move is counted in hexes **straight to where it lands**. Terrain, height, scenery and figures on the way do not matter, and climbing costs nothing.
 - It can land on any free spot within its Move where it fits, at any height (not on scenery or another figure).
 - Terrain affects it only where it lands: lava rolls as usual and swamp hurts at the end of its turn. It never slips on ice and **never takes falling damage**.
 - It still takes passing strikes when it takes off from beside an engaged enemy and lands out of reach.
-- Flying is an ability, so it only exists in the Advanced game. In the Basic game every unit walks.
 
 ## 8. Attacking
 
 ### Range and targets
 - Range is counted in hexes from the attacker to the target. For multi-hex figures, count between the nearest hexes of each.
 - Range 1 means the target must be adjacent.
-- **Advanced:** an attack at range 1 needs the two figures to be engaged (see 9).
+- An attack at range 1 needs the two figures to be engaged (see 9).
 
 ### Line of sight
 Line of sight treats every figure as a token as tall as its Height, whether the board shows it as a figure model or as that token (the Display setting). Each token has an **eye point** (the centre of its top) and a **hit band** (a coloured band around its upper part).
-- **Advanced:** the attacker needs a clear straight line from its eye point to some part of the target's hit band. Terrain and other figures (friend or enemy) block the line. The game checks this automatically; a figure's-eye camera shows the player what the figure sees.
-- **Basic:** the attacker needs a clear line from its eye point to any part of the target's token. Only terrain and scenery block; other figures do not. **Assumption.**
+- The attacker needs a clear straight line from its eye point to some part of the target's hit band. Terrain, scenery and other figures (friend or enemy) block the line. The game checks this automatically; a figure's-eye camera shows the player what the figure sees.
 - The ground each figure stands on never blocks the line, so a figure at the edge of a cliff can see the figure at its foot. A bridge or overhang above either figure still can.
 
 ### Rolling
@@ -211,23 +193,22 @@ Dice:
 - **Attack die**: 3 skull faces, 3 blank faces.
 - **Defense die**: 3 shield faces, 3 blank faces.
 
-### Elevation (Advanced only)
+### Elevation
 Compare the elevations of the surfaces the two figures stand on (for a multi-hex figure, its highest hex).
 - If the attacker is higher: **+1 attack die**, and **another +1** if the difference is at least the defender's Height.
 - If the defender is higher: **+1 defense die**, and **another +1** if the difference is at least the attacker's Height.
 
 ### Wounds and destruction
-- **Basic:** any wound destroys the figure.
-- **Advanced:** wounds stay on the figure; when its wounds reach its Life it is destroyed. A destroyed figure is removed from the battlefield.
+- Wounds stay on the figure; when its wounds reach its Life it is destroyed. A destroyed figure is removed from the battlefield.
 
-## 9. Engagement (Advanced only)
+## 9. Engagement
 
 - Two enemy figures are **engaged** if a hex of one is next to a hex of the other and the difference in those hexes' elevations is less than the Height of the lower figure. **Assumption** (this is the "too high to fight across" rule).
 - An engaged figure may only attack figures it is engaged with. It cannot shoot at distant targets.
 - **Passing strike**: when a step takes a figure out of engagement with one or more enemies, each of those enemies rolls 1 attack die *(tunable)* against it before it leaves. The moving figure does not roll defense. Each skull is 1 wound. A figure destroyed this way falls where it stood. Moving while staying engaged with the same enemy draws no strike.
 - The game marks risky moves (ones that draw passing strikes, fall, or cross lava or ice) in orange, and suggests the safest path to each hex.
 
-## 10. Falling (Advanced only)
+## 10. Falling
 
 Falling is checked on every step of a move. When a figure's highest hex moves down by a drop of:
 - at least its Height: roll 2 attack dice against it, 1 wound per skull, no defense roll *(tunable)*;
@@ -235,9 +216,9 @@ Falling is checked on every step of a move. When a figure's highest hex moves do
 
 Flying figures never take falling damage.
 
-## 11. Abilities (Advanced only)
+## 11. Abilities
 
-Each ability has a name and rules text on the card, and is implemented in code as a set of hooks into the rule steps (before movement, during each step, before an attack roll, after wounds, at the end of a turn, and so on). An ability may change any rule. When an ability contradicts the core rules, the ability wins. Abilities do not exist in the Basic game.
+Each ability has a name and rules text on the card, and is implemented in code as a set of hooks into the rule steps (before movement, during each step, before an attack roll, after wounds, at the end of a turn, and so on). An ability may change any rule. When an ability contradicts the core rules, the ability wins.
 
 General rulings:
 - Numbers in abilities (ranges, dice, bonuses, rolls needed) are on the card data and *tunable*.
@@ -328,8 +309,7 @@ A figure taken by mind control scores its share of its card's points for its new
 
 - **Elimination**: when a player has no figures left, they are out. The last player with figures on the battlefield wins.
 - **Round limit** (optional): when the last round ends, the player with the highest score wins. Ties share the win.
-  - Advanced score: the points of every figure still on the battlefield. Each squad figure is worth its share of the card's points (for example 2 of 3 figures left scores 2/3 of the points, rounded down).
-  - Basic score: the number of surviving figures.
+  - Score: the points of every figure still on the battlefield. Each squad figure is worth its share of the card's points (for example 2 of 3 figures left scores 2/3 of the points, rounded down).
 - A player may **concede** at any time. They are out of the game and their remaining turns are skipped.
 
 ## 13. Point costs

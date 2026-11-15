@@ -35,7 +35,6 @@ import {
  * command log. The same code runs in the browser and on a future server.
  */
 
-export const DEFAULT_ARMY_SIZE = 4;
 /** The largest points budget a game can set. */
 export const MAX_BUDGET = 9999;
 
@@ -53,20 +52,17 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
     }
   }
 
-  // The Advanced game drafts by points when a budget is given (null: no limit); otherwise by card count.
-  const pointsDraft = !setup.armies && setup.mode === "advanced" && setup.budget !== undefined;
-  const budget = pointsDraft ? (setup.budget ?? null) : null;
+  // Armies are drafted to a points budget; null (or no budget given) means no limit.
+  const budget = setup.armies ? null : (setup.budget ?? null);
   if (budget !== null && (!Number.isInteger(budget) || budget < 1 || budget > MAX_BUDGET)) {
     throw new RulesError(`The points budget must be a whole number from 1 to ${MAX_BUDGET}`);
   }
   const state: GameState = {
     formatVersion: 1,
     config: {
-      mode: setup.mode,
       seed: setup.seed >>> 0,
       mapId: setup.mapId,
       roundLimit: setup.roundLimit ?? null,
-      armySize: setup.armies || pointsDraft ? null : (setup.armySize ?? DEFAULT_ARMY_SIZE),
       budget,
       factionPure: setup.factionPure ?? false,
     },
@@ -106,12 +102,8 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
       }
     }
     startDeployment(state, events, ctx);
-  } else if (pointsDraft) {
-    startDraft(state, null, events);
   } else {
-    const size = state.config.armySize!;
-    if (!Number.isInteger(size) || size < 1) throw new RulesError("Army size must be at least 1 card");
-    startDraft(state, size, events);
+    startDraft(state, events);
   }
   return { state, events };
 }

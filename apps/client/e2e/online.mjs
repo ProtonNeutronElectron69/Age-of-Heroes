@@ -201,8 +201,9 @@ try {
 
   // ---- Lobby --------------------------------------------------------------
   await goOnline(alice, "Alice");
-  await alice.page.getByRole("radio", { name: "Basic" }).click();
-  await alice.page.getByRole("radio", { name: "1 card" }).click();
+  // 100 points: one unit each, for a short game.
+  await alice.page.getByLabel("Points per player").fill("100");
+  await alice.page.getByLabel("Points per player").blur();
   await alice.page.getByRole("radio", { name: "5 rounds" }).click();
   await alice.page.getByRole("button", { name: "Create room" }).click();
   const codeEl = alice.page.getByLabel("Room code");

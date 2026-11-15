@@ -2,11 +2,11 @@ import { hexKey } from "../hex";
 import type { UnitCard } from "../schema";
 import { fail } from "./errors";
 import { figureSpots } from "./placement";
-import type { FigureState, GameState, PlayerId, RulesContext, RulesMode, Step, UnitState } from "./types";
+import type { FigureState, GameState, PlayerId, RulesContext, Step, UnitState } from "./types";
 
-/** Stats in effect for the chosen rule set. */
+/** A card's stats, with its Height alongside. */
 export interface EffectiveStats {
-  /** Wounds needed to destroy a figure. In the Basic game any wound destroys. */
+  /** Wounds needed to destroy a figure. */
   readonly life: number;
   readonly move: number;
   readonly range: number;
@@ -15,11 +15,8 @@ export interface EffectiveStats {
   readonly height: number;
 }
 
-export function statsOf(card: UnitCard, mode: RulesMode): EffectiveStats {
-  if (mode === "basic") {
-    return { life: 1, ...card.basic, height: card.height };
-  }
-  const { life, move, range, attack, defense } = card.advanced;
+export function statsOf(card: UnitCard): EffectiveStats {
+  const { life, move, range, attack, defense } = card;
   return { life, move, range, attack, defense, height: card.height };
 }
 
@@ -89,22 +86,17 @@ export function spotsOf(unit: UnitState, figure: FigureState, ctx: RulesContext)
 }
 
 /**
- * Score of what a player still has on the board. Advanced: point value, with
- * squads counting in proportion to their surviving figures. Basic (no point
- * costs): number of surviving figures.
+ * Score of what a player still has on the board: its point value, with
+ * squads counting in proportion to their surviving figures.
  */
 export function scoreOf(state: GameState, player: PlayerId, ctx: RulesContext): number {
   let score = 0;
   for (const unit of unitsOf(state, player)) {
     const alive = unit.figures.filter((f) => !f.destroyed).length;
     if (alive === 0) continue;
-    if (state.config.mode === "basic") {
-      score += alive;
-    } else {
-      // Each figure is worth its share of the card's points (a controlled squad figure counts once).
-      const card = ctx.cards.get(unit.cardId);
-      if (card) score += Math.floor((card.advanced.points * alive) / card.figureCount);
-    }
+    // Each figure is worth its share of the card's points (a controlled squad figure counts once).
+    const card = ctx.cards.get(unit.cardId);
+    if (card) score += Math.floor((card.points * alive) / card.figureCount);
   }
   return score;
 }

@@ -22,12 +22,12 @@ export function snakeOrder(firstRound: readonly PlayerId[], rounds: number): Pla
 /** A points draft goes on until every player has passed or cannot afford anything; this caps its length. */
 const POINTS_DRAFT_ROUNDS = 40;
 
-export function startDraft(state: GameState, armySize: number | null, events: GameEvent[]): void {
+export function startDraft(state: GameState, events: GameEvent[]): void {
   const rng = new Rng(state.rng);
   const { order, rolls } = rollOff(state, rng);
   state.rng = rng.state;
   state.phase = "draft";
-  state.draft = { order: snakeOrder(order, armySize ?? POINTS_DRAFT_ROUNDS), index: 0, rolls, picks: [], passed: [] };
+  state.draft = { order: snakeOrder(order, POINTS_DRAFT_ROUNDS), index: 0, rolls, picks: [], passed: [] };
   events.push({ type: "draftStarted", rolls, order });
 }
 
@@ -35,7 +35,7 @@ export function startDraft(state: GameState, armySize: number | null, events: Ga
 export function pointsSpent(state: GameState, player: PlayerId, ctx: RulesContext): number {
   return state.units
     .filter((u) => u.owner === player)
-    .reduce((n, u) => n + (ctx.cards.get(u.cardId)?.advanced.points ?? 0), 0);
+    .reduce((n, u) => n + (ctx.cards.get(u.cardId)?.points ?? 0), 0);
 }
 
 /** The faction a player is locked into in faction-pure mode, if any. */
@@ -96,7 +96,7 @@ export function pickProblem(state: GameState, ctx: RulesContext, cardId: string,
   const budget = state.config.budget;
   if (budget !== null) {
     const left = budget - pointsSpent(state, player, ctx);
-    if (card.advanced.points > left) return `${card.name} costs ${card.advanced.points} points; you have ${left} left`;
+    if (card.points > left) return `${card.name} costs ${card.points} points; you have ${left} left`;
   }
   const faction = lockedFaction(state, player, ctx);
   if (faction && card.faction !== faction) return `Your army is ${faction} only`;
@@ -143,7 +143,6 @@ export function draftPick(
 /** Points draft only: a player stops drafting for the rest of the draft. */
 export function draftPass(state: GameState, player: PlayerId, events: GameEvent[], ctx: RulesContext): void {
   if (state.phase !== "draft" || !state.draft) fail("The draft is over");
-  if (state.config.armySize !== null) fail("Every player drafts the same number of cards; there is no passing");
   if (currentDrafter(state) !== player) fail("It is not your pick");
   state.draft.passed.push(player);
   events.push({ type: "draftPassed", player });

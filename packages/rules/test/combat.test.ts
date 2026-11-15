@@ -9,10 +9,9 @@ function duel(
   columns: [string, number][],
   positions: Record<string, { q: number; r: number; elevation: number }>,
   activeUnit = "p1:0",
-  mode: "basic" | "advanced" = "basic",
 ): { ctx: RulesContext; state: GameState } {
   const ctx = makeCtx(rowMap(columns), CARDS);
-  const base = createGame(setup(2, { mapId: "test-row", mode }), ctx).state;
+  const base = createGame(setup(2, { mapId: "test-row" }), ctx).state;
   return { ctx, state: turnState(base, activeUnit, positions) };
 }
 
@@ -35,23 +34,14 @@ describe("attacks", () => {
   });
 
   it("cannot target friends or attack twice", () => {
-    const { ctx, state } = duel(flat(4), { "p1:0#1": at(0), "p1:1#1": at(1), "p2:0#1": at(1) });
+    const { ctx, state } = duel(flat(4), { "p1:0#1": at(0), "p1:1#1": at(2), "p2:0#1": at(1) });
     expect(attackProblem(state, "p1:0#1", "p1:1#1", ctx)).toMatch(/own/);
     const r = withOutcome(state, attackCmd("p1:0#1", "p2:0#1"), ctx, () => true);
     expect(applyCommand(r.state, attackCmd("p1:0#1", "p2:0#1"), ctx).ok).toBe(false);
   });
 
-  it("destroys on any wound in the Basic game", () => {
-    const { ctx, state } = duel(flat(4), { "p1:0#1": at(0), "p2:0#1": at(1), "p2:1#1": at(3) });
-    const r = withOutcome(state, attackCmd("p1:0#1", "p2:0#1"), ctx, (ev) =>
-      ev.some((e) => e.type === "attackRolled" && e.wounds === 1),
-    );
-    expect(r.events.some((e) => e.type === "figureDestroyed" && e.figureId === "p2:0#1")).toBe(true);
-    expect(r.state.units.find((u) => u.id === "p2:0")!.figures[0]!.position).toBeNull();
-  });
-
-  it("only destroys when wounds reach Life in the Advanced game", () => {
-    const { ctx, state } = duel(flat(4), { "p1:0#1": at(0), "p2:0#1": at(1), "p2:1#1": at(3) }, "p1:0", "advanced");
+  it("only destroys when wounds reach Life", () => {
+    const { ctx, state } = duel(flat(4), { "p1:0#1": at(0), "p2:0#1": at(1), "p2:1#1": at(3) }, "p1:0");
     const r = withOutcome(state, attackCmd("p1:0#1", "p2:0#1"), ctx, (ev) =>
       ev.some((e) => e.type === "attackRolled" && e.wounds === 2),
     );
@@ -63,18 +53,22 @@ describe("attacks", () => {
     const { ctx, state } = duel(flat(3), { "p1:0#1": at(0), "p2:0#1": at(1) });
     // p2's squad never deployed in this test state, so mark it destroyed.
     for (const f of state.units.find((u) => u.id === "p2:1")!.figures) f.destroyed = true;
+    // One wound from the end of its Life.
+    state.units.find((u) => u.id === "p2:0")!.figures[0]!.wounds = 3;
     const r = withOutcome(state, attackCmd("p1:0#1", "p2:0#1"), ctx, (ev) => ev.some((e) => e.type === "figureDestroyed"));
     expect(r.state.phase).toBe("gameOver");
     expect(r.state.result).toMatchObject({ winners: ["p1"], reason: "elimination" });
   });
 
   it("lets squad figures move and attack in any order, but each moves before its own attack", () => {
-    const { ctx, state } = duel(flat(8), { "p1:1#1": at(0), "p1:1#2": at(1), "p2:0#1": at(4) }, "p1:1");
+    // The squadmate stands behind the shooter, out of its line of sight.
+    const { ctx, state } = duel(flat(8), { "p1:1#1": at(1), "p1:1#2": at(0), "p2:0#1": at(4) }, "p1:1");
     const shot = withOutcome(state, attackCmd("p1:1#1", "p2:0#1"), ctx, (ev) =>
       ev.some((e) => e.type === "attackRolled" && e.wounds === 0),
     ).state;
     // The second figure can still move after its squadmate attacked.
-    const moved = apply(shot, { type: "move", player: "p1", figureId: "p1:1#2", path: [{ hex: { q: 2, r: 0 }, elevation: 1 }] }, ctx);
+    const path = [1, 2].map((q) => ({ hex: { q, r: 0 }, elevation: 1 }));
+    const moved = apply(shot, { type: "move", player: "p1", figureId: "p1:1#2", path }, ctx);
     expect(moved.state.active!.moved).toEqual(["p1:1#2"]);
   });
 });
@@ -82,6 +76,8 @@ describe("attacks", () => {
 describe("swamp", () => {
   it("rolls 1 attack die with no defense against figures ending a turn there", () => {
     const { ctx, state } = duel([["swamp", 1], ["grass", 1], ["grass", 1]], { "p1:0#1": at(0), "p2:0#1": at(2) });
+    // One wound from the end of its Life, so the swamp's wound destroys it.
+    state.units.find((u) => u.id === "p1:0")!.figures[0]!.wounds = 3;
     const hurt = withOutcome(state, { type: "endTurn", player: "p1" }, ctx, (ev) =>
       ev.some((e) => e.type === "attackRolled" && e.source === "swamp" && e.wounds === 1),
     );

@@ -250,7 +250,7 @@ export function deployUnit(
   if (current.unitId !== unitId) fail("Deploy your units in draft order");
   const unit = findUnit(state, unitId) ?? fail(`Unknown unit "${unitId}"`);
   const card = cardOf(unit, ctx);
-  const { height } = statsOf(card, state.config.mode);
+  const { height } = statsOf(card);
 
   const ids = new Set(unit.figures.map((f) => f.id));
   if (placements.length !== ids.size || !placements.every((p) => ids.has(p.figureId))) {

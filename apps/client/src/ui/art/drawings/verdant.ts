@@ -308,14 +308,7 @@ export const VERDANT: Record<string, Drawing> = {
   "briar-sprites": squad([spriteHovering, spriteThrowing, spriteHovering, spriteThrowing]),
   "queen-ilyth": solo(queenIlyth, [26, 174]),
   "mossback-treefolk": squad([treefolk(0), treefolk(14)]),
-  // Prowlers are long and low: on the wide side they stand staggered, not in a row.
-  "duskfang-prowlers": squad([prowler(-10, 12), prowler(8, 0), prowler(0, 6)], {
-    wide: [
-      [46, 176, 0.72],
-      [128, 204, 0.72],
-      [66, 244, 0.84],
-    ],
-  }),
+  "duskfang-prowlers": squad([prowler(-10, 12), prowler(8, 0), prowler(0, 6)]),
   cinderjaw: solo(cinderjaw, [2, 196]),
   "old-rootback": solo(oldRootback, [0, 196]),
 };

@@ -158,10 +158,10 @@ describe("round flow", () => {
     expect(events.at(-1)?.type).toBe("gameOver");
   });
 
-  it("scores surviving figures in the Basic game", () => {
-    const s = placeAll(ready(2, { roundLimit: 1, mode: "basic" }), (p) => allOn(`${p}:0`)).state;
+  it("shares the win when the scores tie", () => {
+    const s = placeAll(ready(2, { roundLimit: 1 }), (p) => allOn(`${p}:0`)).state;
     const end = passRound(s).state;
-    expect(end.result?.scores).toEqual({ p1: 4, p2: 4 });
+    expect(end.result?.scores).toEqual({ p1: 160, p2: 160 });
     expect(end.result?.winners).toEqual(["p1", "p2"]);
   });
 });
