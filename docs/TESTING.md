@@ -60,6 +60,7 @@ The browser tests that show the game board (`full-game`, `online`, `saves`, `edi
 ## Writing a browser test
 
 - **Frames are slow.** CI has no graphics card, so WebGL is drawn in software: the gaming table view draws at about 2 frames a second. Wait for state (a button, `window.__aohUi`, a changed draw count, a settled camera), never for a fixed time or for many frames in a row.
+- **After changing screens, wait for the new canvas's hook:** `window.__aoh?.canvas.isConnected`. The old screen's canvas can still be closing, with its hook in place; a fixed pause before the first click made the editor test fail on `main` once.
 - **Set test mode and reduced motion.** Call `addInitScript(() => { window.__aohTest = true; })` on the page or context before the first `goto`, and pass `reducedMotion: "reduce"` if the test shows the board. Copy the start of an existing test.
 - **Give each browser test its own preview port**, so the jobs can run side by side locally too.
 - **One browser per player** in a test with several players: pages in one browser share one software renderer and slow each other down.

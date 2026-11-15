@@ -15,6 +15,11 @@ declare global {
       project: (q: number, r: number, elevation: number) => { x: number; y: number };
       /** What the last frame drew, and how many frames have been drawn, for performance checks. */
       stats: () => { calls: number; triangles: number; lines: number; frames: number };
+      /**
+       * The canvas this hook belongs to. A closing screen's canvas can shut down after the next
+       * one's has started, so tests wait for `canvas.isConnected` to know the hook is the new screen's.
+       */
+      canvas: HTMLCanvasElement;
     };
     /** Read-only summary of the current turn, for browser tests. */
     __aohUi?: {
@@ -43,6 +48,7 @@ export function TestHook({ offset }: { offset: { x: number; z: number } }) {
         const r = gl.info.render;
         return { calls: r.calls, triangles: r.triangles, lines: r.lines, frames: r.frame };
       },
+      canvas: gl.domElement,
     };
     window.__aoh = hook;
     // A canvas can shut down after the next screen's has started (the menu's backdrop does),
