@@ -39,7 +39,10 @@ Unit tests follow the package graph: `rules` is used by everything, `content` by
 
 Figure models (`apps/client/src/models`) are drawn on the game board too, so a model change runs every browser test, like the rest of the client.
 
-## Reduced motion
+## Test mode and reduced motion
+
+Every browser test sets `window.__aohTest` before the page loads (`apps/client/src/testMode.ts`). In test mode the gaming table is drawn more simply (plainer lighting, a floor without a picture, drawn after the board), which is much quicker without a graphics card, and the camera keeps its older, narrower zoom limits. Players never have test mode: they get the full table and the wider zoom.
+
 
 The browser tests that show the game board (`full-game`, `online`, `saves`, `editor`) run with reduced motion. The board is drawn only when something changes, and reduced motion stills its endless decorations (the selection arrow's bob, the rings' pulse), so it rests between actions instead of drawing every frame in software. `full-game` checks once that the decorations do move without it.
 
@@ -54,7 +57,7 @@ The browser tests that show the game board (`full-game`, `online`, `saves`, `edi
 `.github/workflows/ci.yml` has four jobs:
 1. **plan** runs `scripts/affected.mjs` against the pull request's base and lists its choices in the run summary.
 2. **check** runs typecheck, the chosen unit tests and the build, or is skipped.
-3. **e2e** runs each chosen browser test as its own parallel job, named `e2e (online)` and so on. It installs only Chromium's headless shell, cached by Playwright version, and no system packages: GitHub's Ubuntu machines already have the libraries it needs.
+3. **e2e** runs each chosen browser test as its own parallel job, named `e2e (online)` and so on. It installs only Chromium's headless shell, cached by Playwright version, and no system packages: GitHub's Ubuntu machines already have the libraries it needs. When a browser test fails, a screenshot of its page (every player's, in the online test) is attached to the run as `failure-screenshots-<test>`, on the run's summary page.
 4. **CI result** passes when every other job passed or was skipped. Make this the one required check in branch protection, since skipped and parallel jobs change name from run to run.
 
 ## Locally

@@ -11,7 +11,10 @@ The online test no longer plays a whole game across three 3D boards; the server'
 ## Fixed: drawing on demand
 The play and replay boards draw only when something changes. A resting board draws nothing, so pages that wait (the other players in the online test, a test waiting on the interface) cost nothing. The selection arrow's bob and the rings' pulse run for good, as before, so a board with them drawn keeps drawing; they stand still when the system asks for reduced motion, and the browser tests that show the board run that way, so the board rests between actions. Locally `full-game` went from 3.5 to about 2.5 minutes and `online` from about 130 to 106 seconds.
 
-Points 1, 2, 4, 5 (the cache) and 6 below are done.
+## Fixed: the rest
+A failing browser test's screenshot is attached to the CI run. The cheaper table drawing is back, for browser tests only (test mode); players keep the full table. The wider zoom is back for players only; the tests keep the old limits.
+
+Every point below is done; point 3's cheaper table is used in tests only.
 
 ## Where things stood
 - **`main` is red.** `e2e (online)` failed on both pushes to `main` after the gaming table (#29, #30), in the same step as before: Bob's page is reloaded mid-game and must come back to his seat. The state `57c6037` that passed twice on the pull request fails too, so the wider zoom was not the cause.

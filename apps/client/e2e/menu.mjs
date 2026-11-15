@@ -5,6 +5,7 @@ import { chromium } from "playwright";
 import { preview } from "vite";
 
 const shots = process.env.E2E_SCREENSHOTS;
+const failureShots = process.env.E2E_FAILURE_SCREENSHOTS ?? shots;
 const STYLES = ["War Table", "Atlas", "Banner Hall", "Hex Command"];
 const CHOICES = ["Play on this device", "Play online", "Continue", "Saved games", "Watch a replay", "Map editor", "Unit gallery"];
 
@@ -19,8 +20,17 @@ const browser = await chromium.launch({
 });
 const errors = [];
 
+/** The page opened last, for a screenshot if the test fails. */
+let lastPage = null;
+
 async function open(viewport) {
-  const page = await (await browser.newContext({ viewport })).newPage();
+  const context = await browser.newContext({ viewport });
+  // Test mode (src/testMode.ts): a simpler gaming table to draw, and the narrower zoom limits.
+  await context.addInitScript(() => {
+    window.__aohTest = true;
+  });
+  const page = await context.newPage();
+  lastPage = page;
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(url);
@@ -92,6 +102,9 @@ try {
 
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(`Menu test passed: all ${STYLES.length} styles fit at three window sizes, and the chosen style is kept.`);
+} catch (err) {
+  if (failureShots && lastPage) await lastPage.screenshot({ path: `${failureShots}/menu-failure.png` }).catch(() => {});
+  throw err;
 } finally {
   await browser.close();
   await new Promise((resolve) => server.httpServer.close(resolve));

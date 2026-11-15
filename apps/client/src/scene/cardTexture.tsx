@@ -2,6 +2,7 @@ import type { UnitCard } from "@aoh/rules";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { CanvasTexture, SRGBColorSpace, type Texture } from "three";
+import { TEST_MODE } from "../testMode";
 import { factionTheme } from "../ui/factionThemes";
 import { HexCard } from "../ui/HexCard";
 
@@ -69,7 +70,8 @@ function paint(card: UnitCard, ownerColor: string): Promise<Texture> {
           canvas.getContext("2d")!.drawImage(image, 0, 0, canvas.width, canvas.height);
           const texture = new CanvasTexture(canvas);
           texture.colorSpace = SRGBColorSpace;
-          texture.anisotropy = 4;
+          // Texture sharpening is left out for browser tests, which draw without a graphics card.
+          if (!TEST_MODE) texture.anisotropy = 4;
           resolve(texture);
         };
         image.onerror = () => reject(new Error(`The card picture for ${card.id} did not load`));

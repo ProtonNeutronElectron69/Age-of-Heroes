@@ -4,6 +4,7 @@ import { chromium } from "playwright";
 import { preview } from "vite";
 
 const shots = process.env.E2E_SCREENSHOTS;
+const failureShots = process.env.E2E_FAILURE_SCREENSHOTS ?? shots;
 
 function fail(message) {
   throw new Error(message);
@@ -15,6 +16,10 @@ const browser = await chromium.launch({
   args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
 });
 const context = await browser.newContext({ viewport: { width: 1400, height: 860 } });
+// Test mode (src/testMode.ts): a simpler gaming table to draw, and the narrower zoom limits.
+await context.addInitScript(() => {
+  window.__aohTest = true;
+});
 const page = await context.newPage();
 const errors = [];
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
@@ -89,6 +94,9 @@ try {
 
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(`Models test passed: ${count} units drawn on their bases, in every colour scheme.`);
+} catch (err) {
+  if (failureShots) await page.screenshot({ path: `${failureShots}/models-failure.png` }).catch(() => {});
+  throw err;
 } finally {
   await browser.close();
   await new Promise((resolve) => server.httpServer.close(resolve));
