@@ -15,7 +15,6 @@ export function hex(q: number, r: number): Hex {
   return { q: q + 0, r: r + 0 };
 }
 
-export const ORIGIN: Hex = hex(0, 0);
 
 /** The six neighbour offsets, ordered counter-clockwise starting East. */
 export const DIRECTIONS: readonly Hex[] = [

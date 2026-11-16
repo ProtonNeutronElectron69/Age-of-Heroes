@@ -37,9 +37,6 @@ export function rollOff(state: GameState, rng: Rng): { order: PlayerId[]; rolls:
   }
 }
 
-/** Initiative is a roll-off among the players still in the game. */
-export const rollInitiative = rollOff;
-
 /** Begin a new round: everyone places activation tokens in secret. */
 export function startRound(state: GameState, events: GameEvent[]): void {
   state.round += 1;

@@ -5,7 +5,7 @@ import {
   createGame,
   deepClone,
   replayGame,
-  rollInitiative,
+  rollOff,
   viewFor,
   waitingOn,
   type Command,
@@ -93,7 +93,7 @@ describe("initiative", () => {
   it("passes to the left from the highest roller", () => {
     const state = ready(5);
     for (let seed = 0; seed < 50; seed++) {
-      const { order, rolls } = rollInitiative(state, new Rng(seed));
+      const { order, rolls } = rollOff(state, new Rng(seed));
       const first = state.players.findIndex((p) => p.id === order[0]);
       expect(order).toEqual([0, 1, 2, 3, 4].map((i) => state.players[(first + i) % 5]!.id));
       const winner = rolls.find((r) => r.player === order[0])!.values;
@@ -109,7 +109,7 @@ describe("initiative", () => {
     const state = ready(6);
     let sawReroll = false;
     for (let seed = 0; seed < 300 && !sawReroll; seed++) {
-      sawReroll = rollInitiative(state, new Rng(seed)).rolls.some((r) => r.values.length > 1);
+      sawReroll = rollOff(state, new Rng(seed)).rolls.some((r) => r.values.length > 1);
     }
     expect(sawReroll).toBe(true);
   });

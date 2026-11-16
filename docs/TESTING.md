@@ -7,7 +7,7 @@ Checks run only for the parts of the game a change can affect. The browser tests
 | Check | What it covers | Time |
 |---|---|---|
 | Typecheck and build | Every package compiles, and the client and server build | under a minute |
-| Unit tests | Vitest, by package: `packages/rules`, `packages/content`, `packages/protocol`, `apps/server`, `apps/client` (the figure models and the table layout) | seconds |
+| Unit tests | Vitest, by package: `packages/rules`, `packages/content`, `packages/protocol`, `apps/server`, `apps/client` (the figure models, the table layout and the 3D dice) | seconds |
 | Browser tests | Seven Playwright scripts in `apps/client/e2e`: `full-game`, `editor`, `saves`, `online`, `models`, `gallery`, `menu` | under a minute to about 2 minutes each in CI; `full-game` is the longest, at about 2.5 to 4 |
 
 ## The browser tests
@@ -15,7 +15,7 @@ Checks run only for the parts of the game a change can affect. The browser tests
 | Test | What it plays through |
 |---|---|
 | `full-game` | A hot-seat game: the draft's battlefield view (opening first, the hex tooltip, coming back mid-draft), draft, deployment (models and tokens, the three tables, the board coming to rest), the initiative d20s, dragging a figure, H, the hover card, eye view, the camera following (and its three Display boxes), the hex tooltip on a middle click, squads, the attack scene and dice only (then **Dice rolls** set to None), the dice panel; then each turn is ended at once until the 5-round limit and the game-over screen |
-| `online` | Through the real game server, one browser per player: the lobby, a spectator, both players drafting at the same moment (a taken unit greyed out on the other screen), a reload during the draft, initiative waiting for both players' rolls before showing any result, a ping from Alice on the draft map reaching Bob and the spectator, and one in play reaching Bob (`window.__aohPingsHeard`), a few turns, host-only saving, leaving (which concedes), the replay, and resuming in a new room. Whole online games are played by the server's unit tests |
+| `online` | Through the real game server, one browser per player: the lobby and a spectator; the open draft (both players picking at the same moment, a taken unit greyed out on the other screen, a reload mid-draft); pings on the draft map and in play (`window.__aohPingsHeard`); initiative waiting for both players' rolls before showing any result; a few turns, host-only saving, leaving (which concedes), the replay, and resuming in a new room. Whole online games are played by the server's unit tests |
 | `saves` | Saving a hot-seat game and bringing it back from the saved games list, after a reload, and from a file; the file in the replay viewer |
 | `editor` | Building a map, exporting and importing it, and playing on it |
 | `models` | Every figure model on the model page |

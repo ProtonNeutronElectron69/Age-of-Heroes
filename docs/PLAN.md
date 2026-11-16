@@ -10,11 +10,7 @@ The core game is complete and playable, online too: the game server runs on Rend
 - **On hold (Phase 6):** a computer opponent, and a tutorial.
 - **Phase 7, figure models:** stage 1 is done. Every unit has a low polygon model in flat colour, drawn on the board in place of tokens (the Display button or the T key switches back to tokens and picks one of three colour schemes; see every model at `?models`). **Next, when the owner asks:** later stages add detail and colour.
 - **On hold (Phase 7):** sound and music, terrain and scenery art.
-- **Phase 8, tabletop feel:** done. The board stands on a gaming table with the unit cards round it; figures hop, can be dragged, and jump with H; the camera zooms in closer and pulls back further; attacks play a scene with 3D dice, and each player clicks a d20 for initiative.
-- **Attack roll pacing:** done. The attack dice tumble and bounce longer and land first, then the defense dice roll the same way; the result stays 30% longer before the show closes (a click still closes it).
-- **Online pings:** done. P points at the spot under the pointer for everyone in the game, in play and on the draft map, with an arrow in the player's colour; once a second per player.
-- **Online fixes:** done. Online drafts are open: everyone picks at once and a taken unit greys out for everyone; online initiative waits for every player's roll before any result is made or shown.
-- **Small updates:** done. The camera's follow is three Display boxes (Auto pan, Auto rotate, Auto zoom), sits about a fifth further back, and waits for a moving figure to land; the draft opens on the battlefield with every start zone marked, and View map brings it back at any time; a middle click on a hex shows its terrain, elevation and rules.
+- **Done lately:** Phase 8 (the tabletop feel) and Phase 9 (playtest updates, below).
 
 ### Ideas, not scheduled
 - More premade maps.
@@ -36,6 +32,8 @@ Each phase or drop is one pull request from a working branch, with CI green befo
 | Table | The board stands in the middle of a square gaming table sized to the board and the unit cards, so a board of any shape sits well on it, in one of three styles each player picks for their own screen. Cards lie on a side of the table chosen by where their player's start zone lies, and face that side; up to four players get a side each, and five or six share, two to a side, as they would for a player sitting there. A card is seven hexes of the board's own size, so its figures fit on it: they stand on it before deployment and are stood back on it once destroyed. The table does not change the camera |
 | Art | Unit cards are seven-hex cards in faction colours. Unit art is drawn, not rendered from models, in an ink and colour style; every unit has a drawing and a red and grey hit zone picture. Otherwise none for now: units are figure models on the board (or tokens as tall as their Height, if a player prefers), terrain is flat colour, hovering or clicking a figure shows its card, and a red arrow marks the figure chosen to act. Figure models are built in code from a few solid shapes, like the drawings, and arrive in stages: size and shape first, detail later. A figure stands on a round base a little smaller than its hex; a larger footprint gets one base with a lobe on each hex, thinner where it passes from hex to hex. Figure and base together are as tall as the card's Height; in a squad, a figure that kneels or crouches may be shorter. Flying figures stand on flight stands, as tabletop miniatures do. The body may reach a fifth of a hex past its hexes; a unit that reaches further gets a larger footprint on its card. Bases are light brown, with a ring of colour round the bevelled edge. Model and ring are coloured in one of three schemes: faction models with player rings, player models with faction rings, or every model in the same medium grey with player rings. In every scheme only the ring takes the second colour; the rest of the base stays brown. The Brass Hussars stay at Height 6 for now, on horses a little under life size, rather than growing to Height 7. On the board a single-hex figure faces the nearest enemy figure, across a side of its hex; a larger figure faces along its base. Line of sight keeps using the token shape. Sound and the rest of the art come in Phase 7 |
 | Unit roster | Original units only, across all eras and myths. Squads have 1 special ability and heroes 2 (Flying not counted); heroes have 2 to 8 Life, most squads 1 (tough squads of 2 or 3 figures up to 3). Heroes and squads, and ranged and melee, stay within about 60/40. Point costs set with the balance model |
+| Drafting | Hot-seat: a snake draft; unique units once per game, common units any number of times. Online: an open draft, everyone picking at once, each card once per game. Either way the d20 roll-off winner deploys first; after an open draft players deploy one unit each in turn |
+| Online extras | Initiative waits until every player has rolled, so nobody sees a result early. Players can ping a spot (P); pings are passed on by the server outside the game and never saved or replayed. Hot-seat games and older saves keep the automatic roll |
 | Involvement | Hands-off: work arrives as pull requests with a playable build; the owner decides when to merge |
 
 ## Phases
@@ -229,5 +227,16 @@ The game should feel like a game played on a table. Nothing here changes the rul
   - [x] The camera zooms in close enough to look a figure in the face and pulls back far enough to see the whole table in its room (#34)
 - [x] Part 2: dice
   - [x] An attack zooms in on the fight: the camera glides to the two figures and both unit cards and models come up over a dimmed board, then 3D attack and defense dice tumble and land on the faces the rules rolled. A command with several rolls (an area attack) plays them in turn. A click skips it, and the dice panel keeps the result afterwards. **Dice rolls** under Display chooses the full scene, dice only (just the 3D dice, in a small tray), or none
-  - [x] Initiative: each player clicks a d20, which tumbles and lands on their roll; a tie rolls again. Online, each device rolls its own player's die and the others roll by themselves. Skip shows every result at once
-  - [x] The engine still rolls everything in one step; only the showing changes. With reduced motion the dice appear already landed. Replays show the dice panel as before
+  - [x] Initiative: each player clicks a d20, which tumbles and lands on their roll; a tie rolls again. Skip shows every result at once. Online, each player clicks their own die, and since #41 no die is rolled until everyone has
+  - [x] Apart from online initiative (#41), the engine rolls everything in one step; only the showing changes. With reduced motion the dice appear already landed. Replays show the dice panel as before
+
+### Phase 9: Playtest updates (done, #40 to #45)
+Small changes asked for after playing, online games especially.
+- [x] Camera follow: three boxes under Display (Auto pan, Auto rotate, Auto zoom), the follow about a fifth further back, and every glide waits for a moving figure to land (#40)
+- [x] The draft opens on the battlefield, with each start zone in its player's colour and name; **View map** brings it back at any time (#40)
+- [x] A middle click on a hex shows its terrain, elevation, headroom, special rules, scenery and start zone (#40)
+- [x] Online drafts are open: everyone picks at once, each card once per game, and a taken card greys out for everyone with who took it (#41)
+- [x] Online initiative waits for every player's roll before any result is made or shown (#41)
+- [x] Browser tests: a "Known pitfalls" log in [TESTING.md](TESTING.md), and a long timeout for clicks that open or close a 3D view (#42)
+- [x] Online pings: P points at the spot under the pointer for everyone, in play (#43) and on the draft map (#44)
+- [x] Attack roll pacing: the attack dice tumble longer and land first, then the defense dice; the result stays 30% longer (#45)

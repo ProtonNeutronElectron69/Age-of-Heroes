@@ -8,7 +8,7 @@ Age of Heroes is a turn-based tactics game for 2 to 6 players. Each player comma
 
 In short:
 - Each unit card has Life, Move, Range, Attack, Defense, Points, traits and abilities.
-- Armies are built in a snake draft within a points budget.
+- Armies are drafted within a points budget: a snake draft on one device, an open draft online.
 - Higher ground gives combat bonuses, long drops cause falling damage, and a figure cannot climb a single step taller than its Height.
 - Line of sight is a strict 3D check, and other figures block it.
 - Figures next to enemies are engaged and draw passing strikes when they leave.
@@ -103,11 +103,11 @@ Game options:
 ### Drafting
 Armies are drafted from a shared pool. Hot-seat games use a **snake draft** (online games use an open draft; see Playing online): the pick order reverses each round of picks (seat 1, 2, 3, 3, 2, 1, 1, 2, 3 and so on). The first picker is decided by a d20 roll.
 - **Points**: each pick must fit within the player's remaining points. A player may press "Done drafting" to stop; a player who cannot afford anything that fits is skipped. The draft ends when nobody can or will pick.
-- **Uniques**: a unique unit can be drafted by only one player. Common units can be drafted any number of times by anyone. **Assumption.**
+- **Uniques**: a unique unit can be drafted by only one player. Common units can be drafted any number of times by anyone (online, every unit can be drafted only once; see Playing online). **Assumption.**
 - **Room to deploy**: an army can never need more hexes than its start zone has (a multi-hex figure needs one hex per footprint hex). The draft does not allow a card that would not fit, and a player with no room left skips their remaining picks. On a map whose zones grow (all premade maps), a zone counts as 40 hexes here, since it grows at deployment.
 
 ### Deployment
-After the draft, units are deployed one at a time in the order they were drafted. (With preset armies, players take turns round the table, one unit each.) Each figure goes on a free spot in its owner's start zone where it fits.
+After the draft, units are deployed one at a time in the order they were drafted (after an open draft online, one unit each in turn; see Playing online). (With preset armies, players take turns round the table, one unit each.) Each figure goes on a free spot in its owner's start zone where it fits.
 - **Growing zones**: on maps that allow it (all premade maps; custom maps choose in the editor), each start zone grows before deployment until it has a little more room than the army needs: the hexes the army covers, plus a quarter more, plus 2. Players take turns adding one hex at a time, in seat order. A zone grows into free, standable neighbouring hexes, keeping close to its own centre and away from other zones, and never takes another player's hexes. If a unit still has no spot where it fits when its turn to deploy comes, the zone grows again, up to 40 more hexes. **Assumption.**
 - **No room**: if a unit cannot be placed at all (a map whose zones do not grow, or a board with no space left), it sits the game out and counts as destroyed. **Assumption.**
 
