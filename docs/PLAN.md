@@ -240,3 +240,4 @@ Small changes asked for after playing, online games especially.
 - [x] Browser tests: a "Known pitfalls" log in [TESTING.md](TESTING.md), and a long timeout for clicks that open or close a 3D view (#42)
 - [x] Online pings: P points at the spot under the pointer for everyone, in play (#43) and on the draft map (#44)
 - [x] Attack roll pacing: the attack dice tumble longer and land first, then the defense dice; the result stays 30% longer (#45)
+- [x] A **Keys** panel under the game log lists the hot keys; click its heading to fold it away, and the choice is remembered
