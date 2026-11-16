@@ -65,7 +65,24 @@ The browser tests that show the game board (`full-game`, `online`, `saves`, `edi
 - **Give each browser test its own preview port**, so the jobs can run side by side locally too.
 - **One browser per player** in a test with several players: pages in one browser share one software renderer and slow each other down.
 - **Keep the heavy 3D work small.** Reload or wait on screens without a 3D board where you can, and leave long games to the unit tests and simulations, which play them in seconds.
+- **Give a click that opens or closes a 3D view a long timeout.** Setting up or tearing down a canvas can keep a page busy for several seconds without a graphics card; the online test's `clickSceneChange` does this, and its 5 s `QUICK` timeout is for ordinary buttons.
 - **Save a screenshot on failure** to `E2E_FAILURE_SCREENSHOTS` (or `E2E_SCREENSHOTS`), as every test does in its `catch`.
+
+## Known pitfalls
+
+A log of browser test failures that came from the test, not the game: what was seen, why, the fix, and the rule it taught. Read it before writing or changing a browser test. When a test fails for a test reason, add a row in the same pull request as the fix, and put a lasting rule in "Writing a browser test" above.
+
+| Pull request | What failed | Why | Fix | Rule |
+|---|---|---|---|---|
+| #29 to #32 | `online`: Bob's page, reloaded mid-game, took 40 to 55 s to answer; the test waited 15 s | A freshly loaded play screen opens at the overview camera, which draws at about 2 frames a second in software. Three boards in one browser slowed each other | One browser per player; the reload moved to the draft, which has no 3D board; a few turns instead of a whole game | Keep the 3D work small: reload or wait on screens without a board, one browser per player |
+| #33 | `full-game` took 9 minutes | It waited for 20 steady frames at a time, at about 2 frames a second, and played every round | Wait for the draw count to change; play to the lowest round limit and end turns at once after the checks | Never wait for many frames in a row; leave long games to the simulations |
+| #33 | Pages that only waited still cost CPU | Every board drew every frame | Draw on demand (`frameloop="demand"`) | A resting board must draw nothing; `full-game` checks it |
+| #34 to #36 | `editor` clicked the board before it was ready, once, on `main` | A fixed 800 ms pause; the menu's closing canvas still held `window.__aoh` | Wait for `window.__aoh?.canvas.isConnected` | After changing screens, wait for the new canvas's hook, never a fixed time |
+| #40 | Draft clicks found no buttons | The draft now opens on the map | Every test that drafts clicks **Go to the draft** first | When a screen opens on a new view, update every test that passes through it (search `e2e` for the screen's heading) |
+| #40 | `steadyCamera` could pass while a glide was still to come | The glide waits for hops to land, and a camera that is waiting looks still | `window.__aoh.cameraBusy()`, which `steadyCamera` also waits for | When the game waits before animating, expose a busy flag for tests |
+| #41 | `online`: "Bob never rolled for initiative" | The Continue click closes the dice's 3D canvas as the first turn starts; in software that kept the page busy for more than the 5 s short timeout, so the click counted as failed although it worked | `clickSceneChange` in `online.mjs`, with a 30 s timeout | Clicks that open or close a 3D view (a dice show, the draft map, a new screen) get the long timeout |
+| #41 | `online`: the draft could end before Bob's reload | With an open draft and 100 points, both players could be finished after one pick each | 150 points, and Bob takes the cheapest unit, so he is still drafting | Make the state a later step needs certain, not likely |
+| #41 | The simulation's seed 9 game (online rules) had no attack | A fair game: one player drafted one unit, stopped, and lost it to terrain in round 2 | Seed 11 instead | When a random game fails a "something happened" check, trace its commands before calling it a bug |
 
 ## Safety nets
 
