@@ -36,6 +36,7 @@ const stepSchema = z.object({
 export const commandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("draftPick"), player: id, cardId: id }),
   z.object({ type: z.literal("draftPass"), player: id }),
+  z.object({ type: z.literal("rollInitiative"), player: id }),
   z.object({
     type: z.literal("deployUnit"),
     player: id,
@@ -86,6 +87,9 @@ const setupSchema = z
     armySize: z.number().int().optional(),
     budget: z.number().int().nullable().optional(),
     factionPure: z.boolean().optional(),
+    /** Online games: everyone drafts at once, and each player rolls their own initiative. Older files leave these out. */
+    draft: z.enum(["snake", "open"]).optional(),
+    initiative: z.enum(["auto", "players"]).optional(),
   })
   .superRefine((s, ctx) => {
     if (s.mode === "basic") ctx.addIssue({ code: "custom", path: ["mode"], message: BASIC_RULES_GONE });

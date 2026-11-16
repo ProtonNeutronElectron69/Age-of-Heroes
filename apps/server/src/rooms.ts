@@ -324,6 +324,9 @@ export class RoomManager {
       players: room.members.map((m, i) => ({ id: m.playerId, name: m.name, color: SEAT_COLORS[i]! })),
       budget: s.budget ?? null,
       factionPure: s.factionPure ?? false,
+      // Online, everyone drafts at once, and nobody's initiative roll is made until every player has rolled.
+      draft: "open",
+      initiative: "players",
     };
     const { state, events } = createGame(setup, room.ctx);
     room.setup = setup;

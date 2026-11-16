@@ -1,4 +1,4 @@
-import { currentDrafter, lockedFaction, pickProblem, playerZone, pointsSpent } from "@aoh/rules";
+import { currentDrafter, drafters, isOpenDraft, lockedFaction, pickProblem, playerZone, pointsSpent } from "@aoh/rules";
 import { useState } from "react";
 import { canControl, dispatch, type Session } from "../session";
 import { Names } from "../describe";
@@ -19,7 +19,21 @@ function shortReason(reason: string): string {
 export function DraftScreen({ session }: { session: Session }) {
   const { state, ctx } = session;
   const names = new Names(state, ctx);
-  const drafter = currentDrafter(state);
+  // A snake draft has one drafter at a time. In an open draft (online games) everyone picks at once:
+  // each device drafts for its own player; a hot-seat screen picks whose army a click adds to.
+  const open = isOpenDraft(state);
+  const stillDrafting = drafters(state);
+  const [chosen, setChosen] = useState<string | null>(null);
+  const drafter = !open
+    ? currentDrafter(state)
+    : session.kind === "online"
+      ? session.me && stillDrafting.includes(session.me)
+        ? session.me
+        : null
+      : chosen && stillDrafting.includes(chosen)
+        ? chosen
+        : (stillDrafting[0] ?? null);
+  const finished = open && session.kind === "online" && session.me !== null && !stillDrafting.includes(session.me);
   const budget = state.config.budget;
   const left = drafter && budget !== null ? budget - pointsSpent(state, drafter, ctx) : null;
   const faction = drafter ? lockedFaction(state, drafter, ctx) : null;
@@ -37,7 +51,9 @@ export function DraftScreen({ session }: { session: Session }) {
             {budget === null
               ? "There is no points limit. Pick until your start zone is full or choose to stop. "
               : `Each player has ${budget} points. Pick until you are out of points or choose to stop. `}
-            The order snakes: it reverses every round of picks.
+            {open
+              ? "Everyone drafts at once, and each unit can be drafted by one player only: a unit someone takes is greyed out for everyone."
+              : "The order snakes: it reverses every round of picks."}
           </p>
         </div>
         <div className="draft-actions">
@@ -46,13 +62,30 @@ export function DraftScreen({ session }: { session: Session }) {
           </button>
           <GameMenu session={session} className="draft-menu" />
         </div>
+        {open && session.kind === "local" && stillDrafting.length > 1 && (
+          <div className="segmented draft-for" role="radiogroup" aria-label="Drafting for">
+            {stillDrafting.map((id) => (
+              <button key={id} type="button" role="radio" aria-checked={drafter === id} className={drafter === id ? "on" : ""} onClick={() => setChosen(id)}>
+                {names.player(id)}
+              </button>
+            ))}
+          </div>
+        )}
+        {open && !drafter && state.phase === "draft" && (
+          <p className="turn-banner">
+            <span>
+              {finished ? "You have finished drafting. " : ""}
+              Waiting for {stillDrafting.map((id) => names.player(id)).join(" and ")} to finish drafting.
+            </span>
+          </p>
+        )}
         {drafter && (
           <p className="turn-banner" style={{ borderColor: names.playerColor(drafter) }}>
             <span className="swatch" style={{ background: names.playerColor(drafter) }} />
             <span>
               {myPick ? (
                 <>
-                  <strong>{names.player(drafter)}</strong>, choose a unit.
+                  <strong>{names.player(drafter)}</strong>, {open ? "choose your units." : "choose a unit."}
                 </>
               ) : (
                 <>
@@ -78,10 +111,16 @@ export function DraftScreen({ session }: { session: Session }) {
         ) : (
           <section className="card-grid" aria-label="Available units">
             {[...ctx.cards.values()].map((card) => {
-              const reason = drafter ? pickProblem(state, ctx, card.id, drafter) : "The draft is over";
+              const reason = drafter
+                ? pickProblem(state, ctx, card.id, drafter)
+                : open
+                  ? (pickProblem(state, ctx, card.id) ?? "Not drafting")
+                  : "The draft is over";
               const ok = reason === null;
+              // Who took a card nobody else may now draft.
+              const takenBy = reason && /already been drafted/.test(reason) ? state.units.find((u) => u.cardId === card.id)?.owner : undefined;
               return (
-                <div key={card.id} className={`draft-card ${ok ? "" : "unavailable"}`}>
+                <div key={card.id} className={`draft-card ${ok ? "" : "unavailable"}`} data-points={card.points}>
                   <UnitCardView card={card} />
                   <button
                     type="button"
@@ -89,7 +128,7 @@ export function DraftScreen({ session }: { session: Session }) {
                     disabled={!ok || !drafter || !myPick || session.pending}
                     onClick={() => drafter && dispatch({ type: "draftPick", player: drafter, cardId: card.id })}
                   >
-                    {ok ? `Draft ${card.name}` : shortReason(reason)}
+                    {ok ? `Draft ${card.name}` : takenBy ? `Drafted by ${names.player(takenBy)}` : shortReason(reason)}
                   </button>
                 </div>
               );
@@ -107,6 +146,7 @@ export function DraftScreen({ session }: { session: Session }) {
                 <h3>
                   <span className="swatch" style={{ background: p.color }} /> {p.name}
                   <span className="muted small"> {points} points</span>
+                  {open && state.draft?.passed.includes(p.id) && <span className="muted small">, done</span>}
                 </h3>
                 {onMap && (
                   <p className="muted small">

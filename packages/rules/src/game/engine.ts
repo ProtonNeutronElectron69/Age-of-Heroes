@@ -6,8 +6,8 @@ import { advanceDeployment, currentDeployment, deployUnit, startDeployment } fro
 import {
   continueDraft,
   createUnit,
-  currentDrafter,
   draftPass,
+  drafters,
   draftPick,
   spaceNeeded,
   startDraft,
@@ -65,6 +65,8 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
       roundLimit: setup.roundLimit ?? null,
       budget,
       factionPure: setup.factionPure ?? false,
+      draft: setup.draft ?? "snake",
+      initiative: setup.initiative ?? "auto",
     },
     rng: setup.seed >>> 0,
     round: 0,
@@ -123,6 +125,9 @@ export function applyCommand(state: GameState, command: Command, ctx: RulesConte
       case "draftPass":
         draftPass(next, command.player, events, ctx);
         break;
+      case "rollInitiative":
+        rollForInitiative(next, command.player, events, ctx);
+        break;
       case "deployUnit":
         deployUnit(next, command.player, command.unitId, command.placements, events, ctx);
         break;
@@ -176,16 +181,16 @@ export function replayGame(
 /** Who the game is waiting on, or null when it is over. */
 export function waitingOn(state: GameState): PlayerId[] {
   switch (state.phase) {
-    case "draft": {
-      const p = currentDrafter(state);
-      return p ? [p] : [];
-    }
+    case "draft":
+      return drafters(state);
     case "deploy": {
       const d = currentDeployment(state);
       return d ? [d.player] : [];
     }
     case "placeTokens":
       return state.players.filter((p) => !p.eliminated && !state.tokens[p.id]).map((p) => p.id);
+    case "initiative":
+      return state.players.filter((p) => !p.eliminated && !(state.initiativeReady ?? []).includes(p.id)).map((p) => p.id);
     case "turns":
       return state.active ? [state.active.player] : [];
     case "gameOver":
@@ -219,6 +224,15 @@ function placeTokens(
   maybeStartTurns(state, events, ctx);
 }
 
+function rollForInitiative(state: GameState, player: PlayerId, events: GameEvent[], ctx: RulesContext): void {
+  if (state.phase !== "initiative") fail("Initiative is not being rolled now");
+  const ready = (state.initiativeReady ??= []);
+  if (ready.includes(player)) fail("You have already rolled for initiative");
+  ready.push(player);
+  events.push({ type: "initiativeReady", player });
+  maybeStartTurns(state, events, ctx);
+}
+
 function endTurn(state: GameState, player: PlayerId, events: GameEvent[], ctx: RulesContext): void {
   if (state.phase !== "turns" || !state.active) fail("No turn is in progress");
   if (state.active.player !== player) fail("It is not your turn");
@@ -249,6 +263,7 @@ function concede(state: GameState, player: PlayerId, events: GameEvent[], ctx: R
       advanceDeployment(state, events, ctx);
       break;
     case "placeTokens":
+    case "initiative":
       maybeStartTurns(state, events, ctx);
       break;
     case "turns":

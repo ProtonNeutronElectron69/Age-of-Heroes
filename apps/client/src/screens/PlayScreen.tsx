@@ -283,7 +283,12 @@ export function PlayScreen({ session }: { session: Session }) {
   useEffect(() => {
     if (display.dice === "none") setShow(null);
   }, [display.dice]);
+  // Online, each player rolls their own initiative and the rules roll once everyone has (`initiative: "players"`).
+  const together = state.config.initiative === "players";
+  /** The event count when the initiative dice were last closed, so a closed show does not open again. */
+  const closedInitiative = useRef(-1);
   const closeShow = () => {
+    closedInitiative.current = session.events.length;
     setShow(null);
     if (pendingFollow.current) followFigure(pendingFollow.current);
     pendingFollow.current = null;
@@ -294,6 +299,18 @@ export function PlayScreen({ session }: { session: Session }) {
     setAttackMode(null);
   }, [selected, turnKey]);
   useEffect(() => setAiming(null), [selected, turnKey, attackMode, state]);
+  // With the dice show off, this device rolls for its players at once.
+  useEffect(() => {
+    if (!together || state.phase !== "initiative" || display.dice !== "none" || busy) return;
+    const next = state.players.find((p) => !p.eliminated && !(state.initiativeReady ?? []).includes(p.id) && canControl(session, p.id));
+    if (next) dispatch({ type: "rollInitiative", player: next.id });
+  }, [state, display.dice, busy]);
+  // The initiative dice: waiting for every roll, then the result. The roll arrives a moment before the show
+  // records it, so read it from the last events meanwhile and keep the same dice on screen throughout.
+  const freshInitiative = together && closedInitiative.current !== session.events.length ? initiativeIn(session.lastEvents) : null;
+  const initiativeEvent = show?.kind === "initiative" ? initiativeIn(show.events) : freshInitiative;
+  const initiativeOpen =
+    display.dice !== "none" && (together ? state.phase === "initiative" || initiativeEvent !== null : show?.kind === "initiative");
   const specials = activeCard ? specialActions(activeCard) : [];
   const modeKind = specials.find((s) => s.id === attackMode)?.kind ?? null;
   const blast = activeCard && attackMode ? areaAttackOf(activeCard, attackMode) : undefined;
@@ -810,6 +827,20 @@ export function PlayScreen({ session }: { session: Session }) {
           </section>
         )}
 
+        {state.phase === "initiative" && !initiativeOpen && (
+          <section className="panel" aria-label="Initiative">
+            <h2>Initiative</h2>
+            <p className="muted small">
+              Waiting for{" "}
+              {state.players
+                .filter((p) => !p.eliminated && !(state.initiativeReady ?? []).includes(p.id))
+                .map((p) => p.name)
+                .join(", ")}{" "}
+              to roll for initiative.
+            </p>
+          </section>
+        )}
+
         {active && activeUnit && (
           <section className="panel" aria-label="Current turn">
             <h2>Turn {active.token}</h2>
@@ -960,10 +991,17 @@ export function PlayScreen({ session }: { session: Session }) {
       {show?.kind === "attack" && display.dice !== "none" && (
         <AttackShow key={show.stamp} rolls={attackRollsIn(show.events)} mode={display.dice} state={state} ctx={ctx} names={names} onClose={closeShow} />
       )}
-      {show?.kind === "initiative" && display.dice !== "none" && (
+      {initiativeOpen && (
         <InitiativeShow
-          key={show.stamp}
-          event={initiativeIn(show.events)!}
+          key={together ? `round-${state.round}` : show?.stamp}
+          event={initiativeEvent}
+          players={state.players
+            .filter((p) => !p.eliminated)
+            .sort((a, b) => a.seat - b.seat)
+            .map((p) => p.id)}
+          ready={state.initiativeReady ?? []}
+          onRoll={together ? (player) => dispatch({ type: "rollInitiative", player }) : undefined}
+          busy={busy}
           names={names}
           mayRoll={(p) => session.kind !== "online" || p === session.me}
           onClose={closeShow}

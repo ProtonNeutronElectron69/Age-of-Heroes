@@ -2,7 +2,7 @@ import { MAPS, contextFor } from "@aoh/content";
 import { stateFromView, type ServerMessage } from "@aoh/protocol";
 import {
   currentDeployment,
-  currentDrafter,
+  drafters,
   deploymentPlacements,
   draftableCards,
   livingUnitsOf,
@@ -200,9 +200,12 @@ describe("a full online game", () => {
     await Promise.all(started);
     const current = (): GameState => stateFromView(host.client.lastView()!);
 
+    // Online, everyone drafts at once.
+    expect(current().config.draft).toBe("open");
+    expect(drafters(current())).toEqual(["p1", "p2"]);
     // Acting for someone else is refused.
-    const drafter = currentDrafter(current())!;
-    const other = drafter === "p1" ? "p2" : "p1";
+    const drafter = "p1";
+    const other = "p2";
     const refused = clients.get(other)!.next("error");
     clients.get(other)!.send({ t: "command", command: { type: "draftPick", player: drafter, cardId: "sentinel-k7" } });
     expect((await refused).message).toMatch(/only act for yourself/);
@@ -210,7 +213,7 @@ describe("a full online game", () => {
     // Draft and deploy.
     while (current().phase === "draft") {
       const s = current();
-      const p = currentDrafter(s)!;
+      const p = drafters(s)[0]!;
       await act(clients, { type: "draftPick", player: p, cardId: draftableCards(s, ctx, p).find((id) => id === "sentinel-k7") ?? draftableCards(s, ctx, p)[0]! });
     }
     while (current().phase === "deploy") {
@@ -250,6 +253,18 @@ describe("a full online game", () => {
     badRejoin.send({ t: "rejoin", code, token: "not-the-right-token" });
     expect((await be).message).toMatch(/not yours/);
     await badRejoin.close();
+
+    // p2 places tokens too. Nobody's initiative is rolled until both players have rolled.
+    const p2Unit = livingUnitsOf(current(), "p2")[0]!.id;
+    await act(clients, { type: "placeTokens", player: "p2", tokens: { "1": p2Unit, "2": p2Unit, "3": p2Unit, X: p2Unit } });
+    expect(current().phase).toBe("initiative");
+    await act(clients, { type: "rollInitiative", player: "p1" });
+    expect(back.lastView()!.initiativeReady).toEqual(["p1"]);
+    expect(back.lastView()!.initiative).toBeNull();
+    expect(JSON.stringify(back.messages)).not.toContain("initiativeRolled");
+    await act(clients, { type: "rollInitiative", player: "p2" });
+    expect(current().phase).toBe("turns");
+    expect(current().initiative).toHaveLength(2);
 
     // Spectators cannot play.
     const se = watcher.next("error");
@@ -292,7 +307,7 @@ describe("saving and resuming an online game", () => {
       [host.playerId, host.client],
       [guest.playerId, guest.client],
     ]);
-    const first = currentDrafter(state)!;
+    const first = drafters(state)[0]!;
     await act(clients, { type: "draftPick", player: first, cardId: draftableCards(state, ctx, first)[0]! });
     state = stateFromView(host.client.lastView()!);
 
@@ -353,13 +368,13 @@ describe("saving and resuming an online game", () => {
     expect(a.events.some((e) => e.type === "cardDrafted")).toBe(true);
     const resumed = stateFromView(a.view);
     expect(resumed.units).toEqual(state.units);
-    expect(currentDrafter(resumed)).toBe(currentDrafter(state));
+    expect(drafters(resumed)).toEqual(drafters(state));
     expect(b.view.viewer).toBe(host.playerId);
     const back = new Map([
       [host.playerId, friend],
       [guest.playerId, newHost],
     ]);
-    const p = currentDrafter(resumed)!;
+    const p = drafters(resumed)[0]!;
     await act(back, { type: "draftPick", player: p, cardId: draftableCards(resumed, ctx, p)[0]! });
     expect(stateFromView(newHost.lastView()!).units).toHaveLength(2);
     for (const c of [newHost, friend]) await c.close();

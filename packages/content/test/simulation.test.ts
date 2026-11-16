@@ -8,6 +8,7 @@ import {
   currentDeployment,
   currentDrafter,
   deploymentPlacements,
+  drafters,
   draftableCards,
   livingUnitsOf,
   moveOptions,
@@ -34,7 +35,8 @@ function pick<T>(rng: Rng, items: readonly T[]): T {
 function randomCommand(state: GameState, rng: Rng, c: RulesContext): Command {
   switch (state.phase) {
     case "draft": {
-      const player = currentDrafter(state)!;
+      // An open draft (online games) lets anyone still drafting pick: choose one at random.
+      const player = currentDrafter(state) ?? pick(rng, drafters(state));
       const owned = state.units.some((u) => u.owner === player);
       if (state.config.budget !== null && owned && rng.float() < 0.15) return { type: "draftPass", player };
       return { type: "draftPick", player, cardId: pick(rng, draftableCards(state, c, player)) };
@@ -60,6 +62,10 @@ function randomCommand(state: GameState, rng: Rng, c: RulesContext): Command {
         player,
         tokens: { "1": pick(rng, units), "2": pick(rng, units), "3": pick(rng, units), X: pick(rng, units) },
       };
+    }
+    case "initiative": {
+      const player = state.players.find((p) => !p.eliminated && !(state.initiativeReady ?? []).includes(p.id))!.id;
+      return { type: "rollInitiative", player };
     }
     case "turns": {
       const active = state.active!;
@@ -130,13 +136,15 @@ function checkInvariants(state: GameState): void {
   }
 }
 
-function playRandomGame(seed: number, players: number, budget: number) {
+/** `online`: the online game's rules, an open draft and initiative rolled by each player. */
+function playRandomGame(seed: number, players: number, budget: number, online = false) {
   const setup: GameSetup = {
     seed,
     mapId: map.id,
     roundLimit: 12,
     budget,
     players: Array.from({ length: players }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}`, color: "#fff" })),
+    ...(online ? { draft: "open" as const, initiative: "players" as const } : {}),
   };
   const rng = new Rng(seed * 7919 + 1);
   let state = createGame(setup, ctx).state;
@@ -170,18 +178,20 @@ function playRandomGame(seed: number, players: number, budget: number) {
 }
 
 describe("random games on the Proving Grounds", () => {
-  for (const [seed, players, budget] of [
-    [1, 2, 250],
-    [2, 3, 250],
-    [3, 4, 250],
-    [4, 6, 250],
-    [5, 2, 400],
-    [6, 3, 400],
-    [7, 4, 400],
-    [8, 6, 400],
+  for (const [seed, players, budget, online] of [
+    [1, 2, 250, false],
+    [2, 3, 250, false],
+    [3, 4, 250, false],
+    [4, 6, 250, false],
+    [5, 2, 400, false],
+    [6, 3, 400, false],
+    [7, 4, 400, false],
+    [8, 6, 400, false],
+    [11, 2, 400, true],
+    [10, 4, 250, true],
   ] as const) {
-    it(`seed ${seed}, ${players} players, ${budget} points: stays legal to the end and replays exactly`, () => {
-      const game = playRandomGame(seed, players, budget);
+    it(`seed ${seed}, ${players} players, ${budget} points${online ? ", online rules" : ""}: stays legal to the end and replays exactly`, () => {
+      const game = playRandomGame(seed, players, budget, online);
       expect(game.state.phase).toBe("gameOver");
       expect(game.moves).toBeGreaterThan(0);
       expect(game.attacks).toBeGreaterThan(0);

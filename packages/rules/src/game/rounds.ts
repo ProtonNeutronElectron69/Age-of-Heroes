@@ -47,14 +47,31 @@ export function startRound(state: GameState, events: GameEvent[]): void {
   state.tokens = Object.fromEntries(state.players.map((p) => [p.id, null]));
   state.revealed = Object.fromEntries(state.players.map((p) => [p.id, []]));
   state.initiative = null;
+  delete state.initiativeReady;
   state.pointer = null;
   state.active = null;
   events.push({ type: "roundStarted", round: state.round });
 }
 
+/**
+ * Once every player's tokens are down, roll initiative and start the turns. Where
+ * players roll for themselves, the round first waits ("initiative" phase) until
+ * each of them has; nobody's roll is made until then, so nobody sees one early.
+ */
 export function maybeStartTurns(state: GameState, events: GameEvent[], ctx: RulesContext): void {
-  const waiting = activePlayers(state).filter((id) => !state.tokens[id]);
-  if (waiting.length > 0) return;
+  if (state.phase === "placeTokens") {
+    const waiting = activePlayers(state).filter((id) => !state.tokens[id]);
+    if (waiting.length > 0) return;
+    if (state.config.initiative === "players") {
+      state.phase = "initiative";
+      state.initiativeReady = [];
+    }
+  }
+  if (state.phase === "initiative") {
+    const ready = state.initiativeReady ?? [];
+    if (activePlayers(state).some((id) => !ready.includes(id))) return;
+    delete state.initiativeReady;
+  }
   const rng = new Rng(state.rng);
   const { order, rolls } = rollOff(state, rng);
   state.rng = rng.state;
@@ -175,7 +192,7 @@ export function eliminate(state: GameState, player: PlayerId, events: GameEvent[
  */
 export function checkGameOver(state: GameState, events: GameEvent[], ctx: RulesContext): boolean {
   if (state.phase === "gameOver") return true;
-  if (state.phase === "placeTokens" || state.phase === "turns") {
+  if (state.phase === "placeTokens" || state.phase === "initiative" || state.phase === "turns") {
     for (const p of state.players) {
       if (!p.eliminated && livingUnitsOf(state, p.id).length === 0) eliminate(state, p.id, events);
     }
