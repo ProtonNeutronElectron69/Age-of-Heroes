@@ -1,11 +1,15 @@
 import { currentDrafter, drafters, isOpenDraft, lockedFaction, pickProblem, playerZone, pointsSpent } from "@aoh/rules";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { onPing } from "../online";
 import { canControl, dispatch, type Session } from "../session";
 import { Names } from "../describe";
 import { GameMenu } from "../ui/GameMenu";
 import { OnlineBar } from "../ui/OnlineBar";
 import { UnitCardView } from "../ui/UnitCardView";
 import { DraftMap } from "./DraftMap";
+
+/** How long the map button says who pinged, while this player is on the cards. */
+const PINGED_NOTICE_MS = 3000;
 
 /** A short button label for why a card cannot be drafted. */
 function shortReason(reason: string): string {
@@ -41,6 +45,21 @@ export function DraftScreen({ session }: { session: Session }) {
   // The draft opens on the battlefield, before anyone has picked, so players can plan their armies.
   const [view, setView] = useState<"map" | "units">(() => (state.units.length === 0 ? "map" : "units"));
   const onMap = view === "map";
+  // Online, a ping made while this player is on the cards: the map button says who, for a few seconds.
+  const [pingedBy, setPingedBy] = useState<string | null>(null);
+  useEffect(() => {
+    if (session.kind !== "online") return;
+    let timer = 0;
+    const stop = onPing((p) => {
+      setPingedBy(p.player);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setPingedBy(null), PINGED_NOTICE_MS);
+    });
+    return () => {
+      stop();
+      window.clearTimeout(timer);
+    };
+  }, [session.kind]);
 
   return (
     <div className={`screen draft${onMap ? " map-open" : ""}`}>
@@ -57,8 +76,13 @@ export function DraftScreen({ session }: { session: Session }) {
           </p>
         </div>
         <div className="draft-actions">
-          <button type="button" className={onMap ? "primary" : ""} onClick={() => setView(onMap ? "units" : "map")}>
-            {onMap ? "Go to the draft" : "View map"}
+          <button
+            type="button"
+            className={onMap ? "primary" : pingedBy ? "pinged" : ""}
+            style={!onMap && pingedBy ? { borderColor: names.playerColor(pingedBy) } : undefined}
+            onClick={() => setView(onMap ? "units" : "map")}
+          >
+            {onMap ? "Go to the draft" : pingedBy ? `View map: ${names.player(pingedBy)} pinged it` : "View map"}
           </button>
           <GameMenu session={session} className="draft-menu" />
         </div>
@@ -107,7 +131,7 @@ export function DraftScreen({ session }: { session: Session }) {
 
       <div className={`draft-body${onMap ? " map-view" : ""}`}>
         {onMap ? (
-          <DraftMap state={state} ctx={ctx} />
+          <DraftMap state={state} ctx={ctx} me={session.kind === "online" ? session.me : null} />
         ) : (
           <section className="card-grid" aria-label="Available units">
             {[...ctx.cards.values()].map((card) => {

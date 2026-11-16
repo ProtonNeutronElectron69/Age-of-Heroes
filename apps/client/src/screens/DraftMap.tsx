@@ -7,6 +7,7 @@ import { tableRoom } from "../scene/Table";
 import { TestHook } from "../scene/TestHook";
 import { useDisplay } from "../settings";
 import { HexTip, useHexTip, zoneOwners } from "../ui/HexTip";
+import { PingInput, Pings, useOnlinePings } from "../scene/Pings";
 
 /**
  * The battlefield during the draft: the map with every player's start zone in
@@ -44,7 +45,16 @@ function ZoneLabelPlacer({ labels, layer, center }: { labels: readonly ZoneLabel
   return null;
 }
 
-export function DraftMap({ state, ctx }: { state: GameState; ctx: RulesContext }) {
+export function DraftMap({
+  state,
+  ctx,
+  me = null,
+}: {
+  state: GameState;
+  ctx: RulesContext;
+  /** Online: this device's player, who can ping the map with P. Null for hot-seat and spectators. */
+  me?: string | null;
+}) {
   const board = ctx.board;
   const display = useDisplay();
   const center = useMemo(() => boardCenter(board), [board]);
@@ -81,6 +91,8 @@ export function DraftMap({ state, ctx }: { state: GameState; ctx: RulesContext }
   const layer = useRef<HTMLDivElement>(null);
   const zones = useMemo(() => zoneOwners(state, ctx), [state.players, state.zones, ctx]);
   const [tip, setTip] = useHexTip();
+  // Online, every player on the map sees everyone's pings.
+  const { pings, ping } = useOnlinePings(me, (player) => state.players.find((p) => p.id === player)?.color ?? "#999");
   return (
     <section className="draft-map" aria-label="Battlefield">
       <Canvas
@@ -97,7 +109,10 @@ export function DraftMap({ state, ctx }: { state: GameState; ctx: RulesContext }
           markers={markers}
           backdrop={tableRoom(display.table)}
           onInspect={setTip}
-        />
+        >
+          <Pings pings={pings} center={center} />
+        </BoardScene>
+        <PingInput enabled={me !== null} center={center} onPing={ping} />
         <ZoneLabelPlacer labels={labels} layer={layer} center={center} />
         <TestHook offset={center} />
       </Canvas>
@@ -111,7 +126,7 @@ export function DraftMap({ state, ctx }: { state: GameState; ctx: RulesContext }
       </div>
       <p className="draft-map-hint">
         Each player's start zone is marked in their colour. Drag to turn the board, right-drag or WASD to move it, and the
-        wheel zooms. Middle-click a hex to read its terrain.
+        wheel zooms. Middle-click a hex to read its terrain.{me !== null ? " P points at the spot under the pointer for everyone." : ""}
       </p>
       <HexTip tip={tip} board={board} terrain={ctx.terrain} zones={zones} onClose={() => setTip(null)} />
     </section>

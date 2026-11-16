@@ -24,6 +24,8 @@ declare global {
        */
       canvas: HTMLCanvasElement;
     };
+    /** Online: how many pings from other players this page has heard (set by `online.ts`). */
+    __aohPingsHeard?: number;
     /** Read-only summary of the current turn, for browser tests. */
     __aohUi?: {
       selected: string | null;
@@ -36,9 +38,7 @@ declare global {
       aiming: { id: string; spots: UiStep[] } | null;
       /** Empty hexes the chosen blast may be aimed at. */
       blastHexes: UiStep[];
-      /** Online: pings heard from other players so far, and pings on screen now (anyone's). */
-      pingsHeard: number;
-      pingsShown: number;
+
     };
   }
 }

@@ -1,8 +1,9 @@
 import { HEX_SIZE } from "@aoh/rules";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DoubleSide, Quaternion, Raycaster, Vector2, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import { useReducedMotion } from "../motion";
+import { onPing, sendPing } from "../online";
 import { useWake } from "./wake";
 
 /**
@@ -172,6 +173,44 @@ function PingArrow({ ping, center }: { ping: PingView; center: { x: number; z: n
       </mesh>
     </>
   );
+}
+
+/**
+ * The pings on this screen: other players' as the server passes them on, and this
+ * player's own at once, when `ping` sends it. Each one lasts PING_SECONDS.
+ * Used by every online screen with a board (play and the draft map).
+ */
+export function useOnlinePings(me: string | null, colorOf: (player: string) => string) {
+  const [pings, setPings] = useState<PingView[]>([]);
+  const color = useRef(colorOf);
+  color.current = colorOf;
+  const next = useRef(0);
+  const timers = useRef(new Set<number>());
+  const show = useCallback((player: string, at: PingView["at"]) => {
+    const id = ++next.current;
+    setPings((list) => [...list, { id, color: color.current(player), at }]);
+    const timer = window.setTimeout(() => {
+      timers.current.delete(timer);
+      setPings((list) => list.filter((p) => p.id !== id));
+    }, PING_SECONDS * 1000 + 100);
+    timers.current.add(timer);
+  }, []);
+  useEffect(() => {
+    const stop = onPing((p) => show(p.player, p.at));
+    const pending = timers.current;
+    return () => {
+      stop();
+      for (const t of pending) window.clearTimeout(t);
+    };
+  }, [show]);
+  /** Send this player's ping, and show it here straight away. */
+  const ping = useCallback(
+    (at: PingView["at"]) => {
+      if (me && sendPing(at)) show(me, at);
+    },
+    [me, show],
+  );
+  return { pings, ping };
 }
 
 /** Every ping on screen. Place inside `BoardScene`, whose group is already in board coordinates. */

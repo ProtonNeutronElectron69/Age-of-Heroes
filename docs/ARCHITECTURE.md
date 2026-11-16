@@ -69,7 +69,7 @@ Abilities hook in at fixed points: `abilityModifiers` (extra or fewer dice), `ta
 
 State lives in small stores read with `useSyncExternalStore`:
 - `session.ts`: the game being played. Local (hot-seat) sessions run the engine in the browser; online sessions send commands through `online.ts` and apply server views (`pending` blocks double sends).
-- `online.ts`: the WebSocket connection, lobby state, automatic reconnect and rejoin, host save requests, and pings (`sendPing`, `onPing`): spots a player points at with P, passed on by the server outside the game. `scene/Pings.tsx` reads the P key and draws the arrows.
+- `online.ts`: the WebSocket connection, lobby state, automatic reconnect and rejoin, host save requests, and pings (`sendPing`, `onPing`): spots a player points at with P, passed on by the server outside the game. `scene/Pings.tsx` reads the P key and draws the arrows, on the play screen and the draft map.
 - `saves.ts`: named saves in browser storage, summaries and file downloads. `maps.ts`: custom maps in browser storage.
 - `testMode.ts`: `TEST_MODE`, set only by the browser tests (`window.__aohTest`). It draws a simpler gaming table and keeps the camera's narrower zoom limits; players never have it.
 

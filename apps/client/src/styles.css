@@ -1107,6 +1107,12 @@ legend {
   margin-top: 0;
 }
 
+/* The map button says who pinged the map, in their colour, while this player is on the cards. */
+.draft-actions button.pinged {
+  border-width: 2px;
+  font-weight: 600;
+}
+
 /* The map button and Save and Quit stay together on one line. */
 .draft-actions {
   display: flex;

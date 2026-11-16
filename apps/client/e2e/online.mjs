@@ -139,6 +139,27 @@ async function act(p) {
   }
 }
 
+/** How many pings from other players this page has heard. */
+const pingsHeard = (p) => p.page.evaluate(() => window.__aohPingsHeard ?? 0);
+
+/** Press P with the pointer over an open spot on this page's board (not under a panel). */
+async function pingBoard(p) {
+  await p.page.waitForFunction(() => window.__aoh?.canvas.isConnected && window.__aoh.stats().frames > 0);
+  const spot = await p.page.evaluate(() => {
+    const canvas = window.__aoh.canvas;
+    const r = canvas.getBoundingClientRect();
+    for (const [fx, fy] of [[0.5, 0.55], [0.6, 0.6], [0.45, 0.7], [0.55, 0.4]]) {
+      const x = r.left + r.width * fx;
+      const y = r.top + r.height * fy;
+      if (document.elementFromPoint(x, y) === canvas) return { x, y };
+    }
+    return null;
+  });
+  if (!spot) fail(`No open spot on ${p.label}'s board to ping`);
+  await p.page.mouse.move(spot.x, spot.y);
+  await p.page.keyboard.press("p");
+}
+
 /** Short waits: a button that is not there within a few seconds is not coming back. */
 const QUICK = { timeout: 5000 };
 
@@ -289,10 +310,11 @@ try {
   phase("draft");
   for (const p of [alice, bob, carol]) await p.page.getByRole("heading", { name: "Draft" }).waitFor();
   // Every device opens the draft on the battlefield, the spectator's too; each goes on to the cards on its own.
-  for (const p of [alice, bob, carol]) {
-    await p.page.getByRole("region", { name: "Battlefield" }).waitFor();
-    await clickSceneChange(p.page.getByRole("button", { name: "Go to the draft" }));
-  }
+  for (const p of [alice, bob, carol]) await p.page.getByRole("region", { name: "Battlefield" }).waitFor();
+  // Alice pings the map, and Bob and the spectator both see it.
+  await pingBoard(alice);
+  for (const p of [bob, carol]) await p.page.waitForFunction(() => (window.__aohPingsHeard ?? 0) >= 1, null, { timeout: 15000 });
+  for (const p of [alice, bob, carol]) await clickSceneChange(p.page.getByRole("button", { name: "Go to the draft" }));
   await shot(bob, "2-draft");
   const drafted = (p) => p.page.locator(".armies li").count();
   const inDraft = () => alice.page.getByRole("heading", { name: "Draft" }).count();
@@ -370,23 +392,12 @@ try {
   await carol.browser.close();
   everyone.splice(everyone.indexOf(carol), 1);
 
-  // Pings: Alice points at the board with P, and Bob's page gets her ping.
+  // Pings in play: Alice points at the board with P, and Bob's page gets her ping.
+  // (His count started again at his reload during the draft.)
   phase("ping");
-  await alice.page.waitForFunction(() => window.__aoh?.canvas.isConnected && window.__aoh.stats().frames > 0);
-  const spot = await alice.page.evaluate(() => {
-    const canvas = window.__aoh.canvas;
-    const r = canvas.getBoundingClientRect();
-    for (const [fx, fy] of [[0.5, 0.55], [0.6, 0.6], [0.45, 0.7], [0.55, 0.4]]) {
-      const x = r.left + r.width * fx;
-      const y = r.top + r.height * fy;
-      if (document.elementFromPoint(x, y) === canvas) return { x, y };
-    }
-    return null;
-  });
-  if (!spot) fail("No open spot on Alice's board to ping");
-  await alice.page.mouse.move(spot.x, spot.y);
-  await alice.page.keyboard.press("p");
-  await bob.page.waitForFunction(() => (window.__aohUi?.pingsHeard ?? 0) >= 1, null, { timeout: 15000 });
+  const bobHeard = await pingsHeard(bob);
+  await pingBoard(alice);
+  await bob.page.waitForFunction((before) => (window.__aohPingsHeard ?? 0) > before, bobHeard, { timeout: 15000 });
 
   // Bob watches the initiative dice; Alice keeps them off, so her page rolls for her as soon as the tokens are down.
   await bob.page.getByRole("button", { name: "Display" }).click();

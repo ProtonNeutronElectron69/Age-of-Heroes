@@ -195,6 +195,7 @@ export interface Ping {
   readonly at: { readonly x: number; readonly y: number; readonly z: number };
 }
 const pingListeners = new Set<(ping: Ping) => void>();
+let pingsHeard = 0;
 
 /** Hear other players' pings; returns a function that stops listening. */
 export function onPing(listener: (ping: Ping) => void): () => void {
@@ -243,6 +244,9 @@ function receive(msg: ServerMessage): void {
       saveWaiter = null;
       return;
     case "ping":
+      pingsHeard += 1;
+      // For browser tests: how many pings from other players this page has heard.
+      window.__aohPingsHeard = pingsHeard;
       for (const l of pingListeners) l({ player: msg.player, at: msg.at });
       return;
     case "error":
