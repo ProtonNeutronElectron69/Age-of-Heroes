@@ -2,6 +2,17 @@
 
 The game itself is a static site on GitHub Pages. Online play also needs the game server in `apps/server`: a small Node program that holds the rooms, runs the rules engine and sends each player only what they may see. It runs as **one instance** and keeps rooms in memory, so restarting it ends the games in progress. To keep a game for later, the host saves it to a file at any time and resumes it in a new room (see [Saving online games](#saving-online-games)).
 
+## Our server
+
+The published game uses this server, on Render's free plan:
+
+| | |
+|---|---|
+| Game address (`GAME_SERVER_URL`) | `wss://Age-of-Heroes-server.onrender.com/ws` |
+| Health page | <https://age-of-heroes-server.onrender.com/health> |
+
+The health page shows `{"ok":true,"rooms":0}` (or the number of open rooms) when the server is up. After about 15 minutes with nobody connected it sleeps, and the first visit then takes up to a minute while it wakes. If the game cannot reach the server, open the health page first. The server redeploys itself from `main`; after changing `GAME_SERVER_URL`, run **Deploy to GitHub Pages** in GitHub's Actions tab so the published game picks it up.
+
 ## Recommendation: Render
 
 [Render](https://render.com) is the simplest fit:
