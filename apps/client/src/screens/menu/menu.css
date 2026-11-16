@@ -345,7 +345,7 @@
 
 .mp-desc {
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -370,34 +370,38 @@
   flex: 1;
 }
 
+/* Six premade maps in two columns of compact cards, so the panel still fits the stage. */
 .mp-maps {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 4px;
 }
 
 .mp-mapbtn {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 6px 9px;
+  gap: 7px;
+  padding: 3px 8px;
   text-align: left;
 }
 
 .mp-mapname b {
   display: block;
-  font-size: 15px;
+  font-size: 14px;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .mp-mapname small {
   display: block;
-  font-size: 12.5px;
+  font-size: 11.5px;
+  line-height: 1.2;
   opacity: 0.8;
 }
 
 .mp-mhex {
-  width: 26px;
-  height: 30px;
+  width: 20px;
+  height: 23px;
   flex: none;
   clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
   background: #6aa84f;
@@ -417,6 +421,14 @@
 
 .m-glacier-pass {
   background: linear-gradient(180deg, #2f6e3a 0 22%, #eef3f6 22% 50%, #a8dcef 50% 74%, #2f6e3a 74%);
+}
+
+.m-frostspine-peaks {
+  background: linear-gradient(150deg, #eef3f6 0 38%, #9b968e 38% 64%, #a8dcef 64% 78%, #9b968e 78%);
+}
+
+.m-mirewood-fen {
+  background: linear-gradient(120deg, #2f6e3a 0 30%, #6b6b3a 30% 52%, #3d80c8 52% 70%, #2f6e3a 70%);
 }
 
 .mp-mine {
@@ -1307,11 +1319,11 @@
 
 .ms-banner-hall .mp-maps {
   grid-template-columns: 1fr;
-  gap: 4px;
+  gap: 2px;
 }
 
 .ms-banner-hall .mp-mapbtn {
-  padding: 3px 9px;
+  padding: 1px 9px;
 }
 
 .ms-banner-hall .mp-mapname b {
@@ -1587,7 +1599,7 @@
 }
 
 .ms-hex-command .mp-mapbtn {
-  padding: 7px 16px;
+  padding: 3px 14px;
 }
 
 .ms-hex-command .mp-go {
