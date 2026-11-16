@@ -196,6 +196,39 @@ async function handleInitiative() {
   return true;
 }
 
+/** Set once the intro has been seen to name the fight and the board has floated a wound number. */
+let introChecked = false;
+let introSkipped = false;
+let woundsChecked = false;
+let woundsBefore = null;
+
+/**
+ * The attack intro: the board shows who attacks whom for two seconds before any dice. The first one
+ * is checked and left to play out; once dice rolls are off, one is skipped with a click. Then the
+ * test waits for it to go, as a click on the board meanwhile would only skip it.
+ */
+async function handleAttackIntro() {
+  const intro = page.getByRole("dialog", { name: "Attack begins" });
+  if (!(await intro.waitFor({ timeout: 5000 }).then(() => true, () => false))) {
+    if (!introChecked) fail("An attack did not open with its intro");
+    return;
+  }
+  if (!introChecked) {
+    introChecked = true;
+    woundsBefore = await page.evaluate(() => window.__aoh.woundsShown());
+    const kind = await intro.getAttribute("data-kind");
+    if (kind !== "melee" && kind !== "ranged") fail(`The intro shows no melee or ranged icon: ${kind}`);
+    if (!/attacks|strikes|:/.test(await intro.locator(".fight-title").innerText())) fail("The intro does not say who attacks whom");
+    await shot("6a-attack-intro");
+  } else if (diceOnlyChecked && !introSkipped) {
+    introSkipped = true;
+    await intro.click({ timeout: 2000 }).catch(() => {});
+    // A click skips it at once; the intro would take two seconds by itself.
+    await intro.waitFor({ state: "detached", timeout: 1500 }).catch(() => fail("A click did not skip the attack intro"));
+  }
+  await intro.waitFor({ state: "detached", timeout: 15000 });
+}
+
 /**
  * The attack show. The first is the full scene: both units' cards over a dimmed board and dice
  * that land on the rolled faces, with the same result the dice panel keeps afterwards. The next
@@ -461,9 +494,16 @@ try {
         await page.waitForTimeout(150);
         const after = await page.evaluate(() => window.__aohUi);
         if (after.selected !== ui.selected || after.targets.length === 0) attacks++;
-        // The attack show comes up at once, until dice rolls are switched off.
+        // Every attack opens with its intro on the board, whatever Dice rolls says.
+        await handleAttackIntro();
+        // The attack show comes up next, until dice rolls are switched off.
         if (!diceOnlyChecked && (await page.getByRole("dialog", { name: "Attack" }).waitFor({ timeout: 5000 }).then(() => true, () => false))) {
           await handleAttackShow();
+        }
+        // Once the show is over, the wounds float up from the figures hit (0 for a miss).
+        if (!woundsChecked && woundsBefore !== null) {
+          await page.waitForFunction((n) => window.__aoh.woundsShown() > n, woundsBefore, { timeout: 15000 });
+          woundsChecked = true;
         }
         if (attacks === 1) {
           await shot("6-attack");
@@ -647,6 +687,7 @@ try {
   if (!motionChecked) fail("The arrow and rings were never checked with and without reduced motion");
   if (!initiativeChecked) fail("The initiative d20s were never rolled");
   if (!sceneChecked || !diceOnlyChecked) fail("The attack scene and dice only were not both seen");
+  if (!introChecked || !woundsChecked) fail("No attack intro or wound number was seen");
   if (squadMoves > 0 && cycled === 0) fail("Squads never moved on to their next figure after a move");
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(`Full game played: ${moves} moves, ${attacks} attacks. Result: ${heading}`);

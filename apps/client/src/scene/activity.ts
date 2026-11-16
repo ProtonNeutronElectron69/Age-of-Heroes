@@ -11,6 +11,8 @@ export interface BoardActivity {
   readonly hopping: Set<string>;
   /** The camera has a glide to make, or is making one. */
   gliding: boolean;
+  /** How many wound numbers this board has floated, for browser tests (`window.__aoh.woundsShown()`). */
+  woundsShown: number;
 }
 
 const byScene = new WeakMap<object, BoardActivity>();
@@ -20,7 +22,7 @@ export function useBoardActivity(): BoardActivity {
   const scene = useThree((s) => s.scene);
   let activity = byScene.get(scene);
   if (!activity) {
-    activity = { hopping: new Set(), gliding: false };
+    activity = { hopping: new Set(), gliding: false, woundsShown: 0 };
     byScene.set(scene, activity);
   }
   return activity;

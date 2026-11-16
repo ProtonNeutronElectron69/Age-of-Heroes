@@ -1,13 +1,20 @@
 import { MAPS, contextFor } from "@aoh/content";
 import { stateFromView, type ServerMessage } from "@aoh/protocol";
 import {
+  applyCommand,
+  attackTargets,
+  createGame,
   currentDeployment,
+  currentDrafter,
   drafters,
+  hexDistance,
+  moveOptions,
   deploymentPlacements,
   draftableCards,
   livingUnitsOf,
   replayGame,
   type Command,
+  type GameSetup,
   type GameState,
   type PlayerView,
 } from "@aoh/rules";
@@ -118,6 +125,73 @@ async function act(clients: Map<string, Client>, command: Command): Promise<void
   const updates = [...clients.values()].map((c) => c.next("game", (m) => !m.snapshot));
   sender.send({ t: "command", command });
   await Promise.all(updates);
+}
+
+/**
+ * Play a game here, simply, until the acting figure can attack: the commands so far (to resume
+ * on the server) and that attack. Everyone drafts the first card they can, and figures close in.
+ */
+function playUntilAttack(setup: GameSetup): { commands: Command[]; attack: Command } {
+  let state = createGame(setup, ctx).state;
+  const commands: Command[] = [];
+  for (let n = 0; n < 3000; n++) {
+    let command: Command;
+    switch (state.phase) {
+      case "draft": {
+        const player = currentDrafter(state) ?? drafters(state)[0]!;
+        const cards = draftableCards(state, ctx, player);
+        command = state.units.some((u) => u.owner === player) || cards.length === 0 ? { type: "draftPass", player } : { type: "draftPick", player, cardId: cards[0]! };
+        break;
+      }
+      case "deploy": {
+        const { player, unitId } = currentDeployment(state)!;
+        const unit = state.units.find((u) => u.id === unitId)!;
+        const card = ctx.cards.get(unit.cardId)!;
+        const taken: { hex: { q: number; r: number }; elevation: number }[] = [];
+        const placements = unit.figures.map((f) => {
+          const choice = deploymentPlacements(state, player, card, ctx, taken)[0]!;
+          taken.push(...choice.spots);
+          return { figureId: f.id, ...choice.placement };
+        });
+        command = { type: "deployUnit", player, unitId, placements };
+        break;
+      }
+      case "placeTokens": {
+        const player = state.players.find((p) => !p.eliminated && !state.tokens[p.id])!.id;
+        const u = livingUnitsOf(state, player)[0]!.id;
+        command = { type: "placeTokens", player, tokens: { "1": u, "2": u, "3": u, X: u } };
+        break;
+      }
+      case "initiative": {
+        const player = state.players.find((p) => !(state.initiativeReady ?? []).includes(p.id))!.id;
+        command = { type: "rollInitiative", player };
+        break;
+      }
+      case "turns": {
+        const active = state.active!;
+        const unit = state.units.find((u) => u.id === active.unitId)!;
+        const f = unit.figures.find((x) => !x.destroyed && x.position && !active.attacked.includes(x.id));
+        const targets = f ? attackTargets(state, f.id, ctx) : [];
+        if (f && targets.length > 0) return { commands, attack: { type: "attack", player: active.player, figureId: f.id, targetId: targets[0]! } };
+        const options = f && !active.moved.includes(f.id) ? [...moveOptions(state, f.id, ctx).values()] : [];
+        if (options.length === 0) {
+          command = { type: "endTurn", player: active.player };
+          break;
+        }
+        const enemies = state.units.filter((u) => u.owner !== active.player).flatMap((u) => u.figures.filter((x) => x.position).map((x) => x.position!.hex));
+        const gap = (o: (typeof options)[number]) => Math.min(...enemies.map((e) => hexDistance(e, o.to.hex)));
+        command = { type: "move", player: active.player, figureId: f!.id, path: options.reduce((a, b) => (gap(b) < gap(a) ? b : a)).path };
+        break;
+      }
+      default:
+        throw new Error(`The game reached ${state.phase} without an attack`);
+    }
+    const result = applyCommand(state, command, ctx);
+    if (!result.ok) throw new Error(result.error);
+    state = result.state;
+    commands.push(command);
+  }
+  throw new Error("No attack came up");
 }
 
 describe("rooms", () => {
@@ -413,6 +487,71 @@ describe("saving and resuming an online game", () => {
     await act(back, { type: "draftPick", player: p, cardId: draftableCards(resumed, ctx, p)[0]! });
     expect(stateFromView(newHost.lastView()!).units).toHaveLength(2);
     for (const c of [newHost, friend]) await c.close();
+  });
+
+  it("holds an attack show until every connected player has finished or skipped it", async () => {
+    const setup: GameSetup = {
+      seed: 21,
+      mapId: map.id,
+      roundLimit: null,
+      budget: 140,
+      draft: "open",
+      initiative: "players",
+      players: [
+        { id: "p1", name: "Ana", color: "#e53935" },
+        { id: "p2", name: "Bo", color: "#1e88e5" },
+      ],
+    };
+    const { commands, attack } = playUntilAttack(setup);
+    const record = { formatVersion: 1, setup, map, commands };
+    const ana = await Client.connect();
+    const aw = ana.next("welcome");
+    ana.send({ t: "resume", record, playerId: "p1" });
+    const anaIn = await aw;
+    const bo = await Client.connect();
+    const bw = bo.next("welcome");
+    bo.send({ t: "join", code: anaIn.code, name: "Bo" });
+    await bw;
+    const seated = bo.next("welcome");
+    bo.send({ t: "claim", playerId: "p2" });
+    await seated;
+    const watcher = await Client.connect();
+    const ww = watcher.next("welcome");
+    watcher.send({ t: "spectate", code: anaIn.code });
+    await ww;
+    const snapshots = [ana.next("game"), bo.next("game"), watcher.next("game")];
+    ana.send({ t: "start" });
+    const logged = ((await Promise.all(snapshots))[1] as GameMessage).events.length;
+    const clients = new Map([
+      ["p1", ana],
+      ["p2", bo],
+    ]);
+
+    // The attack starts a show that both players are watching; everyone hears so.
+    const opened = [ana.next("watching"), bo.next("watching"), watcher.next("watching")];
+    await act(clients, attack);
+    const shows = await Promise.all(opened);
+    const game = bo.messages.filter((m): m is GameMessage => m.t === "game").at(-1)!;
+    expect(game.events.some((e) => e.type === "attackRolled")).toBe(true);
+    // The show is named by the length of the log once the attack happened, which every screen knows.
+    const key = shows[0]!.show;
+    expect(key).toBe(logged + game.events.length);
+    for (const m of shows) expect([...m.waiting].sort()).toEqual(["p1", "p2"]);
+
+    // A stale show and a spectator change nothing; the attacker skipping leaves Bo watching.
+    watcher.send({ t: "watched", show: key });
+    ana.send({ t: "watched", show: key - 1 });
+    const one = bo.next("watching");
+    ana.send({ t: "watched", show: key });
+    expect((await one).waiting).toEqual(["p2"]);
+    await watcher.seen("watching", (m) => m.waiting.length === 1);
+    expect(watcher.messages.filter((m) => m.t === "watching").map((m) => (m as { waiting: string[] }).waiting.length)).toEqual([2, 1]);
+
+    // Bo leaving the room for a moment counts as done: the show is over for everyone.
+    const over = ana.next("watching");
+    await bo.close();
+    expect((await over).waiting).toEqual([]);
+    for (const c of [ana, watcher]) await c.close();
   });
 
   it("refuses saves it cannot continue", async () => {

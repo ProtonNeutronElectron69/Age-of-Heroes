@@ -180,8 +180,9 @@ let initiativeChecked = false;
 
 async function tryAct(p) {
   const { page } = p;
-  // Wait for the server to answer the last command before deciding anything.
-  await page.waitForFunction(() => !document.querySelector("[data-pending]"), null, QUICK);
+  // Wait for the server to answer the last command before deciding anything. After an attack this
+  // also waits for both players' attack intros to end (each page holds the next move until then).
+  await page.waitForFunction(() => !document.querySelector("[data-pending]"), null, { timeout: 30000 });
   // Initiative with the dice show on (Bob, in round 1). Alice's page rolls for her at once, as her dice show is off;
   // Bob must see her ready but no result at all until he has rolled too.
   const initiative = page.getByRole("dialog", { name: "Initiative" });

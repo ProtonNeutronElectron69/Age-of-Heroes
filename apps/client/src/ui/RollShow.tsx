@@ -2,6 +2,7 @@ import { Canvas } from "@react-three/fiber";
 import { findFigure, type GameEvent, type GameState, type PlayerId, type RulesContext } from "@aoh/rules";
 import { useEffect, useMemo, useState } from "react";
 import type { Names } from "../describe";
+import type { AttackRoll } from "../fight";
 import { useReducedMotion } from "../motion";
 import { CardFigure } from "../scene/Figures";
 import { CubeDie, D20Die, TrayLights } from "../scene/dice3d";
@@ -12,17 +13,13 @@ import { HexCard } from "./HexCard";
  * The dice show: an attack zooms in on the fight with both units' cards and
  * models over a dimmed board and rolls 3D dice ("scene"), or just rolls the
  * dice ("dice"); initiative rolls a d20 for each player. The rules have already
- * rolled everything; this only shows it, and a click skips it. Afterwards the
- * dice panel keeps the result, as without the show.
+ * rolled everything; this only shows it, and a click skips it (online, an attack's
+ * skip waits for every player: the play screen decides). An attack's dice follow
+ * its intro on the board (`scene/FightFx.tsx`). Afterwards the dice panel keeps
+ * the result, as without the show.
  */
 
-export type AttackRoll = Extract<GameEvent, { type: "attackRolled" }> & { readonly attackerId: string };
 export type InitiativeRoll = Extract<GameEvent, { type: "initiativeRolled" }>;
-
-/** The rolls in a command that the show plays: attacks and other rolls made by a figure (not falls or swamps). */
-export function attackRollsIn(events: readonly GameEvent[]): AttackRoll[] {
-  return events.filter((e): e is AttackRoll => e.type === "attackRolled" && e.attackerId !== null);
-}
 
 export function initiativeIn(events: readonly GameEvent[]): InitiativeRoll | null {
   return (events.find((e) => e.type === "initiativeRolled") as InitiativeRoll | undefined) ?? null;
@@ -44,6 +41,13 @@ const DIE_GAP = 1.3;
 
 function diceRow(count: number, z: number): [number, number, number][] {
   return Array.from({ length: count }, (_, i) => [(i - (count - 1) / 2) * DIE_GAP, 0.45, z]);
+}
+
+/** "Archer attacks Knight": the heading of an attack's intro and dice. */
+export function attackTitle(roll: AttackRoll, names: Names): string {
+  if (roll.source === "passingStrike") return `${names.figure(roll.attackerId)} strikes ${names.figure(roll.targetId)} as it leaves`;
+  if (roll.ability) return `${names.figure(roll.attackerId)}: ${names.ability(roll.attackerId, roll.ability)} on ${names.figure(roll.targetId)}`;
+  return `${names.figure(roll.attackerId)} attacks ${names.figure(roll.targetId)}`;
 }
 
 function resultText(roll: AttackRoll): string {
@@ -90,13 +94,20 @@ export function AttackShow({
   ctx,
   names,
   onClose,
+  onSkip,
+  hint = "Click to skip",
 }: {
   rolls: readonly AttackRoll[];
   mode: Exclude<DiceShow, "none">;
   state: GameState;
   ctx: RulesContext;
   names: Names;
+  /** The show has played to the end. */
   onClose: () => void;
+  /** The player clicked to skip it. */
+  onSkip: () => void;
+  /** The line at the bottom: how to skip, or (online) who has still to skip. */
+  hint?: string;
 }) {
   const reduced = useReducedMotion();
   const [index, setIndex] = useState(0);
@@ -120,12 +131,7 @@ export function AttackShow({
   const landAttack = () => setLanded((n) => ({ ...n, attack: n.attack + 1 }));
   const landDefense = () => setLanded((n) => ({ ...n, defense: n.defense + 1 }));
   const full = mode === "scene";
-  const title =
-    roll.source === "passingStrike"
-      ? `${names.figure(roll.attackerId)} strikes ${names.figure(roll.targetId)} as it leaves`
-      : roll.ability
-        ? `${names.figure(roll.attackerId)}: ${names.ability(roll.attackerId, roll.ability)} on ${names.figure(roll.targetId)}`
-        : `${names.figure(roll.attackerId)} attacks ${names.figure(roll.targetId)}`;
+  const title = attackTitle(roll, names);
   const attackAt = useMemo(() => diceRow(roll.attack.length, full ? 0 : -0.7), [roll, full]);
   const defenseAt = useMemo(() => diceRow(roll.defense.length, full ? 1.6 : 0.7), [roll, full]);
   return (
@@ -134,7 +140,7 @@ export function AttackShow({
       role="dialog"
       aria-label="Attack"
       data-done={done ? "true" : undefined}
-      onClick={onClose}
+      onClick={onSkip}
     >
       {full && <SceneCard figureId={roll.attackerId} state={state} ctx={ctx} names={names} side="attacker" />}
       <div className="scene-stage">
@@ -193,7 +199,7 @@ export function AttackShow({
         <div className={`scene-result ${roll.wounds > 0 ? "hit" : "miss"}`} hidden={!done}>
           {resultText(roll)}
         </div>
-        <div className="scene-hint">{rolls.length > 1 ? `Roll ${index + 1} of ${rolls.length}. ` : ""}Click to skip</div>
+        <div className="scene-hint">{rolls.length > 1 ? `Roll ${index + 1} of ${rolls.length}. ` : ""}{hint}</div>
       </div>
       {full && <SceneCard figureId={roll.targetId} state={state} ctx={ctx} names={names} side="defender" />}
     </div>
