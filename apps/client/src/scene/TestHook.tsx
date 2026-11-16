@@ -18,6 +18,8 @@ declare global {
       stats: () => { calls: number; triangles: number; lines: number; frames: number };
       /** The camera has a glide to make (perhaps waiting for a hop to land first), or is making one. */
       cameraBusy: () => boolean;
+      /** How many wound numbers have floated up from figures on this board. */
+      woundsShown: () => number;
       /**
        * The canvas this hook belongs to. A closing screen's canvas can shut down after the next
        * one's has started, so tests wait for `canvas.isConnected` to know the hook is the new screen's.
@@ -60,6 +62,7 @@ export function TestHook({ offset }: { offset: { x: number; z: number } }) {
         return { calls: r.calls, triangles: r.triangles, lines: r.lines, frames: r.frame };
       },
       cameraBusy: () => activity.gliding,
+      woundsShown: () => activity.woundsShown,
       canvas: gl.domElement,
     };
     window.__aoh = hook;

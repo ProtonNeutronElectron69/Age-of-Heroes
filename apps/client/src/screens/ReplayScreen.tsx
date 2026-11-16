@@ -5,7 +5,9 @@ import { Canvas } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Names } from "../describe";
 import { BoardScene, boardCenter } from "../scene/BoardScene";
-import { FigureLabels, Figures, type FigureMotions, type FigureView } from "../scene/Figures";
+import { FigureLabels, Figures, SHAKE_SECONDS, type FigureMotions, type FigureShake, type FigureView } from "../scene/Figures";
+import { WoundNumbers, anchorOf, type WoundNumber } from "../scene/FightFx";
+import { fallenSpots, woundMarksIn } from "../fight";
 import { GamingTable, TableCards, tableRoom } from "../scene/Table";
 import { tableFor, tableUnits } from "../scene/tableData";
 import { useDisplay } from "../settings";
@@ -100,6 +102,14 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
   );
 
   const [hexTip, setHexTip] = useHexTip();
+  // Each step floats its wounds up; figures it destroyed stay where they fell until they have shaken.
+  const fallen = useMemo(
+    () => ("ctx" in built && index > 0 ? fallenSpots(built.frames[index - 1]!.state, built.frames[index]!.last, built.ctx) : new Map<string, never>()),
+    [built, index],
+  );
+  const marks = useMemo(() => woundMarksIn(stepEvents ?? []), [stepEvents]);
+  const [settled, setSettled] = useState(-1);
+  const [shake, setShake] = useState<FigureShake | null>(null);
 
   if (!("ctx" in built) || !center || !table) {
     return (
@@ -148,6 +158,36 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
     }
   }
 
+  if (settled !== index) {
+    for (const [id, spots] of fallen) {
+      const hit = findFigure(state, id);
+      if (!hit) continue;
+      const card = ctx.cards.get(hit.unit.cardId)!;
+      figures.push({
+        id,
+        cardId: card.id,
+        footprint: card.footprint,
+        faction: card.faction,
+        owner: hit.unit.owner,
+        pose: hit.unit.figures.indexOf(hit.figure),
+        spots,
+        height: card.height,
+        color: names.playerColor(hit.unit.owner),
+        label: names.tokenLabel(id),
+        hero: card.figureCount === 1,
+        status: "idle",
+        ...(statsOf(card).life > 1 ? { lifeLeft: 0 } : {}),
+      });
+    }
+  }
+  const numbers: WoundNumber[] = marks.flatMap((m) => {
+    const view = figures.find((f) => f.id === m.figureId);
+    if (!view || m.wounds === null) return [];
+    const a = anchorOf(view);
+    return [{ figureId: m.figureId, wounds: m.wounds, at: { x: a.x, y: a.top, z: a.z } }];
+  });
+  const destroyed = marks.filter((m) => m.destroyed).map((m) => m.figureId);
+
   const firstFigure = (unitId: string | null) => (unitId ? state.units.find((u) => u.id === unitId)?.figures[0]?.id ?? null : null);
   const shown = hovered ?? pinned;
   const found = shown ? findFigure(state, shown) : undefined;
@@ -173,14 +213,24 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
           <GamingTable layout={table} style={display.table} />
           <TableCards
             layout={table}
-            units={tableUnits(state, ctx, (p) => names.playerColor(p))}
+            units={tableUnits(state, ctx, (p) => names.playerColor(p), new Set(settled !== index ? fallen.keys() : []))}
             onHover={(unitId) => setHovered(firstFigure(unitId))}
             onClick={(unitId) => {
               const id = firstFigure(unitId);
               setPinned(pinned === id ? null : id);
             }}
           />
-          <Figures figures={figures} onClick={(id) => setPinned(pinned === id ? null : id)} onHover={setHovered} labels={labelLayer} motions={motions} />
+          <Figures figures={figures} onClick={(id) => setPinned(pinned === id ? null : id)} onHover={setHovered} labels={labelLayer} motions={motions} shake={shake} />
+          {marks.length > 0 && (
+            <WoundNumbers
+              key={index}
+              numbers={numbers}
+              center={center}
+              then={destroyed.length > 0 ? SHAKE_SECONDS : 0}
+              onFloated={() => destroyed.length > 0 && setShake((x) => ({ key: (x?.key ?? 0) + 1, ids: destroyed }))}
+              onDone={() => setSettled(index)}
+            />
+          )}
         </BoardScene>
       </Canvas>
       <FigureLabels figures={figures} layer={labelLayer} />

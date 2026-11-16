@@ -1308,6 +1308,47 @@ p.bad {
   }
 }
 
+/* ---- The attack intro: the board shows the fight; a click anywhere skips it (PlayScreen.tsx) ---- */
+
+.fight-intro {
+  position: absolute;
+  inset: 0;
+  z-index: 18;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 64px 16px 24px;
+  pointer-events: auto;
+}
+
+.fight-title {
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 2px solid;
+  background: rgba(8, 11, 16, 0.78);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 18px;
+  text-align: center;
+  animation: scene-in 0.3s ease-out;
+}
+
+.fight-hint {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(8, 11, 16, 0.66);
+  color: var(--muted, #9aa6b8);
+  font-size: 12px;
+}
+
+.watching-note {
+  margin: 6px 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
 /* ---- The dice show: the attack scene, dice only, and initiative (ui/RollShow.tsx) ---- */
 
 .roll-show {

@@ -141,6 +141,11 @@ export const clientMessageSchema = z.discriminatedUnion("t", [
   z.object({ t: z.literal("save") }),
   /** Point at a spot on the board for everyone else to see (the P key). Not part of the game: never saved or replayed. */
   z.object({ t: z.literal("ping"), at: pingPointSchema }),
+  /**
+   * This player has finished watching an attack show, or clicked to skip it. `show` is the
+   * number of game events once the attack happened, which every player's log agrees on.
+   */
+  z.object({ t: z.literal("watched"), show: z.number().int().min(0) }),
 ]);
 /** A client message. Commands are typed as the engine's own Command, which the schema checks the shape of. */
 export type ClientMessage =
@@ -232,6 +237,12 @@ export type ServerMessage =
   | { readonly t: "saved"; readonly record: Replay }
   /** Another player pointed at this spot on the board (board coordinates). */
   | { readonly t: "ping"; readonly player: string; readonly at: { readonly x: number; readonly y: number; readonly z: number } }
+  /**
+   * Who is still watching an attack show (`show`: the number of game events once the attack happened).
+   * Sent when the show starts and each time a player finishes or skips it. A show is skipped only
+   * once every connected player has skipped or finished it: `waiting` is then empty.
+   */
+  | { readonly t: "watching"; readonly show: number; readonly waiting: string[] }
   | { readonly t: "error"; readonly message: string };
 
 /** Read a replay file. Throws with a readable message if it is malformed. */

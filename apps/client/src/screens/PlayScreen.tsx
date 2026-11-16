@@ -31,11 +31,13 @@ import { Canvas } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Names } from "../describe";
 import { BoardScene, boardCenter, type CameraFocusRequest, type Marker } from "../scene/BoardScene";
-import { FigureLabels, Figures, type FigureCarry, type FigureJump, type FigureMotions, type FigureView } from "../scene/Figures";
+import { FigureLabels, Figures, SHAKE_SECONDS, type FigureCarry, type FigureJump, type FigureMotions, type FigureShake, type FigureView } from "../scene/Figures";
+import { ATTACK_RED, FightIntro, WoundNumbers, anchorOf, type FigureAnchor, type WoundNumber } from "../scene/FightFx";
+import { attackRollsIn, fallenSpots, fightIn, woundMarksIn, type WoundMark } from "../fight";
 import { GamingTable, TableCards, tableRoom } from "../scene/Table";
 import { tableFor, tableKey, tableUnits } from "../scene/tableData";
 import { TestHook } from "../scene/TestHook";
-import { closeOnline } from "../online";
+import { closeOnline, sendWatched, useOnline } from "../online";
 import { PingInput, Pings, useOnlinePings } from "../scene/Pings";
 import { downloadGameFile } from "../saves";
 import { canControl, clearError, dispatch, endSession, replayOf, type Session } from "../session";
@@ -45,7 +47,7 @@ import { GameMenu } from "../ui/GameMenu";
 import { HexTip, useHexTip, zoneOwners } from "../ui/HexTip";
 import { OnlineBar } from "../ui/OnlineBar";
 import { DiceOverlay, EventLog, GameOver, KeysPanel, PassScreen, RoundBar, TokenPanel } from "../ui/panels";
-import { AttackShow, InitiativeShow, attackRollsIn, initiativeIn } from "../ui/RollShow";
+import { AttackShow, InitiativeShow, attackTitle, initiativeIn } from "../ui/RollShow";
 import { UnitCardView } from "../ui/UnitCardView";
 
 interface Pending {
@@ -105,12 +107,59 @@ function useDelayedHover(): [string | null, (id: string | null) => void] {
 const FOLLOW_FRAME = { from: { x: 0, y: 1, z: 0.85 }, distance: 18 } as const;
 /** The closest the camera frames a fight for the attack scene. */
 const FIGHT_DISTANCE = 15;
+/** How long the attack intro (auras, arrow, icon) plays before the dice roll. */
+const INTRO_MS = 2000;
+/**
+ * Online, the player whose turn it is waits for everyone to finish watching an attack; but no
+ * longer than this after their own show has ended, so a player who has gone quiet cannot stall the game.
+ */
+const HOLD_LIMIT_MS = 20000;
+
+/** An attack being shown: its intro on the board, then (with Dice rolls on) the dice. */
+interface Beat {
+  /** The event count once the attack happened; online, this names the show for every screen. */
+  readonly stamp: number;
+  readonly events: readonly GameEvent[];
+  readonly part: "intro" | "dice";
+  /** Online: this player has clicked to skip, and waits for the others to. */
+  readonly skipped: boolean;
+}
+
+/** A figure destroyed by a recent command, still drawn where it fell until it has shaken. */
+interface Ghost {
+  readonly stamp: number;
+  readonly id: string;
+  readonly spots: readonly Step[];
+}
+
+/** One command's wounds, floating up once its show is over. */
+interface Batch {
+  readonly stamp: number;
+  readonly marks: readonly WoundMark[];
+}
 
 export function PlayScreen({ session }: { session: Session }) {
   const { state, ctx } = session;
   const isOnline = session.kind === "online";
-  /** Online: waiting for the server to answer the last command, so nothing else may be sent. */
-  const busy = session.pending;
+  /** Online: this device's player (null for a spectator); locally null. */
+  const me = isOnline ? session.me : null;
+
+  // ---- Attacks are shown before play goes on ----
+  const [beat, setBeat] = useState<Beat | null>(null);
+  const beatRef = useRef(beat);
+  beatRef.current = beat;
+  const online = useOnline();
+  const watching = isOnline ? online.watching : null;
+  /** The show whose wait has run out (HOLD_LIMIT_MS). */
+  const [holdLapsed, setHoldLapsed] = useState(-1);
+  /** Online: the other players still watching the attack that was the last thing to happen. */
+  const othersWatching =
+    watching && watching.show === session.events.length && holdLapsed !== watching.show ? watching.waiting.filter((p) => p !== me) : [];
+  /**
+   * Nothing else may be sent: online, the server has not answered the last command yet, or an attack
+   * is still being shown, here or on another player's screen.
+   */
+  const busy = session.pending || beat !== null || othersWatching.length > 0;
   const names = useMemo(() => new Names(state, ctx), [state, ctx]);
   const board = ctx.board;
   const center = useMemo(() => boardCenter(board), [board]);
@@ -259,30 +308,172 @@ export function PlayScreen({ session }: { session: Session }) {
     if (next) setSelected(next);
     // The camera follows the selection to the squad's next figure; after the attack scene, if one plays.
     if (next && next !== actor.id) {
-      if (display.dice === "scene" && attackRollsIn(session.lastEvents).length > 0) pendingFollow.current = next;
+      if (attackRollsIn(session.lastEvents).length > 0) pendingFollow.current = next;
       else followFigure(next);
     }
   }, [session.lastEvents]);
 
-  // ---- The dice show: the attack scene and the initiative d20s (presentation only) ----
-  const [show, setShow] = useState<{ stamp: number; kind: "attack" | "initiative"; events: readonly GameEvent[] } | null>(null);
+  // ---- Wounds: numbers float up, then destroyed figures shake and leave the board ----
+  // The state before the last command, to find where destroyed figures fell.
+  const seen = useRef({ events: session.lastEvents, state, before: state });
+  if (seen.current.events !== session.lastEvents) seen.current = { events: session.lastEvents, state, before: seen.current.state };
+  else seen.current.state = state;
+  const fallen = useMemo(() => fallenSpots(seen.current.before, session.lastEvents, ctx), [session.lastEvents]);
+  const [ghostList, setGhostList] = useState<readonly Ghost[]>([]);
+  const [retired, setRetired] = useState<ReadonlySet<string>>(() => new Set());
   useEffect(() => {
-    const events = session.lastEvents;
-    if (display.dice === "none" || events.length === 0) return;
+    if (fallen.size === 0) return;
     const stamp = session.events.length;
-    if (initiativeIn(events)) return setShow({ stamp, kind: "initiative", events });
-    const rolls = attackRollsIn(events);
-    if (rolls.length > 0) {
-      setShow({ stamp, kind: "attack", events });
-      // The full scene zooms in on the fight.
-      if (display.dice === "scene") setFollow((f) => ({ id: rolls[0]!.attackerId, with: rolls[0]!.targetId, key: (f?.key ?? 0) + 1 }));
+    setGhostList((g) => [...g, ...[...fallen].map(([id, spots]) => ({ stamp, id, spots }))]);
+  }, [fallen]);
+  const ghostKey = (g: { stamp: number; id: string }) => `${g.stamp}:${g.id}`;
+  // The figures that fell to the last command are drawn from the first frame, before the effect above records them.
+  const ghosts = [...ghostList, ...[...fallen].map(([id, spots]) => ({ stamp: session.events.length, id, spots }))].filter(
+    (g, i, all) => !retired.has(ghostKey(g)) && all.findIndex((x) => ghostKey(x) === ghostKey(g)) === i,
+  );
+  const [batches, setBatches] = useState<readonly Batch[]>([]);
+  const [shake, setShake] = useState<FigureShake | null>(null);
+  /** Float a command's wounds (once its show, if any, is over). */
+  const release = (stamp: number, events: readonly GameEvent[]) => {
+    const marks = woundMarksIn(events);
+    if (marks.length > 0) setBatches((list) => [...list.filter((b) => b.stamp !== stamp), { stamp, marks }]);
+  };
+  const destroyedIn = (b: Batch) => b.marks.filter((m) => m.destroyed).map((m) => m.figureId);
+  const batchFloated = (b: Batch) => {
+    const ids = destroyedIn(b);
+    if (ids.length > 0) setShake((x) => ({ key: (x?.key ?? 0) + 1, ids }));
+  };
+  const batchDone = (b: Batch) => {
+    setBatches((list) => list.filter((x) => x.stamp !== b.stamp));
+    if (followAfter.current?.stamp === b.stamp) followFigure(followAfter.current.id);
+    followAfter.current = null;
+    const gone = destroyedIn(b).map((id) => ghostKey({ stamp: b.stamp, id }));
+    if (gone.length === 0) return;
+    setRetired((r) => new Set([...r, ...gone]));
+    setGhostList((list) => list.filter((g) => !gone.includes(ghostKey(g))));
+  };
+
+  // ---- The attack intro and the dice show, and the initiative d20s (presentation only) ----
+  const [show, setShow] = useState<{ stamp: number; kind: "initiative"; events: readonly GameEvent[] } | null>(null);
+  /** Online: the show this device has told the others it is done with, so it tells them once. */
+  const reported = useRef(-1);
+  const reportWatched = (stamp: number) => {
+    if (me === null || reported.current === stamp) return;
+    reported.current = stamp;
+    sendWatched(stamp);
+  };
+  /** Stop showing the attack; its wounds float up. */
+  const dropBeat = () => {
+    const b = beatRef.current;
+    if (!b) return null;
+    beatRef.current = null;
+    setBeat(null);
+    release(b.stamp, b.events);
+    return b;
+  };
+  /** A squad's next figure to follow once the attack's wounds have floated up (and any destroyed figure has gone). */
+  const followAfter = useRef<{ stamp: number; id: string } | null>(null);
+  const endBeat = () => {
+    const b = dropBeat();
+    if (!b) return;
+    const next = pendingFollow.current;
+    pendingFollow.current = null;
+    if (next && woundMarksIn(b.events).length > 0) followAfter.current = { stamp: b.stamp, id: next };
+    else if (next) followFigure(next);
+  };
+  const toDice = (b: Beat) => {
+    const next = { ...b, part: "dice" as const };
+    beatRef.current = next;
+    setBeat(next);
+  };
+  /** The intro, or the dice, played to the end. */
+  const beatPlayed = () => {
+    const b = beatRef.current;
+    if (!b) return;
+    if (b.part === "intro" && display.dice !== "none") return toDice(b);
+    reportWatched(b.stamp);
+    endBeat();
+  };
+  /**
+   * A click on the intro or the dice. Locally it skips what is showing. Online it skips the rest
+   * of the show, but only once every player has clicked (or their show has ended); until then this
+   * player's show plays on and says who it is waiting for. Spectators skip for themselves.
+   */
+  const skipBeat = () => {
+    const b = beatRef.current;
+    if (!b) return;
+    if (!isOnline) {
+      if (b.part === "intro" && display.dice !== "none") toDice(b);
+      else endBeat();
       return;
     }
-    // Anything else that happens ends an attack show; the initiative dice stay until closed.
-    setShow((s) => (s?.kind === "attack" ? null : s));
+    if (me === null) return endBeat();
+    reportWatched(b.stamp);
+    const known = watching?.show === b.stamp;
+    if (known && watching.waiting.every((p) => p === me)) return endBeat();
+    const next = { ...b, skipped: true };
+    beatRef.current = next;
+    setBeat(next);
+  };
+  // Online: everyone has finished or skipped the show, so it ends on every screen.
+  useEffect(() => {
+    const b = beatRef.current;
+    if (b && watching && watching.show === b.stamp && watching.waiting.length === 0) endBeat();
+  }, [watching]);
+  // Online: a player who switches away from the game is not watching; nobody waits for them.
+  useEffect(() => {
+    if (!isOnline) return;
+    const away = () => {
+      const b = beatRef.current;
+      if (!document.hidden || !b) return;
+      reportWatched(b.stamp);
+      endBeat();
+    };
+    document.addEventListener("visibilitychange", away);
+    return () => document.removeEventListener("visibilitychange", away);
+  }, [isOnline]);
+  // The player whose turn it is waits for the others' shows, but not for ever.
+  useEffect(() => {
+    if (beat || othersWatching.length === 0 || !watching) return;
+    const showKey = watching.show;
+    const t = window.setTimeout(() => setHoldLapsed(showKey), HOLD_LIMIT_MS);
+    return () => window.clearTimeout(t);
+  }, [beat === null, watching]);
+  useEffect(() => {
+    const events = session.lastEvents;
+    if (events.length === 0) return;
+    const stamp = session.events.length;
+    // Something new happened: a show still running ends, though its wounds still float up.
+    const old = beatRef.current;
+    if (old) {
+      reportWatched(old.stamp);
+      dropBeat();
+    }
+    if (initiativeIn(events)) {
+      if (display.dice !== "none") setShow({ stamp, kind: "initiative", events });
+      return;
+    }
+    const rolls = attackRollsIn(events);
+    if (rolls.length > 0) {
+      // Every attack opens with its intro, whatever Dice rolls says, and the camera frames the fight.
+      const next: Beat = { stamp, events, part: "intro", skipped: false };
+      beatRef.current = next;
+      setBeat(next);
+      setFollow((f) => ({ id: rolls[0]!.attackerId, with: rolls[0]!.targetId, key: (f?.key ?? 0) + 1 }));
+      return;
+    }
+    // Wounds without an attack (a fall, lava, an ability) float up straight away.
+    release(stamp, events);
   }, [session.lastEvents]);
   useEffect(() => {
-    if (display.dice === "none") setShow(null);
+    if (beat?.part !== "intro") return;
+    const t = window.setTimeout(beatPlayed, INTRO_MS);
+    return () => window.clearTimeout(t);
+  }, [beat?.stamp, beat?.part]);
+  useEffect(() => {
+    if (display.dice !== "none") return;
+    setShow(null);
+    if (beatRef.current?.part === "dice") beatPlayed();
   }, [display.dice]);
   // Online, each player rolls their own initiative and the rules roll once everyone has (`initiative: "players"`).
   const together = state.config.initiative === "players";
@@ -420,7 +611,6 @@ export function PlayScreen({ session }: { session: Session }) {
   };
 
   // ---- Pings (online): P points at the spot under the pointer for everyone in the game ----
-  const me = session.kind === "online" ? session.me : null;
   const { pings, ping } = useOnlinePings(me, (player) => names.playerColor(player));
   // Players ping; spectators only watch. Not in eye view, where the pointer turns the view.
   const canPing = isOnline && me !== null && !eyeView && state.phase !== "gameOver";
@@ -506,6 +696,27 @@ export function PlayScreen({ session }: { session: Session }) {
         ...(life > 1 ? { lifeLeft: life - f.wounds } : {}),
       });
     }
+  }
+  // Figures destroyed a moment ago stay where they fell until they have shaken.
+  for (const g of ghosts) {
+    const hit = findFigure(state, g.id);
+    if (!hit || figures.some((f) => f.id === g.id)) continue;
+    const card = ctx.cards.get(hit.unit.cardId)!;
+    figures.push({
+      id: g.id,
+      cardId: card.id,
+      footprint: card.footprint,
+      faction: card.faction,
+      owner: hit.unit.owner,
+      pose: hit.unit.figures.indexOf(hit.figure),
+      spots: g.spots,
+      height: card.height,
+      color: names.playerColor(hit.unit.owner),
+      label: names.tokenLabel(g.id),
+      hero: card.figureCount === 1,
+      status: "idle",
+      ...(statsOf(card).life > 1 ? { lifeLeft: 0 } : {}),
+    });
   }
   if (deployUnit && deployCard) {
     pending.forEach((p, i) => {
@@ -661,7 +872,8 @@ export function PlayScreen({ session }: { session: Session }) {
   // ---- The table: every unit's card, with the figures that are off the board ----
   const tableShape = tableKey(state);
   const table = useMemo(() => tableFor(state, ctx), [tableShape, ctx]);
-  const placing = new Set(deployUnit ? deployUnit.figures.slice(0, pending.length).map((f) => f.id) : []);
+  // Figures being placed are on the board, not their card; so are destroyed figures still shaking.
+  const placing = new Set([...(deployUnit ? deployUnit.figures.slice(0, pending.length).map((f) => f.id) : []), ...ghosts.map((g) => g.id)]);
   const cardsOnTable = tableUnits(state, ctx, (p) => names.playerColor(p), placing);
   const firstFigure = (unitId: string | null) => (unitId ? state.units.find((u) => u.id === unitId)?.figures[0]?.id ?? null : null);
 
@@ -693,9 +905,11 @@ export function PlayScreen({ session }: { session: Session }) {
     if (!follow) return null;
     const centre = (id: string): Vec3 | null => {
       const hit = findFigure(state, id);
-      if (!hit?.figure.position) return null;
+      if (!hit) return null;
       const card = ctx.cards.get(hit.unit.cardId)!;
-      const spots = figureSpots(hit.figure, card.footprint, card.height, ctx);
+      // A figure the attack destroyed is still drawn where it fell.
+      const spots = hit.figure.position ? figureSpots(hit.figure, card.footprint, card.height, ctx) : fallen.get(id);
+      if (!spots?.length) return null;
       const at = spots.map((s) => hexToWorld(s.hex));
       const ground = Math.max(...spots.map((s) => s.elevation));
       return {
@@ -708,12 +922,17 @@ export function PlayScreen({ session }: { session: Session }) {
     if (!point) return null;
     const other = follow.with ? centre(follow.with) : null;
     if (other) {
-      // A fight: look at the middle of the two figures, from far enough back to see both.
-      const apart = Math.hypot(other.x - point.x, other.z - point.z);
+      // A fight: look at the middle of the two figures from across the line between them, so
+      // they stand side by side on screen, and from far enough back to see both. Always, whatever
+      // the Display settings: an attack is worth seeing.
+      const dx = other.x - point.x;
+      const dz = other.z - point.z;
+      const apart = Math.hypot(dx, dz);
+      const across = apart > 0.01 ? { x: (-dz / apart) * FOLLOW_FRAME.from.z, y: FOLLOW_FRAME.from.y, z: (dx / apart) * FOLLOW_FRAME.from.z } : FOLLOW_FRAME.from;
       return {
         key: follow.key,
         point: { x: (point.x + other.x) / 2, y: (point.y + other.y) / 2, z: (point.z + other.z) / 2 },
-        frame: { from: FOLLOW_FRAME.from, distance: Math.max(FIGHT_DISTANCE, apart * 1.5 + 6) },
+        frame: { from: across, distance: Math.max(FIGHT_DISTANCE, apart * 1.5 + 6), either: true },
       };
     }
     // Following the acting unit makes only the moves the player has ticked under Display.
@@ -723,6 +942,40 @@ export function PlayScreen({ session }: { session: Session }) {
     // Only a new follow request moves the camera; later state changes must not.
   }, [follow]);
   const [hexTip, setHexTip] = useHexTip();
+
+  // ---- What the fight effects need: where each figure stands ----
+  const anchorFor = (id: string): FigureAnchor | null => {
+    const view = figures.find((f) => f.id === id);
+    return view ? anchorOf(view) : null;
+  };
+  const fight = useMemo(() => (beat ? fightIn(beat.events, state, ctx) : null), [beat?.stamp]);
+  const intro =
+    beat?.part === "intro" && fight
+      ? {
+          pairs: fight.pairs.flatMap((p) => {
+            const from = anchorFor(p.attackerId);
+            const to = anchorFor(p.targetId);
+            return from && to ? [{ from, to, ranged: p.ranged }] : [];
+          }),
+          attackers: fight.attackers.flatMap((id) => anchorFor(id) ?? []),
+          targets: fight.targets.flatMap((id) => anchorFor(id) ?? []),
+        }
+      : null;
+  const firstRoll = beat ? attackRollsIn(beat.events)[0] : undefined;
+  // A blast names its first target "and 2 more".
+  const fightTitle = firstRoll ? `${attackTitle(firstRoll, names)}${fight && fight.targets.length > 1 ? ` and ${fight.targets.length - 1} more` : ""}` : "";
+  /** What the bottom line of the intro and the dice says: how to skip, or who the skip waits for. */
+  const skipHint =
+    beat?.skipped && watching?.show === beat.stamp
+      ? `Waiting for ${watching.waiting.filter((p) => p !== me).map((p) => names.player(p)).join(", ")} to skip`
+      : beat?.skipped
+        ? "Waiting for the others to skip"
+        : "Click to skip";
+  const numbersOf = (b: Batch): WoundNumber[] =>
+    b.marks.flatMap((m) => {
+      const a = m.wounds === null ? null : anchorFor(m.figureId);
+      return a && m.wounds !== null ? [{ figureId: m.figureId, wounds: m.wounds, at: { x: a.x, y: a.top, z: a.z } }] : [];
+    });
 
   const zones = useMemo(() => zoneOwners(state, ctx), [state.players, state.zones, ctx]);
 
@@ -749,6 +1002,17 @@ export function PlayScreen({ session }: { session: Session }) {
           onInspect={setHexTip}
         >
           <Pings pings={pings} center={center} />
+          {intro && <FightIntro key={beat!.stamp} pairs={intro.pairs} attackers={intro.attackers} targets={intro.targets} center={center} />}
+          {batches.map((b) => (
+            <WoundNumbers
+              key={b.stamp}
+              numbers={numbersOf(b)}
+              center={center}
+              then={destroyedIn(b).length > 0 ? SHAKE_SECONDS : 0}
+              onFloated={() => batchFloated(b)}
+              onDone={() => batchDone(b)}
+            />
+          ))}
           <GamingTable layout={table} style={display.table} />
           <TableCards
             layout={table}
@@ -766,6 +1030,7 @@ export function PlayScreen({ session }: { session: Session }) {
             labels={labelLayer}
             motions={motions}
             jump={jump}
+            shake={shake}
             carry={carry}
             canDrag={canDrag}
             onDragStart={onDragStart}
@@ -910,6 +1175,11 @@ export function PlayScreen({ session }: { session: Session }) {
                 ))}
               </div>
             )}
+            {othersWatching.length > 0 && !beat && (
+              <p className="watching-note" role="status">
+                Waiting for {othersWatching.map((p) => names.player(p)).join(", ")} to finish watching the attack.
+              </p>
+            )}
             <p className="muted small">
               {!myTurn
                 ? `Waiting for ${names.player(active.player)} to play this turn.`
@@ -1001,10 +1271,34 @@ export function PlayScreen({ session }: { session: Session }) {
         </div>
       )}
 
-      {/* While the dice show plays, the dice panel waits; it keeps the result afterwards. */}
-      {!show && <DiceOverlay events={session.lastEvents} names={names} stamp={session.events.length} />}
-      {show?.kind === "attack" && display.dice !== "none" && (
-        <AttackShow key={show.stamp} rolls={attackRollsIn(show.events)} mode={display.dice} state={state} ctx={ctx} names={names} onClose={closeShow} />
+      {/* While the attack or the dice show plays, the dice panel waits; it keeps the result afterwards. */}
+      {!show && !beat && <DiceOverlay events={session.lastEvents} names={names} stamp={session.events.length} />}
+      {beat?.part === "intro" && (
+        <div
+          className="fight-intro"
+          role="dialog"
+          aria-label="Attack begins"
+          data-kind={fight?.pairs[0]?.ranged ? "ranged" : "melee"}
+          onClick={skipBeat}
+        >
+          <div className="fight-title" style={{ borderColor: ATTACK_RED }}>
+            {fightTitle}
+          </div>
+          <div className="fight-hint">{skipHint}</div>
+        </div>
+      )}
+      {beat?.part === "dice" && display.dice !== "none" && (
+        <AttackShow
+          key={beat.stamp}
+          rolls={attackRollsIn(beat.events)}
+          mode={display.dice}
+          state={state}
+          ctx={ctx}
+          names={names}
+          onClose={beatPlayed}
+          onSkip={skipBeat}
+          hint={skipHint}
+        />
       )}
       {initiativeOpen && (
         <InitiativeShow

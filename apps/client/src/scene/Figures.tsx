@@ -56,12 +56,16 @@ export interface FigureJump {
   readonly ids: readonly string[];
 }
 
+/** Figures to shake on the spot (a destroyed figure, just before it leaves the board); a new `key` starts a shake. */
+export type FigureShake = FigureJump;
+
 interface Props {
   figures: readonly FigureView[];
   onClick?: (id: string) => void;
   onHover?: (id: string | null) => void;
   motions?: FigureMotions | null;
   jump?: FigureJump | null;
+  shake?: FigureShake | null;
   carry?: FigureCarry | null;
   /** Figures the pointer may pick up and drag. While one is held the camera stays still. */
   canDrag?: (id: string) => boolean;
@@ -158,10 +162,15 @@ const JUMP_SECONDS = 0.95;
 const JUMP_HEIGHT = 3.2;
 /** How quickly a figure settles where it belongs: the share of the way left covered each second is 1 - e^-rate. */
 const SETTLE_RATE = 14;
+/** A shake: how long, how far to each side at first, and how many times a second. */
+export const SHAKE_SECONDS = 0.6;
+const SHAKE_WIDTH = 0.09 * HEX_SIZE;
+const SHAKE_RATE = 14;
 
 interface Animation {
   readonly motions: FigureMotions | null;
   readonly jump: FigureJump | null;
+  readonly shake: FigureShake | null;
   readonly carry: FigureCarry | null;
   /** How far each figure is drawn from where it stands, for the name tags. */
   readonly offsets: Map<string, Vector3>;
@@ -194,14 +203,17 @@ function useFigureAnimation(f: FigureView): RefObject<Group | null> {
     // Moves and jumps already made when the figure is first drawn are not played again.
     seenMotions: anim?.motions?.key,
     seenJump: anim?.jump?.key,
+    seenShake: anim?.shake?.key,
     hop: null as { points: Vector3[]; t: number } | null,
     jumpT: -1,
+    shakeT: -1,
   });
+  const reduced = useReducedMotion();
   const invalidate = useThree((s) => s.invalidate);
   const wake = useWake();
   const activity = useBoardActivity();
   // A new move, jump, drag or place needs a frame to start from.
-  useEffect(() => wake(), [anim?.motions, anim?.jump, anim?.carry, f.spots, wake]);
+  useEffect(() => wake(), [anim?.motions, anim?.jump, anim?.shake, anim?.carry, f.spots, wake]);
   // Report a hop about to start before the next frame, so the camera waits for it to land.
   useLayoutEffect(() => {
     const m = anim?.motions;
@@ -282,11 +294,24 @@ function useFigureAnimation(f: FigureView): RefObject<Group | null> {
       else if (u < 0.72) up = JUMP_HEIGHT * 4 * (u / 0.72) * (1 - u / 0.72);
       else up = JUMP_HEIGHT * 0.16 * 4 * ((u - 0.72) / 0.28) * (1 - (u - 0.72) / 0.28);
     }
+    const sh = anim.shake;
+    if (sh && sh.key !== st.seenShake) {
+      st.seenShake = sh.key;
+      // Under reduced motion the figure keeps still.
+      if (sh.ids.includes(f.id) && !reduced) st.shakeT = 0;
+    }
+    let side = 0;
+    if (st.shakeT >= 0) {
+      st.shakeT += delta;
+      const u = st.shakeT / SHAKE_SECONDS;
+      if (u >= 1) st.shakeT = -1;
+      else side = SHAKE_WIDTH * (1 - u) * Math.sin(st.shakeT * SHAKE_RATE * 2 * Math.PI);
+    }
     const was = lastDrawn.copy(g.position);
-    g.position.set(st.offset.x, st.offset.y + up, st.offset.z);
+    g.position.set(st.offset.x + side, st.offset.y + up, st.offset.z + side * 0.4);
     // Keep drawing while the figure moves, and once more after it stops, so its name tag
     // (placed in the same frame, perhaps before it moved) catches up.
-    if (!was.equals(g.position) || st.hop || st.jumpT >= 0) invalidate();
+    if (!was.equals(g.position) || st.hop || st.jumpT >= 0 || st.shakeT >= 0) invalidate();
   });
   return group;
 }
@@ -666,7 +691,7 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
 /** Pointer travel (pixels) that turns a press on a figure into a drag. */
 const DRAG_PIXELS = 5;
 
-export function Figures({ figures, onClick, onHover, labels, style, motions = null, jump = null, carry = null, canDrag, onDragStart, onDragEnd }: Props) {
+export function Figures({ figures, onClick, onHover, labels, style, motions = null, jump = null, shake = null, carry = null, canDrag, onDragStart, onDragEnd }: Props) {
   const display = useDisplay();
   const drawn = style ?? display.figures;
   const facing = useMemo(() => facings(figures), [figures]);
@@ -711,7 +736,7 @@ export function Figures({ figures, onClick, onHover, labels, style, motions = nu
     };
   }, []);
 
-  const animation = useMemo<Animation>(() => ({ motions, jump, carry, offsets, onDown }), [motions, jump, carry, offsets, onDown]);
+  const animation = useMemo<Animation>(() => ({ motions, jump, shake, carry, offsets, onDown }), [motions, jump, shake, carry, offsets, onDown]);
   return (
     <AnimationContext.Provider value={animation}>
       {figures.map((f) =>

@@ -24,6 +24,11 @@ export interface OnlineState {
   readonly error: string | null;
   /** This device came to play (create, join or resume), not just to watch. */
   readonly wantsSeat: boolean;
+  /**
+   * The latest attack show and the players still watching it (`show` is the game's event count
+   * once the attack happened). The next move waits until nobody is.
+   */
+  readonly watching: { readonly show: number; readonly waiting: readonly string[] } | null;
 }
 
 const SEAT_KEY = "age-of-heroes:online:v1";
@@ -109,6 +114,7 @@ let state: OnlineState = {
   connected: false,
   error: null,
   wantsSeat: false,
+  watching: null,
 };
 const listeners = new Set<() => void>();
 let socket: WebSocket | null = null;
@@ -208,6 +214,11 @@ export function sendPing(at: Ping["at"]): boolean {
   return send({ t: "ping", at: { x: at.x, y: at.y, z: at.z } });
 }
 
+/** Tell everyone this player has finished watching an attack show, or wants to skip it. */
+export function sendWatched(show: number): boolean {
+  return send({ t: "watched", show });
+}
+
 function receive(msg: ServerMessage): void {
   switch (msg.t) {
     case "welcome": {
@@ -248,6 +259,9 @@ function receive(msg: ServerMessage): void {
       // For browser tests: how many pings from other players this page has heard.
       window.__aohPingsHeard = pingsHeard;
       for (const l of pingListeners) l({ player: msg.player, at: msg.at });
+      return;
+    case "watching":
+      set({ watching: { show: msg.show, waiting: msg.waiting } });
       return;
     case "error":
       if (saveWaiter) {
@@ -358,7 +372,7 @@ function disconnect(forgetSeat = true): void {
   hello = null;
   retries = 0;
   if (forgetSeat) write(SEAT_KEY, null);
-  set({ status: "idle", code: null, me: null, room: null, map: null, connected: false, error: null });
+  set({ status: "idle", code: null, me: null, room: null, map: null, connected: false, error: null, watching: null });
   endOnlineSession();
 }
 

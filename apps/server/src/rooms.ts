@@ -64,6 +64,11 @@ interface Room {
   /** Set while a resumed game waits for its players; cleared once it continues. */
   resume: Resume | null;
   lastActive: number;
+  /**
+   * The attack show every screen is playing, and the players still watching it. Their screens
+   * hold the next move until everyone has finished or skipped it. Not part of the game.
+   */
+  show: { readonly key: number; readonly waiting: Set<string> } | null;
 }
 
 interface Seat {
@@ -136,6 +141,7 @@ export class RoomManager {
     if (member) member.conn = null;
     room.lastActive = this.now();
     this.broadcastRoom(room);
+    if (member) this.stopWatching(room, member.playerId);
   }
 
   /** Remove rooms nobody has been connected to for a while. */
@@ -173,6 +179,8 @@ export class RoomManager {
         return this.save(conn);
       case "ping":
         return this.ping(conn, msg.at);
+      case "watched":
+        return this.watched(conn, msg.show);
     }
   }
 
@@ -198,6 +206,7 @@ export class RoomManager {
       events: [],
       resume: null,
       lastActive: this.now(),
+      show: null,
     };
     this.rooms.set(room.code, room);
     const member = this.addMember(room, conn, name);
@@ -241,6 +250,7 @@ export class RoomManager {
       events: [],
       resume: { record, state: replayed.state, events: replayed.events },
       lastActive: this.now(),
+      show: null,
     };
     this.rooms.set(room.code, room);
     const member = this.seatArmy(room, conn, army.id, army.name);
@@ -374,7 +384,43 @@ export class RoomManager {
     room.events.push(...result.events);
     room.lastActive = this.now();
     this.broadcastGame(room, result.events, false);
+    this.openShow(room, result.events);
     if (result.state.phase === "gameOver") this.broadcastReplay(room);
+  }
+
+  /**
+   * An attack (a roll by a figure) starts a show on every screen: the attack intro, then the dice.
+   * Everyone sees it to the end unless every connected player skips it, so the server keeps
+   * track of who is still watching. Any other move ends the last show.
+   */
+  private openShow(room: Room, events: GameEvent[]): void {
+    const attack = events.some((e) => e.type === "attackRolled" && e.attackerId !== null);
+    if (!attack) {
+      room.show = null;
+      return;
+    }
+    const waiting = new Set(room.members.filter((m) => m.conn).map((m) => m.playerId));
+    room.show = { key: room.events.length, waiting };
+    this.broadcastShow(room);
+  }
+
+  /** A player finished watching the show, or skipped it. Old or unknown shows are ignored. */
+  private watched(conn: Connection, key: number): void {
+    const { room, playerId } = this.seatOf(conn);
+    if (!playerId || !room.show || room.show.key !== key) return;
+    if (room.show.waiting.delete(playerId)) this.broadcastShow(room);
+  }
+
+  /** A player who is not connected is not watching. */
+  private stopWatching(room: Room, playerId: string): void {
+    if (room.show?.waiting.delete(playerId)) this.broadcastShow(room);
+  }
+
+  private broadcastShow(room: Room): void {
+    const show = room.show;
+    if (!show) return;
+    const message: ServerMessage = { t: "watching", show: show.key, waiting: [...show.waiting] };
+    for (const { conn } of this.recipients(room)) conn.send(message);
   }
 
   /**
@@ -411,6 +457,7 @@ export class RoomManager {
         // During the game: leaving concedes.
         const member = room.members.find((m) => m.playerId === playerId)!;
         member.conn = null;
+        this.stopWatching(room, playerId);
         const p = room.state.players.find((x) => x.id === playerId);
         if (p && !p.eliminated && room.state.phase !== "gameOver") {
           const result = applyCommand(room.state, { type: "concede", player: playerId }, room.ctx);

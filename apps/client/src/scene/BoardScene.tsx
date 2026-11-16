@@ -288,8 +288,11 @@ const FOCUS_WAIT_SECONDS = 3;
 export interface CameraFocusRequest {
   readonly point: Vec3;
   readonly key: number;
-  /** Also set the view: look from this direction (it need not be unit length) at this distance. */
-  readonly frame?: { readonly from: Vec3; readonly distance: number };
+  /**
+   * Also set the view: look from this direction (it need not be unit length) at this distance.
+   * With `either`, look from this side or the opposite one, whichever is nearer the current view.
+   */
+  readonly frame?: { readonly from: Vec3; readonly distance: number; readonly either?: boolean };
   /**
    * Which parts of a framed move to make (all by default): move to the point,
    * turn to the frame's direction, and come to the frame's distance. What is
@@ -334,6 +337,10 @@ function CameraFocus({ focus, center }: { focus: CameraFocusRequest; center: { x
     const view = frame
       ? { direction: new Vector3(frame.from.x, frame.from.y, frame.from.z).normalize(), distance: frame.distance, parts: parts ?? ALL_PARTS }
       : null;
+    if (view && frame?.either && controls) {
+      const now = camera.position.clone().sub(controls.target);
+      if (now.x * view.direction.x + now.z * view.direction.z < 0) view.direction.set(-view.direction.x, view.direction.y, -view.direction.z);
+    }
     setGoal({ target, view, age: 0, waited: 0 });
     wake();
     // Only a new key starts a move; the point is read when it does.
