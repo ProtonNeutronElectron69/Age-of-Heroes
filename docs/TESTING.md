@@ -14,7 +14,7 @@ Checks run only for the parts of the game a change can affect. The browser tests
 
 | Test | What it plays through |
 |---|---|
-| `full-game` | A hot-seat game: draft, deployment (models and tokens, the three tables, the board coming to rest), the initiative d20s, dragging a figure, H, the hover card, eye view, the camera following, squads, the attack scene and dice only (then **Dice rolls** set to None), the dice panel; then each turn is ended at once until the 5-round limit and the game-over screen |
+| `full-game` | A hot-seat game: the draft's battlefield view (opening first, the hex tooltip, coming back mid-draft), draft, deployment (models and tokens, the three tables, the board coming to rest), the initiative d20s, dragging a figure, H, the hover card, eye view, the camera following (and its three Display boxes), the hex tooltip on a middle click, squads, the attack scene and dice only (then **Dice rolls** set to None), the dice panel; then each turn is ended at once until the 5-round limit and the game-over screen |
 | `online` | Through the real game server, one browser per player: the lobby, a spectator, a reload during the draft, a few turns, host-only saving, leaving (which concedes), the replay, and resuming in a new room. Whole online games are played by the server's unit tests |
 | `saves` | Saving a hot-seat game and bringing it back from the saved games list, after a reload, and from a file; the file in the replay viewer |
 | `editor` | Building a map, exporting and importing it, and playing on it |
@@ -59,7 +59,7 @@ The browser tests that show the game board (`full-game`, `online`, `saves`, `edi
 
 ## Writing a browser test
 
-- **Frames are slow.** CI has no graphics card, so WebGL is drawn in software: the gaming table view draws at about 2 frames a second. Wait for state (a button, `window.__aohUi`, a changed draw count, a settled camera), never for a fixed time or for many frames in a row.
+- **Frames are slow.** CI has no graphics card, so WebGL is drawn in software: the gaming table view draws at about 2 frames a second. Wait for state (a button, `window.__aohUi`, a changed draw count, a settled camera, which includes `window.__aoh.cameraBusy()` being false: a glide waits for hops to land before it starts), never for a fixed time or for many frames in a row.
 - **After changing screens, wait for the new canvas's hook:** `window.__aoh?.canvas.isConnected`. The old screen's canvas can still be closing, with its hook in place; a fixed pause before the first click made the editor test fail on `main` once.
 - **Set test mode and reduced motion.** Call `addInitScript(() => { window.__aohTest = true; })` on the page or context before the first `goto`, and pass `reducedMotion: "reduce"` if the test shows the board. A test that plays turns but does not check the dice show sets **Dice rolls** to None in the same script (`aoh.display` in `localStorage`), so the show cannot cover the board. Copy the start of an existing test.
 - **Give each browser test its own preview port**, so the jobs can run side by side locally too.

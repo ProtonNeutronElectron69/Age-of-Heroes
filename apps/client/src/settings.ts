@@ -16,6 +16,10 @@ export interface DisplaySettings {
   readonly table: TableStyle;
   /** How attacks and initiative show their dice. */
   readonly dice: DiceShow;
+  /** The play screen's camera follows the acting figure: moving to it, turning to face the board, and zooming. */
+  readonly autoPan: boolean;
+  readonly autoRotate: boolean;
+  readonly autoZoom: boolean;
 }
 
 /**
@@ -49,7 +53,16 @@ export const MENU_STYLES: readonly { readonly id: MenuStyle; readonly name: stri
 ];
 
 const KEY = "aoh.display";
-const DEFAULTS: DisplaySettings = { figures: "models", scheme: "faction", menu: "war-table", table: "tavern", dice: "scene" };
+const DEFAULTS: DisplaySettings = {
+  figures: "models",
+  scheme: "faction",
+  menu: "war-table",
+  table: "tavern",
+  dice: "scene",
+  autoPan: true,
+  autoRotate: true,
+  autoZoom: true,
+};
 
 function load(): DisplaySettings {
   try {
@@ -60,6 +73,9 @@ function load(): DisplaySettings {
       menu: MENU_STYLES.some((m) => m.id === saved.menu) ? saved.menu! : DEFAULTS.menu,
       table: TABLE_STYLES.some((t) => t.id === saved.table) ? saved.table! : DEFAULTS.table,
       dice: DICE_SHOWS.some((d) => d.id === saved.dice) ? saved.dice! : DEFAULTS.dice,
+      autoPan: saved.autoPan !== false,
+      autoRotate: saved.autoRotate !== false,
+      autoZoom: saved.autoZoom !== false,
     };
   } catch {
     return DEFAULTS;

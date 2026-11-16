@@ -24,6 +24,8 @@ import {
   Matrix4,
   MeshStandardMaterial,
   Quaternion,
+  Raycaster,
+  Vector2,
   Vector3,
   type InstancedMesh,
   type Material,
@@ -31,6 +33,7 @@ import {
 } from "three";
 import { TEST_MODE } from "../testMode";
 import { HEX_GAP } from "./scale";
+import { useBoardActivity } from "./activity";
 import { useWake } from "./wake";
 
 export interface Marker {
@@ -73,7 +76,18 @@ interface Props {
   backdrop?: string;
   /** A figure is being dragged: report the hex under the pointer although a button is held. */
   dragging?: boolean;
+  /** A middle click (not a drag) on the board: the surface under the pointer, and where on screen the click was. */
+  onInspect?: (hit: HexInspect) => void;
   children?: ReactNode;
+}
+
+/** A hex the player middle-clicked, for its terrain tooltip. */
+export interface HexInspect {
+  readonly step: Step;
+  readonly cell: Cell;
+  /** Where the click was, in page coordinates. */
+  readonly x: number;
+  readonly y: number;
 }
 
 /** Eye view look speed: radians per pixel dragged, and per second with the arrow keys. */
@@ -267,6 +281,8 @@ const FOCUS_DISTANCE = 16;
  */
 const FOCUS_RATE = 10;
 const FOCUS_MAX_SECONDS = 0.8;
+/** The longest the camera waits for hops to land (a long hop takes 2.4 seconds), in case one is never reported. */
+const FOCUS_WAIT_SECONDS = 3;
 
 /** A request to move the camera; a new `key` starts a move. */
 export interface CameraFocusRequest {
@@ -274,12 +290,22 @@ export interface CameraFocusRequest {
   readonly key: number;
   /** Also set the view: look from this direction (it need not be unit length) at this distance. */
   readonly frame?: { readonly from: Vec3; readonly distance: number };
+  /**
+   * Which parts of a framed move to make (all by default): move to the point,
+   * turn to the frame's direction, and come to the frame's distance. What is
+   * left out stays as the player set it.
+   */
+  readonly parts?: { readonly pan: boolean; readonly rotate: boolean; readonly zoom: boolean };
 }
+
+const ALL_PARTS = { pan: true, rotate: true, zoom: true } as const;
 
 /**
  * Glides the map camera to look at a point. Without a frame it keeps its angle
  * and comes no further away than FOCUS_DISTANCE; with one it ends at the
- * frame's distance and direction. Turning or zooming the camera by hand stops it.
+ * frame's distance and direction, or makes only the parts asked for. It waits
+ * while any figure is still hopping along a move, so the camera never leaves a
+ * figure mid-move. Turning or zooming the camera by hand stops it.
  */
 function CameraFocus({ focus, center }: { focus: CameraFocusRequest; center: { x: number; z: number } }) {
   const camera = useThree((s) => s.camera);
@@ -291,33 +317,62 @@ function CameraFocus({ focus, center }: { focus: CameraFocusRequest; center: { x
   } | null;
   const invalidate = useThree((s) => s.invalidate);
   const wake = useWake();
-  const goal = useRef<{ target: Vector3; eye: Vector3 | null; age: number } | null>(null);
-  const { point, key, frame } = focus;
+  const activity = useBoardActivity();
+  const goal = useRef<{
+    target: Vector3;
+    view: { direction: Vector3; distance: number; parts: NonNullable<CameraFocusRequest["parts"]> } | null;
+    age: number;
+    waited: number;
+  } | null>(null);
+  const { point, key, frame, parts } = focus;
+  const setGoal = (g: typeof goal.current) => {
+    goal.current = g;
+    activity.gliding = g !== null;
+  };
   useEffect(() => {
     const target = new Vector3(point.x - center.x, point.y, point.z - center.z);
-    const eye = frame ? new Vector3(frame.from.x, frame.from.y, frame.from.z).setLength(frame.distance).add(target) : null;
-    goal.current = { target, eye, age: 0 };
+    const view = frame
+      ? { direction: new Vector3(frame.from.x, frame.from.y, frame.from.z).normalize(), distance: frame.distance, parts: parts ?? ALL_PARTS }
+      : null;
+    setGoal({ target, view, age: 0, waited: 0 });
     wake();
     // Only a new key starts a move; the point is read when it does.
   }, [key]);
   useEffect(() => {
     if (!controls?.addEventListener) return;
-    const stop = () => (goal.current = null);
+    const stop = () => setGoal(null);
     controls.addEventListener("start", stop);
     return () => controls.removeEventListener?.("start", stop);
   }, [controls]);
+  useEffect(() => () => void (activity.gliding = false), [activity]);
   const offset = useMemo(() => new Vector3(), []);
   useFrame((_, delta) => {
     const g = goal.current;
     if (!g || !controls) return;
+    // Wait for every hop to land; the hopping figures draw those frames anyway.
+    if (activity.hopping.size > 0 && g.waited < FOCUS_WAIT_SECONDS) {
+      g.waited += delta;
+      invalidate();
+      return;
+    }
     g.age += delta;
     const last = g.age >= FOCUS_MAX_SECONDS;
     const ease = last ? 1 : 1 - Math.exp(-FOCUS_RATE * Math.min(delta, 0.25));
-    if (g.eye) {
-      controls.target.lerp(g.target, ease);
-      camera.position.lerp(g.eye, ease);
+    if (g.view) {
+      const { direction, distance: wantedDistance, parts: p } = g.view;
+      offset.copy(camera.position).sub(controls.target);
+      let distance = offset.length();
+      offset.normalize();
+      if (p.pan) controls.target.lerp(g.target, ease);
+      if (p.rotate) offset.lerp(direction, ease).normalize();
+      if (p.zoom) distance += (wantedDistance - distance) * ease;
+      camera.position.copy(controls.target).addScaledVector(offset, distance);
       controls.update();
-      if (last || (controls.target.distanceTo(g.target) < 0.02 && camera.position.distanceTo(g.eye) < 0.02)) goal.current = null;
+      const there =
+        (!p.pan || controls.target.distanceTo(g.target) < 0.02) &&
+        (!p.rotate || offset.distanceTo(direction) < 0.002) &&
+        (!p.zoom || Math.abs(distance - wantedDistance) < 0.02);
+      if (last || there) setGoal(null);
       else invalidate();
       return;
     }
@@ -328,7 +383,7 @@ function CameraFocus({ focus, center }: { focus: CameraFocusRequest; center: { x
     offset.setLength(distance + (wanted - distance) * ease);
     camera.position.copy(controls.target).add(offset);
     controls.update();
-    if (last || (controls.target.distanceTo(g.target) < 0.02 && Math.abs(distance - wanted) < 0.02)) goal.current = null;
+    if (last || (controls.target.distanceTo(g.target) < 0.02 && Math.abs(distance - wanted) < 0.02)) setGoal(null);
     else invalidate();
   });
   return null;
@@ -349,6 +404,60 @@ const CAMERA_FURTHEST_LEAST = TEST_MODE ? 60 : 140;
 
 /** Pointer travel (pixels) beyond which a click is treated as a camera drag. */
 const DRAG_PIXELS = 5;
+
+/**
+ * Middle click: finds the terrain under the pointer by casting a ray through
+ * everything else (figures, markers, the table), so the hex under a figure can
+ * be read too. A middle drag still zooms the camera; only a click inspects.
+ */
+function MiddleClickInspect({ board, onInspect }: { board: Board; onInspect: (hit: HexInspect) => void }) {
+  const gl = useThree((s) => s.gl);
+  const camera = useThree((s) => s.camera);
+  const scene = useThree((s) => s.scene);
+  const report = useRef(onInspect);
+  report.current = onInspect;
+  useEffect(() => {
+    const el = gl.domElement;
+    const ray = new Raycaster();
+    const ndc = new Vector2();
+    let down: { x: number; y: number } | null = null;
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 1) return;
+      down = { x: e.clientX, y: e.clientY };
+      // No autoscroll cursor.
+      e.preventDefault();
+    };
+    const onUp = (e: PointerEvent) => {
+      if (e.button !== 1 || !down) return;
+      const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+      down = null;
+      if (moved > DRAG_PIXELS) return;
+      const rect = el.getBoundingClientRect();
+      ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      for (const hit of ray.intersectObjects(scene.children, true)) {
+        const cells = hit.object.userData.aohCells as readonly Cell[] | undefined;
+        const cell = cells && hit.instanceId !== undefined ? cells[hit.instanceId] : undefined;
+        if (!cell) continue;
+        const step = surfaceForCell(board, cell);
+        if (step) report.current({ step, cell, x: e.clientX, y: e.clientY });
+        return;
+      }
+    };
+    const noAutoscroll = (e: MouseEvent) => {
+      if (e.button === 1) e.preventDefault();
+    };
+    el.addEventListener("pointerdown", onDown);
+    el.addEventListener("pointerup", onUp);
+    el.addEventListener("mousedown", noAutoscroll);
+    return () => {
+      el.removeEventListener("pointerdown", onDown);
+      el.removeEventListener("pointerup", onUp);
+      el.removeEventListener("mousedown", noAutoscroll);
+    };
+  }, [gl, camera, scene, board]);
+  return null;
+}
 
 /** The standing surface a click on a cell refers to: the top of the solid stack containing it. */
 function surfaceForCell(board: Board, cell: Cell): Step | null {
@@ -469,6 +578,8 @@ function TerrainCells({
     <instancedMesh
       ref={mesh}
       args={[geometry, material, cells.length]}
+      // Read by the middle-click inspector.
+      userData={{ aohCells: cells }}
       onClick={(e: ThreeEvent<MouseEvent>) => {
         if (e.delta > DRAG_PIXELS) return;
         const cell = cellAt(e);
@@ -577,6 +688,7 @@ export function BoardScene({
   still = false,
   backdrop = "#18202c",
   dragging = false,
+  onInspect,
   children,
 }: Props) {
   const cells = useMemo(() => board.cells(), [board]);
@@ -687,6 +799,7 @@ export function BoardScene({
       </group>
       {still ? null : eyeView ? <EyeCamera view={eyeView} center={center} /> : <KeyboardPan />}
       {focus && !eyeView && !still && <CameraFocus focus={focus} center={center} />}
+      {onInspect && !still && <MiddleClickInspect board={board} onInspect={onInspect} />}
       {!still && <OrbitControls
         makeDefault
         enabled={!eyeView}

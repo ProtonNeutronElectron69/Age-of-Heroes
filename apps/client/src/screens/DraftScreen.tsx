@@ -1,9 +1,11 @@
-import { currentDrafter, lockedFaction, pickProblem, pointsSpent } from "@aoh/rules";
+import { currentDrafter, lockedFaction, pickProblem, playerZone, pointsSpent } from "@aoh/rules";
+import { useState } from "react";
 import { canControl, dispatch, type Session } from "../session";
 import { Names } from "../describe";
 import { GameMenu } from "../ui/GameMenu";
 import { OnlineBar } from "../ui/OnlineBar";
 import { UnitCardView } from "../ui/UnitCardView";
+import { DraftMap } from "./DraftMap";
 
 /** A short button label for why a card cannot be drafted. */
 function shortReason(reason: string): string {
@@ -22,9 +24,12 @@ export function DraftScreen({ session }: { session: Session }) {
   const left = drafter && budget !== null ? budget - pointsSpent(state, drafter, ctx) : null;
   const faction = drafter ? lockedFaction(state, drafter, ctx) : null;
   const myPick = canControl(session, drafter);
+  // The draft opens on the battlefield, before anyone has picked, so players can plan their armies.
+  const [view, setView] = useState<"map" | "units">(() => (state.units.length === 0 ? "map" : "units"));
+  const onMap = view === "map";
 
   return (
-    <div className="screen draft">
+    <div className={`screen draft${onMap ? " map-open" : ""}`}>
       <header className="panel draft-header">
         <div>
           <h1>Draft</h1>
@@ -35,7 +40,12 @@ export function DraftScreen({ session }: { session: Session }) {
             The order snakes: it reverses every round of picks.
           </p>
         </div>
-        <GameMenu session={session} className="draft-menu" />
+        <div className="draft-actions">
+          <button type="button" className={onMap ? "primary" : ""} onClick={() => setView(onMap ? "units" : "map")}>
+            {onMap ? "Go to the draft" : "View map"}
+          </button>
+          <GameMenu session={session} className="draft-menu" />
+        </div>
         {drafter && (
           <p className="turn-banner" style={{ borderColor: names.playerColor(drafter) }}>
             <span className="swatch" style={{ background: names.playerColor(drafter) }} />
@@ -62,26 +72,30 @@ export function DraftScreen({ session }: { session: Session }) {
       </header>
       <OnlineBar session={session} />
 
-      <div className="draft-body">
-        <section className="card-grid" aria-label="Available units">
-          {[...ctx.cards.values()].map((card) => {
-            const reason = drafter ? pickProblem(state, ctx, card.id, drafter) : "The draft is over";
-            const ok = reason === null;
-            return (
-              <div key={card.id} className={`draft-card ${ok ? "" : "unavailable"}`}>
-                <UnitCardView card={card} />
-                <button
-                  type="button"
-                  className="primary"
-                  disabled={!ok || !drafter || !myPick || session.pending}
-                  onClick={() => drafter && dispatch({ type: "draftPick", player: drafter, cardId: card.id })}
-                >
-                  {ok ? `Draft ${card.name}` : shortReason(reason)}
-                </button>
-              </div>
-            );
-          })}
-        </section>
+      <div className={`draft-body${onMap ? " map-view" : ""}`}>
+        {onMap ? (
+          <DraftMap state={state} ctx={ctx} />
+        ) : (
+          <section className="card-grid" aria-label="Available units">
+            {[...ctx.cards.values()].map((card) => {
+              const reason = drafter ? pickProblem(state, ctx, card.id, drafter) : "The draft is over";
+              const ok = reason === null;
+              return (
+                <div key={card.id} className={`draft-card ${ok ? "" : "unavailable"}`}>
+                  <UnitCardView card={card} />
+                  <button
+                    type="button"
+                    className="primary"
+                    disabled={!ok || !drafter || !myPick || session.pending}
+                    onClick={() => drafter && dispatch({ type: "draftPick", player: drafter, cardId: card.id })}
+                  >
+                    {ok ? `Draft ${card.name}` : shortReason(reason)}
+                  </button>
+                </div>
+              );
+            })}
+          </section>
+        )}
 
         <aside className="panel armies" aria-label="Armies">
           <h2>Armies</h2>
@@ -94,6 +108,11 @@ export function DraftScreen({ session }: { session: Session }) {
                   <span className="swatch" style={{ background: p.color }} /> {p.name}
                   <span className="muted small"> {points} points</span>
                 </h3>
+                {onMap && (
+                  <p className="muted small">
+                    Start zone: {playerZone(state, p.id, ctx).length} hexes, in {p.name}'s colour.
+                  </p>
+                )}
                 {units.length === 0 ? (
                   <p className="muted small">No units yet</p>
                 ) : (

@@ -2,6 +2,7 @@ import { useThree } from "@react-three/fiber";
 import { HEX_SIZE, LEVEL_HEIGHT, hexToWorld } from "@aoh/rules";
 import { useEffect } from "react";
 import { Vector3 } from "three";
+import { useBoardActivity } from "./activity";
 
 interface UiStep {
   hex: { q: number; r: number };
@@ -15,6 +16,8 @@ declare global {
       project: (q: number, r: number, elevation: number) => { x: number; y: number };
       /** What the last frame drew, and how many frames have been drawn, for performance checks. */
       stats: () => { calls: number; triangles: number; lines: number; frames: number };
+      /** The camera has a glide to make (perhaps waiting for a hop to land first), or is making one. */
+      cameraBusy: () => boolean;
       /**
        * The canvas this hook belongs to. A closing screen's canvas can shut down after the next
        * one's has started, so tests wait for `canvas.isConnected` to know the hook is the new screen's.
@@ -40,6 +43,7 @@ declare global {
 /** Exposes a projection helper for automated browser tests. */
 export function TestHook({ offset }: { offset: { x: number; z: number } }) {
   const { camera, gl } = useThree();
+  const activity = useBoardActivity();
   useEffect(() => {
     const hook: NonNullable<Window["__aoh"]> = {
       project(q, r, elevation) {
@@ -52,6 +56,7 @@ export function TestHook({ offset }: { offset: { x: number; z: number } }) {
         const r = gl.info.render;
         return { calls: r.calls, triangles: r.triangles, lines: r.lines, frames: r.frame };
       },
+      cameraBusy: () => activity.gliding,
       canvas: gl.domElement,
     };
     window.__aoh = hook;
@@ -60,6 +65,6 @@ export function TestHook({ offset }: { offset: { x: number; z: number } }) {
     return () => {
       if (window.__aoh === hook) delete window.__aoh;
     };
-  }, [camera, gl, offset]);
+  }, [camera, gl, offset, activity]);
   return null;
 }

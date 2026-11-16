@@ -41,6 +41,7 @@ import { canControl, clearError, dispatch, endSession, replayOf, type Session } 
 import { DisplayMenu } from "../ui/DisplayMenu";
 import { toggleFigures, useDisplay } from "../settings";
 import { GameMenu } from "../ui/GameMenu";
+import { HexTip, useHexTip, zoneOwners } from "../ui/HexTip";
 import { OnlineBar } from "../ui/OnlineBar";
 import { DiceOverlay, EventLog, GameOver, PassScreen, RoundBar, TokenPanel } from "../ui/panels";
 import { AttackShow, InitiativeShow, attackRollsIn, initiativeIn } from "../ui/RollShow";
@@ -100,7 +101,9 @@ function useDelayedHover(): [string | null, (id: string | null) => void] {
 }
 
 /** The view the camera glides to when it follows the acting figure: from the south, looking down at about 50 degrees. */
-const FOLLOW_FRAME = { from: { x: 0, y: 1, z: 0.85 }, distance: 15 } as const;
+const FOLLOW_FRAME = { from: { x: 0, y: 1, z: 0.85 }, distance: 18 } as const;
+/** The closest the camera frames a fight for the attack scene. */
+const FIGHT_DISTANCE = 15;
 
 export function PlayScreen({ session }: { session: Session }) {
   const { state, ctx } = session;
@@ -686,12 +689,17 @@ export function PlayScreen({ session }: { session: Session }) {
       return {
         key: follow.key,
         point: { x: (point.x + other.x) / 2, y: (point.y + other.y) / 2, z: (point.z + other.z) / 2 },
-        frame: { from: FOLLOW_FRAME.from, distance: Math.max(FOLLOW_FRAME.distance, apart * 1.5 + 6) },
+        frame: { from: FOLLOW_FRAME.from, distance: Math.max(FIGHT_DISTANCE, apart * 1.5 + 6) },
       };
     }
-    return { key: follow.key, point, frame: FOLLOW_FRAME };
+    // Following the acting unit makes only the moves the player has ticked under Display.
+    const parts = { pan: display.autoPan, rotate: display.autoRotate, zoom: display.autoZoom };
+    if (!parts.pan && !parts.rotate && !parts.zoom) return null;
+    return { key: follow.key, point, frame: FOLLOW_FRAME, parts };
     // Only a new follow request moves the camera; later state changes must not.
   }, [follow]);
+  const [hexTip, setHexTip] = useHexTip();
+  const zones = useMemo(() => zoneOwners(state, ctx), [state.players, state.zones, ctx]);
 
   return (
     <div className="screen play" data-pending={busy ? "true" : undefined}>
@@ -713,6 +721,7 @@ export function PlayScreen({ session }: { session: Session }) {
           focus={focusRequest}
           backdrop={tableRoom(display.table)}
           dragging={!!drag && !drag.dropped}
+          onInspect={setHexTip}
         >
           <GamingTable layout={table} style={display.table} />
           <TableCards
@@ -740,6 +749,7 @@ export function PlayScreen({ session }: { session: Session }) {
         <TestHook offset={center} />
       </Canvas>
       <FigureLabels figures={figures} layer={labelLayer} />
+      <HexTip tip={hexTip} board={board} terrain={ctx.terrain} zones={zones} onClose={() => setHexTip(null)} />
 
       {state.phase !== "deploy" && state.round > 0 && <RoundBar state={state} names={names} />}
       <OnlineBar session={session} />
@@ -876,7 +886,7 @@ export function PlayScreen({ session }: { session: Session }) {
                   }`
                 : "This unit has finished."}
               {moveBig ? " Press R to turn." : ""}
-              {myTurn ? ` Keys: ${activeUnit.figures.length > 1 ? "1-4 pick a figure, " : ""}E eye view, H shows where the chosen figure is, Space ends the turn, WASD moves the map.` : ""}
+              {myTurn ? ` Keys: ${activeUnit.figures.length > 1 ? "1-4 pick a figure, " : ""}E eye view, H shows where the chosen figure is, Space ends the turn, WASD moves the map; middle-click a hex to read its terrain.` : ""}
               {hoverOption ? ` Move cost ${hoverOption.cost}.` : ""}
               {eyeView && myTurn ? " Drag or use the arrow keys to look around. Clicking an enemy faces it (a red-ringed one is attacked). Exit eye view to end the turn." : ""}
             </p>
