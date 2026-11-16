@@ -4,6 +4,8 @@ import {
   attackDice,
   attackProblem,
   attackTargets,
+  blastProblem,
+  blastSpots,
   createGame,
   hex,
   moveOptions,
@@ -48,6 +50,7 @@ const ABILITY_CARDS: UnitCard[] = [
   hero("trampler", [ab("trample", { defenseDice: 1 })], { footprint: "2x1", size: "huge", height: 9 }),
   hero("spitter", [ab("ember-spit", { range: 3, dice: 2, splashDice: 1 })]),
   hero("mortar", [ab("mortar-barrage", { range: 8, minRange: 3, dice: 3, splashDice: 1, ignoresSight: 1 })]),
+  hero("bomber", [ab("mortar-barrage", { range: 8, minRange: 3, dice: 3, splashDice: 1, ignoresSight: 1, hexTarget: 1 })]),
   hero("monk", [ab("lantern-gaze", { range: 4, needed: 16 })]),
   hero("bigfoe", [], { size: "large", height: 7 }),
   hero("knight", [ab("charge", { bonus: 1 })]),
@@ -259,15 +262,79 @@ describe("special actions", () => {
     expect(rolls.every((e) => e.ability === "ember-spit")).toBe(true);
   });
 
-  it("a blast on a figure covering several hexes splashes only round the hex nearest the attacker", () => {
-    // The 2-hex target covers q 3 and 4. One bystander is next to q 3 (the near hex), one only next to q 4.
+  describe("blasts on a figure covering several hexes", () => {
+    // The 2-hex target covers q 3 and 4. One bystander stands next to q 3 only, one next to q 4 only.
     const pos = { "p1:0#1": at(0), "p2:0#1": at(3), "p2:1#1": at(2), "p2:2#1": at(5) };
-    const g = game(flat(7), { p1: ["mortar"], p2: ["trampler", "hero", "hero"] }, pos);
-    const r = apply(g.state, { type: "attack", player: "p1", figureId: "p1:0#1", targetId: "p2:0#1", ability: "mortar-barrage" }, g.ctx);
-    expect(ofType(r.events, "attackRolled").map((e) => [e.targetId, e.attack.length])).toEqual([
-      ["p2:0#1", 3],
-      ["p2:1#1", 1],
-    ]);
+    const g = () => game(flat(7), { p1: ["mortar"], p2: ["trampler", "hero", "hero"] }, pos);
+    const blast = (aim?: { q: number; r: number }) => {
+      const s = g();
+      const cmd = { type: "attack" as const, player: "p1", figureId: "p1:0#1", targetId: "p2:0#1", ability: "mortar-barrage", ...(aim ? { aim } : {}) };
+      return ofType(apply(s.state, cmd, s.ctx).events, "attackRolled").map((e) => [e.targetId, e.attack.length]);
+    };
+
+    it("splash round the hex the player aims at, and nowhere else", () => {
+      expect(blast(hex(4, 0))).toEqual([
+        ["p2:0#1", 3],
+        ["p2:2#1", 1],
+      ]);
+      expect(blast(hex(3, 0))).toEqual([
+        ["p2:0#1", 3],
+        ["p2:1#1", 1],
+      ]);
+    });
+
+    it("hit the target once, though its other hex is next to the aimed one", () => {
+      expect(blast(hex(3, 0)).filter(([id]) => id === "p2:0#1")).toHaveLength(1);
+    });
+
+    it("splash round every hex of the target in older saves, which aimed at no hex", () => {
+      expect(blast()).toEqual([
+        ["p2:0#1", 3],
+        ["p2:1#1", 1],
+        ["p2:2#1", 1],
+      ]);
+    });
+
+    it("must aim at one of the target's hexes, within range", () => {
+      const s = g();
+      expect(attackProblem(s.state, "p1:0#1", "p2:0#1", s.ctx, "mortar-barrage", hex(5, 0))).toMatch(/one of the target's hexes/);
+      expect(attackProblem(s.state, "p1:0#1", "p2:0#1", s.ctx, "mortar-barrage", hex(4, 0))).toBeNull();
+      expect(attackProblem(s.state, "p1:0#1", "p2:0#1", s.ctx, undefined, hex(3, 0))).toMatch(/Only a blast/);
+      // Ember Spit reaches 3 hexes: the target's near hex, but not its far one.
+      const spit = game(flat(7), { p1: ["spitter"], p2: ["trampler"] }, { "p1:0#1": at(0), "p2:0#1": at(3) });
+      expect(attackProblem(spit.state, "p1:0#1", "p2:0#1", spit.ctx, "ember-spit", hex(3, 0))).toBeNull();
+      expect(attackProblem(spit.state, "p1:0#1", "p2:0#1", spit.ctx, "ember-spit", hex(4, 0))).toMatch(/out of range/);
+    });
+  });
+
+  describe("blasts aimed at an empty hex", () => {
+    // A test card whose blast may be aimed at a hex. Figures at q 3 and 5 are next to q 4; q 7 is not.
+    const pos = { "p1:0#1": at(0), "p2:0#1": at(3), "p2:1#1": at(5), "p1:1#1": at(7) };
+    const g = () => game(flat(9), { p1: ["bomber", "hero"], p2: ["hero", "hero"] }, pos);
+    const at4 = { hex: hex(4, 0), elevation: 1 };
+
+    it("splash every figure next to the hex, friend or foe, never the attacker", () => {
+      const s = g();
+      const r = apply(s.state, { type: "blast", player: "p1", figureId: "p1:0#1", ability: "mortar-barrage", at: at4 }, s.ctx);
+      expect(ofType(r.events, "attackRolled").map((e) => [e.targetId, e.attack.length])).toEqual([
+        ["p2:0#1", 1],
+        ["p2:1#1", 1],
+      ]);
+      expect(r.state.active!.attacked).toContain("p1:0#1");
+    });
+
+    it("needs an empty hex in range, and a blast that may be aimed at a hex", () => {
+      const s = g();
+      expect(blastProblem(s.state, "p1:0#1", at4, s.ctx, "mortar-barrage")).toBeNull();
+      expect(blastProblem(s.state, "p1:0#1", { hex: hex(3, 0), elevation: 1 }, s.ctx, "mortar-barrage")).toMatch(/Someone stands there/);
+      expect(blastProblem(s.state, "p1:0#1", { hex: hex(2, 0), elevation: 1 }, s.ctx, "mortar-barrage")).toMatch(/Too close/);
+      expect(blastProblem(s.state, "p1:0#1", { hex: hex(4, 0), elevation: 5 }, s.ctx, "mortar-barrage")).toMatch(/no ground/);
+      const plain = game(flat(9), { p1: ["mortar"], p2: ["hero"] }, { "p1:0#1": at(0), "p2:0#1": at(8) });
+      expect(blastProblem(plain.state, "p1:0#1", at4, plain.ctx, "mortar-barrage")).toMatch(/aimed at a figure/);
+      expect(blastSpots(plain.state, "p1:0#1", plain.ctx, "mortar-barrage")).toEqual([]);
+      // Along the row: from 3 hexes out to its end, except where figures stand. (The test map has a second row further off.)
+      expect(blastSpots(s.state, "p1:0#1", s.ctx, "mortar-barrage").filter((p) => p.hex.r === 0).map((p) => p.hex.q)).toEqual([4, 6, 8]);
+    });
   });
 
   it("Mortar Barrage ignores sight but not its minimum range", () => {

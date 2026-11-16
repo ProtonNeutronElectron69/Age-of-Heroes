@@ -37,6 +37,9 @@ export interface Marker {
   readonly step: Step;
   readonly color: string;
   readonly opacity?: number;
+  /** A marker that takes clicks: drawn as a see-through column this many levels tall, over any figure there. */
+  readonly onClick?: () => void;
+  readonly height?: number;
 }
 
 export interface GroundHandlers {
@@ -652,6 +655,23 @@ export function BoardScene({
         ))}
         {markers.map((m, i) => {
           const { x, z } = hexToWorld(m.step.hex, HEX_SIZE);
+          if (m.onClick) {
+            const tall = (m.height ?? 1) * LEVEL_HEIGHT + 0.3;
+            return (
+              <mesh
+                key={`${i}:${hexKey(m.step.hex)}@${m.step.elevation}`}
+                geometry={markerGeometry}
+                scale={[1.12, tall / 0.03, 1.12]}
+                position={[x, m.step.elevation * LEVEL_HEIGHT + tall / 2, z]}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  m.onClick!();
+                }}
+              >
+                <meshBasicMaterial color={m.color} transparent opacity={m.opacity ?? 0.35} depthWrite={false} />
+              </mesh>
+            );
+          }
           return (
             <mesh
               key={`${i}:${hexKey(m.step.hex)}@${m.step.elevation}`}

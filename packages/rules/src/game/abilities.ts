@@ -618,6 +618,8 @@ export interface AreaAttackSpec {
   readonly dice: number;
   readonly splashDice: number;
   readonly ignoresSight: boolean;
+  /** May be aimed at an empty hex, not only at a figure (`hexTarget: 1` on the card). */
+  readonly hexTarget: boolean;
 }
 
 export interface MindControlSpec {
@@ -677,6 +679,7 @@ export function areaAttackOf(card: UnitCard, id: string): AreaAttackSpec | undef
     dice: param(a, "dice", 2),
     splashDice: param(a, "splashDice", 1),
     ignoresSight: param(a, "ignoresSight", 0) === 1,
+    hexTarget: param(a, "hexTarget", 0) === 1,
   };
 }
 

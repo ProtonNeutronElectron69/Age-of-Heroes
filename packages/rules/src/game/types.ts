@@ -213,6 +213,19 @@ export type Command =
       readonly targetId: string;
       /** Use a special attack or power from the card instead of a normal attack. */
       readonly ability?: string;
+      /**
+       * A blast's aimed hex: one of the target's hexes. Figures next to it take the splash.
+       * Older saves have none; their blasts splash round every hex of the target, as they did then.
+       */
+      readonly aim?: Hex;
+    }
+  | {
+      /** A blast aimed at an empty hex, for a blast that may be aimed at a hex (`hexTarget`). */
+      readonly type: "blast";
+      readonly player: PlayerId;
+      readonly figureId: string;
+      readonly ability: string;
+      readonly at: Step;
     }
   | { readonly type: "draftPass"; readonly player: PlayerId }
   | { readonly type: "endTurn"; readonly player: PlayerId }

@@ -65,7 +65,7 @@ An ability is engine code named by an id. To add one:
    - `afterAttack` for reactions (it gets the RNG for rolls);
    - `endOfTurnAbilities` for end-of-turn effects;
    - movement (`movement.ts`) for things like flying and trample;
-   - `AREA_IDS` / `MIND_IDS` for special actions.
+   - `AREA_IDS` / `MIND_IDS` for special actions. A blast (an `AREA_IDS` ability) reads `range`, `minRange`, `dice`, `splashDice` and `ignoresSight`; give it `"hexTarget": 1` if its text lets it land on an empty hex (the `blast` command), and say so in the text.
 
    Read numbers with `param(ability, "name", default)`. Update the id list in the comment at the top of the file.
 2. Add a test in `packages/rules/test/abilities.test.ts`: a test card in `ABILITY_CARDS` and a case for when it applies and when it does not. Use `withOutcome` for rolls.

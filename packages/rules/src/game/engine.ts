@@ -1,7 +1,7 @@
 import { deepClone } from "../clone";
 import { MAX_PLAYERS, MIN_PLAYERS } from "../schema";
 import { endOfTurnAbilities } from "./abilities";
-import { attack, endOfTurnTerrain } from "./combat";
+import { attack, blastHex, endOfTurnTerrain } from "./combat";
 import { advanceDeployment, currentDeployment, deployUnit, startDeployment } from "./deploy";
 import {
   continueDraft,
@@ -133,7 +133,10 @@ export function applyCommand(state: GameState, command: Command, ctx: RulesConte
         moveFigure(next, command.player, command.figureId, command.path, events, ctx);
         break;
       case "attack":
-        attack(next, command.player, command.figureId, command.targetId, events, ctx, command.ability);
+        attack(next, command.player, command.figureId, command.targetId, events, ctx, command.ability, command.aim);
+        break;
+      case "blast":
+        blastHex(next, command.player, command.figureId, command.ability, command.at, events, ctx);
         break;
       case "endTurn":
         endTurn(next, command.player, events, ctx);
