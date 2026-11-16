@@ -248,8 +248,9 @@ legend {
   gap: 8px;
 }
 
+/* Greyed rather than faded: a faded face let the card's other side show through it. */
 .draft-card.unavailable .unit-card-face {
-  opacity: 0.45;
+  filter: grayscale(0.9) brightness(0.5);
 }
 
 .armies .army {

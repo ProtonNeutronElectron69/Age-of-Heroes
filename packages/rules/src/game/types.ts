@@ -63,7 +63,22 @@ export interface UnitState {
   figures: FigureState[];
 }
 
-export type Phase = "draft" | "deploy" | "placeTokens" | "turns" | "gameOver";
+/** "initiative": every token is down and the round waits for each player to roll (`initiative: "players"` games only). */
+export type Phase = "draft" | "deploy" | "placeTokens" | "initiative" | "turns" | "gameOver";
+
+/**
+ * How armies are drafted. "snake": one pick at a time, the order reversing
+ * each round of picks. "open": everyone picks at once, and each card can be
+ * drafted by one player only.
+ */
+export type DraftMode = "snake" | "open";
+
+/**
+ * How initiative is rolled. "auto": as soon as the last tokens are placed.
+ * "players": each player rolls for themselves, and nobody's roll is made
+ * (or seen) until every player has rolled.
+ */
+export type InitiativeMode = "auto" | "players";
 
 export interface ActiveTurn {
   readonly player: PlayerId;
@@ -92,7 +107,7 @@ export interface RollOff {
 }
 
 export interface DraftState {
-  /** Who picks at each step of the snake draft. */
+  /** Who picks at each step of the snake draft. An open draft keeps the roll-off order here, for deployment. */
   readonly order: PlayerId[];
   index: number;
   readonly rolls: RollOff[];
@@ -125,6 +140,8 @@ export interface GameConfig {
   readonly budget: number | null;
   /** Every unit in an army must share the faction of its first pick. */
   readonly factionPure: boolean;
+  readonly draft: DraftMode;
+  readonly initiative: InitiativeMode;
 }
 
 export interface GameState {
@@ -145,6 +162,8 @@ export interface GameState {
   revealed: Record<PlayerId, TokenId[]>;
   /** Turn order for this round, set by the initiative roll. */
   initiative: PlayerId[] | null;
+  /** Players who have rolled for this round's initiative, while the round waits for the rest ("initiative" phase). */
+  initiativeReady?: PlayerId[];
   /**
    * Start zones grown at deployment to fit each army (maps with `growZones`).
    * A player missing here uses the map's zone as drawn.
@@ -182,6 +201,9 @@ export interface GameSetup {
   readonly budget?: number | null;
   /** Every unit in an army must share the faction of its first pick. */
   readonly factionPure?: boolean;
+  /** Older games and hot-seat games leave these out: a snake draft, and initiative rolled at once. */
+  readonly draft?: DraftMode;
+  readonly initiative?: InitiativeMode;
 }
 
 export interface RulesContext {
@@ -228,6 +250,8 @@ export type Command =
       readonly at: Step;
     }
   | { readonly type: "draftPass"; readonly player: PlayerId }
+  /** A player rolls for initiative (`initiative: "players"` games). */
+  | { readonly type: "rollInitiative"; readonly player: PlayerId }
   | { readonly type: "endTurn"; readonly player: PlayerId }
   | { readonly type: "concede"; readonly player: PlayerId };
 
@@ -237,6 +261,8 @@ export type GameEvent =
   | { readonly type: "draftStarted"; readonly rolls: RollOff[]; readonly order: PlayerId[] }
   | { readonly type: "cardDrafted"; readonly player: PlayerId; readonly cardId: string; readonly unitId: string }
   | { readonly type: "draftEnded" }
+  /** A player has rolled for initiative; the roll is made once everyone has. */
+  | { readonly type: "initiativeReady"; readonly player: PlayerId }
   | { readonly type: "deploymentStarted" }
   | {
       readonly type: "unitDeployed";

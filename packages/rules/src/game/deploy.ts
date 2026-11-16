@@ -13,8 +13,20 @@ import type { FigurePlacement, GameEvent, GameState, PlayerId, RulesContext, Ste
  */
 export function startDeployment(state: GameState, events: GameEvent[], _ctx: RulesContext): void {
   let queue: { player: PlayerId; unitId: string }[];
-  if (state.draft) {
+  if (state.draft && state.config.draft !== "open") {
     queue = state.draft.picks.map((p) => ({ player: p.player, unitId: p.unitId }));
+  } else if (state.draft) {
+    // An open draft's picks come in any order: deploy one unit each in turn, from the roll-off winner,
+    // each player's units in the order they picked them.
+    queue = [];
+    const order = state.draft.order;
+    const longest = Math.max(0, ...order.map((id) => state.units.filter((u) => u.owner === id).length));
+    for (let i = 0; i < longest; i++) {
+      for (const id of order) {
+        const unit = state.units.filter((u) => u.owner === id)[i];
+        if (unit) queue.push({ player: id, unitId: unit.id });
+      }
+    }
   } else {
     queue = [];
     const bySeat = [...state.players].sort((a, b) => a.seat - b.seat);

@@ -101,7 +101,7 @@ Game options:
 - **Round limit**: none (the default), or a number of rounds.
 
 ### Drafting
-Armies are drafted from a shared pool in a **snake draft**: the pick order reverses each round of picks (seat 1, 2, 3, 3, 2, 1, 1, 2, 3 and so on). The first picker is decided by a d20 roll.
+Armies are drafted from a shared pool. Hot-seat games use a **snake draft** (online games use an open draft; see Playing online): the pick order reverses each round of picks (seat 1, 2, 3, 3, 2, 1, 1, 2, 3 and so on). The first picker is decided by a d20 roll.
 - **Points**: each pick must fit within the player's remaining points. A player may press "Done drafting" to stop; a player who cannot afford anything that fits is skipped. The draft ends when nobody can or will pick.
 - **Uniques**: a unique unit can be drafted by only one player. Common units can be drafted any number of times by anyone. **Assumption.**
 - **Room to deploy**: an army can never need more hexes than its start zone has (a multi-hex figure needs one hex per footprint hex). The draft does not allow a card that would not fit, and a player with no room left skips their remaining picks. On a map whose zones grow (all premade maps), a zone counts as 40 hexes here, since it grows at deployment.
@@ -115,6 +115,8 @@ After the draft, units are deployed one at a time in the order they were drafted
 Online, the host picks the options above and shares a room code. Seats and colors follow the order players join, and the host can start once the room holds a player count the map supports. The rules are the same, with these differences:
 - **Who acts**: each device acts only for its own player. The game server checks every action, so nobody can move another player's units.
 - **Hidden information**: each device sees only what that player could see at a table. Other players' activation tokens stay hidden until revealed, and the dice are rolled on the server, so no device can predict them.
+- **Open draft**: everyone drafts at the same time instead of in snake order, and each unit can be drafted by only one player, common units too: once someone takes a unit it is greyed out for everyone. The points, faction and room rules are the same. Each player presses "Done drafting" when finished (or is finished for them when nothing left fits), and the draft ends when everyone is done. The d20 roll-off still happens: its winner deploys first, and then players deploy one unit each in turn, in roll-off order, each in the order they drafted their units.
+- **Rolling initiative**: each player rolls their own d20 (section 5.2), and no roll is made, or shown to anyone, until every player has rolled.
 - **Leaving**: leaving a game in progress concedes (section 12). A dropped connection or a page reload does not: the player returns to the same seat.
 - **Spectators** can watch with a room code. They see what a player outside the game would see: no secret tokens.
 - **Replays**: when the game ends, everyone can download its full record and watch it again move by move, with every token shown.
@@ -128,7 +130,7 @@ Each round has three parts.
 Every player has four tokens: **1, 2, 3** and a bluff token **X**. In secret, each player places all four on their own living units' cards. One card may hold several tokens. The X token does nothing; it hides which units will act.
 
 ### 5.2 Roll initiative
-Every player rolls a d20. If several players tie for the highest roll, only they roll again, until one is highest. That player goes first, and play passes to the left (increasing seat order, wrapping around) for the rest of the round.
+Every player rolls a d20. If several players tie for the highest roll, only they roll again, until one is highest. That player goes first, and play passes to the left (increasing seat order, wrapping around) for the rest of the round. Online, the round waits until every player has rolled before any roll is made or shown (see Playing online).
 
 ### 5.3 Take turns
 1. In initiative order, each player reveals their **1** token and takes a turn with the unit holding it.

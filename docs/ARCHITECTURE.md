@@ -36,8 +36,8 @@ Dependencies only point downwards: `client` and `server` use `protocol`, `conten
 | `editor.ts` | Pure map-editing operations used by the map editor: placing and removing pieces, side placement, start zones, fixing problems, and seeded random fills |
 | `game/types.ts` | `GameState`, `Command`, `GameEvent`, `PlayerView` and friends |
 | `game/engine.ts` | `createGame`, `applyCommand`, `replayGame`, `waitingOn` and the turn flow |
-| `game/draft.ts`, `game/deploy.ts` | Snake draft to a points budget (optionally faction-pure) and deployment. Zones that grow to fit an army are stored in `GameState.zones`; read a player's zone with `playerZone` |
-| `game/rounds.ts` | Token placement, initiative, turn order, wounds, elimination and game over |
+| `game/draft.ts`, `game/deploy.ts` | Snake draft to a points budget (optionally faction-pure) and deployment. An open draft (`GameSetup.draft: "open"`, online games) lets every player pick at once (`drafters`) with every card exclusive, and deploys one unit each in roll-off order. Zones that grow to fit an army are stored in `GameState.zones`; read a player's zone with `playerZone` |
+| `game/rounds.ts` | Token placement, initiative, turn order, wounds, elimination and game over. With `GameSetup.initiative: "players"` (online games) a round waits in the `initiative` phase for every player's `rollInitiative` command before rolling |
 | `game/placement.ts`, `game/movement.ts` | Multi-hex footprints, reachable placements (Dijkstra with hazard tie-breaks), moving, falling, passing strikes, flying, trample |
 | `game/engagement.ts`, `game/combat.ts` | Engagement, attack legality, dice, height bonuses, special actions, mind control |
 | `game/abilities.ts` | Every ability: attack and defense modifiers, reactions after an attack, end-of-turn effects, special action specs |

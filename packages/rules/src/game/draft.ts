@@ -27,8 +27,29 @@ export function startDraft(state: GameState, events: GameEvent[]): void {
   const { order, rolls } = rollOff(state, rng);
   state.rng = rng.state;
   state.phase = "draft";
-  state.draft = { order: snakeOrder(order, POINTS_DRAFT_ROUNDS), index: 0, rolls, picks: [], passed: [] };
+  // An open draft has no turns; the roll-off order is kept to order deployment.
+  const open = state.config.draft === "open";
+  state.draft = { order: open ? order : snakeOrder(order, POINTS_DRAFT_ROUNDS), index: 0, rolls, picks: [], passed: [] };
   events.push({ type: "draftStarted", rolls, order });
+}
+
+/** Is this an open draft, where everyone picks at once? */
+export function isOpenDraft(state: GameState): boolean {
+  return state.config.draft === "open";
+}
+
+/**
+ * Who may pick right now: in a snake draft the one player whose pick it is;
+ * in an open draft everyone still in the game who has not finished drafting.
+ */
+export function drafters(state: GameState): PlayerId[] {
+  const d = state.draft;
+  if (state.phase !== "draft" || !d) return [];
+  if (!isOpenDraft(state)) {
+    const p = currentDrafter(state);
+    return p ? [p] : [];
+  }
+  return state.players.filter((p) => !p.eliminated && !d.passed.includes(p.id)).map((p) => p.id);
 }
 
 /** Points a player has spent in a points draft. */
@@ -45,10 +66,10 @@ export function lockedFaction(state: GameState, player: PlayerId, ctx: RulesCont
   return first ? (ctx.cards.get(first.cardId)?.faction ?? null) : null;
 }
 
-/** Who picks next. */
+/** Who picks next in a snake draft (null in an open draft, where anyone may: see `drafters`). */
 export function currentDrafter(state: GameState): PlayerId | null {
   const d = state.draft;
-  if (!d) return null;
+  if (!d || isOpenDraft(state)) return null;
   return d.order[d.index] ?? null;
 }
 
@@ -87,6 +108,9 @@ export function draftableCards(state: GameState, ctx: RulesContext, player?: Pla
 export function pickProblem(state: GameState, ctx: RulesContext, cardId: string, player?: PlayerId): string | null {
   const card = ctx.cards.get(cardId);
   if (!card) return `Unknown card "${cardId}"`;
+  if (isOpenDraft(state) && state.units.some((u) => u.cardId === cardId)) {
+    return `${card.name} has already been drafted`;
+  }
   if (isUnique(card) && state.units.some((u) => u.cardId === cardId)) {
     return `${card.name} is unique and has already been drafted`;
   }
@@ -130,23 +154,23 @@ export function draftPick(
   ctx: RulesContext,
 ): void {
   if (state.phase !== "draft" || !state.draft) fail("The draft is over");
-  if (currentDrafter(state) !== player) fail("It is not your pick");
+  if (!drafters(state).includes(player)) fail(isOpenDraft(state) ? "You have finished drafting" : "It is not your pick");
   const problem = pickProblem(state, ctx, cardId, player);
   if (problem) fail(problem);
   const unit = createUnit(state, player, cardId, ctx);
   state.draft.picks.push({ player, cardId, unitId: unit.id });
   events.push({ type: "cardDrafted", player, cardId, unitId: unit.id });
-  state.draft.index += 1;
+  if (!isOpenDraft(state)) state.draft.index += 1;
   continueDraft(state, events, ctx);
 }
 
 /** Points draft only: a player stops drafting for the rest of the draft. */
 export function draftPass(state: GameState, player: PlayerId, events: GameEvent[], ctx: RulesContext): void {
   if (state.phase !== "draft" || !state.draft) fail("The draft is over");
-  if (currentDrafter(state) !== player) fail("It is not your pick");
+  if (!drafters(state).includes(player)) fail(isOpenDraft(state) ? "You have finished drafting" : "It is not your pick");
   state.draft.passed.push(player);
   events.push({ type: "draftPassed", player });
-  state.draft.index += 1;
+  if (!isOpenDraft(state)) state.draft.index += 1;
   continueDraft(state, events, ctx);
 }
 
@@ -158,6 +182,18 @@ export function draftPass(state: GameState, player: PlayerId, events: GameEvent[
 export function continueDraft(state: GameState, events: GameEvent[], ctx: RulesContext): void {
   const d = state.draft;
   if (!d) return;
+  if (isOpenDraft(state)) {
+    // A player with nothing left they can draft is done, as if they had pressed "Done drafting".
+    for (const p of state.players) {
+      if (p.eliminated || d.passed.includes(p.id) || draftableCards(state, ctx, p.id).length > 0) continue;
+      d.passed.push(p.id);
+      events.push({ type: "draftPassed", player: p.id });
+    }
+    if (drafters(state).length > 0) return;
+    events.push({ type: "draftEnded" });
+    startDeployment(state, events, ctx);
+    return;
+  }
   const canPick = new Set(
     state.players
       .filter((p) => !p.eliminated && !d.passed.includes(p.id) && draftableCards(state, ctx, p.id).length > 0)

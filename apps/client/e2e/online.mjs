@@ -142,10 +142,35 @@ async function act(p) {
 /** Short waits: a button that is not there within a few seconds is not coming back. */
 const QUICK = { timeout: 5000 };
 
+/** Set once Bob has rolled for initiative with the dice show on, and seen the result. */
+let initiativeChecked = false;
+
 async function tryAct(p) {
   const { page } = p;
   // Wait for the server to answer the last command before deciding anything.
   await page.waitForFunction(() => !document.querySelector("[data-pending]"), null, QUICK);
+  // Initiative with the dice show on (Bob, in round 1). Alice's page rolls for her at once, as her dice show is off;
+  // Bob must see her ready but no result at all until he has rolled too.
+  const initiative = page.getByRole("dialog", { name: "Initiative" });
+  if (await initiative.count()) {
+    const roll = initiative.getByRole("button", { name: /^Roll for / });
+    if (await roll.count()) {
+      await initiative.locator(".initiative-value[data-ready]").first().waitFor(QUICK);
+      if (await initiative.locator(".initiative-value[data-value]").count()) fail(`${p.label} saw an initiative result before rolling`);
+      await shot(p, "4-initiative-waiting");
+      await roll.click(QUICK);
+      return "initiative";
+    }
+    const done = initiative.getByRole("button", { name: "Continue" });
+    if (await done.count()) {
+      if ((await initiative.locator(".initiative-value[data-value]").count()) < 2) fail("The initiative show ended without both rolls");
+      // Closing the dice also closes their 3D canvas while the first turn starts; drawn in software, that can take a while.
+      await done.click({ timeout: 30000 });
+      initiativeChecked = true;
+      return "initiative";
+    }
+    return null;
+  }
   // Secret tokens: online there is no pass screen, the panel just appears.
   const lock = page.getByRole("button", { name: /Lock in tokens|^Place / });
   if (await lock.count()) {
@@ -220,8 +245,8 @@ try {
 
   // ---- Lobby --------------------------------------------------------------
   await goOnline(alice, "Alice");
-  // 100 points: one unit each, for a short game.
-  await alice.page.getByLabel("Points per player").fill("100");
+  // 150 points: one or two units each, for a short game.
+  await alice.page.getByLabel("Points per player").fill("150");
   await alice.page.getByLabel("Points per player").blur();
   await alice.page.getByRole("radio", { name: "5 rounds" }).click();
   await alice.page.getByRole("button", { name: "Create room" }).click();
@@ -260,39 +285,50 @@ try {
   const drafted = (p) => p.page.locator(".armies li").count();
   const inDraft = () => alice.page.getByRole("heading", { name: "Draft" }).count();
   const canDraft = (p) => p.page.locator(".draft-card button.primary:not([disabled])").count();
+  if (await canDraft(carol)) fail("The spectator could draft");
+  // Everyone drafts at once: Alice and Bob pick at the same moment, Alice the first unit and Bob the cheapest,
+  // so Bob has points left and is still drafting when his page is reloaded below.
+  const aliceCard = await alice.page.locator(".draft-card:has(button.primary:not([disabled])) .hex-card").first().getAttribute("data-card");
+  const cheapest = await bob.page.evaluate((taken) => {
+    const open = [...document.querySelectorAll(".draft-card:has(button.primary:not([disabled]))")].filter((el) => el.querySelector(".hex-card")?.dataset.card !== taken);
+    open.sort((a, b) => Number(a.dataset.points) - Number(b.dataset.points));
+    return open[0]?.querySelector(".hex-card")?.dataset.card;
+  }, aliceCard);
+  await Promise.all([
+    alice.page.locator(".draft-card button.primary:not([disabled])").first().click(),
+    bob.page.locator(`.draft-card:has(.hex-card[data-card="${cheapest}"]) button.primary`).click(),
+  ]);
+  for (let t = 0; t < 200 && (await inDraft()) && (await drafted(alice)) < 2; t++) await alice.page.waitForTimeout(30);
+  // The unit Alice took is greyed out on Bob's screen: each unit can be drafted by one player only.
+  if (await inDraft()) {
+    await bob.page.locator(`.draft-card:has(.hex-card[data-card="${aliceCard}"]) button`).filter({ hasText: "Drafted by Alice" }).waitFor({ timeout: 10000 });
+    await shot(bob, "2b-draft-taken");
+  }
   let reloaded = false;
-  for (let i = 0; i < 40 && (await inDraft()); i++) {
-    // Wait until every device has seen the last pick before deciding whose turn it is.
-    const counts = await Promise.all([alice, bob, carol].map(drafted));
-    if (new Set(counts).size > 1) {
-      await alice.page.waitForTimeout(50);
-      continue;
-    }
-    if (!reloaded && counts[0] > 0) {
+  for (let i = 0; i < 60 && (await inDraft()); i++) {
+    if (!reloaded) {
       // Drop Bob's connection mid-draft: the page must come back to his seat, with every pick so far.
       // Once a unit has been drafted the draft opens on the cards, with no 3D board, so this is quick even without a graphics card.
       reloaded = true;
       phase("reloading Bob's page");
+      const before = await drafted(alice);
       await bob.page.reload();
       await bob.page.getByText("Playing as Bob").waitFor();
       await bob.page.getByRole("heading", { name: "Draft" }).waitFor();
-      if ((await drafted(bob)) !== counts[0]) fail(`After the reload Bob sees ${await drafted(bob)} drafted units, not ${counts[0]}`);
+      if ((await drafted(bob)) !== before) fail(`After the reload Bob sees ${await drafted(bob)} drafted units, not ${before}`);
       continue;
     }
-    const open = [];
-    for (const p of [alice, bob]) {
-      if (await canDraft(p)) open.push(p);
-    }
-    if (open.length > 1) fail("Both players could draft at once");
     if (await canDraft(carol)) fail("The spectator could draft");
-    if (open.length === 0) {
-      await alice.page.waitForTimeout(50);
-      continue;
+    // Each player drafts what they can afford, then says they are done.
+    let did = false;
+    for (const p of [alice, bob]) {
+      if (await p.page.locator("[data-pending]").count()) continue;
+      const pick = p.page.locator(".draft-card button.primary:not([disabled])").first();
+      const done = p.page.getByRole("button", { name: "Done drafting" });
+      if (await pick.count()) await pick.click().then(() => (did = true), () => {});
+      else if (await done.count()) await done.click().then(() => (did = true), () => {});
     }
-    await open[0].page.locator(".draft-card button.primary:not([disabled])").first().click();
-    for (let t = 0; t < 100 && (await drafted(open[0])) === counts[0] && (await inDraft()); t++) {
-      await alice.page.waitForTimeout(30);
-    }
+    if (!did) await alice.page.waitForTimeout(50);
   }
   if (!reloaded) fail("Bob was never reloaded during the draft");
   if (await canDraft(carol)) fail("The spectator could draft");
@@ -322,13 +358,26 @@ try {
   await carol.browser.close();
   everyone.splice(everyone.indexOf(carol), 1);
 
+  // Bob watches the initiative dice; Alice keeps them off, so her page rolls for her as soon as the tokens are down.
+  await bob.page.getByRole("button", { name: "Display" }).click();
+  await bob.page.getByLabel("Dice rolls").selectOption("dice");
+  await bob.page.getByRole("button", { name: "Display" }).click();
+
   // ---- Play a few turns ---------------------------------------------------
   phase("play");
   let ended = 0;
   let idle = 0;
   let retries = 0;
+  let diceOff = false;
   for (let step = 0; step < 400 && !(moves > 0 && ended >= 2); step++) {
     let did = false;
+    // Once checked, Bob turns the dice show off again: this test plays turns, and full-game checks the attack scene.
+    if (initiativeChecked && !diceOff) {
+      diceOff = true;
+      await bob.page.getByRole("button", { name: "Display" }).click();
+      await bob.page.getByLabel("Dice rolls").selectOption("none");
+      await bob.page.getByRole("button", { name: "Display" }).click();
+    }
     for (const p of [alice, bob]) {
       const what = await act(p);
       if (what === "retry") {
@@ -347,6 +396,7 @@ try {
   }
   if (moves === 0) fail("No figure moved");
   if (ended < 2) fail(`Only ${ended} turns were ended`);
+  if (!initiativeChecked) fail("Bob never rolled for initiative with the dice show on");
   // The catch-up after the reload brought the whole log back, not just the state:
   // the first pick happened before his reload, so his page only has it from the catch-up.
   await bob.page.locator(".log-lines li").filter({ hasText: "drafts" }).first().waitFor();

@@ -71,6 +71,8 @@ export function describeEvent(e: GameEvent, names: Names): string | null {
       return `${names.player(e.player)} drafts ${names.unit(e.unitId)}.`;
     case "draftEnded":
       return "The draft is complete.";
+    case "initiativeReady":
+      return `${names.player(e.player)} is ready to roll for initiative.`;
     case "deploymentStarted":
       return "Deploy your armies in your start zones.";
     case "unitDeployed":

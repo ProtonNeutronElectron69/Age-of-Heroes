@@ -167,23 +167,40 @@ const D20_GAP = 2.6;
 
 /**
  * Initiative: a d20 for each player, who clicks it to roll. It tumbles and lands
- * on the value the rules rolled; a tie rolls again. Dice of players on other
- * devices (online) roll by themselves.
+ * on the value the rules rolled; a tie rolls again.
+ *
+ * Where players roll for themselves (online games, `onRoll`), the rules make no
+ * roll until every player has clicked: until then `event` is null and the dice
+ * wait, each player's row saying whether they have rolled. When the roll comes,
+ * every die tumbles at once, so nobody sees a result before they have rolled.
  */
 export function InitiativeShow({
   event,
+  players,
+  ready = [],
+  onRoll,
+  busy = false,
   names,
   mayRoll,
   onClose,
 }: {
-  event: InitiativeRoll;
+  event: InitiativeRoll | null;
+  /** The players rolling, in seat order (the order of the event's rolls). */
+  players: readonly PlayerId[];
+  /** Players who have rolled, while waiting for the rest. */
+  ready?: readonly PlayerId[];
+  /** Send this device's roll for a player; the dice then wait for everyone. Without it the rules have already rolled. */
+  onRoll?: (player: PlayerId) => void;
+  /** A roll is on its way to the server. */
+  busy?: boolean;
   names: Names;
   /** Whether this device rolls for the player (hot-seat: everyone; online: only its own player). */
   mayRoll: (player: PlayerId) => boolean;
   onClose: () => void;
 }) {
   const reduced = useReducedMotion();
-  const rolls = event.rolls;
+  const together = onRoll !== undefined;
+  const rolls = event?.rolls ?? players.map((player) => ({ player, values: [] as number[] }));
   /** For each player, which of their values the die is showing (-1 before it is rolled), and whether it has landed. */
   const [stage, setStage] = useState<number[]>(() => rolls.map(() => -1));
   const [landed, setLanded] = useState<boolean[]>(() => rolls.map(() => false));
@@ -191,13 +208,18 @@ export function InitiativeShow({
   const [skipped, setSkipped] = useState(false);
   const roll = (i: number) => setStage((s) => (s[i] !== -1 ? s : s.map((x, j) => (j === i ? 0 : x))));
   const finished = (i: number) => stage[i] === rolls[i]!.values.length - 1 && landed[i];
-  const allDone = rolls.every((_, i) => finished(i));
+  const allDone = event !== null && rolls.every((_, i) => finished(i));
 
-  // Other devices' players roll by themselves, one after another.
+  // Hot-seat: the rules have rolled already, and other devices' players (if any) roll by themselves.
   useEffect(() => {
+    if (together) return;
     const timers = rolls.flatMap((r, i) => (mayRoll(r.player) ? [] : [window.setTimeout(() => roll(i), 700 + i * 400)]));
     return () => timers.forEach((t) => window.clearTimeout(t));
   }, []);
+  // Everyone has rolled and the result is in: every die tumbles at once.
+  useEffect(() => {
+    if (together && event) setStage(event.rolls.map(() => 0));
+  }, [together, event]);
   // A tie rolls again a moment after the die lands.
   useEffect(() => {
     const timers = rolls.flatMap((r, i) =>
@@ -255,7 +277,17 @@ export function InitiativeShow({
             return (
               <div key={r.player} className="initiative-player" data-player={r.player}>
                 <span className="swatch" style={{ background: names.playerColor(r.player) }} /> {names.player(r.player)}
-                {s < 0 && mayRoll(r.player) ? (
+                {together && !event ? (
+                  mayRoll(r.player) && !ready.includes(r.player) ? (
+                    <button type="button" className="primary" disabled={busy} onClick={() => onRoll(r.player)}>
+                      Roll for {names.player(r.player)}
+                    </button>
+                  ) : (
+                    <span className="initiative-value" data-ready={ready.includes(r.player) ? "true" : undefined}>
+                      {ready.includes(r.player) ? "ready" : "waiting to roll"}
+                    </span>
+                  )
+                ) : s < 0 && mayRoll(r.player) && !together ? (
                   <button type="button" className="primary" onClick={() => roll(i)}>
                     Roll for {names.player(r.player)}
                   </button>
@@ -269,11 +301,13 @@ export function InitiativeShow({
             );
           })}
         </div>
-        {allDone ? (
+        {!event ? (
+          <p className="muted small">The dice roll once every player has rolled.</p>
+        ) : allDone ? (
           <>
             <p className="roll-result">
-              <strong>{names.player(event.order[0]!)}</strong> goes first
-              {event.order.length > 2 ? `, then ${event.order.slice(1).map((p) => names.player(p)).join(", then ")}` : ""}.
+              <strong>{names.player(event!.order[0]!)}</strong> goes first
+              {event!.order.length > 2 ? `, then ${event!.order.slice(1).map((p) => names.player(p)).join(", then ")}` : ""}.
             </p>
             <button type="button" className="primary" onClick={onClose}>
               Continue
