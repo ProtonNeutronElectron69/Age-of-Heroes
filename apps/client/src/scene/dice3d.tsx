@@ -199,6 +199,8 @@ interface Throw {
   readonly delay?: number;
   /** How long the tumble takes. */
   readonly duration?: number;
+  /** How many times it bounces as it lands (2 by default); a longer roll can bounce more. */
+  readonly bounces?: number;
   /** Seed for its path and spin. */
   readonly seed: number;
   /** A new value throws the die again, even if it lands on the same face. */
@@ -209,6 +211,9 @@ interface Throw {
   readonly onLanded?: () => void;
 }
 
+/** How long a die tumbles unless told otherwise, in seconds. */
+const DEFAULT_TUMBLE = 1.1;
+
 /** Moves a die from above and to the side of its spot to the spot, tumbling into its landing turn. */
 function useTumble(group: RefObject<Group | null>, final: Quaternion, t: Throw) {
   const invalidate = useThree((s) => s.invalidate);
@@ -216,8 +221,10 @@ function useTumble(group: RefObject<Group | null>, final: Quaternion, t: Throw) 
   const path = useMemo(() => {
     const r = random(t.seed);
     const axis = new Vector3(r() - 0.5, r() - 0.5, r() - 0.5).normalize();
-    return { axis, turns: 2 + Math.floor(r() * 2), from: new Vector3(t.at[0] + (r() - 0.5) * 4, t.at[1] + 3.5, t.at[2] + 2 + r() * 2) };
-  }, [t.seed, t.at]);
+    // A longer roll spins for longer too, so it does not look slowed down.
+    const turns = (2 + Math.floor(r() * 2)) * Math.max(1, (t.duration ?? DEFAULT_TUMBLE) / DEFAULT_TUMBLE);
+    return { axis, turns, from: new Vector3(t.at[0] + (r() - 0.5) * 4, t.at[1] + 3.5, t.at[2] + 2 + r() * 2) };
+  }, [t.seed, t.at, t.duration]);
   const started = useRef<number | null>(null);
   const landed = useRef(false);
   const onLanded = useRef(t.onLanded);
@@ -232,12 +239,16 @@ function useTumble(group: RefObject<Group | null>, final: Quaternion, t: Throw) 
     const g = group.current;
     if (!g || landed.current) return;
     started.current ??= clock.elapsedTime;
-    const duration = t.duration ?? 1.1;
-    const u = t.still ? 1 : Math.min(1, Math.max(0, (clock.elapsedTime - started.current - (t.delay ?? 0)) / duration));
+    const duration = t.duration ?? DEFAULT_TUMBLE;
+    const since = clock.elapsedTime - started.current - (t.delay ?? 0);
+    const u = t.still ? 1 : Math.min(1, Math.max(0, since / duration));
+    // A die waiting its turn is not shown yet, rather than hanging where it will be thrown from.
+    g.visible = t.still === true || since >= 0;
     const ease = 1 - (1 - u) ** 3;
     g.position.lerpVectors(path.from, new Vector3(...t.at), ease);
-    // Two small bounces as it lands.
-    g.position.y += Math.abs(Math.sin(u * Math.PI * 2.5)) * (1 - u) * 0.9;
+    // Bounces as it lands, each lower than the last.
+    const bounces = t.bounces ?? 2;
+    g.position.y += Math.abs(Math.sin(u * Math.PI * (bounces + 0.5))) * (1 - u) ** (bounces > 2 ? 1.4 : 1) * 0.9;
     spin.setFromAxisAngle(path.axis, (1 - ease) * path.turns * Math.PI * 2);
     g.quaternion.copy(final).premultiply(spin);
     if (u >= 1) {
@@ -283,7 +294,7 @@ export function CubeDie({ kind, face, ...t }: { kind: DieKind; face: DieFace } &
   useTumble(group, final, t);
   cubeGeometry ??= new BoxGeometry(0.9, 0.9, 0.9);
   return (
-    <group ref={group} position={[t.at[0], t.at[1] + 3.5, t.at[2]]}>
+    <group ref={group} position={[t.at[0], t.at[1] + 3.5, t.at[2]]} visible={t.still === true || !t.delay}>
       <mesh geometry={cubeGeometry} material={cubeMaterialsFor(kind)} />
     </group>
   );
@@ -296,7 +307,7 @@ export function D20Die({ value, toward, ...t }: { value: number; toward: readonl
   const final = useMemo(() => d20Landing(parts.faces, value, new Vector3(...toward)), [value, toward[0], toward[1], toward[2]]);
   useTumble(group, final, t);
   return (
-    <group ref={group} position={[t.at[0], t.at[1] + 3.5, t.at[2]]}>
+    <group ref={group} position={[t.at[0], t.at[1] + 3.5, t.at[2]]} visible={t.still === true || !t.delay}>
       <mesh geometry={parts.geometry} material={parts.material} />
     </group>
   );

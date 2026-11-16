@@ -28,8 +28,18 @@ export function initiativeIn(events: readonly GameEvent[]): InitiativeRoll | nul
   return (events.find((e) => e.type === "initiativeRolled") as InitiativeRoll | undefined) ?? null;
 }
 
-/** How long a finished attack stays on screen before the show moves on or closes. */
-const LINGER_MS = 3000;
+/** How long a finished attack stays on screen before the show moves on or closes (a click closes it sooner). */
+const LINGER_MS = 3900;
+/**
+ * The attack roll builds up: the attack dice tumble and bounce first, and only once
+ * they have landed (and a short pause) do the defense dice roll. Each die starts a
+ * little after the one before it. Seconds.
+ */
+const ATTACK_TUMBLE = 1.9;
+const DEFENSE_TUMBLE = 1.7;
+const DEFENSE_PAUSE = 0.4;
+const DICE_STAGGER = 0.12;
+const TUMBLE_BOUNCES = 4;
 const DIE_GAP = 1.3;
 
 function diceRow(count: number, z: number): [number, number, number][] {
@@ -90,21 +100,25 @@ export function AttackShow({
 }) {
   const reduced = useReducedMotion();
   const [index, setIndex] = useState(0);
-  const [landed, setLanded] = useState(0);
+  const [landed, setLanded] = useState({ attack: 0, defense: 0 });
   const roll = rolls[index]!;
-  const dice = roll.attack.length + roll.defense.length;
-  const done = landed >= dice;
+  const attackDown = landed.attack >= roll.attack.length;
+  const defenseDown = landed.defense >= roll.defense.length;
+  const done = attackDown && defenseDown;
+  // The defense dice wait until the last attack die has landed.
+  const defenseDelay = roll.attack.length > 0 ? (roll.attack.length - 1) * DICE_STAGGER + ATTACK_TUMBLE + DEFENSE_PAUSE : 0;
   useEffect(() => {
     if (!done) return;
     const t = window.setTimeout(() => {
       if (index + 1 < rolls.length) {
         setIndex(index + 1);
-        setLanded(0);
+        setLanded({ attack: 0, defense: 0 });
       } else onClose();
     }, LINGER_MS);
     return () => window.clearTimeout(t);
   }, [done, index]);
-  const land = () => setLanded((n) => n + 1);
+  const landAttack = () => setLanded((n) => ({ ...n, attack: n.attack + 1 }));
+  const landDefense = () => setLanded((n) => ({ ...n, defense: n.defense + 1 }));
   const full = mode === "scene";
   const title =
     roll.source === "passingStrike"
@@ -143,15 +157,38 @@ export function AttackShow({
           {full && <SceneModel figureId={roll.attackerId} state={state} ctx={ctx} names={names} x={-3.9} yaw={Math.PI / 2 - 0.45} />}
           {full && <SceneModel figureId={roll.targetId} state={state} ctx={ctx} names={names} x={3.9} yaw={-Math.PI / 2 + 0.45} />}
           {roll.attack.map((face, i) => (
-            <CubeDie key={`a${i}`} kind="attack" face={face} at={attackAt[i]!} seed={index * 31 + i} delay={i * 0.08} still={reduced} onLanded={land} />
+            <CubeDie
+              key={`a${i}`}
+              kind="attack"
+              face={face}
+              at={attackAt[i]!}
+              seed={index * 31 + i}
+              delay={i * DICE_STAGGER}
+              duration={ATTACK_TUMBLE}
+              bounces={TUMBLE_BOUNCES}
+              still={reduced}
+              onLanded={landAttack}
+            />
           ))}
           {roll.defense.map((face, i) => (
-            <CubeDie key={`d${i}`} kind="defense" face={face} at={defenseAt[i]!} seed={index * 31 + 17 + i} delay={0.25 + i * 0.08} still={reduced} onLanded={land} />
+            <CubeDie
+              key={`d${i}`}
+              kind="defense"
+              face={face}
+              at={defenseAt[i]!}
+              seed={index * 31 + 17 + i}
+              delay={defenseDelay + i * DICE_STAGGER}
+              duration={DEFENSE_TUMBLE}
+              bounces={TUMBLE_BOUNCES}
+              still={reduced}
+              onLanded={landDefense}
+            />
           ))}
         </Canvas>
         <div className="scene-faces">
-          <span>Attack: {roll.attack.length ? roll.attack.join(", ") : "no dice"}</span>
-          <span>Defense: {roll.defense.length ? roll.defense.join(", ") : "no dice"}</span>
+          {/* Each side's faces show once its dice have landed, so the text does not give the roll away. */}
+          <span>Attack: {!roll.attack.length ? "no dice" : attackDown ? roll.attack.join(", ") : "rolling..."}</span>
+          <span>Defense: {!roll.defense.length ? "no dice" : defenseDown ? roll.defense.join(", ") : attackDown ? "rolling..." : "waiting"}</span>
         </div>
         <div className={`scene-result ${roll.wounds > 0 ? "hit" : "miss"}`} hidden={!done}>
           {resultText(roll)}
