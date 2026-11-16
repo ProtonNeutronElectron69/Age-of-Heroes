@@ -4,7 +4,8 @@ import { DICE_SHOWS, TABLE_STYLES, setDisplay, useDisplay, type DiceShow, type T
 
 /**
  * How this screen draws the game: figure models or tokens, the colour scheme
- * for models, the gaming table and how dice rolls are shown. A small button opens the choices.
+ * for models, the gaming table, how dice rolls are shown and how the camera
+ * follows the acting unit. A small button opens the choices.
  */
 export function DisplayMenu() {
   const display = useDisplay();
@@ -65,6 +66,22 @@ export function DisplayMenu() {
             </select>
           </label>
           <p className="muted small">The full scene zooms in on each attack; a click skips it.</p>
+          <fieldset className="checks">
+            <legend>Camera follows the acting unit</legend>
+            {(
+              [
+                ["autoPan", "Auto pan"],
+                ["autoRotate", "Auto rotate"],
+                ["autoZoom", "Auto zoom"],
+              ] as const
+            ).map(([key, label]) => (
+              <label key={key} className="check">
+                <input type="checkbox" checked={display[key]} onChange={(e) => setDisplay({ [key]: e.target.checked })} />
+                {label}
+              </label>
+            ))}
+          </fieldset>
+          <p className="muted small">The camera waits for a figure to finish moving. Attacks in the full scene always frame the fight.</p>
         </section>
       )}
       <button type="button" className="display-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>

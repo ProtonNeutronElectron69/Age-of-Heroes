@@ -11,6 +11,7 @@ The core game is complete and playable, online too: the game server runs on Rend
 - **Phase 7, figure models:** stage 1 is done. Every unit has a low polygon model in flat colour, drawn on the board in place of tokens (the Display button or the T key switches back to tokens and picks one of three colour schemes; see every model at `?models`). **Next, when the owner asks:** later stages add detail and colour.
 - **On hold (Phase 7):** sound and music, terrain and scenery art.
 - **Phase 8, tabletop feel:** done. The board stands on a gaming table with the unit cards round it; figures hop, can be dragged, and jump with H; the camera zooms in closer and pulls back further; attacks play a scene with 3D dice, and each player clicks a d20 for initiative.
+- **Small updates:** done. The camera's follow is three Display boxes (Auto pan, Auto rotate, Auto zoom), sits about a fifth further back, and waits for a moving figure to land; the draft opens on the battlefield with every start zone marked, and View map brings it back at any time; a middle click on a hex shows its terrain, elevation and rules.
 
 ### Ideas, not scheduled
 - More premade maps.

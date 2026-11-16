@@ -251,6 +251,11 @@ try {
   // ---- Draft ----------------------------------------------------------------
   phase("draft");
   for (const p of [alice, bob, carol]) await p.page.getByRole("heading", { name: "Draft" }).waitFor();
+  // Every device opens the draft on the battlefield, the spectator's too; each goes on to the cards on its own.
+  for (const p of [alice, bob, carol]) {
+    await p.page.getByRole("region", { name: "Battlefield" }).waitFor();
+    await p.page.getByRole("button", { name: "Go to the draft" }).click();
+  }
   await shot(bob, "2-draft");
   const drafted = (p) => p.page.locator(".armies li").count();
   const inDraft = () => alice.page.getByRole("heading", { name: "Draft" }).count();
@@ -265,7 +270,7 @@ try {
     }
     if (!reloaded && counts[0] > 0) {
       // Drop Bob's connection mid-draft: the page must come back to his seat, with every pick so far.
-      // The draft has no 3D board, so this is quick even without a graphics card.
+      // Once a unit has been drafted the draft opens on the cards, with no 3D board, so this is quick even without a graphics card.
       reloaded = true;
       phase("reloading Bob's page");
       await bob.page.reload();

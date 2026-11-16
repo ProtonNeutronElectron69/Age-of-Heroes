@@ -62,6 +62,8 @@ try {
   // Draft: saving is offered here too.
   await page.getByRole("heading", { name: "Draft" }).waitFor();
   if (!(await page.getByRole("button", { name: "Save game" }).count())) fail("No Save button during the draft");
+  // The draft opens on the battlefield.
+  await page.getByRole("button", { name: "Go to the draft" }).click();
   while (await page.getByRole("heading", { name: "Draft" }).count()) {
     await page.locator(".draft-card button.primary:not([disabled])").first().click();
   }

@@ -1,11 +1,12 @@
 import type { ThreeEvent } from "@react-three/fiber";
 import { useFrame, useThree } from "@react-three/fiber";
 import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS, hex, hexKey, hexToWorld, type Footprint, type Step } from "@aoh/rules";
-import { createContext, useContext, useEffect, useMemo, useRef, type RefObject } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import { BufferGeometry, Color, ExtrudeGeometry, Shape, ShapeGeometry, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import { BASE_COLOR, BASE_RADIUS, UNIT_MODELS, baseFrame, baseGeometry, figureColors, figureGeometry } from "../models";
 import { useReducedMotion } from "../motion";
 import { useDisplay } from "../settings";
+import { useBoardActivity } from "./activity";
 import { useWake } from "./wake";
 import { factionTheme } from "../ui/factionThemes";
 
@@ -198,8 +199,17 @@ function useFigureAnimation(f: FigureView): RefObject<Group | null> {
   });
   const invalidate = useThree((s) => s.invalidate);
   const wake = useWake();
+  const activity = useBoardActivity();
   // A new move, jump, drag or place needs a frame to start from.
   useEffect(() => wake(), [anim?.motions, anim?.jump, anim?.carry, f.spots, wake]);
+  // Report a hop about to start before the next frame, so the camera waits for it to land.
+  useLayoutEffect(() => {
+    const m = anim?.motions;
+    if (m && m.key !== live.current.seenMotions && m.moves.some((x) => x.figureId === f.id && x.path.length > 0)) {
+      activity.hopping.add(f.id);
+    }
+  }, [anim?.motions, activity, f.id]);
+  useEffect(() => () => void activity.hopping.delete(f.id), [activity, f.id]);
   useEffect(() => {
     const offsets = anim?.offsets;
     if (!offsets) return;
@@ -232,6 +242,7 @@ function useFigureAnimation(f: FigureView): RefObject<Group | null> {
         }
         st.hop = points.length > 1 ? { points, t: 0 } : null;
       }
+      if (!st.hop) activity.hopping.delete(f.id);
     }
     if (st.hop) {
       const hops = st.hop.points.length - 1;
@@ -241,6 +252,7 @@ function useFigureAnimation(f: FigureView): RefObject<Group | null> {
       if (at >= hops) {
         st.hop = null;
         st.offset.set(0, 0, 0);
+        activity.hopping.delete(f.id);
       } else {
         const i = Math.floor(at);
         const u = at - i;

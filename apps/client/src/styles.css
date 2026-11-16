@@ -1106,6 +1106,13 @@ legend {
   margin-top: 0;
 }
 
+/* The map button and Save and Quit stay together on one line. */
+.draft-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .lobby-players .army-name {
   flex: 1;
 }
@@ -1407,5 +1414,126 @@ p.bad {
 @media (prefers-reduced-motion: reduce) {
   .attack-show.full {
     animation: none;
+  }
+}
+
+/* ---- Hex tooltip: a middle click on the board -------------------------------- */
+.hex-tip {
+  position: fixed;
+  z-index: 40;
+  max-width: 250px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-solid);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.hex-tip-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.hex-tip-height {
+  display: block;
+  color: var(--muted);
+}
+
+.hex-tip p {
+  margin: 4px 0 0;
+}
+
+.hex-tip-zone {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.display-panel .checks {
+  margin: 10px 0 0;
+}
+
+.display-panel .checks .check {
+  margin-top: 4px;
+}
+
+/* ---- The battlefield during the draft ------------------------------------------ */
+.draft.map-open {
+  overflow: hidden;
+}
+
+.draft-body.map-view {
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.draft-body.map-view .armies {
+  overflow-y: auto;
+}
+
+.draft-map {
+  position: relative;
+  min-height: 320px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.draft-map-hint {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  max-width: min(560px, calc(100% - 20px));
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.zone-labels {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.zone-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 2px solid;
+  border-radius: 4px;
+  background: var(--panel-solid);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  visibility: hidden;
+}
+
+/* A narrow window stacks the map over the armies: give the map a height and let the page scroll. */
+@media (max-width: 760px) {
+  .draft.map-open {
+    overflow-y: auto;
+  }
+
+  .draft-body.map-view {
+    flex: none;
+  }
+
+  .draft-map {
+    height: 60vh;
   }
 }

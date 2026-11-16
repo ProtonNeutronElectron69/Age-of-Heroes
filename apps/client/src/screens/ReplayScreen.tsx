@@ -10,6 +10,7 @@ import { GamingTable, TableCards, tableRoom } from "../scene/Table";
 import { tableFor, tableUnits } from "../scene/tableData";
 import { useDisplay } from "../settings";
 import { DisplayMenu } from "../ui/DisplayMenu";
+import { HexTip, useHexTip, zoneOwners } from "../ui/HexTip";
 import { DiceOverlay, EventLog, RoundBar } from "../ui/panels";
 import { UnitCardView } from "../ui/UnitCardView";
 
@@ -98,6 +99,8 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
     [index, stepEvents],
   );
 
+  const [hexTip, setHexTip] = useHexTip();
+
   if (!("ctx" in built) || !center || !table) {
     return (
       <div className="screen setup">
@@ -149,6 +152,7 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
   const shown = hovered ?? pinned;
   const found = shown ? findFigure(state, shown) : undefined;
   const winners = state.result?.winners.map((w) => names.player(w)) ?? [];
+  const zones = zoneOwners(state, ctx);
 
   return (
     <div className="screen play replay">
@@ -164,6 +168,7 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
           board={ctx.board}
           terrain={ctx.terrain}
           backdrop={tableRoom(display.table)}
+          onInspect={setHexTip}
         >
           <GamingTable layout={table} style={display.table} />
           <TableCards
@@ -179,6 +184,7 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
         </BoardScene>
       </Canvas>
       <FigureLabels figures={figures} layer={labelLayer} />
+      <HexTip tip={hexTip} board={ctx.board} terrain={ctx.terrain} zones={zones} onClose={() => setHexTip(null)} />
 
       {state.round > 0 && state.phase !== "deploy" && <RoundBar state={state} names={names} />}
 

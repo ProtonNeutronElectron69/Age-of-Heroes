@@ -112,7 +112,8 @@ async function steadyCamera(frames = 5) {
         let same = 0;
         const tick = () => {
           const p = JSON.stringify(window.__aoh?.project(0, 0, 0));
-          same = p === last ? same + 1 : 0;
+          // A glide waiting for a hop to land has not started yet: the camera is not settled.
+          same = p === last && !window.__aoh?.cameraBusy() ? same + 1 : 0;
           last = p;
           if (same >= frames) resolve();
           else requestAnimationFrame(tick);
@@ -238,6 +239,18 @@ let squadMoves = 0;
 let cycled = 0;
 let dragged = false;
 let jumpChecked = false;
+let tipChecked = false;
+
+/** Middle-clicks a point on the board and returns the hex tooltip's text, then closes it with Escape. */
+async function hexTipAt(x, y) {
+  await page.mouse.click(x, y, { button: "middle" });
+  const tip = page.getByRole("tooltip", { name: "Hex information" });
+  await tip.waitFor({ timeout: 5000 });
+  const text = await tip.innerText();
+  await page.keyboard.press("Escape");
+  await tip.waitFor({ state: "hidden" });
+  return text;
+}
 
 try {
   phase("setup");
@@ -249,8 +262,19 @@ try {
   await shot("1-setup");
   await page.getByRole("button", { name: "Start draft" }).click();
 
-  // Draft: take the first card that is still available each pick.
+  // Draft: it opens on the battlefield, with every player's start zone marked, before anyone picks.
   await page.getByRole("heading", { name: "Draft" }).waitFor();
+  const battlefield = page.getByRole("region", { name: "Battlefield" });
+  await battlefield.waitFor();
+  await page.waitForFunction(() => window.__aoh?.canvas.isConnected && window.__aoh.stats().frames > 0);
+  await shot("2a-draft-map");
+  // A middle click on a hex shows its terrain.
+  const field = await battlefield.boundingBox();
+  const draftTip = await hexTipAt(field.x + field.width / 2, field.y + field.height / 2);
+  if (!/Elevation \d/.test(draftTip)) fail(`The hex tooltip in the draft shows no elevation: ${draftTip}`);
+  await page.getByRole("button", { name: "Go to the draft" }).click();
+
+  // Then take the first card that is still available each pick.
   // Every unit shows its hex card, with the name and rules text fitted inside it.
   await page.waitForFunction(() => {
     const cards = document.querySelectorAll(".draft-card .hex-card");
@@ -268,9 +292,18 @@ try {
   // Every unit in the roster has its drawing.
   if (cardFit.undrawn.length) fail(`Cards without unit art: ${cardFit.undrawn.join(", ")}`);
   await shot("2-draft");
+  let mapReopened = false;
   while (await page.getByRole("heading", { name: "Draft" }).count()) {
     await page.locator(".draft-card button.primary:not([disabled])").first().click();
+    // The battlefield can be looked at again at any time during the draft.
+    if (!mapReopened && (await page.getByRole("button", { name: "View map" }).count())) {
+      mapReopened = true;
+      await page.getByRole("button", { name: "View map" }).click();
+      await battlefield.waitFor();
+      await page.getByRole("button", { name: "Go to the draft" }).click();
+    }
   }
+  if (!mapReopened) fail("The draft ended before the map could be opened again");
 
   phase("deployment");
   // Deployment: auto place each unit.
@@ -294,6 +327,10 @@ try {
       await page.getByRole("button", { name: "Display" }).click();
       await page.getByRole("radio", { name: "Models" }).click();
       await buttonsOnScreen("With the Display panel open");
+      // The camera follows the acting unit by panning, turning and zooming, each a box of its own and all ticked at first.
+      for (const name of ["Auto pan", "Auto rotate", "Auto zoom"]) {
+        if (!(await page.getByRole("checkbox", { name }).isChecked())) fail(`${name} is not ticked at first`);
+      }
       const back = await trianglesAfter({ expect: models });
       if (back !== models) fail(`The models did not come back: ${back} triangles, not ${models}`);
       // The board stands on a gaming table, in one of three styles.
@@ -320,7 +357,7 @@ try {
   let roundSeen = "";
   /** Every one-off check is done: from here on, turns are ended at once. */
   const checksDone = () =>
-    dragged && jumpChecked && followChecked && hoverChecked && eyeChecked && sceneChecked && diceOnlyChecked && attacks >= ATTACKS_WANTED && (squadMoves === 0 || cycled > 0);
+    dragged && jumpChecked && tipChecked && followChecked && hoverChecked && eyeChecked && sceneChecked && diceOnlyChecked && attacks >= ATTACKS_WANTED && (squadMoves === 0 || cycled > 0);
   for (let step = 0; step < 2000; step++) {
     if (await page.getByRole("dialog", { name: "Game over" }).count()) break;
     // The dice show covers the board: deal with it before anything else.
@@ -403,6 +440,16 @@ try {
     // Screen points are only good once the camera has stopped gliding.
     await steadyCamera(1);
     const ui = await page.evaluate(() => window.__aohUi);
+    // A middle click on a hex the figure could move to shows that hex's terrain and elevation.
+    if (!tipChecked && ui?.moves.length) {
+      const m = ui.moves[0];
+      const p = await screenPoint(m.hex.q, m.hex.r, m.elevation);
+      if (p) {
+        tipChecked = true;
+        const text = await hexTipAt(p.x, p.y);
+        if (!/Elevation \d/.test(text)) fail(`The hex tooltip shows no elevation: ${text}`);
+      }
+    }
     const squad = (await turn.locator(".figure-button").count()) > 1;
     // Attack whenever the selected figure has a target.
     if (ui?.selected && ui.targets.length > 0 && !handled.has(`a:${ui.selected}`)) {
