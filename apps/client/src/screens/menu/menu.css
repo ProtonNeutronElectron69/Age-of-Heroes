@@ -155,6 +155,19 @@
   z-index: 3;
 }
 
+/* The game's version and last update, small in the bottom right corner of every style. */
+.menu-version {
+  position: absolute;
+  right: 22px;
+  bottom: 3px;
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  color: rgba(239, 227, 203, 0.6);
+  white-space: nowrap;
+  z-index: 3;
+}
+
 .menu-styles-label {
   padding: 0 6px 0 8px;
   color: #b9a888;
@@ -1623,7 +1636,8 @@
 .main-menu.compact .menu-title,
 .main-menu.compact .menu-cmds,
 .main-menu.compact .menu-panel,
-.main-menu.compact .menu-styles {
+.main-menu.compact .menu-styles,
+.main-menu.compact .menu-version {
   position: static;
   transform: none;
   inset: auto;

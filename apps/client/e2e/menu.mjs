@@ -42,7 +42,7 @@ async function open(viewport) {
 async function fits(page, what) {
   const r = await page.evaluate(() => {
     const doc = document.scrollingElement;
-    const out = [...document.querySelectorAll(".menu-title, .menu-cmds .mc, .menu-panel, .menu-styles")].filter((el) => {
+    const out = [...document.querySelectorAll(".menu-title, .menu-cmds .mc, .menu-panel, .menu-styles, .menu-version")].filter((el) => {
       const b = el.getBoundingClientRect();
       return b.left < -1 || b.top < -1 || b.right > innerWidth + 1 || b.bottom > innerHeight + 1;
     });
@@ -68,6 +68,9 @@ try {
         }
       }
       await fits(page, `${style} at ${size}`);
+      // The version and last update sit in a corner: "v1.0 · Last updated MM/DD/YYYY".
+      const version = await page.locator(".menu-version").innerText();
+      if (!/^v\d+\.\d+(\.\d+)? · Last updated \d{2}\/\d{2}\/\d{4}$/.test(version)) fail(`${style}: the version reads "${version}"`);
       await page.getByRole("radio", { name: "Online" }).click();
       await page.getByRole("button", { name: "Create room" }).waitFor();
       await fits(page, `${style} online at ${size}`);
