@@ -118,6 +118,13 @@ const codeSchema = z
   .transform((s) => s.trim().toUpperCase())
   .pipe(z.string().regex(/^[A-Z]{4,8}$/));
 
+/** A point on the board, in board coordinates (the same as `hexToWorld`). */
+const coord = z.number().finite().min(-1000).max(1000);
+const pingPointSchema = z.object({ x: coord, y: coord, z: coord }).strict();
+
+/** The fewest milliseconds between two pings from one player. */
+export const PING_INTERVAL_MS = 1000;
+
 export const clientMessageSchema = z.discriminatedUnion("t", [
   z.object({ t: z.literal("create"), name: nameSchema, settings: roomSettingsSchema }),
   z.object({ t: z.literal("join"), code: codeSchema, name: nameSchema }),
@@ -132,6 +139,8 @@ export const clientMessageSchema = z.discriminatedUnion("t", [
   z.object({ t: z.literal("claim"), playerId: id }),
   /** Host only: get the whole game as a file to resume later. */
   z.object({ t: z.literal("save") }),
+  /** Point at a spot on the board for everyone else to see (the P key). Not part of the game: never saved or replayed. */
+  z.object({ t: z.literal("ping"), at: pingPointSchema }),
 ]);
 /** A client message. Commands are typed as the engine's own Command, which the schema checks the shape of. */
 export type ClientMessage =
@@ -221,6 +230,8 @@ export type ServerMessage =
   | { readonly t: "replay"; readonly replay: Replay }
   /** The host's save of the game (sent only to the host, who asked for it). */
   | { readonly t: "saved"; readonly record: Replay }
+  /** Another player pointed at this spot on the board (board coordinates). */
+  | { readonly t: "ping"; readonly player: string; readonly at: { readonly x: number; readonly y: number; readonly z: number } }
   | { readonly t: "error"; readonly message: string };
 
 /** Read a replay file. Throws with a readable message if it is malformed. */

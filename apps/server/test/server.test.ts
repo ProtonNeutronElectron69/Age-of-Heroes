@@ -283,6 +283,41 @@ describe("a full online game", () => {
     for (const c of [host.client, back, watcher]) await c.close();
   });
 
+  it("passes a ping to everyone else, at most once a second per player, and never from a spectator", async () => {
+    const { code, host, others } = await room(2);
+    const guest = others[0]!.client;
+    const watcher = await Client.connect();
+    const ww = watcher.next("welcome");
+    watcher.send({ t: "spectate", code });
+    await ww;
+    const started = [host.client.next("game"), guest.next("game"), watcher.next("game")];
+    host.client.send({ t: "start" });
+    await Promise.all(started);
+
+    const at = { x: 1.5, y: 0.6, z: -2 };
+    const pinged = [guest.next("ping"), watcher.next("ping")];
+    host.client.send({ t: "ping", at });
+    for (const m of await Promise.all(pinged)) expect(m).toEqual({ t: "ping", player: host.playerId, at });
+
+    // A second ping straight away is dropped. A message that does get through (the spectator's
+    // refused command) shows the server has handled everything sent before it.
+    host.client.send({ t: "ping", at: { x: 9, y: 0, z: 9 } });
+    watcher.send({ t: "ping", at });
+    const done = watcher.next("error");
+    watcher.send({ t: "command", command: { type: "concede", player: host.playerId } });
+    await done;
+    const settled = guest.next("ping").then(() => "pinged", () => "quiet");
+    expect(await settled).toBe("quiet");
+    expect(guest.messages.filter((m) => m.t === "ping")).toHaveLength(1);
+    expect(host.client.messages.some((m) => m.t === "ping")).toBe(false);
+
+    // A ping that is not a point on the board is refused.
+    const refused = host.client.next("error");
+    host.client.send({ t: "ping", at: { x: "far", y: 0, z: 0 } });
+    expect((await refused).message).toMatch(/not understood/);
+    for (const c of [host.client, guest, watcher]) await c.close();
+  });
+
   it("does not let new players join a game in progress", async () => {
     const { code, host, others } = await room(2);
     const started = host.client.next("game");

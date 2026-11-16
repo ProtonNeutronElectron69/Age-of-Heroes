@@ -36,6 +36,9 @@ declare global {
       aiming: { id: string; spots: UiStep[] } | null;
       /** Empty hexes the chosen blast may be aimed at. */
       blastHexes: UiStep[];
+      /** Online: pings heard from other players so far, and pings on screen now (anyone's). */
+      pingsHeard: number;
+      pingsShown: number;
     };
   }
 }

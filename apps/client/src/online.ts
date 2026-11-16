@@ -189,6 +189,24 @@ function open(url: string, first: ClientMessage): void {
   };
 }
 
+/** A spot another player pointed at with the P key (board coordinates). Pings are not part of the game. */
+export interface Ping {
+  readonly player: string;
+  readonly at: { readonly x: number; readonly y: number; readonly z: number };
+}
+const pingListeners = new Set<(ping: Ping) => void>();
+
+/** Hear other players' pings; returns a function that stops listening. */
+export function onPing(listener: (ping: Ping) => void): () => void {
+  pingListeners.add(listener);
+  return () => pingListeners.delete(listener);
+}
+
+/** Point at a spot on the board for the other players. False if there is no connection to send it on. */
+export function sendPing(at: Ping["at"]): boolean {
+  return send({ t: "ping", at: { x: at.x, y: at.y, z: at.z } });
+}
+
 function receive(msg: ServerMessage): void {
   switch (msg.t) {
     case "welcome": {
@@ -223,6 +241,9 @@ function receive(msg: ServerMessage): void {
     case "saved":
       saveWaiter?.resolve(msg.record);
       saveWaiter = null;
+      return;
+    case "ping":
+      for (const l of pingListeners) l({ player: msg.player, at: msg.at });
       return;
     case "error":
       if (saveWaiter) {

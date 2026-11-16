@@ -35,7 +35,8 @@ import { FigureLabels, Figures, type FigureCarry, type FigureJump, type FigureMo
 import { GamingTable, TableCards, tableRoom } from "../scene/Table";
 import { tableFor, tableKey, tableUnits } from "../scene/tableData";
 import { TestHook } from "../scene/TestHook";
-import { closeOnline } from "../online";
+import { closeOnline, onPing, sendPing } from "../online";
+import { PING_SECONDS, PingInput, Pings, type PingView } from "../scene/Pings";
 import { downloadGameFile } from "../saves";
 import { canControl, clearError, dispatch, endSession, replayOf, type Session } from "../session";
 import { DisplayMenu } from "../ui/DisplayMenu";
@@ -418,6 +419,28 @@ export function PlayScreen({ session }: { session: Session }) {
     return engagedEnemies(state, activeUnit.owner, spotsOf(activeUnit.id, figureId), activeCard.height, ctx).length;
   };
 
+  // ---- Pings (online): P points at the spot under the pointer for everyone in the game ----
+  const [pings, setPings] = useState<PingView[]>([]);
+  const pingCount = useRef({ next: 0, heard: 0 });
+  const showPing = (player: string, at: PingView["at"]) => {
+    const id = ++pingCount.current.next;
+    setPings((list) => [...list, { id, color: names.playerColor(player), at }]);
+    window.setTimeout(() => setPings((list) => list.filter((p) => p.id !== id)), PING_SECONDS * 1000 + 100);
+  };
+  const showPingRef = useRef(showPing);
+  showPingRef.current = showPing;
+  useEffect(
+    () =>
+      onPing((p) => {
+        pingCount.current.heard += 1;
+        showPingRef.current(p.player, p.at);
+      }),
+    [],
+  );
+  // Players ping; spectators only watch. Not in eye view, where the pointer turns the view.
+  const me = session.kind === "online" ? session.me : null;
+  const canPing = isOnline && me !== null && !eyeView && state.phase !== "gameOver";
+
   // Publish a read-only summary of the turn for automated browser tests.
   useEffect(() => {
     const positioned = state.units.flatMap((u) =>
@@ -433,8 +456,10 @@ export function PlayScreen({ session }: { session: Session }) {
       enemies: positioned.filter((x) => active && x.unit.owner !== active.player).map((x) => x.pos),
       aiming: aiming ? { id: aiming, spots: aimSpots } : null,
       blastHexes,
+      pingsHeard: pingCount.current.heard,
+      pingsShown: pings.length,
     };
-  }, [state, ctx, selected, options, targets, active, drag, hoverOption, aiming, aimSpots, blastHexes]);
+  }, [state, ctx, selected, options, targets, active, drag, hoverOption, aiming, aimSpots, blastHexes, pings]);
 
   // ---- Figure's-eye view -------------------------------------------------
   const eye = useMemo(() => {
@@ -716,6 +741,7 @@ export function PlayScreen({ session }: { session: Session }) {
     // Only a new follow request moves the camera; later state changes must not.
   }, [follow]);
   const [hexTip, setHexTip] = useHexTip();
+
   const zones = useMemo(() => zoneOwners(state, ctx), [state.players, state.zones, ctx]);
 
   return (
@@ -740,6 +766,7 @@ export function PlayScreen({ session }: { session: Session }) {
           dragging={!!drag && !drag.dropped}
           onInspect={setHexTip}
         >
+          <Pings pings={pings} center={center} />
           <GamingTable layout={table} style={display.table} />
           <TableCards
             layout={table}
@@ -763,6 +790,13 @@ export function PlayScreen({ session }: { session: Session }) {
             onDragEnd={onDragEnd}
           />
         </BoardScene>
+        <PingInput
+          enabled={canPing}
+          center={center}
+          onPing={(at) => {
+            if (me && sendPing(at)) showPing(me, at);
+          }}
+        />
         <TestHook offset={center} />
       </Canvas>
       <FigureLabels figures={figures} layer={labelLayer} />
@@ -917,7 +951,7 @@ export function PlayScreen({ session }: { session: Session }) {
                   }`
                 : "This unit has finished."}
               {moveBig ? " Press R to turn." : ""}
-              {myTurn ? ` Keys: ${activeUnit.figures.length > 1 ? "1-4 pick a figure, " : ""}E eye view, H shows where the chosen figure is, Space ends the turn, WASD moves the map; middle-click a hex to read its terrain.` : ""}
+              {myTurn ? ` Keys: ${activeUnit.figures.length > 1 ? "1-4 pick a figure, " : ""}E eye view, H shows where the chosen figure is, Space ends the turn, WASD moves the map; middle-click a hex to read its terrain${isOnline ? "; P points at the spot under the pointer for everyone" : ""}.` : ""}
               {hoverOption ? ` Move cost ${hoverOption.cost}.` : ""}
               {eyeView && myTurn ? " Drag or use the arrow keys to look around. Clicking an enemy faces it (a red-ringed one is attacked). Exit eye view to end the turn." : ""}
             </p>

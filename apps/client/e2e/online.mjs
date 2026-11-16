@@ -370,6 +370,24 @@ try {
   await carol.browser.close();
   everyone.splice(everyone.indexOf(carol), 1);
 
+  // Pings: Alice points at the board with P, and Bob's page gets her ping.
+  phase("ping");
+  await alice.page.waitForFunction(() => window.__aoh?.canvas.isConnected && window.__aoh.stats().frames > 0);
+  const spot = await alice.page.evaluate(() => {
+    const canvas = window.__aoh.canvas;
+    const r = canvas.getBoundingClientRect();
+    for (const [fx, fy] of [[0.5, 0.55], [0.6, 0.6], [0.45, 0.7], [0.55, 0.4]]) {
+      const x = r.left + r.width * fx;
+      const y = r.top + r.height * fy;
+      if (document.elementFromPoint(x, y) === canvas) return { x, y };
+    }
+    return null;
+  });
+  if (!spot) fail("No open spot on Alice's board to ping");
+  await alice.page.mouse.move(spot.x, spot.y);
+  await alice.page.keyboard.press("p");
+  await bob.page.waitForFunction(() => (window.__aohUi?.pingsHeard ?? 0) >= 1, null, { timeout: 15000 });
+
   // Bob watches the initiative dice; Alice keeps them off, so her page rolls for her as soon as the tokens are down.
   await bob.page.getByRole("button", { name: "Display" }).click();
   await bob.page.getByLabel("Dice rolls").selectOption("dice");
