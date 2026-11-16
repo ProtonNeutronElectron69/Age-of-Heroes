@@ -2,7 +2,7 @@
 
 A turn-based 3D tactics game for 2 to 6 players in the browser. Heroes and squads from every era and myth fight on battlefields built from stacked hex pieces. Sabre-tooth cats, samurai, musketeers, knights, World War 2 riflemen, robots, dragons, undead and angels can all share one battlefield.
 
-**Play it:** <https://protonneutronelectron69.github.io/Age-of-Heroes/>, published from `main` on every merge.
+**Play it:** <https://protonneutronelectron69.github.io/Age-of-Heroes/>, published from `main` on every merge. Online play uses our game server on Render; its health page is <https://age-of-heroes-server.onrender.com/health> (see [docs/HOSTING.md](docs/HOSTING.md)).
 
 ## What's in the game
 
