@@ -10,7 +10,7 @@ The core game is complete and playable, online too: the game server runs on Rend
 - **On hold (Phase 6):** a computer opponent, and a tutorial.
 - **Phase 7, figure models:** stage 1 is done. Every unit has a low polygon model in flat colour, drawn on the board in place of tokens (the Display button or the T key switches back to tokens and picks one of three colour schemes; see every model at `?models`). **Next, when the owner asks:** later stages add detail and colour.
 - **On hold (Phase 7):** sound and music, terrain and scenery art.
-- **Done lately:** Phase 8 (the tabletop feel) and Phase 9 (playtest updates, below).
+- **Done lately:** Phase 8 (the tabletop feel) and Phase 9 (playtest updates, below). The game as it stood after Phase 9 is version 1.0.
 
 ### Ideas, not scheduled
 - More premade maps.
@@ -230,7 +230,7 @@ The game should feel like a game played on a table. Nothing here changes the rul
   - [x] Initiative: each player clicks a d20, which tumbles and lands on their roll; a tie rolls again. Skip shows every result at once. Online, each player clicks their own die, and since #41 no die is rolled until everyone has
   - [x] Apart from online initiative (#41), the engine rolls everything in one step; only the showing changes. With reduced motion the dice appear already landed. Replays show the dice panel as before
 
-### Phase 9: Playtest updates (done, #40 to #45)
+### Phase 9: Playtest updates (done, #40 to #49)
 Small changes asked for after playing, online games especially.
 - [x] Camera follow: three boxes under Display (Auto pan, Auto rotate, Auto zoom), the follow about a fifth further back, and every glide waits for a moving figure to land (#40)
 - [x] The draft opens on the battlefield, with each start zone in its player's colour and name; **View map** brings it back at any time (#40)
@@ -241,4 +241,5 @@ Small changes asked for after playing, online games especially.
 - [x] Online pings: P points at the spot under the pointer for everyone, in play (#43) and on the draft map (#44)
 - [x] Attack roll pacing: the attack dice tumble longer and land first, then the defense dice; the result stays 30% longer (#45)
 - [x] A **Keys** panel under the game log lists the hot keys; click its heading to fold it away, and the choice is remembered
-- [x] Attack effects: every attack opens with a two-second intro (click to skip), whatever **Dice rolls** says: the camera frames the two figures side by side, a red aura rises round the attacker and a blue one round each target, a red arrow arcs from attacker to target, and a bow (a shot from range) or crossed sword and shield (melee) floats over them. After the dice, a red number of wounds floats up from each figure hit (0 for an attack that did no harm; falls, terrain and abilities too), and a destroyed figure stays where it fell until it has shaken. Replays float the numbers and shake the fallen. Online, a skip needs every player's click, and the player whose turn it is waits until everyone has finished watching
+- [x] Attack effects: every attack opens with a two-second intro (click to skip), whatever **Dice rolls** says: the camera frames the two figures side by side, a red aura rises round the attacker and a blue one round each target, a red arrow arcs from attacker to target, and a bow (a shot from range) or crossed sword and shield (melee) floats over them. After the dice, a red number of wounds floats up from each figure hit (0 for an attack that did no harm; falls, terrain and abilities too), and a destroyed figure stays where it fell until it has shaken. Replays float the numbers and shake the fallen. Online, a skip needs every player's click, and the player whose turn it is waits until everyone has finished watching (#48)
+- [x] The game is **v1.0**. The main menu shows the version and the date of the last update (MM/DD/YYYY) in its bottom right corner

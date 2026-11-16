@@ -49,6 +49,7 @@
 
 ### Main menu
 - Four styles (War Table, Atlas, Banner Hall, Hex Command) share one set of choices and panels; `SetupScreen.tsx` builds them and `screens/menu/MenuFrame.tsx` and `menu.css` dress them. A new menu choice or setting goes in every style, and must fit the 1280 by 720 stage without scrolling (`e2e/menu.mjs` checks).
+- **Version:** the menu's corner shows "v1.0 · Last updated MM/DD/YYYY" (`version.ts`). The version is `version` in `apps/client/package.json` (1.0.0 shows as v1.0); change it only when the owner asks. The date is the latest commit's, read at build time, so it needs no editing.
 
 ### Browser tests
 - **Hooks:** `apps/client/e2e` drives the canvas through `window.__aoh` (`scene/TestHook.tsx`, including `woundsShown()`), `window.__aohUi` (`PlayScreen.tsx`) and `window.__aohPingsHeard` (`online.ts`); keep them working when changing those screens. A hook only removes `window.__aoh` if it still owns it, since a closing canvas can unmount after the next one mounts; after changing screens, tests wait for `window.__aoh?.canvas.isConnected`. Before clicking the canvas, tests wait for the camera to settle (`steadyCamera`, which includes `window.__aoh.cameraBusy()`). Tests that draft click **Go to the draft** first. After an attack, tests wait for the "Attack begins" intro to end (or `[data-pending]` to clear), as a click during it only skips it.

@@ -5,6 +5,7 @@ import "@fontsource/im-fell-english-sc/latin-400.css";
 import "@fontsource/marcellus-sc/latin-400.css";
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { MENU_STYLES, setDisplay, useDisplay, type MenuStyle } from "../../settings";
+import { GAME_VERSION, LAST_UPDATED } from "../../version";
 import { CompassRose, Icon, type IconName } from "./icons";
 import { MenuBoard } from "./MenuBoard";
 import "./menu.css";
@@ -190,6 +191,10 @@ export function MenuFrame({ commands, heading, sub, children, extras }: Props) {
             {children}
           </section>
           <StylePicker style={style} />
+          <p className="menu-version">
+            {GAME_VERSION}
+            {LAST_UPDATED && ` · Last updated ${LAST_UPDATED}`}
+          </p>
         </div>
       </div>
       {extras}

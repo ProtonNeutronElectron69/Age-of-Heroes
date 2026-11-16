@@ -20,7 +20,7 @@ Checks run only for the parts of the game a change can affect. The browser tests
 | `editor` | Building a map, exporting and importing it, and playing on it |
 | `models` | Every figure model on the model page |
 | `gallery` | The unit gallery: filters, sorts, sizes and the model viewer |
-| `menu` | The main menu in all four styles at three window sizes, with nothing scrolling |
+| `menu` | The main menu in all four styles at three window sizes, with nothing scrolling, and the version and last update in the corner |
 
 ## What a change runs
 
