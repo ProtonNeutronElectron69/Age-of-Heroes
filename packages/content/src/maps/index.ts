@@ -1,5 +1,7 @@
 import { mapSchema, type MapDefinition } from "@aoh/rules";
+import frostspinePeaks from "./frostspine-peaks.json";
 import glacierPass from "./glacier-pass.json";
+import mirewoodFen from "./mirewood-fen.json";
 import provingGrounds from "./proving-grounds.json";
 import theMesa from "./the-mesa.json";
 import twinFords from "./twin-fords.json";
@@ -15,4 +17,4 @@ export function loadMap(data: unknown): MapDefinition {
 }
 
 /** The premade map library. */
-export const MAPS: readonly MapDefinition[] = [provingGrounds, twinFords, theMesa, glacierPass].map(loadMap);
+export const MAPS: readonly MapDefinition[] = [provingGrounds, twinFords, theMesa, glacierPass, frostspinePeaks, mirewoodFen].map(loadMap);

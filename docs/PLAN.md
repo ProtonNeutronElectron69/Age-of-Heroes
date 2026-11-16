@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. 508 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with six premade maps, hot-seat and online play, saved games and replays. 508 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 - **On hold (Phase 6):** a computer opponent, and a tutorial.
@@ -76,7 +76,7 @@ Each phase or drop is one pull request from a working branch, with CI green befo
 - [x] Start zone painting for up to 6 zones, and which zones each player count uses
 - [x] Undo and redo
 - [x] Save maps in the browser ("My maps"), export and import map files, and play any map
-- [x] Library of four premade maps: Proving Grounds, Twin Fords, The Mesa and Glacier Pass
+- [x] Library of four premade maps: Proving Grounds, Twin Fords, The Mesa and Glacier Pass (two large ones joined later; see Phase 9)
 - [x] Setup screen offers only the player counts a map supports
 - [x] Browser test that builds, exports, imports and plays a custom map
 
@@ -230,7 +230,7 @@ The game should feel like a game played on a table. Nothing here changes the rul
   - [x] Initiative: each player clicks a d20, which tumbles and lands on their roll; a tie rolls again. Skip shows every result at once. Online, each player clicks their own die, and since #41 no die is rolled until everyone has
   - [x] Apart from online initiative (#41), the engine rolls everything in one step; only the showing changes. With reduced motion the dice appear already landed. Replays show the dice panel as before
 
-### Phase 9: Playtest updates (done, #40 to #49)
+### Phase 9: Playtest updates (done, #40 to #50)
 Small changes asked for after playing, online games especially.
 - [x] Camera follow: three boxes under Display (Auto pan, Auto rotate, Auto zoom), the follow about a fifth further back, and every glide waits for a moving figure to land (#40)
 - [x] The draft opens on the battlefield, with each start zone in its player's colour and name; **View map** brings it back at any time (#40)
@@ -242,4 +242,5 @@ Small changes asked for after playing, online games especially.
 - [x] Attack roll pacing: the attack dice tumble longer and land first, then the defense dice; the result stays 30% longer (#45)
 - [x] A **Keys** panel under the game log lists the hot keys; click its heading to fold it away, and the choice is remembered
 - [x] Attack effects: every attack opens with a two-second intro (click to skip), whatever **Dice rolls** says: the camera frames the two figures side by side, a red aura rises round the attacker and a blue one round each target, a red arrow arcs from attacker to target, and a bow (a shot from range) or crossed sword and shield (melee) floats over them. After the dice, a red number of wounds floats up from each figure hit (0 for an attack that did no harm; falls, terrain and abilities too), and a destroyed figure stays where it fell until it has shaken. Replays float the numbers and shake the fallen. Online, a skip needs every player's click, and the player whose turn it is waits until everyone has finished watching (#48)
-- [x] The game is **v1.0**. The main menu shows the version and the date of the last update (MM/DD/YYYY) in its bottom right corner
+- [x] The game is **v1.0**. The main menu shows the version and the date of the last update (MM/DD/YYYY) in its bottom right corner (#49)
+- [x] Two large 4-player maps, about twice the size of Twin Fords on a square outline (24 by 28 hexes), with a start zone in each corner. The same turned 180 degrees and nearly mirror-symmetric, so every corner is equally far from the centre. **Frostspine Peaks**: a summit 13 levels high, snowy ridges and passes between the corners, glaciers and frozen tarns. **Mirewood Fen**: pools, channels and swamp under about a hundred trees, with causeways to a walled mound in the middle
