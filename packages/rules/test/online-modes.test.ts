@@ -111,23 +111,11 @@ describe("initiative rolled by the players", () => {
       commands.push(cmd);
       state = apply(state, cmd).state;
     };
-    state = deployAll(state).state;
+    while (state.phase === "deploy") run(nextDeploy(state));
     for (const p of ["p1", "p2"]) run({ type: "placeTokens", player: p, tokens: allOn(`${p}:0`) });
     run({ type: "rollInitiative", player: "p2" });
     run({ type: "rollInitiative", player: "p1" });
-    const deployCommands = deployCommandsOf(game);
-    expect(replayGame(game, [...deployCommands, ...commands], ctx).state.initiative).toEqual(state.initiative);
+    expect(state.initiative).toHaveLength(2);
+    expect(replayGame(game, commands, ctx).state.initiative).toEqual(state.initiative);
   });
 });
-
-/** The deploy commands `deployAll` makes for a new game from this setup. */
-function deployCommandsOf(game: ReturnType<typeof setup>): Command[] {
-  let state = createGame(game, ctx).state;
-  const out: Command[] = [];
-  while (state.phase === "deploy") {
-    const cmd = nextDeploy(state);
-    out.push(cmd);
-    state = apply(state, cmd).state;
-  }
-  return out;
-}

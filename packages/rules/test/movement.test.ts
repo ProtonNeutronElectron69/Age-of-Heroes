@@ -27,7 +27,7 @@ function rowGame(
 }
 
 const flat = (n: number, terrain = "grass"): [string, number][] => Array.from({ length: n }, () => [terrain, 1]);
-const move = (state: GameState, path: Step[]) =>
+const move = (path: Step[]) =>
   ({ type: "move", player: "p1", figureId: "p1:0#1", path }) as const;
 
 describe("movement options", () => {
@@ -102,7 +102,7 @@ describe("movement options", () => {
 describe("move command", () => {
   it("moves the figure and records it", () => {
     const { ctx, state } = rowGame(flat(6), at(0));
-    const r = apply(state, move(state, [step(1), step(2)]), ctx);
+    const r = apply(state, move([step(1), step(2)]), ctx);
     expect(r.state.units[0]!.figures[0]!.position).toMatchObject({ hex: hex(2, 0), elevation: 1 });
     expect(r.events[0]).toMatchObject({ type: "figureMoved", path: [step(1), step(2)] });
     expect(r.state.active!.moved).toEqual(["p1:0#1"]);
@@ -110,7 +110,7 @@ describe("move command", () => {
 
   it("rejects bad paths", () => {
     const { ctx, state } = rowGame([...flat(7), ["water", 1], ["grass", 1]], at(0), { "p2:0#1": at(4) });
-    const fails = (path: Step[]) => applyCommand(state, move(state, path), ctx);
+    const fails = (path: Step[]) => applyCommand(state, move(path), ctx);
     expect(fails([]).ok).toBe(false);
     expect(fails([step(2)]).error).toMatch(/cannot move/);
     expect(fails([step(1), step(2), step(3), step(4)]).error).toMatch(/enemy/);
@@ -119,10 +119,10 @@ describe("move command", () => {
 
   it("does not let a figure move twice or after attacking", () => {
     const { ctx, state } = rowGame(flat(6), at(0));
-    const moved = apply(state, move(state, [step(1)]), ctx).state;
-    expect(applyCommand(moved, move(moved, [step(2)]), ctx).error).toMatch(/already moved/);
+    const moved = apply(state, move([step(1)]), ctx).state;
+    expect(applyCommand(moved, move([step(2)]), ctx).error).toMatch(/already moved/);
     const attacked = { ...state, active: { ...state.active!, attacked: ["p1:0#1"] } };
-    expect(applyCommand(attacked, move(attacked, [step(1)]), ctx).error).toMatch(/after attacking/);
+    expect(applyCommand(attacked, move([step(1)]), ctx).error).toMatch(/after attacking/);
   });
 
   it("only moves figures of the activated unit", () => {
@@ -133,7 +133,7 @@ describe("move command", () => {
 
   it("lava destroys on a low roll and is survived on a high one", () => {
     const { ctx, state } = rowGame([["grass", 1], ["lava", 1], ["grass", 1]], at(0));
-    const cmd = move(state, [step(1), step(2)]);
+    const cmd = move([step(1), step(2)]);
     const burned = withOutcome(state, cmd, ctx, (ev) => ev.some((e) => e.type === "terrainRoll" && e.outcome === "destroyed"));
     const fig = burned.state.units[0]!.figures[0]!;
     expect(fig.destroyed).toBe(true);
@@ -154,7 +154,7 @@ describe("move command", () => {
     ).state;
     const state = turnState(base, "p1:0", { "p1:0#1": at(0), "p2:0#1": at(2) });
     // p3 has a figure off this row; it stays alive because it is not destroyed.
-    const r = withOutcome(state, move(state, [step(1)]), ctx, (ev) => ev.some((e) => e.type === "figureDestroyed"));
+    const r = withOutcome(state, move([step(1)]), ctx, (ev) => ev.some((e) => e.type === "figureDestroyed"));
     expect(r.state.players.find((p) => p.id === "p1")!.eliminated).toBe(true);
     expect(r.state.phase).toBe("turns");
     expect(r.state.active?.player).not.toBe("p1");
@@ -163,7 +163,7 @@ describe("move command", () => {
 
   it("ice slides a slipping figure one hex on and ends its move", () => {
     const { ctx, state } = rowGame([["grass", 1], ["ice", 1], ["grass", 1], ["grass", 1], ["grass", 1]], at(0));
-    const cmd = move(state, [step(1), step(2), step(3)]);
+    const cmd = move([step(1), step(2), step(3)]);
     const slipped = withOutcome(state, cmd, ctx, (ev) => ev.some((e) => e.type === "terrainRoll" && e.outcome === "slipped"));
     expect(slipped.state.units[0]!.figures[0]!.position).toMatchObject({ hex: hex(2, 0) });
     expect(slipped.events.some((e) => e.type === "figureSlid")).toBe(true);
@@ -173,7 +173,7 @@ describe("move command", () => {
 
   it("a slip that cannot slide leaves the figure on the ice", () => {
     const { ctx, state } = rowGame([["grass", 1], ["ice", 1], ["rock", 9]], at(0));
-    const r = withOutcome(state, move(state, [step(1)]), ctx, (ev) => ev.some((e) => e.type === "terrainRoll" && e.outcome === "slipped"));
+    const r = withOutcome(state, move([step(1)]), ctx, (ev) => ev.some((e) => e.type === "terrainRoll" && e.outcome === "slipped"));
     expect(r.state.units[0]!.figures[0]!.position).toMatchObject({ hex: hex(1, 0) });
     expect(r.events.some((e) => e.type === "figureSlid")).toBe(false);
   });
@@ -183,7 +183,7 @@ describe("move command", () => {
     // and the figure would be stuck on an occupied hex.
     const columns: [string, number][] = [["grass", 1], ["grass", 1], ["ice", 1], ["grass", 1], ["grass", 1], ["grass", 1]];
     const { ctx, state } = rowGame(columns, at(0), { "p1:1#1": at(2), "p1:1#2": at(3) });
-    const r = withOutcome(state, move(state, [step(1), step(2), step(3), step(4)]), ctx, (ev) =>
+    const r = withOutcome(state, move([step(1), step(2), step(3), step(4)]), ctx, (ev) =>
       ev.some((e) => e.type === "terrainRoll" && e.outcome === "slipped"),
     );
     expect(r.state.units[0]!.figures[0]!.position).toMatchObject({ hex: hex(1, 0) });
