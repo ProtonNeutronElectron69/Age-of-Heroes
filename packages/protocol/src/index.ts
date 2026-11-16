@@ -48,7 +48,8 @@ export const commandSchema = z.discriminatedUnion("type", [
     tokens: z.object({ "1": id, "2": id, "3": id, X: id }).strict(),
   }),
   z.object({ type: z.literal("move"), player: id, figureId: id, path: z.array(stepSchema).min(1).max(64) }),
-  z.object({ type: z.literal("attack"), player: id, figureId: id, targetId: id, ability: id.optional() }),
+  z.object({ type: z.literal("attack"), player: id, figureId: id, targetId: id, ability: id.optional(), aim: hexSchema.optional() }),
+  z.object({ type: z.literal("blast"), player: id, figureId: id, ability: id, at: stepSchema.omit({ rotation: true }) }),
   z.object({ type: z.literal("endTurn"), player: id }),
   z.object({ type: z.literal("concede"), player: id }),
 ]);

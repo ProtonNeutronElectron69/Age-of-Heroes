@@ -1,5 +1,5 @@
 import { rollCombat } from "../dice";
-import { DIRECTIONS, hexAdd, hexDistance, hexEquals, hexKey, hexSub, isAdjacent } from "../hex";
+import { DIRECTIONS, hexAdd, hexDistance, hexEquals, hexKey, hexSub, isAdjacent, type Hex } from "../hex";
 import { hasLineOfSight, type Token } from "../los";
 import { Rng } from "../rng";
 import { isUnique } from "../schema";
@@ -19,6 +19,7 @@ import {
   spotDistance,
   swapOf,
   targetingProblem,
+  type AreaAttackSpec,
   type Combatant,
   type ReachSpec,
 } from "./abilities";
@@ -112,10 +113,17 @@ export function attackProblem(
   targetId: string,
   ctx: RulesContext,
   ability?: string,
+  aim?: Hex,
 ): string | null {
   const a = findFigure(state, attackerId);
   if (!a) return "That figure is not on the battlefield";
   const card = cardOf(a.unit, ctx);
+  if (aim) {
+    const area = ability ? areaAttackOf(card, ability) : undefined;
+    if (!area) return "Only a blast is aimed at a hex";
+    const problem = actionProblem(state, attackerId, targetId, ctx, area);
+    return problem ?? aimProblem(state, attackerId, targetId, aim, ctx, area);
+  }
   if (!ability) {
     return actionProblem(state, attackerId, targetId, ctx, {
       range: statsOf(card).range,
@@ -155,6 +163,109 @@ export function attackProblem(
   const swap = swapOf(card, ability);
   if (swap) return swapProblem(state, attackerId, targetId, ctx, swap);
   return "That power is not an attack";
+}
+
+/** Why a blast cannot be aimed at this hex of its target: it must be one of the target's hexes, within the blast's range. */
+function aimProblem(state: GameState, attackerId: string, targetId: string, aim: Hex, ctx: RulesContext, area: AreaAttackSpec): string | null {
+  const a = findFigure(state, attackerId)!;
+  const t = findFigure(state, targetId)!;
+  const target = combatant(t.unit, t.figure, ctx);
+  const spot = target.spots.find((s) => hexEquals(s.hex, aim));
+  if (!spot) return "Aim at one of the target's hexes";
+  const distance = spotDistance(combatant(a.unit, a.figure, ctx).spots, [spot]);
+  if (distance > area.range) return `That hex is out of range (${distance} hexes, range ${area.range})`;
+  if (distance < area.minRange) return `That hex is too close (needs at least ${area.minRange} hexes)`;
+  return null;
+}
+
+/**
+ * Why a blast cannot be aimed at this empty hex, or null if it can. Only a blast that may be aimed at
+ * a hex (`hexTarget`) can; the hex must be an empty surface within range, and in sight unless the
+ * blast needs none. An engaged figure may only attack the enemies it is engaged with, so it cannot.
+ */
+export function blastProblem(state: GameState, attackerId: string, at: Step, ctx: RulesContext, ability: string): string | null {
+  const active = state.active;
+  if (state.phase !== "turns" || !active) return "No turn is in progress";
+  const a = findFigure(state, attackerId);
+  if (!a || a.figure.destroyed || !a.figure.position) return "That figure is not on the battlefield";
+  if (a.unit.id !== active.unitId) return "Only the activated unit can attack this turn";
+  if (active.attacked.includes(attackerId)) return "That figure has already attacked this turn";
+  const card = cardOf(a.unit, ctx);
+  if (!abilityOf(card, ability)) return "That figure has no such power";
+  const area = areaAttackOf(card, ability);
+  if (!area) return "That power is not a blast";
+  if (!area.hexTarget) return `${area.name} must be aimed at a figure`;
+  if (!ctx.board.surfaces(at.hex).some((s) => s.elevation === at.elevation)) return "There is no ground there";
+  if (figuresAt(state, ctx, at.hex).length > 0) return "Someone stands there: aim at the figure instead";
+  const attacker = combatant(a.unit, a.figure, ctx);
+  const distance = spotDistance(attacker.spots, [at]);
+  if (distance > area.range) return `Out of range (${distance} hexes, range ${area.range})`;
+  if (distance < area.minRange) return `Too close (needs at least ${area.minRange} hexes)`;
+  if (engagedEnemies(state, a.unit.owner, attacker.spots, attacker.card.height, ctx).length > 0) {
+    return "An engaged figure can only attack enemies it is engaged with";
+  }
+  if (area.ignoresSight) return null;
+  const blockers: Token[] = [];
+  for (const unit of state.units) {
+    const c = ctx.cards.get(unit.cardId);
+    if (!c) continue;
+    for (const figure of unit.figures) {
+      if (figure.id === attackerId) continue;
+      blockers.push(...tokens(figureSpots(figure, c.footprint, c.height, ctx), c.height));
+    }
+  }
+  // The hex is in sight if a figure of Height 1 standing there could be seen.
+  if (!hasLineOfSight(ctx.board, tokens(attacker.spots, attacker.card.height), [{ ...at, height: 1 }], { blockers })) {
+    return "No line of sight";
+  }
+  return null;
+}
+
+/** Every empty hex a blast that may be aimed at a hex could be aimed at right now. */
+export function blastSpots(state: GameState, attackerId: string, ctx: RulesContext, ability: string): Step[] {
+  const a = findFigure(state, attackerId);
+  if (!a?.figure.position) return [];
+  const area = areaAttackOf(cardOf(a.unit, ctx), ability);
+  if (!area?.hexTarget) return [];
+  const spots: Step[] = [];
+  for (const h of ctx.board.hexes()) {
+    if (hexDistance(h, a.figure.position.hex) > area.range + 3) continue;
+    for (const surface of ctx.board.surfaces(h)) {
+      const at = { hex: h, elevation: surface.elevation };
+      if (blastProblem(state, attackerId, at, ctx, ability) === null) spots.push(at);
+    }
+  }
+  return spots;
+}
+
+/** Living figures with a hex at `h`, at any height. */
+function figuresAt(state: GameState, ctx: RulesContext, h: Hex): Combatant[] {
+  const found: Combatant[] = [];
+  for (const unit of state.units) {
+    for (const figure of unit.figures) {
+      if (figure.destroyed || !figure.position) continue;
+      const c = combatant(unit, figure, ctx);
+      if (c.spots.some((s) => hexEquals(s.hex, h))) found.push(c);
+    }
+  }
+  return found;
+}
+
+/**
+ * The figures a blast centred on `centre` splashes: every living figure with a hex next to it,
+ * except the attacker and those already hit in full. Each figure is hit once, however many of its
+ * hexes are near.
+ */
+function splashedBy(state: GameState, ctx: RulesContext, centre: readonly Step[], except: readonly string[]): Combatant[] {
+  const found: Combatant[] = [];
+  for (const unit of state.units) {
+    for (const figure of unit.figures) {
+      if (figure.destroyed || !figure.position || except.includes(figure.id)) continue;
+      const c = combatant(unit, figure, ctx);
+      if (spotDistance(c.spots, centre) <= 1) found.push(c);
+    }
+  }
+  return found;
 }
 
 /** Why a figure cannot swap places with a friend (Fae Step), or null if it can. */
@@ -349,9 +460,10 @@ export function attack(
   events: GameEvent[],
   ctx: RulesContext,
   ability?: string,
+  aim?: Hex,
 ): void {
   if (state.active && state.active.player !== player) fail("It is not your turn");
-  const problem = attackProblem(state, figureId, targetId, ctx, ability);
+  const problem = attackProblem(state, figureId, targetId, ctx, ability, aim);
   if (problem) fail(problem);
 
   const a = findFigure(state, figureId)!;
@@ -365,15 +477,10 @@ export function attack(
   const swap = ability ? swapOf(attacker.card, ability) : undefined;
 
   if (area) {
-    // The target takes the full blast; every other figure next to it takes the splash.
-    const splashed: Combatant[] = [];
-    for (const unit of state.units) {
-      for (const figure of unit.figures) {
-        if (figure.destroyed || !figure.position || figure.id === targetId || figure.id === figureId) continue;
-        const c = combatant(unit, figure, ctx);
-        if (spotDistance(c.spots, defender.spots) <= 1) splashed.push(c);
-      }
-    }
+    // The target takes the full blast; every other figure next to the aimed hex takes the splash, once.
+    // Older saves aimed at no hex: their blasts splash round every hex of the target, as they did then.
+    const centre = aim ? defender.spots.filter((s) => hexEquals(s.hex, aim)) : defender.spots;
+    const splashed = splashedBy(state, ctx, centre, [targetId, figureId]);
     resolve(state, ctx, rng, attacker, defender, area.dice, area.id, events);
     for (const c of splashed) {
       if (!c.figure.destroyed) resolve(state, ctx, rng, attacker, c, area.splashDice, area.id, events);
@@ -437,6 +544,36 @@ export function attack(
   checkGameOver(state, events, ctx);
 }
 
+/** A blast aimed at an empty hex (`blast` command): every figure next to the hex takes the splash dice, once. */
+export function blastHex(
+  state: GameState,
+  player: PlayerId,
+  figureId: string,
+  ability: string,
+  at: Step,
+  events: GameEvent[],
+  ctx: RulesContext,
+): void {
+  if (state.active && state.active.player !== player) fail("It is not your turn");
+  const problem = blastProblem(state, figureId, at, ctx, ability);
+  if (problem) fail(problem);
+  const a = findFigure(state, figureId)!;
+  const attacker = combatant(a.unit, a.figure, ctx);
+  const area = areaAttackOf(attacker.card, ability)!;
+  events.push({ type: "abilityUsed", ability, figureId, detail: `${area.name} lands on an empty hex` });
+  const rng = new Rng(state.rng);
+  for (const c of splashedBy(state, ctx, [at], [figureId])) {
+    if (!c.figure.destroyed) resolve(state, ctx, rng, attacker, c, area.splashDice, area.id, events);
+  }
+  state.rng = rng.state;
+  const active = state.active!;
+  active.attacked.push(figureId);
+  if (!attacker.figure.destroyed && hasAbility(attacker.card, "smoke-step")) {
+    active.bonusMoves[figureId] = param(abilityOf(attacker.card, "smoke-step"), "move", 2);
+  }
+  checkGameOver(state, events, ctx);
+}
+
 /** Mind control: the figure leaves its unit and joins the controller's army as a unit of its own. */
 function takeControl(state: GameState, player: PlayerId, target: Combatant, events: GameEvent[]): void {
   const from = target.unit;
@@ -481,3 +618,4 @@ export function endOfTurnTerrain(state: GameState, unitId: string, events: GameE
   }
   state.rng = rng.state;
 }
+

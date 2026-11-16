@@ -2,8 +2,9 @@ import { HEX_SIZE } from "@aoh/rules";
 
 /**
  * Where everything sits on the gaming table: the board in the middle, each
- * player's unit cards in a band along the side of the table nearest their
- * start zone. The table is a square as large as the board and the cards need.
+ * player's unit cards in a band along a side of the table, chosen by where
+ * their start zone lies. Up to four players get a side each; five or six
+ * share, two to a side. The table is a square as large as the board and the cards need.
  * All distances are in board units (a hex is HEX_SIZE from centre to corner).
  */
 
@@ -60,11 +61,50 @@ const YAW: Record<TableSide, number> = { south: 0, north: Math.PI, east: Math.PI
 /** Seats when start zones are unknown: opposite sides first, as players sit down at a table. */
 const SEAT_ORDER: readonly TableSide[] = ["south", "north", "east", "west", "south", "north"];
 
-function sideOf(home: { x: number; z: number }, mat: Bounds): TableSide {
-  const dx = (home.x - (mat.minX + mat.maxX) / 2) / Math.max(mat.maxX - mat.minX, 1e-6);
-  const dz = (home.z - (mat.minZ + mat.maxZ) / 2) / Math.max(mat.maxZ - mat.minZ, 1e-6);
-  if (Math.abs(dz) >= Math.abs(dx)) return dz >= 0 ? "south" : "north";
-  return dx >= 0 ? "east" : "west";
+const OUTWARD: Record<TableSide, readonly [number, number]> = { south: [0, 1], north: [0, -1], east: [1, 0], west: [-1, 0] };
+
+/**
+ * How badly a side suits a player: 0 when their start zone lies straight out from the board's
+ * middle towards it, up to 2 when it lies the other way. Without a start zone, their usual seat costs nothing.
+ */
+function sideCost(player: TablePlayer, index: number, side: TableSide, mat: Bounds): number {
+  if (!player.home) return side === SEAT_ORDER[index % SEAT_ORDER.length] ? 0 : 1;
+  const dx = (player.home.x - (mat.minX + mat.maxX) / 2) / Math.max(mat.maxX - mat.minX, 1e-6);
+  const dz = (player.home.z - (mat.minZ + mat.maxZ) / 2) / Math.max(mat.maxZ - mat.minZ, 1e-6);
+  const length = Math.hypot(dx, dz);
+  if (length < 1e-9) return 1;
+  const [sx, sz] = OUTWARD[side];
+  return 1 - (dx * sx + dz * sz) / length;
+}
+
+/**
+ * A side for each player. Up to four players each get a side of their own; five or six share,
+ * at most two to a side. Of those seatings, the one that best fits where the start zones lie wins.
+ */
+function assignSides(players: readonly TablePlayer[], mat: Bounds): TableSide[] {
+  const perSide = Math.max(1, Math.ceil(players.length / SIDES.length));
+  const used: Record<TableSide, number> = { south: 0, north: 0, east: 0, west: 0 };
+  const chosen: TableSide[] = [];
+  let best: TableSide[] = [];
+  let bestCost = Infinity;
+  const search = (i: number, cost: number) => {
+    if (cost >= bestCost) return;
+    if (i === players.length) {
+      best = [...chosen];
+      bestCost = cost;
+      return;
+    }
+    for (const side of SIDES) {
+      if (used[side] >= perSide) continue;
+      used[side]++;
+      chosen.push(side);
+      search(i + 1, cost + sideCost(players[i]!, i, side, mat));
+      chosen.pop();
+      used[side]--;
+    }
+  };
+  search(0, 0);
+  return best;
 }
 
 interface Seat {
@@ -90,8 +130,9 @@ export function layoutTable(board: Bounds, players: readonly TablePlayer[]): Tab
     maxZ: board.maxZ + BOARD_MARGIN,
   };
   const bySide: Record<TableSide, Seat[]> = { south: [], north: [], east: [], west: [] };
+  const sides = assignSides(players, mat);
   players.forEach((player, i) => {
-    const side = player.home ? sideOf(player.home, mat) : SEAT_ORDER[i % SEAT_ORDER.length]!;
+    const side = sides[i]!;
     const across = side === "south" || side === "north";
     bySide[side].push({ player, along: player.home ? (across ? player.home.x : player.home.z) : i });
   });

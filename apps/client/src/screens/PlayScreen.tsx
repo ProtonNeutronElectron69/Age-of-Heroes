@@ -1,7 +1,10 @@
 import {
   HIT_BAND_FROM,
   LEVEL_HEIGHT,
+  areaAttackOf,
+  attackProblem,
   attackTargets,
+  blastSpots,
   currentDeployment,
   deploymentPlacements,
   engagedEnemies,
@@ -128,6 +131,8 @@ export function PlayScreen({ session }: { session: Session }) {
   const [eyeView, setEyeView] = useState(false);
   /** Which action an attack click uses: null for a normal attack, or a special action's id. */
   const [attackMode, setAttackMode] = useState<string | null>(null);
+  /** A blast at a figure covering several hexes waits here while the player picks the hex to aim at. */
+  const [aiming, setAiming] = useState<string | null>(null);
   const [revealedFor, setRevealedFor] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(true);
   /** Keep the selected figure's unit card on screen (a viewer preference, kept in the browser). */
@@ -141,7 +146,7 @@ export function PlayScreen({ session }: { session: Session }) {
   const display = useDisplay();
   /** The figure the pointer is dragging to a new hex; `dropped` once it has been let go there. */
   const [drag, setDrag] = useState<{ id: string; dropped: Step | null } | null>(null);
-  /** The unit jumping on the spot so it can be found (the H key). */
+  /** The figures jumping on the spot so they can be found (the H key). */
   const [jump, setJump] = useState<FigureJump | null>(null);
 
   // ---- Deployment -------------------------------------------------------
@@ -285,8 +290,10 @@ export function PlayScreen({ session }: { session: Session }) {
     setRotation(f?.position?.rotation ?? 0);
     setAttackMode(null);
   }, [selected, turnKey]);
+  useEffect(() => setAiming(null), [selected, turnKey, attackMode, state]);
   const specials = activeCard ? specialActions(activeCard) : [];
   const modeKind = specials.find((s) => s.id === attackMode)?.kind ?? null;
+  const blast = activeCard && attackMode ? areaAttackOf(activeCard, attackMode) : undefined;
 
   const options = useMemo<Map<string, MoveOption>>(() => {
     if (!active || !selected) return new Map();
@@ -303,6 +310,22 @@ export function PlayScreen({ session }: { session: Session }) {
     return new Set(attackTargets(state, selected, ctx, attackMode ?? undefined));
   }, [state, ctx, active, selected, attackMode]);
   const moveBig = activeCard ? activeCard.footprint !== "1" : false;
+  /** The hexes of the aimed-at figure a blast may land on. */
+  const aimSpots = useMemo<Step[]>(() => {
+    if (!aiming || !selected || !attackMode) return [];
+    const unit = state.units.find((u) => u.figures.some((f) => f.id === aiming));
+    const f = unit?.figures.find((x) => x.id === aiming);
+    if (!unit || !f) return [];
+    const card = ctx.cards.get(unit.cardId)!;
+    return figureSpots(f, card.footprint, card.height, ctx).filter(
+      (s) => attackProblem(state, selected, aiming, ctx, attackMode, s.hex) === null,
+    );
+  }, [aiming, selected, attackMode, state, ctx]);
+  /** Empty hexes a blast that may be aimed at a hex can land on. */
+  const blastHexes = useMemo<Step[]>(() => {
+    if (!blast?.hexTarget || !active || !selected || !attackMode || active.attacked.includes(selected)) return [];
+    return blastSpots(state, selected, ctx, attackMode);
+  }, [blast, active, selected, attackMode, state, ctx]);
 
   /** The move option for a hex: for big figures, prefer the facing chosen with R. */
   const optionAt = (step: Step | null): MoveOption | undefined => {
@@ -316,7 +339,7 @@ export function PlayScreen({ session }: { session: Session }) {
   const hoverOption = optionAt(hoverStep);
 
   // Keys: R turns a big figure, 1-4 pick a squad figure, E toggles eye view, C the unit card,
-  // T models or tokens, H makes the acting unit jump, Space ends the turn. WASD pans the map (in BoardScene).
+  // T models or tokens, H makes the chosen figure jump, Space ends the turn. WASD pans the map (in BoardScene).
   const keys = useRef<(e: KeyboardEvent) => void>(() => {});
   keys.current = (e: KeyboardEvent) => {
     const t = e.target;
@@ -324,15 +347,19 @@ export function PlayScreen({ session }: { session: Session }) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (document.querySelector(".page-overlay, .pass-screen")) return; // a dialog is open
     const key = e.key.toLowerCase();
-    if (key === "t") {
+    if (key === "escape" && aiming) {
+      setAiming(null);
+    } else if (key === "t") {
       toggleFigures();
     } else if (key === "r") {
       setRotation((r) => (r + (e.shiftKey ? 5 : 1)) % 6);
     } else if (key === "c") {
       toggleCard();
     } else if (key === "h" && activeUnit && !eyeView) {
-      // The acting unit jumps, so it is easy to find on a crowded board.
-      const ids = activeUnit.figures.filter((f) => !f.destroyed && f.position).map((f) => f.id);
+      // The chosen figure (the one under the arrow) jumps, so it is easy to find on a crowded board.
+      // With none chosen (another player's turn), the whole acting unit jumps.
+      const living = activeUnit.figures.filter((f) => !f.destroyed && f.position).map((f) => f.id);
+      const ids = selected && living.includes(selected) ? [selected] : living;
       setJump((j) => ({ key: (j?.key ?? 0) + 1, ids }));
     } else if (key === "e" && active && myTurn && (selected || eyeView)) {
       setEyeView(!eyeView);
@@ -362,6 +389,10 @@ export function PlayScreen({ session }: { session: Session }) {
     const card = ctx.cards.get(unit.cardId)!;
     return figureSpots(f, card.footprint, card.height, ctx);
   };
+  const spotsOfFigure = (figureId: string): Step[] => {
+    const unit = state.units.find((u) => u.figures.some((f) => f.id === figureId));
+    return unit ? spotsOf(unit.id, figureId) : [];
+  };
   const engagedCount = (figureId: string): number => {
     if (!activeUnit || !activeCard) return 0;
     return engagedEnemies(state, activeUnit.owner, spotsOf(activeUnit.id, figureId), activeCard.height, ctx).length;
@@ -380,8 +411,10 @@ export function PlayScreen({ session }: { session: Session }) {
         .filter((x) => targets.has(x.f.id))
         .map((x) => ({ id: x.f.id, hex: x.pos.hex, elevation: x.pos.elevation, height: ctx.cards.get(x.unit.cardId)!.height })),
       enemies: positioned.filter((x) => active && x.unit.owner !== active.player).map((x) => x.pos),
+      aiming: aiming ? { id: aiming, spots: aimSpots } : null,
+      blastHexes,
     };
-  }, [state, ctx, selected, options, targets, active, drag, hoverOption]);
+  }, [state, ctx, selected, options, targets, active, drag, hoverOption, aiming, aimSpots, blastHexes]);
 
   // ---- Figure's-eye view -------------------------------------------------
   const eye = useMemo(() => {
@@ -494,6 +527,26 @@ export function PlayScreen({ session }: { session: Session }) {
     for (const s of hoverOption.path) markers.push({ step: s, color: "#ffeb3b", opacity: 0.7 });
     if (moveBig) for (const s of hoverOption.spots) markers.push({ step: s, color: "#ffffff", opacity: 0.6 });
   }
+  const sendAttack = (targetId: string, aim?: Step) => {
+    if (!active || !selected) return;
+    setAiming(null);
+    dispatch({
+      type: "attack",
+      player: active.player,
+      figureId: selected,
+      targetId,
+      ...(attackMode ? { ability: attackMode } : {}),
+      ...(aim ? { aim: aim.hex } : {}),
+    });
+  };
+  if (aiming) {
+    const unit = state.units.find((u) => u.figures.some((f) => f.id === aiming));
+    const height = unit ? ctx.cards.get(unit.cardId)!.height : 1;
+    for (const s of aimSpots) {
+      markers.push({ step: s, color: "#e53935", opacity: 0.35, height, onClick: () => !busy && sendAttack(aiming, s) });
+    }
+  }
+  for (const s of blastHexes) markers.push({ step: s, color: "#e53935", opacity: 0.3 });
 
   // ---- Interaction -------------------------------------------------------
   const onSurfaceClick = (step: Step) => {
@@ -505,6 +558,10 @@ export function PlayScreen({ session }: { session: Session }) {
         setRotation(option.placement.rotation);
         setPending([...pending, option]);
       }
+      return;
+    }
+    if (active && selected && attackMode && blastHexes.some((s) => sameStep(s, step))) {
+      dispatch({ type: "blast", player: active.player, figureId: selected, ability: attackMode, at: { hex: step.hex, elevation: step.elevation } });
       return;
     }
     if (active && selected) {
@@ -521,13 +578,12 @@ export function PlayScreen({ session }: { session: Session }) {
       return;
     }
     if (active && selected && targets.has(id)) {
-      dispatch({
-        type: "attack",
-        player: active.player,
-        figureId: selected,
-        targetId: id,
-        ...(attackMode ? { ability: attackMode } : {}),
-      });
+      // A blast at a figure on several hexes: the player picks which of its hexes to aim at.
+      if (blast && spotsOfFigure(id).length > 1) {
+        setAiming(aiming === id ? null : id);
+        return;
+      }
+      sendAttack(id);
       return;
     }
     if (active && activeUnit?.figures.some((f) => f.id === id) && canAct(id)) {
@@ -808,15 +864,19 @@ export function PlayScreen({ session }: { session: Session }) {
                       ? targets.size > 0
                         ? "Rings: friends to swap places with."
                         : "No friend in range to swap with."
-                      : targets.size > 0
-                        ? "Red rings: attack."
-                        : "No enemy in range and sight."
-                  } Orange hexes are risky (lava, ice, falls or passing strikes).${
+                      : aiming
+                        ? "Click one of the red hexes to aim the blast there; figures next to it are hit too. Escape picks another target."
+                        : targets.size > 0
+                          ? `Red rings: attack.${blast ? " A big figure: click it, then pick the hex to aim at." : ""}`
+                          : blastHexes.length > 0
+                            ? ""
+                            : "No enemy in range and sight."
+                  }${blastHexes.length > 0 ? " Red hexes: empty ground the blast can land on." : ""} Orange hexes are risky (lava, ice, falls or passing strikes).${
                     state.pinned?.includes(selected) ? " This figure is pinned and cannot move this turn." : ""
                   }`
                 : "This unit has finished."}
               {moveBig ? " Press R to turn." : ""}
-              {myTurn ? ` Keys: ${activeUnit.figures.length > 1 ? "1-4 pick a figure, " : ""}E eye view, H shows where the unit is, Space ends the turn, WASD moves the map.` : ""}
+              {myTurn ? ` Keys: ${activeUnit.figures.length > 1 ? "1-4 pick a figure, " : ""}E eye view, H shows where the chosen figure is, Space ends the turn, WASD moves the map.` : ""}
               {hoverOption ? ` Move cost ${hoverOption.cost}.` : ""}
               {eyeView && myTurn ? " Drag or use the arrow keys to look around. Clicking an enemy faces it (a red-ringed one is attacked). Exit eye view to end the turn." : ""}
             </p>

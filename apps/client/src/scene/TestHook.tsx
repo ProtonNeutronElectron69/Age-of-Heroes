@@ -29,6 +29,10 @@ declare global {
       moves: UiStep[];
       targets: (UiStep & { id: string; height: number })[];
       enemies: UiStep[];
+      /** A blast waiting for the player to pick which of a big figure's hexes to aim at. */
+      aiming: { id: string; spots: UiStep[] } | null;
+      /** Empty hexes the chosen blast may be aimed at. */
+      blastHexes: UiStep[];
     };
   }
 }

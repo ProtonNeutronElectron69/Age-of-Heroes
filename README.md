@@ -19,12 +19,12 @@ A turn-based 3D tactics game for 2 to 6 players in the browser. Heroes and squad
 - **Hot-seat play** on one device, with a pass-the-device screen for the secret tokens.
 - **Online play:** room codes, each device sees only what its player may see, reconnecting, spectators, and an authoritative server.
 - **Saved games and replays:** named saves, save files, and online games the host can save and resume later. Finished games can be watched move by move.
-- **A gaming table** under the board, in three styles, with every unit's card laid out round it and destroyed figures stood on their cards. Figures hop from hex to hex, can be dragged to where they should go, and jump when you press H to find them.
+- **A gaming table** under the board, in three styles, with every unit's card laid out round it and destroyed figures stood on their cards. Figures hop from hex to hex, can be dragged to where they should go, and the chosen figure jumps when you press H, so you can find it.
 - **3D dice:** an attack zooms in on the fight, with both units' cards and models over a dimmed board, and rolls tumbling attack and defense dice; each player clicks a d20 for initiative. Choose the full scene, dice only or none under Display.
 - **3D figure models** for all 48 units on the board, in three colour schemes, or plain tokens that show the hit band (Display, or the T key). The camera follows the acting unit, and resting the pointer on another unit shows its card beside the acting unit's.
 - **Main menu in four styles** (War Table, Atlas, Banner Hall and Hex Command), each fitting a landscape window without scrolling, and a **unit gallery** of every card, filterable and sortable, with each unit's 3D model to turn and zoom.
 
-**Keys in play:** WASD pans the map, 1 to 4 pick a squad's figures, E opens and closes eye view, H makes the acting unit jump so you can find it, Space ends the turn, R turns a multi-hex figure, C shows or hides the unit card, T switches between figure models and tokens.
+**Keys in play:** WASD pans the map, 1 to 4 pick a squad's figures, E opens and closes eye view, H makes the chosen figure jump so you can find it, Space ends the turn, R turns a multi-hex figure, C shows or hides the unit card, T switches between figure models and tokens, Escape cancels choosing where to aim a blast.
 
 **Design pages:** add `?cards` to the address to see every unit card, and `?models` to see every figure model lined up on a board, with their fit to their bases.
 

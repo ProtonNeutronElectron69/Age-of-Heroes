@@ -146,6 +146,19 @@ async function boardRests() {
   );
 }
 
+/** The Display button and the Save game and Quit buttons stay inside the window, whatever the cards above them. */
+async function buttonsOnScreen(when) {
+  const off = await page.evaluate(() =>
+    [".display-toggle", ".hud-right .menu", ".display-panel"].filter((sel) => {
+      const el = document.querySelector(sel);
+      if (!el) return false;
+      const b = el.getBoundingClientRect();
+      return b.top < 0 || b.bottom > innerHeight + 1;
+    }),
+  );
+  if (off.length) fail(`${when}, these are pushed off screen: ${off.join(", ")}`);
+}
+
 let moves = 0;
 let motionChecked = false;
 let initiativeChecked = false;
@@ -280,6 +293,7 @@ try {
       if (tokens === models) fail(`T did not swap the models for tokens (${models} triangles either way)`);
       await page.getByRole("button", { name: "Display" }).click();
       await page.getByRole("radio", { name: "Models" }).click();
+      await buttonsOnScreen("With the Display panel open");
       const back = await trianglesAfter({ expect: models });
       if (back !== models) fail(`The models did not come back: ${back} triangles, not ${models}`);
       // The board stands on a gaming table, in one of three styles.
@@ -367,6 +381,7 @@ try {
           if (!(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.tagName === "CANVAS", at))) continue;
           await page.mouse.move(at.x, at.y);
           const shown = await page.locator(".hud-right .unit-card-other").waitFor({ timeout: 3000 }).then(() => true, () => false);
+          if (shown) await buttonsOnScreen("With two unit cards showing");
           // Over the turn panel, off the board.
           await page.mouse.move(120, 140);
           if (!shown) continue;
@@ -434,17 +449,30 @@ try {
       await page.emulateMedia({ reducedMotion: "reduce" });
       if (!(await boardRests())) fail("The board kept drawing with reduced motion");
     }
-    // H makes the acting unit jump, so it can be found: its name tag rises and comes back down.
+    // H makes the chosen figure jump, so it can be found: its name tag rises and comes back down.
+    // In a squad only that figure jumps; the rest of the squad stays where it is.
     if (ui?.selected && !jumpChecked) {
       await steadyCamera();
       const tagTop = (id) => document.querySelector(`.label-anchor[data-id="${id}"]`)?.getBoundingClientRect().y;
       const rest = await page.evaluate(tagTop, ui.selected);
+      const unit = ui.selected.split("#")[0];
+      const squadmates = await page.evaluate(
+        ({ unit, selected }) =>
+          [...document.querySelectorAll(".label-anchor")]
+            .filter((a) => a.dataset.id.split("#")[0] === unit && a.dataset.id !== selected && a.style.visibility !== "hidden")
+            .map((a) => [a.dataset.id, a.getBoundingClientRect().y]),
+        { unit, selected: ui.selected },
+      );
       if (rest !== undefined && (await tagOf(ui.selected))) {
         await page.keyboard.press("h");
         const rose = await page
           .waitForFunction(({ id, rest }) => document.querySelector(`.label-anchor[data-id="${id}"]`)?.getBoundingClientRect().y < rest - 25, { id: ui.selected, rest }, { timeout: 5000 })
           .then(() => true, () => false);
         if (!rose) fail("H did not make the acting figure jump");
+        for (const [id, y] of squadmates) {
+          const now = await page.evaluate(tagTop, id);
+          if (now !== undefined && Math.abs(now - y) > 2) fail(`H made ${id} jump too, not just the chosen figure`);
+        }
         jumpChecked = true;
         // Back on its hex before anything is clicked.
         await page.waitForFunction(({ id, rest }) => Math.abs(document.querySelector(`.label-anchor[data-id="${id}"]`)?.getBoundingClientRect().y - rest) < 2, { id: ui.selected, rest });

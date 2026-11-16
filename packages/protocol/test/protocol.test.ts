@@ -18,6 +18,12 @@ describe("message validation", () => {
     ).toBe(true);
     expect(commandSchema.safeParse({ type: "move", player: "p1", figureId: "x", path: [] }).success).toBe(false);
     expect(commandSchema.safeParse({ type: "explode", player: "p1" }).success).toBe(false);
+    const attack = { type: "attack", player: "p1", figureId: "p1:0#1", targetId: "p2:0#1", ability: "mortar-barrage" };
+    expect(commandSchema.safeParse({ ...attack, aim: { q: 3, r: 0 } }).success).toBe(true);
+    expect(commandSchema.safeParse({ ...attack, aim: { q: "3" } }).success).toBe(false);
+    const blast = { type: "blast", player: "p1", figureId: "p1:0#1", ability: "mortar-barrage" };
+    expect(commandSchema.safeParse({ ...blast, at: { hex: { q: 4, r: 0 }, elevation: 1 } }).success).toBe(true);
+    expect(commandSchema.safeParse(blast).success).toBe(false);
     expect(
       commandSchema.safeParse({ type: "placeTokens", player: "p1", tokens: { "1": "a", "2": "a", "3": "a", X: "a", Y: "b" } })
         .success,

@@ -355,6 +355,16 @@ legend {
   /* Wide enough to read the unit card where the window has room. */
   width: clamp(270px, 28vw, 380px);
   align-items: stretch;
+  /*
+   * The height left for unit cards once the column's own buttons are counted (Hide unit card
+   * above; Display, Save game and Quit below; the gaps and edges). A card is about 1.03 times
+   * as tall as it is wide, so the cards are sized from this and never push the buttons off screen.
+   */
+  --card-room: calc(100vh - 230px);
+}
+
+.hud-right > * {
+  flex-shrink: 0;
 }
 
 .hud-right .menu {
@@ -1168,6 +1178,7 @@ p.bad {
 /* ---- Display menu (ui/DisplayMenu.tsx) --------------------------------- */
 
 .display-menu {
+  position: relative;
   margin-top: auto;
   display: flex;
   flex-direction: column;
@@ -1180,7 +1191,14 @@ p.bad {
   margin-top: 0;
 }
 
+/* Opens above its button, over the cards, so it never pushes the buttons below it off screen. */
 .display-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 2;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
   width: 100%;
   max-width: 300px;
   background: var(--panel-solid);
@@ -1197,15 +1215,16 @@ p.bad {
 .hud-right .unit-card-main,
 .hud-right .unit-card-other {
   align-self: flex-end;
-  width: 100%;
+  width: min(100%, calc(var(--card-room) / 1.03));
 }
 
+/* Two cards share the room: the acting unit's a little larger. */
 .hud-right.two-cards .unit-card-main {
-  width: min(100%, 39vh);
+  width: min(100%, calc(var(--card-room) * 0.56 / 1.03));
 }
 
 .hud-right .unit-card-other {
-  width: min(78%, 29vh);
+  width: min(78%, calc(var(--card-room) * 0.44 / 1.03));
   animation: card-other-in 0.18s ease-out;
 }
 
