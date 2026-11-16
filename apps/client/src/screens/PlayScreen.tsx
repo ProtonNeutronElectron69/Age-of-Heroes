@@ -44,7 +44,7 @@ import { toggleFigures, useDisplay } from "../settings";
 import { GameMenu } from "../ui/GameMenu";
 import { HexTip, useHexTip, zoneOwners } from "../ui/HexTip";
 import { OnlineBar } from "../ui/OnlineBar";
-import { DiceOverlay, EventLog, GameOver, PassScreen, RoundBar, TokenPanel } from "../ui/panels";
+import { DiceOverlay, EventLog, GameOver, KeysPanel, PassScreen, RoundBar, TokenPanel } from "../ui/panels";
 import { AttackShow, InitiativeShow, attackRollsIn, initiativeIn } from "../ui/RollShow";
 import { UnitCardView } from "../ui/UnitCardView";
 
@@ -976,6 +976,7 @@ export function PlayScreen({ session }: { session: Session }) {
         )}
 
         <EventLog events={session.events} names={names} />
+        <KeysPanel online={isOnline} />
       </aside>
 
       <aside className={`hud-right${mainCard && otherCard ? " two-cards" : ""}`}>

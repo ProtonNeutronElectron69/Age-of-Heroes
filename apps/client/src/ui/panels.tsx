@@ -291,6 +291,70 @@ export function EventLog({ events, names }: { events: readonly GameEvent[]; name
 }
 
 // ---------------------------------------------------------------------------
+// Hot keys
+
+const KEYS_OPEN = "age-of-heroes:show-keys:v1";
+
+/** The play screen's keys and mouse controls, as [what to press, what it does]. */
+function hotKeys(online: boolean): readonly (readonly [string, string])[] {
+  return [
+    ["Left drag", "Turn the camera"],
+    ["Right drag", "Move the camera"],
+    ["WASD", "Move the camera"],
+    ["Wheel", "Zoom"],
+    ["Middle click", "Terrain of a hex"],
+    ["1 to 4", "Pick a squad figure"],
+    ["R", "Turn a big figure"],
+    ["E", "Eye view (arrows look)"],
+    ["H", "Find the chosen figure"],
+    ["Space", "End the turn"],
+    ["C", "Show or hide the unit card"],
+    ["T", "Models or tokens"],
+    ["Esc", "Stop aiming a blast"],
+    ...(online ? ([["P", "Ping the spot under the pointer"]] as const) : []),
+  ];
+}
+
+/** A small list of the hot keys, under the log. Click its heading to open or close it; the choice is remembered. */
+export function KeysPanel({ online }: { online: boolean }) {
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(KEYS_OPEN) !== "false";
+    } catch {
+      return true;
+    }
+  });
+  const toggle = () =>
+    setOpen((was) => {
+      try {
+        localStorage.setItem(KEYS_OPEN, String(!was));
+      } catch {
+        // Kept for this visit only.
+      }
+      return !was;
+    });
+  return (
+    <section className={`panel keys-panel${open ? " open" : ""}`} aria-label="Hot keys">
+      <h2>
+        <button type="button" className="keys-toggle" aria-expanded={open} onClick={toggle}>
+          Keys <span aria-hidden="true">{open ? "▾" : "▸"}</span>
+        </button>
+      </h2>
+      {open && (
+        <dl className="keys-list">
+          {hotKeys(online).map(([key, does]) => (
+            <div key={key}>
+              <dt>{key}</dt>
+              <dd>{does}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Game over
 
 export function GameOver({
