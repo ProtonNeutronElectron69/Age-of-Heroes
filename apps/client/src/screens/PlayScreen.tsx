@@ -141,7 +141,7 @@ export function PlayScreen({ session }: { session: Session }) {
   const display = useDisplay();
   /** The figure the pointer is dragging to a new hex; `dropped` once it has been let go there. */
   const [drag, setDrag] = useState<{ id: string; dropped: Step | null } | null>(null);
-  /** The unit jumping on the spot so it can be found (the H key). */
+  /** The figures jumping on the spot so they can be found (the H key). */
   const [jump, setJump] = useState<FigureJump | null>(null);
 
   // ---- Deployment -------------------------------------------------------
@@ -316,7 +316,7 @@ export function PlayScreen({ session }: { session: Session }) {
   const hoverOption = optionAt(hoverStep);
 
   // Keys: R turns a big figure, 1-4 pick a squad figure, E toggles eye view, C the unit card,
-  // T models or tokens, H makes the acting unit jump, Space ends the turn. WASD pans the map (in BoardScene).
+  // T models or tokens, H makes the chosen figure jump, Space ends the turn. WASD pans the map (in BoardScene).
   const keys = useRef<(e: KeyboardEvent) => void>(() => {});
   keys.current = (e: KeyboardEvent) => {
     const t = e.target;
@@ -331,8 +331,10 @@ export function PlayScreen({ session }: { session: Session }) {
     } else if (key === "c") {
       toggleCard();
     } else if (key === "h" && activeUnit && !eyeView) {
-      // The acting unit jumps, so it is easy to find on a crowded board.
-      const ids = activeUnit.figures.filter((f) => !f.destroyed && f.position).map((f) => f.id);
+      // The chosen figure (the one under the arrow) jumps, so it is easy to find on a crowded board.
+      // With none chosen (another player's turn), the whole acting unit jumps.
+      const living = activeUnit.figures.filter((f) => !f.destroyed && f.position).map((f) => f.id);
+      const ids = selected && living.includes(selected) ? [selected] : living;
       setJump((j) => ({ key: (j?.key ?? 0) + 1, ids }));
     } else if (key === "e" && active && myTurn && (selected || eyeView)) {
       setEyeView(!eyeView);
@@ -816,7 +818,7 @@ export function PlayScreen({ session }: { session: Session }) {
                   }`
                 : "This unit has finished."}
               {moveBig ? " Press R to turn." : ""}
-              {myTurn ? ` Keys: ${activeUnit.figures.length > 1 ? "1-4 pick a figure, " : ""}E eye view, H shows where the unit is, Space ends the turn, WASD moves the map.` : ""}
+              {myTurn ? ` Keys: ${activeUnit.figures.length > 1 ? "1-4 pick a figure, " : ""}E eye view, H shows where the chosen figure is, Space ends the turn, WASD moves the map.` : ""}
               {hoverOption ? ` Move cost ${hoverOption.cost}.` : ""}
               {eyeView && myTurn ? " Drag or use the arrow keys to look around. Clicking an enemy faces it (a red-ringed one is attacked). Exit eye view to end the turn." : ""}
             </p>

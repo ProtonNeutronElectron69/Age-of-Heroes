@@ -365,13 +365,15 @@ export function attack(
   const swap = ability ? swapOf(attacker.card, ability) : undefined;
 
   if (area) {
-    // The target takes the full blast; every other figure next to it takes the splash.
+    // The target takes the full blast; every other figure next to the hex it lands on takes the splash.
+    // A figure on several hexes is hit on the hex nearest the attacker, so the splash does not spread round it.
+    const blast = blastSpot(attacker.spots, defender.spots);
     const splashed: Combatant[] = [];
     for (const unit of state.units) {
       for (const figure of unit.figures) {
         if (figure.destroyed || !figure.position || figure.id === targetId || figure.id === figureId) continue;
         const c = combatant(unit, figure, ctx);
-        if (spotDistance(c.spots, defender.spots) <= 1) splashed.push(c);
+        if (spotDistance(c.spots, [blast]) <= 1) splashed.push(c);
       }
     }
     resolve(state, ctx, rng, attacker, defender, area.dice, area.id, events);
@@ -480,4 +482,21 @@ export function endOfTurnTerrain(state: GameState, unitId: string, events: GameE
     woundFigure(state, unit, figure, roll.wounds, stats.life, "swamp", events);
   }
   state.rng = rng.state;
+}
+
+/**
+ * Where an area attack lands on its target: the target's hex nearest the attacker (on a tie, the
+ * first in its footprint, its front hex). A single-hex target is hit on its own hex.
+ */
+export function blastSpot(attacker: readonly Step[], target: readonly Step[]): Step {
+  let best = target[0]!;
+  let bestDistance = Infinity;
+  for (const spot of target) {
+    const d = spotDistance(attacker, [spot]);
+    if (d < bestDistance) {
+      best = spot;
+      bestDistance = d;
+    }
+  }
+  return best;
 }

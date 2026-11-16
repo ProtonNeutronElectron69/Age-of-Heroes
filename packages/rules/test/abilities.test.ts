@@ -259,6 +259,17 @@ describe("special actions", () => {
     expect(rolls.every((e) => e.ability === "ember-spit")).toBe(true);
   });
 
+  it("a blast on a figure covering several hexes splashes only round the hex nearest the attacker", () => {
+    // The 2-hex target covers q 3 and 4. One bystander is next to q 3 (the near hex), one only next to q 4.
+    const pos = { "p1:0#1": at(0), "p2:0#1": at(3), "p2:1#1": at(2), "p2:2#1": at(5) };
+    const g = game(flat(7), { p1: ["mortar"], p2: ["trampler", "hero", "hero"] }, pos);
+    const r = apply(g.state, { type: "attack", player: "p1", figureId: "p1:0#1", targetId: "p2:0#1", ability: "mortar-barrage" }, g.ctx);
+    expect(ofType(r.events, "attackRolled").map((e) => [e.targetId, e.attack.length])).toEqual([
+      ["p2:0#1", 3],
+      ["p2:1#1", 1],
+    ]);
+  });
+
   it("Mortar Barrage ignores sight but not its minimum range", () => {
     const cols: [string, number][] = [["grass", 1], ["rock", 15], ["grass", 1], ["grass", 1], ["grass", 1]];
     const g = game(cols, { p1: ["mortar"], p2: ["hero"] }, { "p1:0#1": at(0), "p2:0#1": at(3) });

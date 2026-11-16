@@ -34,6 +34,34 @@ describe("the gaming table", () => {
     expect([...side("p4")]).toEqual(["west"]);
   });
 
+  it("gives up to four players a side each, even when two start zones face the same side", () => {
+    // A wide board with a start zone in each corner: by nearest side alone, two would share south and two north.
+    const corners = [{ x: -14, z: 10 }, { x: 14, z: 10 }, { x: 14, z: -10 }, { x: -14, z: -10 }];
+    for (const count of [3, 4]) {
+      const layout = layoutTable(BOARD, players(count, 2, corners.slice(0, count)));
+      const sides = Array.from({ length: count }, (_, i) => new Set(layout.cards.filter((c) => c.player === `p${i + 1}`).map((c) => c.side)));
+      for (const s of sides) expect(s.size).toBe(1);
+      expect(new Set(sides.map((s) => [...s][0])).size).toBe(count);
+    }
+    // Each still sits on a side next to their corner.
+    const four = layoutTable(BOARD, players(4, 2, corners));
+    const sideOf = (p: string) => four.cards.find((c) => c.player === p)!.side;
+    expect(["south", "west"]).toContain(sideOf("p1"));
+    expect(["south", "east"]).toContain(sideOf("p2"));
+    expect(["north", "east"]).toContain(sideOf("p3"));
+    expect(["north", "west"]).toContain(sideOf("p4"));
+  });
+
+  it("puts at most two players on a side when five or six play", () => {
+    for (const count of [5, 6]) {
+      const homes = Array.from({ length: count }, () => ({ x: 0, z: 11 }));
+      const layout = layoutTable(BOARD, players(count, 1, homes));
+      const perSide = new Map<string, Set<string>>();
+      for (const c of layout.cards) perSide.set(c.side, (perSide.get(c.side) ?? new Set()).add(c.player));
+      for (const ps of perSide.values()) expect(ps.size).toBeLessThanOrEqual(2);
+    }
+  });
+
   it("lays every card on the table, clear of the board and of each other", () => {
     for (const count of [2, 3, 4, 5, 6]) {
       for (const units of [1, 4, 9]) {

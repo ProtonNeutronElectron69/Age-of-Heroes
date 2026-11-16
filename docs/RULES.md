@@ -225,6 +225,7 @@ General rulings:
 - **Auras do not stack.** A figure gets each named bonus at most once, however many sources are nearby.
 - Bonus dice from abilities add to height bonuses. Every roll lists why its dice changed.
 - **Special actions** (Ember Spit, Mortar Barrage, Arc Lightning, Lantern Gaze, Grapple Line, Fae Step) are used **instead of** the figure's normal attack, and follow the normal attack rules (engagement, line of sight) unless they say otherwise.
+- **Blasts** (Ember Spit, Mortar Barrage, Arc Lightning, and the units' own blasts such as grenades) hit the target and every other figure next to the hex the blast lands on. A target on one hex is hit on that hex; a target on several hexes is hit on its hex nearest the attacker (on a tie, its front hex), so figures next to only its far side are not caught.
 - **Forced moves** (Shove, Grapple Line) move a figure without walking: there are no passing strikes and no ice slips, but the figure takes falling damage if it drops far enough and rolls for lava where it lands. **Assumption.**
 
 | Ability | What it does |

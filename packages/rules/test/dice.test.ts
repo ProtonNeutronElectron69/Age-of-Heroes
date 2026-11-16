@@ -32,6 +32,21 @@ describe("rng", () => {
 });
 
 describe("dice", () => {
+  it("rolls fairly: about half skulls, half shields, and every d20 face about as often", () => {
+    const rng = new Rng(seedFromString("fair"));
+    const n = 60000;
+    // With 60,000 dice the share of marks lands within 1% of a half almost always (over 4 standard deviations).
+    expect(Math.abs(countFaces(rollDice(rng, ATTACK_DIE, n), "skull") / n - 0.5)).toBeLessThan(0.01);
+    expect(Math.abs(countFaces(rollDice(rng, DEFENSE_DIE, n), "shield") / n - 0.5)).toBeLessThan(0.01);
+    // The first die of games started from neighbouring seeds is fair too.
+    let skulls = 0;
+    for (let seed = 1; seed <= n; seed++) if (rollDice(new Rng(seed), ATTACK_DIE, 1)[0] === "skull") skulls++;
+    expect(Math.abs(skulls / n - 0.5)).toBeLessThan(0.01);
+    const d20 = new Array(21).fill(0);
+    for (let i = 0; i < n; i++) d20[rng.d20()]++;
+    for (let face = 1; face <= 20; face++) expect(Math.abs(d20[face] / n - 0.05)).toBeLessThan(0.006);
+  });
+
   it("uses 3 skulls / 3 blanks and 3 shields / 3 blanks", () => {
     expect(countFaces(ATTACK_DIE.faces, "skull")).toBe(3);
     expect(countFaces(ATTACK_DIE.faces, "blank")).toBe(3);
