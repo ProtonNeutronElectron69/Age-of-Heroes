@@ -4,13 +4,14 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. 507 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with four premade maps, hot-seat and online play, saved games and replays. 508 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 - **On hold (Phase 6):** a computer opponent, and a tutorial.
 - **Phase 7, figure models:** stage 1 is done. Every unit has a low polygon model in flat colour, drawn on the board in place of tokens (the Display button or the T key switches back to tokens and picks one of three colour schemes; see every model at `?models`). **Next, when the owner asks:** later stages add detail and colour.
 - **On hold (Phase 7):** sound and music, terrain and scenery art.
 - **Phase 8, tabletop feel:** done. The board stands on a gaming table with the unit cards round it; figures hop, can be dragged, and jump with H; the camera zooms in closer and pulls back further; attacks play a scene with 3D dice, and each player clicks a d20 for initiative.
+- **Online pings:** done. P points at the spot under the pointer for everyone in the game, with an arrow in the player's colour; once a second per player.
 - **Online fixes:** done. Online drafts are open: everyone picks at once and a taken unit greys out for everyone; online initiative waits for every player's roll before any result is made or shown.
 - **Small updates:** done. The camera's follow is three Display boxes (Auto pan, Auto rotate, Auto zoom), sits about a fifth further back, and waits for a moving figure to land; the draft opens on the battlefield with every start zone marked, and View map brings it back at any time; a middle click on a hex shows its terrain, elevation and rules.
 

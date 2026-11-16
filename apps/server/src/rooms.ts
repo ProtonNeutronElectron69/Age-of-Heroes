@@ -1,5 +1,6 @@
 import { SEAT_COLORS, contextFor } from "@aoh/content";
 import {
+  PING_INTERVAL_MS,
   PROTOCOL_VERSION,
   clientMessageSchema,
   type ClientMessage,
@@ -34,6 +35,8 @@ interface Member {
   /** Secret that lets this player reconnect. */
   readonly token: string;
   conn: Connection | null;
+  /** When this player last pinged, to hold them to one ping a second. */
+  lastPing?: number;
 }
 
 /** A room made from a saved game: players claim their armies, then the host carries on. */
@@ -76,6 +79,9 @@ export interface RoomManagerOptions {
   readonly idleMs?: number;
   readonly now?: () => number;
 }
+
+/** How much sooner than PING_INTERVAL_MS a ping may arrive and still count: messages do not arrive evenly spaced. */
+const PING_SLACK_MS = 100;
 
 // Letters only, without ones that are easy to confuse (I, O).
 const CODE_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -165,6 +171,8 @@ export class RoomManager {
         return this.claim(conn, msg.playerId);
       case "save":
         return this.save(conn);
+      case "ping":
+        return this.ping(conn, msg.at);
     }
   }
 
@@ -367,6 +375,23 @@ export class RoomManager {
     room.lastActive = this.now();
     this.broadcastGame(room, result.events, false);
     if (result.state.phase === "gameOver") this.broadcastReplay(room);
+  }
+
+  /**
+   * Pass a player's ping to everyone else in the room. Pings are not part of the game, so
+   * they are not logged, saved or replayed. One a second per player; quicker ones are dropped
+   * without an error (a little slack allows for the network). Spectators cannot ping.
+   */
+  private ping(conn: Connection, at: { x: number; y: number; z: number }): void {
+    const { room, playerId } = this.seatOf(conn);
+    if (!playerId || !room.state) return;
+    const member = room.members.find((m) => m.playerId === playerId);
+    if (!member) return;
+    const now = this.now();
+    if (member.lastPing !== undefined && now - member.lastPing < PING_INTERVAL_MS - PING_SLACK_MS) return;
+    member.lastPing = now;
+    const message: ServerMessage = { t: "ping", player: playerId, at: { x: at.x, y: at.y, z: at.z } };
+    for (const { conn: other } of this.recipients(room)) if (other !== conn) other.send(message);
   }
 
   private leave(conn: Connection): void {
