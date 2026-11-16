@@ -142,6 +142,18 @@ async function act(p) {
 /** Short waits: a button that is not there within a few seconds is not coming back. */
 const QUICK = { timeout: 5000 };
 
+/**
+ * Clicks a button that opens or closes a 3D view: a new screen, the draft map, the dice.
+ * Without a graphics card, setting up or tearing down a canvas can keep the page busy for
+ * several seconds, and Playwright counts the click as done only once the page answers, so
+ * these clicks get a long timeout. QUICK is for ordinary buttons. See "Known pitfalls" in
+ * docs/TESTING.md: a 5 s timeout here once failed a click that had worked.
+ */
+const SCENE_CHANGE = { timeout: 30000 };
+async function clickSceneChange(button) {
+  await button.click(SCENE_CHANGE);
+}
+
 /** Set once Bob has rolled for initiative with the dice show on, and seen the result. */
 let initiativeChecked = false;
 
@@ -164,8 +176,8 @@ async function tryAct(p) {
     const done = initiative.getByRole("button", { name: "Continue" });
     if (await done.count()) {
       if ((await initiative.locator(".initiative-value[data-value]").count()) < 2) fail("The initiative show ended without both rolls");
-      // Closing the dice also closes their 3D canvas while the first turn starts; drawn in software, that can take a while.
-      await done.click({ timeout: 30000 });
+      // Closing the dice also closes their 3D canvas as the first turn starts.
+      await clickSceneChange(done);
       initiativeChecked = true;
       return "initiative";
     }
@@ -271,7 +283,7 @@ try {
   await alice.page.getByText("Bob").waitFor();
   await alice.page.getByText("1 watching").waitFor();
   await shot(alice, "1-lobby");
-  await alice.page.getByRole("button", { name: "Start game" }).click();
+  await clickSceneChange(alice.page.getByRole("button", { name: "Start game" }));
 
   // ---- Draft ----------------------------------------------------------------
   phase("draft");
@@ -279,7 +291,7 @@ try {
   // Every device opens the draft on the battlefield, the spectator's too; each goes on to the cards on its own.
   for (const p of [alice, bob, carol]) {
     await p.page.getByRole("region", { name: "Battlefield" }).waitFor();
-    await p.page.getByRole("button", { name: "Go to the draft" }).click();
+    await clickSceneChange(p.page.getByRole("button", { name: "Go to the draft" }));
   }
   await shot(bob, "2-draft");
   const drafted = (p) => p.page.locator(".armies li").count();
@@ -415,7 +427,7 @@ try {
 
   // Leaving concedes: with one player left, the game is over.
   phase("leaving");
-  await bob.page.getByRole("button", { name: "Leave game" }).click();
+  await clickSceneChange(bob.page.getByRole("button", { name: "Leave game" }));
   await bob.page.getByRole("radio", { name: "Online" }).waitFor();
   const over = alice.page.getByRole("dialog", { name: "Game over" });
   await over.waitFor();
@@ -434,7 +446,7 @@ try {
   if (replay.commands.at(-1)?.type !== "concede") fail("The replay does not end with Bob leaving");
   if (!replay.setup.seed) fail("The replay is missing the game's seed");
 
-  await alice.page.getByRole("button", { name: "New game" }).click();
+  await clickSceneChange(alice.page.getByRole("button", { name: "New game" }));
   await alice.page.getByRole("button", { name: "Watch a replay" }).waitFor();
   await alice.page.getByLabel("Replay file").setInputFiles(file);
   await alice.page.getByRole("region", { name: "Replay controls" }).waitFor();
@@ -445,7 +457,7 @@ try {
 
   // ---- Resume the saved game in a new room --------------------------------
   phase("resuming");
-  await alice.page.getByRole("button", { name: "Close replay" }).click();
+  await clickSceneChange(alice.page.getByRole("button", { name: "Close replay" }));
   await alice.page.getByRole("radio", { name: "Online" }).click();
   await alice.page.getByLabel("Resume file").setInputFiles(saveFile);
   await alice.page.getByRole("group", { name: "Resume a saved game" }).getByRole("button", { name: /Alice/ }).click();
@@ -464,7 +476,7 @@ try {
   await armies.getByRole("listitem").filter({ hasText: "Bob" }).getByRole("button", { name: "This is me" }).click();
   await bob.page.getByText("Waiting for the host to continue.").waitFor();
   await shot(alice, "6-resume-lobby");
-  await alice.page.getByRole("button", { name: "Continue game" }).click();
+  await clickSceneChange(alice.page.getByRole("button", { name: "Continue game" }));
   for (const p of [alice, bob]) {
     await p.page.locator(".round-label").waitFor();
     const round = await p.page.locator(".round-label").innerText();
