@@ -462,6 +462,10 @@ try {
       }
     }
 
+    // A move can draw a passing strike, which plays the attack intro (and the dice show while it is on).
+    // The dice panel is hidden while it plays, so let it finish before closing the panel.
+    if (await page.getByRole("dialog", { name: "Attack begins" }).count()) await handleAttackIntro();
+    if (await page.getByRole("dialog", { name: "Attack" }).count()) await handleAttackShow();
     // The dice stay up until closed (or the next action): close them so they do not cover the board.
     const closeDice = page.getByRole("button", { name: "Close dice" });
     if (await closeDice.count()) await closeDice.click();

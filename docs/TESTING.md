@@ -84,6 +84,7 @@ A log of browser test failures that came from the test, not the game: what was s
 | #41 | `online`: "Bob never rolled for initiative" | The Continue click closes the dice's 3D canvas as the first turn starts; in software that kept the page busy for more than the 5 s short timeout, so the click counted as failed although it worked | `clickSceneChange` in `online.mjs`, with a 30 s timeout | Clicks that open or close a 3D view (a dice show, the draft map, a new screen) get the long timeout |
 | #41 | `online`: the draft could end before Bob's reload | With an open draft and 100 points, both players could be finished after one pick each | 150 points, and Bob takes the cheapest unit, so he is still drafting | Make the state a later step needs certain, not likely |
 | #41 | The simulation's seed 9 game (online rules) had no attack | A fair game: one player drafted one unit, stopped, and lost it to terrain in round 2 | Seed 11 instead | When a random game fails a "something happened" check, trace its commands before calling it a bug |
+| #50 | `full-game`: "Close dice" timed out, the button detached | A move drew a passing strike. Since #48 every attack roll plays the attack intro, which hides the dice panel, so the panel vanished under the click | Each step first lets a running attack intro or dice show finish (`handleAttackIntro`, `handleAttackShow`) | Before touching anything a show hides, wait for the show: a move can start one too, not only an attack |
 
 ## Safety nets
 

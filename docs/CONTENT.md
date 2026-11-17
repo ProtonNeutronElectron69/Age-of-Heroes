@@ -81,6 +81,7 @@ The easiest way is the in-game map editor. Hold Shift to place a piece beside an
 2. Copy it into `packages/content/src/maps/`.
 3. Add it to `MAPS` in `maps/index.ts`.
 4. Update the map list expected in `content.test.ts`.
+5. Give it a small picture on the main menu: a `.m-<map id>` rule in `apps/client/src/screens/menu/menu.css`, next to the others. Check that the menu still fits in every style (`node e2e/menu.mjs` after a build); the map cards are kept compact so the panel fits the 1280 by 720 stage.
 
 The tests check that every bundled map:
 - builds without problems (every piece held up and joined to the rest, no sealed spaces, no scenery in start zones);

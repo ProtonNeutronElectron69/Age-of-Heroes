@@ -338,7 +338,10 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
           </button>
         )}
       </div>
-      <p className="mp-hint mp-desc">{map.description}</p>
+      {/* Two lines at most, so the panel fits the menu's stage; the whole text shows on hover. */}
+      <p className="mp-hint mp-desc" title={map.description}>
+        {map.description}
+      </p>
     </section>
   );
 
