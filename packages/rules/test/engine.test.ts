@@ -6,6 +6,7 @@ import {
   deepClone,
   replayGame,
   rollOff,
+  tokensToPlace,
   viewFor,
   waitingOn,
   type Command,
@@ -78,6 +79,33 @@ describe("token placement", () => {
     const state = ready();
     const s = apply(state, { type: "placeTokens", player: "p1", tokens: allOn("p1:1") }).state;
     expect(applyCommand(s, { type: "placeTokens", player: "p1", tokens: allOn("p1:0") }, ctx).ok).toBe(false);
+  });
+
+  it("under the one-per-unit rule, keeps each token on its own unit and asks only for as many as there are units", () => {
+    // Each player has two units (a hero and a squad).
+    const state = ready(2, { tokenRule: "onePerUnit" });
+    expect(tokensToPlace(state, "p1")).toBe(2);
+    const place = (tokens: Record<string, string>) => applyCommand(state, { type: "placeTokens", player: "p1", tokens: tokens as never }, ctx);
+    expect(place(allOn("p1:0")).ok).toBe(false);
+    const stacked = place({ "1": "p1:0", "2": "p1:0" });
+    expect(stacked.ok).toBe(false);
+    expect(!stacked.ok && stacked.error).toMatch(/only one token/);
+    expect(place({ "1": "p1:0" }).ok).toBe(false);
+    expect(place({ "1": "p1:0", "2": "p1:1", X: "p1:1" }).ok).toBe(false);
+    expect(place({ "1": "p1:0", X: "p1:1" }).ok).toBe(true);
+    // Older games keep placing all four.
+    expect(tokensToPlace(ready(), "p1")).toBe(4);
+  });
+
+  it("skips a turn whose token was left off, and reveals only the tokens placed", () => {
+    const placed = placeAll(ready(2, { tokenRule: "onePerUnit" }), (p) => ({ "2": `${p}:0`, X: `${p}:1` }));
+    const round = passRound(placed.state);
+    const events = [...placed.events, ...round.events];
+    const revealed = events.flatMap((e) => (e.type === "tokenRevealed" ? [e.token] : []));
+    expect(revealed.sort()).toEqual(["2", "2", "X", "X"]);
+    expect(events.filter((e) => e.type === "turnStarted").map((e) => (e as { token: string }).token)).toEqual(["2", "2"]);
+    expect(events.some((e) => e.type === "turnLost")).toBe(false);
+    expect(round.state.phase).toBe("placeTokens");
   });
 
   it("starts turns with an initiative roll once everyone has placed", () => {

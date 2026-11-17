@@ -104,6 +104,11 @@ export function advance(state: GameState, events: GameEvent[], ctx: RulesContext
       continue;
     }
     const unitId = placed[token];
+    // A player with fewer units than tokens may have left this one off: no turn, and nothing to reveal.
+    if (unitId === undefined) {
+      stepPointer(state);
+      continue;
+    }
     state.revealed[player]!.push(token);
     events.push({ type: "tokenRevealed", player, token, unitId });
     const unit = findUnit(state, unitId);
@@ -130,7 +135,7 @@ export function advance(state: GameState, events: GameEvent[], ctx: RulesContext
 function endRound(state: GameState, events: GameEvent[], ctx: RulesContext): void {
   for (const id of activePlayers(state)) {
     const placed = state.tokens[id];
-    if (placed && !state.revealed[id]!.includes("X")) {
+    if (placed?.X !== undefined && !state.revealed[id]!.includes("X")) {
       state.revealed[id]!.push("X");
       events.push({ type: "tokenRevealed", player: id, token: "X", unitId: placed.X });
     }

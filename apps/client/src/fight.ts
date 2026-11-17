@@ -2,6 +2,7 @@ import {
   areaAttackOf,
   figureSpots,
   findFigure,
+  hexDistance,
   statsOf,
   type FigurePosition,
   type GameEvent,
@@ -41,16 +42,30 @@ export interface Fight {
 }
 
 /**
- * Was this roll made from range? A normal attack uses the card's Range, a special
- * attack its own; a range of 1 is melee. Passing strikes are always melee.
+ * Was this roll made from range? A normal attack on an adjacent figure is a blow in melee,
+ * whatever the attacker's Range; otherwise a normal attack uses the card's Range, a special
+ * attack its own, and a range of 1 is melee. Passing strikes are always melee. `state` is
+ * the game as the attack began, so a figure it destroyed still has its place.
  */
 export function isRanged(roll: AttackRoll, state: GameState, ctx: RulesContext): boolean {
   if (roll.source !== "attack") return false;
   const hit = findFigure(state, roll.attackerId);
   const card = hit ? ctx.cards.get(hit.unit.cardId) : undefined;
-  if (!card) return false;
+  if (!hit || !card) return false;
+  if (!roll.ability && adjacent(roll.attackerId, roll.targetId, state, ctx)) return false;
   const range = (roll.ability ? areaAttackOf(card, roll.ability)?.range : undefined) ?? statsOf(card).range;
   return range > 1;
+}
+
+/** Do the two figures stand on neighbouring hexes (any hex of each, for larger figures)? */
+function adjacent(aId: string, bId: string, state: GameState, ctx: RulesContext): boolean {
+  const spotsOf = (id: string): readonly Step[] => {
+    const hit = findFigure(state, id);
+    const card = hit ? ctx.cards.get(hit.unit.cardId) : undefined;
+    return hit && card && hit.figure.position ? figureSpots(hit.figure, card.footprint, card.height, ctx) : [];
+  };
+  const b = spotsOf(bId);
+  return spotsOf(aId).some((s) => b.some((t) => hexDistance(s.hex, t.hex) <= 1));
 }
 
 /**

@@ -2,7 +2,7 @@ import { hexKey } from "../hex";
 import type { UnitCard } from "../schema";
 import { fail } from "./errors";
 import { figureSpots } from "./placement";
-import type { FigureState, GameState, PlayerId, RulesContext, Step, UnitState } from "./types";
+import { TOKEN_IDS, type FigureState, type GameState, type PlayerId, type RulesContext, type Step, type UnitState } from "./types";
 
 /** A card's stats, with its Height alongside. */
 export interface EffectiveStats {
@@ -38,6 +38,16 @@ export function unitsOf(state: GameState, player: PlayerId): UnitState[] {
 
 export function livingUnitsOf(state: GameState, player: PlayerId): UnitState[] {
   return unitsOf(state, player).filter(isUnitAlive);
+}
+
+/**
+ * How many activation tokens a player places this round: all four, except that under the
+ * "onePerUnit" rule each token needs a unit of its own, so a player with fewer living units
+ * places one on each.
+ */
+export function tokensToPlace(state: GameState, player: PlayerId): number {
+  if (state.config.tokenRule !== "onePerUnit") return TOKEN_IDS.length;
+  return Math.min(TOKEN_IDS.length, livingUnitsOf(state, player).length);
 }
 
 export function activePlayers(state: GameState): PlayerId[] {

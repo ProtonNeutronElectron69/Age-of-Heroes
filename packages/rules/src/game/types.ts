@@ -14,7 +14,8 @@ export const TOKEN_IDS: readonly TokenId[] = ["1", "2", "3", "X"];
 export const NUMBERED_TOKENS: readonly NumberedToken[] = ["1", "2", "3"];
 
 /** Which unit card each token is placed on. One unit may hold several tokens. */
-export type TokenAssignment = Record<TokenId, string>;
+/** Which unit holds each token. A token left out was not placed (only under the "onePerUnit" rule). */
+export type TokenAssignment = Partial<Record<TokenId, string>>;
 
 /** A standing spot: a hex plus the elevation of the surface in it. */
 export interface Step {
@@ -80,6 +81,13 @@ export type DraftMode = "snake" | "open";
  */
 export type InitiativeMode = "auto" | "players";
 
+/**
+ * How activation tokens are placed. "stack": all four, and one unit may hold several (older
+ * games). "onePerUnit": at most one token on each living unit, so a player with fewer than four
+ * units places one token on each and leaves the rest off.
+ */
+export type TokenRule = "stack" | "onePerUnit";
+
 export interface ActiveTurn {
   readonly player: PlayerId;
   readonly unitId: string;
@@ -142,6 +150,8 @@ export interface GameConfig {
   readonly factionPure: boolean;
   readonly draft: DraftMode;
   readonly initiative: InitiativeMode;
+  /** Left out by games saved before the rule existed, which keep "stack". */
+  readonly tokenRule?: TokenRule;
 }
 
 export interface GameState {
@@ -204,6 +214,8 @@ export interface GameSetup {
   /** Older games and hot-seat games leave these out: a snake draft, and initiative rolled at once. */
   readonly draft?: DraftMode;
   readonly initiative?: InitiativeMode;
+  /** New games use "onePerUnit"; older ones leave it out and keep "stack". */
+  readonly tokenRule?: TokenRule;
 }
 
 export interface RulesContext {

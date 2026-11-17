@@ -464,7 +464,7 @@ export function PlayScreen({ session }: { session: Session }) {
     if (rolls.length > 0) {
       // Every attack opens with its intro, whatever Dice rolls says, and the camera frames the fight.
       const next: Beat = { stamp, events, part: "intro", skipped: false };
-      playSound(fightIn(events, state, ctx)?.pairs[0]?.ranged ? "ranged" : "melee");
+      playSound(fightIn(events, seen.current.before, ctx)?.pairs[0]?.ranged ? "ranged" : "melee");
       beatRef.current = next;
       setBeat(next);
       setFollow((f) => ({ id: rolls[0]!.attackerId, with: rolls[0]!.targetId, key: (f?.key ?? 0) + 1 }));
@@ -964,7 +964,8 @@ export function PlayScreen({ session }: { session: Session }) {
     const view = figures.find((f) => f.id === id);
     return view ? anchorOf(view) : null;
   };
-  const fight = useMemo(() => (beat ? fightIn(beat.events, state, ctx) : null), [beat?.stamp]);
+  // Read from the game as the attack began, so a figure it destroyed still has its place.
+  const fight = useMemo(() => (beat ? fightIn(beat.events, seen.current.before, ctx) : null), [beat?.stamp]);
   const intro =
     beat?.part === "intro" && fight
       ? {

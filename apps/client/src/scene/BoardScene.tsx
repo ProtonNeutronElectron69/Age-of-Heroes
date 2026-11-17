@@ -29,7 +29,7 @@ import {
   Vector3,
   type InstancedMesh,
   type Material,
-  type PerspectiveCamera,
+  PerspectiveCamera,
 } from "three";
 import { TEST_MODE } from "../testMode";
 import { HEX_GAP } from "./scale";
@@ -215,6 +215,28 @@ function EyeCamera({ view, center }: { view: { eye: Vec3; look: Vec3 }; center: 
 
 /** WASD pan speed, as a share of the camera's distance from its target per second. */
 const PAN_SPEED = 0.9;
+/**
+ * The camera's near plane, as a share of its distance from the point it looks at, and never
+ * nearer than NEAR_LEAST. A fixed near plane of 0.1 left the depth buffer too coarse far out:
+ * layers of the gaming table a hundredth of a unit apart flickered through each other.
+ */
+const NEAR_SHARE = 0.02;
+const NEAR_LEAST = 0.1;
+
+/** Keeps the near plane in step with the zoom (close in eye view, where the camera stands among the figures). */
+function DepthRange({ eye }: { eye: boolean }) {
+  const controls = useThree((s) => s.controls) as unknown as { target: Vector3 } | null;
+  useFrame(({ camera }) => {
+    if (!(camera instanceof PerspectiveCamera)) return;
+    const distance = !eye && controls ? camera.position.distanceTo(controls.target) : 0;
+    const near = Math.max(NEAR_LEAST, distance * NEAR_SHARE);
+    if (Math.abs(camera.near - near) <= near * 0.05) return;
+    camera.near = near;
+    camera.updateProjectionMatrix();
+  });
+  return null;
+}
+
 const PAN_KEYS: Record<string, [number, number]> = { w: [0, 1], s: [0, -1], a: [-1, 0], d: [1, 0] };
 
 /** Pans the map camera with W, A, S and D, relative to where the camera faces. */
@@ -805,6 +827,7 @@ export function BoardScene({
         {children}
       </group>
       {still ? null : eyeView ? <EyeCamera view={eyeView} center={center} /> : <KeyboardPan />}
+      {!still && <DepthRange eye={!!eyeView} />}
       {focus && !eyeView && !still && <CameraFocus focus={focus} center={center} />}
       {onInspect && !still && <MiddleClickInspect board={board} onInspect={onInspect} />}
       {!still && <OrbitControls

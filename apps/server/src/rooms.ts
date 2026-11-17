@@ -345,6 +345,8 @@ export class RoomManager {
       // Online, everyone drafts at once, and nobody's initiative roll is made until every player has rolled.
       draft: "open",
       initiative: "players",
+      // At most one activation token on each unit.
+      tokenRule: "onePerUnit",
     };
     const { state, events } = createGame(setup, room.ctx);
     room.setup = setup;

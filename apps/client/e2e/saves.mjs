@@ -73,19 +73,24 @@ try {
     await page.getByRole("button", { name: "Confirm" }).click();
   }
 
-  // Place tokens for both players and play two turns (ending them is enough to move the game on).
-  for (let turns = 0; turns < 2; ) {
+  // Place tokens for both players and play two turns (ending them is enough to move the game on),
+  // then stop on the next turn, whichever round it falls in: with one token per unit, a small army
+  // has only a turn or two each round.
+  for (let turns = 0; ; ) {
     if (await page.locator(".pass-card").count()) {
       await page.locator(".pass-card button").click();
       const rows = page.locator(".token-table tbody tr");
-      for (const token of ["1", "2", "3", "X"]) {
-        await rows.first().getByRole("button", { name: new RegExp(`^Token ${token} on`) }).click();
+      // One token on each unit, as many as there are units, up to four.
+      const n = await rows.count();
+      for (const [row, token] of ["1", "2", "3", "X"].slice(0, Math.min(4, n)).entries()) {
+        await rows.nth(row).getByRole("button", { name: new RegExp(`^Token ${token} on`) }).click();
       }
       await page.getByRole("button", { name: "Lock in tokens" }).click();
       continue;
     }
     const end = page.getByRole("button", { name: "End turn" });
     if (await end.count()) {
+      if (turns >= 2) break;
       await end.click();
       turns++;
       continue;

@@ -47,6 +47,18 @@ describe("the attack intro", () => {
     expect(fightIn([{ type: "roundEnded", round: 1 }], state, ctx)).toBeNull();
   });
 
+  it("shows a normal attack on a neighbouring figure as melee, even from a ranged attacker", () => {
+    const state = game();
+    const marisol = figureOf(state, "marisol-vance");
+    const asagiri = figureOf(state, "lady-asagiri");
+    marisol.position = { hex: { q: 0, r: 0 }, elevation: 1, rotation: 0 };
+    asagiri.position = { hex: { q: 1, r: 0 }, elevation: 1, rotation: 0 };
+    expect(fightIn([roll(marisol.id, asagiri.id, 1)], state, ctx)!.pairs[0]!.ranged).toBe(false);
+    // Two hexes apart, the same shot is from range.
+    asagiri.position = { hex: { q: 2, r: 0 }, elevation: 1, rotation: 0 };
+    expect(fightIn([roll(marisol.id, asagiri.id, 1)], state, ctx)!.pairs[0]!.ranged).toBe(true);
+  });
+
   it("shows the first attacker and everything it hit, but not a blow struck back as a figure falls", () => {
     const state = game();
     const kenzo = figureOf(state, "kenzo").id;
