@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { COLOR_SCHEMES, type ColorScheme } from "../models";
-import { MusicControl } from "./MusicControl";
+import { SoundControls } from "./MusicControl";
 import { DICE_SHOWS, TABLE_STYLES, setDisplay, useDisplay, type DiceShow, type TableStyle } from "../settings";
 
 /**
@@ -84,7 +84,7 @@ export function DisplayMenu() {
           </fieldset>
           <p className="muted small">The camera waits for a figure to finish moving. Attacks in the full scene always frame the fight.</p>
           <h2>Sound</h2>
-          <MusicControl />
+          <SoundControls />
         </section>
       )}
       <button type="button" className="display-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>

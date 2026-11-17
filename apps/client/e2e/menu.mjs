@@ -1,6 +1,7 @@
 // Checks the main menu in each of its four styles: every choice is there, nothing scrolls on a
 // landscape window, the War Table board is drawn, the chosen style is kept after a reload, and the
-// menu music plays and can be turned off.
+// menu music plays and can be turned off; the sound controls and credits are on every style, and the
+// menu buttons make their hover and click sounds unless sounds are off.
 // Usage: node e2e/menu.mjs   (serves the build in apps/client/dist)
 import { chromium } from "playwright";
 import { preview } from "vite";
@@ -83,12 +84,16 @@ try {
       await fits(page, `${style} at ${size}`);
       // Music on or off, its volume and the credits are on every style.
       const sound = page.locator(".menu-sound");
-      if ((await sound.getByRole("checkbox", { name: "Music" }).count()) !== 1 || (await sound.getByRole("slider", { name: "Music volume" }).count()) !== 1) {
-        fail(`${style}: no music controls`);
+      for (const name of ["Music", "Sounds"]) {
+        if ((await sound.getByRole("checkbox", { name }).count()) !== 1 || (await sound.getByRole("slider", { name: `${name} volume` }).count()) !== 1) {
+          fail(`${style}: no ${name} controls`);
+        }
       }
       await sound.getByRole("button", { name: "Credits" }).click();
       const credits = page.getByRole("dialog", { name: "Credits" });
-      if (!(await credits.innerText()).includes("The Fall of Arcana")) fail(`${style}: the credits do not list the music`);
+      const listed = await credits.innerText();
+      if (!listed.includes("The Fall of Arcana")) fail(`${style}: the credits do not list the music`);
+      if (!/sound effects/i.test(listed) || !listed.includes("Kenney")) fail(`${style}: the credits do not list the sound effects`);
       await credits.getByRole("button", { name: "Close" }).click();
       await credits.waitFor({ state: "detached" });
       // The version and last update sit in a corner: "v1.0 · Last updated MM/DD/YYYY".
@@ -120,6 +125,22 @@ try {
   await page.locator('[data-menu-style="atlas"]').waitFor();
   if ((await page.getByRole("radio", { name: "Atlas" }).getAttribute("aria-checked")) !== "true") fail("The Atlas style was not kept after a reload");
 
+  // Menu buttons answer the pointer and a click with a sound, and the Sounds box silences them.
+  const sfx = () => page.evaluate(() => window.__aohSfx?.() ?? {});
+  const before = await sfx();
+  await page.getByRole("button", { name: "Saved games" }).hover();
+  await page.getByRole("button", { name: "Saved games" }).click();
+  const after = await sfx();
+  if (!((after.hover ?? 0) > (before.hover ?? 0))) fail("Mousing over a menu button made no sound");
+  if (!((after.click ?? 0) > (before.click ?? 0))) fail("Clicking a menu button made no sound");
+  await page.getByRole("checkbox", { name: "Sounds" }).uncheck();
+  const quiet = await sfx();
+  await page.getByRole("button", { name: "Watch a replay" }).hover();
+  await page.getByRole("button", { name: "Map editor" }).hover();
+  if (((await sfx()).hover ?? 0) !== (quiet.hover ?? 0)) fail("Sounds off still played the hover sound");
+  await page.getByRole("checkbox", { name: "Sounds" }).check();
+  await page.getByRole("radio", { name: "Play on this device" }).click();
+
   // The menu music plays once the player has clicked; the Music box stops it, and the choice is kept.
   await page.getByRole("radio", { name: "War Table" }).click();
   await page.waitForFunction(() => window.__aohMusic?.().mood === "menu" && window.__aohMusic().playing);
@@ -136,7 +157,7 @@ try {
   await phone.getByRole("button", { name: "Unit gallery" }).waitFor();
 
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
-  console.log(`Menu test passed: all ${STYLES.length} styles fit at three window sizes, the chosen style is kept, and the music plays and can be turned off.`);
+  console.log(`Menu test passed: all ${STYLES.length} styles fit at three window sizes, the chosen style is kept, the music plays and can be turned off, and the menu answers with sounds.`);
 } catch (err) {
   if (failureShots && lastPage) await lastPage.screenshot({ path: `${failureShots}/menu-failure.png` }).catch(() => {});
   throw err;

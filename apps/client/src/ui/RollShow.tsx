@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Names } from "../describe";
 import type { AttackRoll } from "../fight";
 import { useReducedMotion } from "../motion";
+import { playSound } from "../sfx";
 import { CardFigure } from "../scene/Figures";
 import { CubeDie, D20Die, TrayLights } from "../scene/dice3d";
 import type { DiceShow } from "../settings";
@@ -128,6 +129,13 @@ export function AttackShow({
     }, LINGER_MS);
     return () => window.clearTimeout(t);
   }, [done, index]);
+  // The attack dice are heard as they are thrown, and the defense dice when they follow.
+  useEffect(() => {
+    if (roll.attack.length > 0) playSound("dice");
+    if (roll.defense.length === 0) return;
+    const t = window.setTimeout(() => playSound("dice"), defenseDelay * 1000);
+    return () => window.clearTimeout(t);
+  }, [index]);
   const landAttack = () => setLanded((n) => ({ ...n, attack: n.attack + 1 }));
   const landDefense = () => setLanded((n) => ({ ...n, defense: n.defense + 1 }));
   const full = mode === "scene";
@@ -277,6 +285,12 @@ export function InitiativeShow({
     );
     return () => timers.forEach((t) => window.clearTimeout(t));
   }, [stage, landed]);
+
+  // Each throw of a d20 is heard (a skip shows every result without a sound).
+  const thrown = stage.reduce((n, s) => n + (s >= 0 ? s + 1 : 0), 0);
+  useEffect(() => {
+    if (thrown > 0 && !skipped) playSound("dice");
+  }, [thrown]);
 
   const skip = () => {
     setSkipped(true);

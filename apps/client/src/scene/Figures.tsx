@@ -77,6 +77,8 @@ interface Props {
   labels?: RefObject<HTMLDivElement | null>;
   /** Draw models or tokens whatever the display setting says (the menu backdrop always shows models). */
   style?: "models" | "tokens";
+  /** A hopping figure has landed on the next step of its path (for its sound). */
+  onLand?: (figureId: string, step: Step) => void;
 }
 
 const RING: Record<FigureView["status"], string | null> = {
@@ -175,6 +177,7 @@ interface Animation {
   /** How far each figure is drawn from where it stands, for the name tags. */
   readonly offsets: Map<string, Vector3>;
   readonly onDown: (id: string, e: ThreeEvent<PointerEvent>) => void;
+  readonly onLand?: (figureId: string, step: Step) => void;
 }
 
 const AnimationContext = createContext<Animation | null>(null);
@@ -204,7 +207,8 @@ function useFigureAnimation(f: FigureView): RefObject<Group | null> {
     seenMotions: anim?.motions?.key,
     seenJump: anim?.jump?.key,
     seenShake: anim?.shake?.key,
-    hop: null as { points: Vector3[]; t: number } | null,
+    /** A hop along a path: where each landing is drawn, the step it lands on, and how many have landed. */
+    hop: null as { points: Vector3[]; steps: Step[]; landed: number; t: number } | null,
     jumpT: -1,
     shakeT: -1,
   });
@@ -248,11 +252,15 @@ function useFigureAnimation(f: FigureView): RefObject<Group | null> {
       if (mine && mine.path.length > 0) {
         const end = worldOf(mine.path[mine.path.length - 1]!, new Vector3());
         const points: Vector3[] = [];
+        const steps: Step[] = [];
         for (const step of [mine.from, ...mine.path]) {
           const p = worldOf(step, new Vector3()).sub(end);
-          if (points.length === 0 || !points[points.length - 1]!.equals(p)) points.push(p);
+          if (points.length === 0 || !points[points.length - 1]!.equals(p)) {
+            points.push(p);
+            steps.push(step);
+          }
         }
-        st.hop = points.length > 1 ? { points, t: 0 } : null;
+        st.hop = points.length > 1 ? { points, steps, landed: 0, t: 0 } : null;
       }
       if (!st.hop) activity.hopping.delete(f.id);
     }
@@ -261,6 +269,10 @@ function useFigureAnimation(f: FigureView): RefObject<Group | null> {
       const each = Math.min(HOP_SECONDS, HOP_MAX_SECONDS / hops);
       st.hop.t += delta;
       const at = st.hop.t / each;
+      while (st.hop.landed < Math.min(hops, Math.floor(at))) {
+        st.hop.landed++;
+        anim.onLand?.(f.id, st.hop.steps[st.hop.landed]!);
+      }
       if (at >= hops) {
         st.hop = null;
         st.offset.set(0, 0, 0);
@@ -691,7 +703,7 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
 /** Pointer travel (pixels) that turns a press on a figure into a drag. */
 const DRAG_PIXELS = 5;
 
-export function Figures({ figures, onClick, onHover, labels, style, motions = null, jump = null, shake = null, carry = null, canDrag, onDragStart, onDragEnd }: Props) {
+export function Figures({ figures, onClick, onHover, labels, style, motions = null, jump = null, shake = null, carry = null, canDrag, onDragStart, onDragEnd, onLand }: Props) {
   const display = useDisplay();
   const drawn = style ?? display.figures;
   const facing = useMemo(() => facings(figures), [figures]);
@@ -736,7 +748,7 @@ export function Figures({ figures, onClick, onHover, labels, style, motions = nu
     };
   }, []);
 
-  const animation = useMemo<Animation>(() => ({ motions, jump, shake, carry, offsets, onDown }), [motions, jump, shake, carry, offsets, onDown]);
+  const animation = useMemo<Animation>(() => ({ motions, jump, shake, carry, offsets, onDown, onLand }), [motions, jump, shake, carry, offsets, onDown, onLand]);
   return (
     <AnimationContext.Provider value={animation}>
       {figures.map((f) =>

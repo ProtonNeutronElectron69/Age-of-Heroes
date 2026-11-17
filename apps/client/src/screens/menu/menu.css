@@ -1885,7 +1885,8 @@
 }
 
 .menu-sound input[type="range"] {
-  width: 84px;
+  width: 64px;
+  min-width: 0;
   flex: none;
 }
 
@@ -1909,7 +1910,7 @@
 }
 
 .ms-banner-hall .menu-sound {
-  left: 22px;
+  right: 22px;
   top: 14px;
 }
 

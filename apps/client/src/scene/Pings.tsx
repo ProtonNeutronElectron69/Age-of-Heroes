@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DoubleSide, Quaternion, Raycaster, Vector2, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import { useReducedMotion } from "../motion";
 import { onPing, sendPing } from "../online";
+import { playSound } from "../sfx";
 import { useWake } from "./wake";
 
 /**
@@ -184,6 +185,8 @@ export function useOnlinePings(me: string | null, colorOf: (player: string) => s
   const [pings, setPings] = useState<PingView[]>([]);
   const color = useRef(colorOf);
   color.current = colorOf;
+  const mine = useRef(me);
+  mine.current = me;
   const next = useRef(0);
   const timers = useRef(new Set<number>());
   const show = useCallback((player: string, at: PingView["at"]) => {
@@ -196,7 +199,11 @@ export function useOnlinePings(me: string | null, colorOf: (player: string) => s
     timers.current.add(timer);
   }, []);
   useEffect(() => {
-    const stop = onPing((p) => show(p.player, p.at));
+    const stop = onPing((p) => {
+      show(p.player, p.at);
+      // Another player's ping is heard, so it is not missed when it lands off screen.
+      if (p.player !== mine.current) playSound("ping");
+    });
     const pending = timers.current;
     return () => {
       stop();
