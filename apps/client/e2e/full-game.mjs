@@ -215,6 +215,8 @@ async function handleAttackIntro() {
   }
   if (!introChecked) {
     introChecked = true;
+    // The battle music comes in with the attack.
+    await page.waitForFunction(() => window.__aohMusic?.().mood === "battle", null, { timeout: 3000 }).catch(() => fail("An attack did not bring in the battle music"));
     woundsBefore = await page.evaluate(() => window.__aoh.woundsShown());
     const kind = await intro.getAttribute("data-kind");
     if (kind !== "melee" && kind !== "ranged") fail(`The intro shows no melee or ranged icon: ${kind}`);
@@ -359,6 +361,9 @@ try {
       if (tokens === models) fail(`T did not swap the models for tokens (${models} triangles either way)`);
       await page.getByRole("button", { name: "Display" }).click();
       await page.getByRole("radio", { name: "Models" }).click();
+      // A game has its own music, and the Display panel has its controls.
+      if ((await page.evaluate(() => window.__aohMusic?.().mood)) !== "play") fail("The game is not playing its own music");
+      if ((await page.getByRole("region", { name: "Display" }).getByRole("checkbox", { name: "Music" }).count()) !== 1) fail("The Display panel has no Music box");
       await buttonsOnScreen("With the Display panel open");
       // The camera follows the acting unit by panning, turning and zooming, each a box of its own and all ticked at first.
       for (const name of ["Auto pan", "Auto rotate", "Auto zoom"]) {
@@ -468,7 +473,9 @@ try {
     if (await page.getByRole("dialog", { name: "Attack" }).count()) await handleAttackShow();
     // The dice stay up until closed (or the next action): close them so they do not cover the board.
     const closeDice = page.getByRole("button", { name: "Close dice" });
-    if (await closeDice.count()) await closeDice.click();
+    // A new round's dice panel shows for a moment before the initiative show covers it. If the panel
+    // goes before the click lands, start the step again: its top lets the show play.
+    if ((await closeDice.count()) && !(await closeDice.click({ timeout: 3000 }).then(() => true, () => false))) continue;
     if (checksDone()) {
       await page.getByRole("button", { name: "End turn" }).click();
       continue;
@@ -680,6 +687,7 @@ try {
   const over = page.getByRole("dialog", { name: "Game over" });
   if (!(await over.count())) fail("The game did not reach the game over screen");
   await shot("7-game-over");
+  await page.waitForFunction(() => window.__aohMusic?.().mood === "victory", null, { timeout: 3000 }).catch(() => fail("The game over screen did not bring in the victory music"));
   const heading = await over.getByRole("heading").innerText();
   if (!/wins|share the win|Nobody/.test(heading)) fail(`Unexpected result: ${heading}`);
   if (moves === 0) fail("No figure moved during the game");

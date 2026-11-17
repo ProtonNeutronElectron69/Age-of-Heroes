@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { COLOR_SCHEMES, type ColorScheme } from "../models";
+import { MusicControl } from "./MusicControl";
 import { DICE_SHOWS, TABLE_STYLES, setDisplay, useDisplay, type DiceShow, type TableStyle } from "../settings";
 
 /**
  * How this screen draws the game: figure models or tokens, the colour scheme
  * for models, the gaming table, how dice rolls are shown and how the camera
- * follows the acting unit. A small button opens the choices.
+ * follows the acting unit, and the music. A small button opens the choices.
  */
 export function DisplayMenu() {
   const display = useDisplay();
@@ -82,6 +83,8 @@ export function DisplayMenu() {
             ))}
           </fieldset>
           <p className="muted small">The camera waits for a figure to finish moving. Attacks in the full scene always frame the fight.</p>
+          <h2>Sound</h2>
+          <MusicControl />
         </section>
       )}
       <button type="button" className="display-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>

@@ -4,6 +4,7 @@ import "@fontsource/im-fell-english/latin-400-italic.css";
 import "@fontsource/im-fell-english-sc/latin-400.css";
 import "@fontsource/marcellus-sc/latin-400.css";
 import { useEffect, useId, useState, type ReactNode } from "react";
+import { CreditsButton, MusicControl } from "../../ui/MusicControl";
 import { MENU_STYLES, setDisplay, useDisplay, type MenuStyle } from "../../settings";
 import { GAME_VERSION, LAST_UPDATED } from "../../version";
 import { CompassRose, Icon, type IconName } from "./icons";
@@ -191,6 +192,10 @@ export function MenuFrame({ commands, heading, sub, children, extras }: Props) {
             {children}
           </section>
           <StylePicker style={style} />
+          <div className="menu-sound">
+            <MusicControl />
+            <CreditsButton />
+          </div>
           <p className="menu-version">
             {GAME_VERSION}
             {LAST_UPDATED && ` · Last updated ${LAST_UPDATED}`}

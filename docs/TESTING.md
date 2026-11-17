@@ -14,13 +14,13 @@ Checks run only for the parts of the game a change can affect. The browser tests
 
 | Test | What it plays through |
 |---|---|
-| `full-game` | A hot-seat game: the draft's battlefield view (opening first, the hex tooltip, coming back mid-draft), draft, deployment (models and tokens, the three tables, the board coming to rest), the initiative d20s, dragging a figure, H, the hover card, eye view, the camera following (and its three Display boxes), the hex tooltip on a middle click, squads, the attack intro (its melee or ranged icon and title; once Dice rolls is off, a click skips it), the attack scene and dice only (then **Dice rolls** set to None), a wound number floating up, the dice panel; then each turn is ended at once until the 5-round limit and the game-over screen |
+| `full-game` | A hot-seat game: the draft's battlefield view (opening first, the hex tooltip, coming back mid-draft), draft, deployment (models and tokens, the three tables, the board coming to rest), the initiative d20s, dragging a figure, H, the hover card, eye view, the camera following (and its three Display boxes), the hex tooltip on a middle click, squads, the attack intro (its melee or ranged icon and title; once Dice rolls is off, a click skips it), the music (play, battle with the first attack, victory at the end), the attack scene and dice only (then **Dice rolls** set to None), a wound number floating up, the dice panel; then each turn is ended at once until the 5-round limit and the game-over screen |
 | `online` | Through the real game server, one browser per player: the lobby and a spectator; the open draft (both players picking at the same moment, a taken unit greyed out on the other screen, a reload mid-draft); pings on the draft map and in play (`window.__aohPingsHeard`); initiative waiting for both players' rolls before showing any result; a few turns, host-only saving, leaving (which concedes), the replay, and resuming in a new room. Whole online games are played by the server's unit tests |
 | `saves` | Saving a hot-seat game and bringing it back from the saved games list, after a reload, and from a file; the file in the replay viewer |
 | `editor` | Building a map, exporting and importing it, and playing on it |
 | `models` | Every figure model on the model page |
 | `gallery` | The unit gallery: filters, sorts, sizes and the model viewer |
-| `menu` | The main menu in all four styles at three window sizes, with nothing scrolling, and the version and last update in the corner |
+| `menu` | The main menu in all four styles at three window sizes, with nothing scrolling, the version and last update in the corner, the music controls and credits on every style, and the menu music playing and being turned off |
 
 ## What a change runs
 
@@ -85,6 +85,7 @@ A log of browser test failures that came from the test, not the game: what was s
 | #41 | `online`: the draft could end before Bob's reload | With an open draft and 100 points, both players could be finished after one pick each | 150 points, and Bob takes the cheapest unit, so he is still drafting | Make the state a later step needs certain, not likely |
 | #41 | The simulation's seed 9 game (online rules) had no attack | A fair game: one player drafted one unit, stopped, and lost it to terrain in round 2 | Seed 11 instead | When a random game fails a "something happened" check, trace its commands before calling it a bug |
 | #50 | `full-game`: "Close dice" timed out, the button detached | A move drew a passing strike. Since #48 every attack roll plays the attack intro, which hides the dice panel, so the panel vanished under the click | Each step first lets a running attack intro or dice show finish (`handleAttackIntro`, `handleAttackShow`) | Before touching anything a show hides, wait for the show: a move can start one too, not only an attack |
+| #51 | `full-game`: "Close dice" timed out, the button detached, more often on a busy machine | At a new round the dice panel is drawn one frame before the initiative show opens and hides it; the test saw the panel, then the show covered it | The click gets a short timeout, and if the panel has gone the step starts again, which lets the show play | A panel that a show can hide may vanish between seeing it and clicking it: give the click a short timeout and go round again |
 
 ## Safety nets
 

@@ -1,5 +1,6 @@
 // Checks the main menu in each of its four styles: every choice is there, nothing scrolls on a
-// landscape window, the War Table board is drawn, and the chosen style is kept after a reload.
+// landscape window, the War Table board is drawn, the chosen style is kept after a reload, and the
+// menu music plays and can be turned off.
 // Usage: node e2e/menu.mjs   (serves the build in apps/client/dist)
 import { chromium } from "playwright";
 import { preview } from "vite";
@@ -42,15 +43,27 @@ async function open(viewport) {
 async function fits(page, what) {
   const r = await page.evaluate(() => {
     const doc = document.scrollingElement;
-    const out = [...document.querySelectorAll(".menu-title, .menu-cmds .mc, .menu-panel, .menu-styles, .menu-version")].filter((el) => {
+    const out = [...document.querySelectorAll(".menu-title, .menu-cmds .mc, .menu-panel, .menu-styles, .menu-sound, .menu-version")].filter((el) => {
       const b = el.getBoundingClientRect();
       return b.left < -1 || b.top < -1 || b.right > innerWidth + 1 || b.bottom > innerHeight + 1;
     });
     const panel = document.querySelector(".menu-panel");
-    return { scroll: doc.scrollHeight > innerHeight + 1 || doc.scrollWidth > innerWidth + 1, out: out.map((el) => el.className), panel: panel.scrollHeight > panel.clientHeight + 1 };
+    // The music controls cover nothing else.
+    const sound = document.querySelector(".menu-sound")?.getBoundingClientRect();
+    const under = sound
+      ? [...document.querySelectorAll(".menu-title h1, .menu-title p, .menu-cmds .mc, .menu-panel, .menu-styles, .menu-version")].filter((el) => {
+          // The title's box can span the stage, so measure its words.
+          const words = document.createRange();
+          words.selectNodeContents(el);
+          const b = el.closest(".menu-title") ? words.getBoundingClientRect() : el.getBoundingClientRect();
+          return b.left < sound.right && sound.left < b.right && b.top < sound.bottom && sound.top < b.bottom;
+        })
+      : [];
+    return { scroll: doc.scrollHeight > innerHeight + 1 || doc.scrollWidth > innerWidth + 1, out: out.map((el) => el.className), under: under.map((el) => el.className || el.tagName), panel: panel.scrollHeight > panel.clientHeight + 1 };
   });
   if (r.scroll) fail(`${what}: the page scrolls`);
   if (r.out.length) fail(`${what}: parts of the menu are outside the window: ${r.out.join(", ")}`);
+  if (r.under.length) fail(`${what}: the music controls cover part of the menu: ${r.under.join(", ")}`);
   if (r.panel) fail(`${what}: the settings panel overflows`);
 }
 
@@ -68,6 +81,16 @@ try {
         }
       }
       await fits(page, `${style} at ${size}`);
+      // Music on or off, its volume and the credits are on every style.
+      const sound = page.locator(".menu-sound");
+      if ((await sound.getByRole("checkbox", { name: "Music" }).count()) !== 1 || (await sound.getByRole("slider", { name: "Music volume" }).count()) !== 1) {
+        fail(`${style}: no music controls`);
+      }
+      await sound.getByRole("button", { name: "Credits" }).click();
+      const credits = page.getByRole("dialog", { name: "Credits" });
+      if (!(await credits.innerText()).includes("The Fall of Arcana")) fail(`${style}: the credits do not list the music`);
+      await credits.getByRole("button", { name: "Close" }).click();
+      await credits.waitFor({ state: "detached" });
       // The version and last update sit in a corner: "v1.0 · Last updated MM/DD/YYYY".
       const version = await page.locator(".menu-version").innerText();
       if (!/^v\d+\.\d+(\.\d+)? · Last updated \d{2}\/\d{2}\/\d{4}$/.test(version)) fail(`${style}: the version reads "${version}"`);
@@ -97,6 +120,15 @@ try {
   await page.locator('[data-menu-style="atlas"]').waitFor();
   if ((await page.getByRole("radio", { name: "Atlas" }).getAttribute("aria-checked")) !== "true") fail("The Atlas style was not kept after a reload");
 
+  // The menu music plays once the player has clicked; the Music box stops it, and the choice is kept.
+  await page.getByRole("radio", { name: "War Table" }).click();
+  await page.waitForFunction(() => window.__aohMusic?.().mood === "menu" && window.__aohMusic().playing);
+  await page.getByRole("checkbox", { name: "Music" }).uncheck();
+  await page.waitForFunction(() => window.__aohMusic().mood === null && !window.__aohMusic().playing);
+  await page.reload();
+  await page.locator('[data-menu-style="war-table"]').waitFor();
+  if (await page.getByRole("checkbox", { name: "Music" }).isChecked()) fail("Music off was not kept after a reload");
+
   // A phone held upright gets one scrolling column with every choice.
   const phone = await open({ width: 400, height: 860 });
   if (!(await phone.locator(".main-menu.compact").count())) fail("A narrow window should get the one-column menu");
@@ -104,7 +136,7 @@ try {
   await phone.getByRole("button", { name: "Unit gallery" }).waitFor();
 
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
-  console.log(`Menu test passed: all ${STYLES.length} styles fit at three window sizes, and the chosen style is kept.`);
+  console.log(`Menu test passed: all ${STYLES.length} styles fit at three window sizes, the chosen style is kept, and the music plays and can be turned off.`);
 } catch (err) {
   if (failureShots && lastPage) await lastPage.screenshot({ path: `${failureShots}/menu-failure.png` }).catch(() => {});
   throw err;
