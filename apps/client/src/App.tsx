@@ -13,6 +13,7 @@ import { SetupScreen } from "./screens/SetupScreen";
 import { UnitGalleryScreen } from "./screens/UnitGalleryScreen";
 import { useMusicScene } from "./music";
 import { useSession } from "./session";
+import { useEventSounds } from "./sfx";
 
 type View =
   | { name: "setup"; mapId?: string }
@@ -27,6 +28,7 @@ export function App() {
   // Menu music everywhere outside a game; a game has its own, and its end has the victory music.
   const inGame = session !== null || view.name === "replay";
   useMusicScene(session?.state.phase === "gameOver" ? "victory" : inGame ? "play" : "menu");
+  useEventSounds(session?.lastEvents ?? null, session?.events.length ?? null);
 
   // The card and model galleries are design pages, opened with ?cards or ?models in the address.
   const query = new URLSearchParams(window.location.search);

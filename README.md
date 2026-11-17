@@ -39,7 +39,7 @@ The rules are in [docs/RULES.md](docs/RULES.md). Progress and what's next are in
 | [docs/PLAN.md](docs/PLAN.md) | Status, roadmap and design decisions |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code is organised and how a game flows through it |
 | [docs/CONTENT.md](docs/CONTENT.md) | Adding units, abilities and maps, and the rules the tests enforce |
-| [docs/CREDITS.md](docs/CREDITS.md) | The music, its composers and licences |
+| [docs/CREDITS.md](docs/CREDITS.md) | The music and sound effects, their makers and licences |
 | [docs/TESTING.md](docs/TESTING.md) | Which checks each kind of change runs, locally and in CI |
 | [docs/HOSTING.md](docs/HOSTING.md) | Running and hosting the online game server |
 | [CLAUDE.md](CLAUDE.md) | Working rules for contributors and coding agents |

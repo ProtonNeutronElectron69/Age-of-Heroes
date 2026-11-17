@@ -43,6 +43,8 @@ import { downloadGameFile } from "../saves";
 import { canControl, clearError, dispatch, endSession, replayOf, type Session } from "../session";
 import { DisplayMenu } from "../ui/DisplayMenu";
 import { useBattleMusic } from "../music";
+import { playSound } from "../sfx";
+import { landingSound } from "../soundEffects";
 import { toggleFigures, useDisplay } from "../settings";
 import { GameMenu } from "../ui/GameMenu";
 import { HexTip, useHexTip, zoneOwners } from "../ui/HexTip";
@@ -339,11 +341,13 @@ export function PlayScreen({ session }: { session: Session }) {
   /** Float a command's wounds (once its show, if any, is over). */
   const release = (stamp: number, events: readonly GameEvent[]) => {
     const marks = woundMarksIn(events);
+    if (marks.some((m) => (m.wounds ?? 0) > 0)) playSound("wounds");
     if (marks.length > 0) setBatches((list) => [...list.filter((b) => b.stamp !== stamp), { stamp, marks }]);
   };
   const destroyedIn = (b: Batch) => b.marks.filter((m) => m.destroyed).map((m) => m.figureId);
   const batchFloated = (b: Batch) => {
     const ids = destroyedIn(b);
+    if (ids.length > 0) playSound("destroyed");
     if (ids.length > 0) setShake((x) => ({ key: (x?.key ?? 0) + 1, ids }));
   };
   const batchDone = (b: Batch) => {
@@ -460,6 +464,7 @@ export function PlayScreen({ session }: { session: Session }) {
     if (rolls.length > 0) {
       // Every attack opens with its intro, whatever Dice rolls says, and the camera frames the fight.
       const next: Beat = { stamp, events, part: "intro", skipped: false };
+      playSound(fightIn(events, state, ctx)?.pairs[0]?.ranged ? "ranged" : "melee");
       beatRef.current = next;
       setBeat(next);
       setFollow((f) => ({ id: rolls[0]!.attackerId, with: rolls[0]!.targetId, key: (f?.key ?? 0) + 1 }));
@@ -844,6 +849,14 @@ export function PlayScreen({ session }: { session: Session }) {
     }),
     [session.lastEvents],
   );
+  /** A hop's sound depends on what the figure lands on: water and swamp splash, lava flares. */
+  const land = useCallback((_id: string, step: Step) => playSound(landingSound(ctx.board.surfaceAt(step.hex, step.elevation)?.terrain)), [ctx]);
+  // A figure dragged to its hex makes its landing sound when the move is made, as it does not hop.
+  useEffect(() => {
+    for (const e of session.lastEvents) {
+      if (e.type === "figureMoved" && e.figureId === carried.current && e.path.length > 0) land(e.figureId, e.path[e.path.length - 1]!);
+    }
+  }, [session.lastEvents]);
   useEffect(() => {
     carried.current = null;
   }, [session.lastEvents, session.error]);
@@ -1038,6 +1051,7 @@ export function PlayScreen({ session }: { session: Session }) {
             canDrag={canDrag}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
+            onLand={land}
           />
         </BoardScene>
         <PingInput

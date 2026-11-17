@@ -688,6 +688,11 @@ try {
   if (!(await over.count())) fail("The game did not reach the game over screen");
   await shot("7-game-over");
   await page.waitForFunction(() => window.__aohMusic?.().mood === "victory", null, { timeout: 3000 }).catch(() => fail("The game over screen did not bring in the victory music"));
+  // The game's sound effects were asked for: drafting and placing, hops, the attack, its dice and wounds, and each new round.
+  const sfx = await page.evaluate(() => window.__aohSfx?.() ?? {});
+  const unheard = ["placed", "hop", "dice", "round"].filter((id) => !(sfx[id] > 0));
+  if (!(sfx.melee > 0 || sfx.ranged > 0)) unheard.push("melee or ranged");
+  if (unheard.length) fail(`No sound for: ${unheard.join(", ")} (${JSON.stringify(sfx)})`);
   const heading = await over.getByRole("heading").innerText();
   if (!/wins|share the win|Nobody/.test(heading)) fail(`Unexpected result: ${heading}`);
   if (moves === 0) fail("No figure moved during the game");

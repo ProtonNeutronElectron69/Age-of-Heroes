@@ -23,6 +23,9 @@ export interface DisplaySettings {
   /** Whether music plays, and how loud (0 to 1). */
   readonly music: boolean;
   readonly musicVolume: number;
+  /** Whether sound effects play, and how loud (0 to 1). */
+  readonly sounds: boolean;
+  readonly soundsVolume: number;
 }
 
 /**
@@ -67,6 +70,8 @@ const DEFAULTS: DisplaySettings = {
   autoZoom: true,
   music: true,
   musicVolume: 0.6,
+  sounds: true,
+  soundsVolume: 0.7,
 };
 
 function load(): DisplaySettings {
@@ -84,6 +89,9 @@ function load(): DisplaySettings {
       music: saved.music !== false,
       musicVolume:
         typeof saved.musicVolume === "number" && saved.musicVolume >= 0 && saved.musicVolume <= 1 ? saved.musicVolume : DEFAULTS.musicVolume,
+      sounds: saved.sounds !== false,
+      soundsVolume:
+        typeof saved.soundsVolume === "number" && saved.soundsVolume >= 0 && saved.soundsVolume <= 1 ? saved.soundsVolume : DEFAULTS.soundsVolume,
     };
   } catch {
     return DEFAULTS;

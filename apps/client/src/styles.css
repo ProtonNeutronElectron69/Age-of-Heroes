@@ -1647,6 +1647,10 @@ p.bad {
   gap: 10px;
 }
 
+.display-panel .music-control + .music-control {
+  margin-top: 6px;
+}
+
 .music-control .check {
   margin-top: 0;
 }
@@ -1661,6 +1665,10 @@ p.bad {
   width: min(560px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
   overflow-y: auto;
+}
+
+.credits h2:not(:first-child) {
+  margin-top: 18px;
 }
 
 .credits h3 {
