@@ -257,12 +257,13 @@ export function GamingTable({ layout, style }: { layout: TableLayout; style: Tab
   const rail = look.rail;
   return (
     <group position={[cx, 0, cz]}>
-      {/* The top's surface, just under the board, and the slab it belongs to. */}
+      {/* The top's surface, just under the board, and the slab it belongs to. The slab stops a
+          little below the surface, so the two never fight for the same pixels when zoomed out. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]} {...still}>
         <planeGeometry args={[width, depth]} />
         <Surface map={top} roughness={0.85} />
       </mesh>
-      <mesh position={[0, -TOP_THICKNESS / 2 - 0.04, 0]} {...still}>
+      <mesh position={[0, -TOP_THICKNESS / 2 - 0.15, 0]} {...still}>
         <boxGeometry args={[width, TOP_THICKNESS, depth]} />
         <Surface color={look.edge} roughness={0.8} />
       </mesh>

@@ -2,6 +2,7 @@ import {
   NUMBERED_TOKENS,
   TOKEN_IDS,
   livingUnitsOf,
+  tokensToPlace,
   viewFor,
   type DieFace,
   type GameEvent,
@@ -48,15 +49,34 @@ export function TokenPanel({
   onSubmit: (tokens: TokenAssignment) => void;
 }) {
   const units = livingUnitsOf(state, player);
-  const [assigned, setAssigned] = useState<Partial<TokenAssignment>>({});
-  const complete = TOKEN_IDS.every((t) => assigned[t]);
+  const [assigned, setAssigned] = useState<TokenAssignment>({});
+  /** Newer games: one token per unit, and as many tokens as there are units, up to four. */
+  const spread = state.config.tokenRule === "onePerUnit";
+  const needed = tokensToPlace(state, player);
+  const count = TOKEN_IDS.filter((t) => assigned[t]).length;
+  const complete = spread ? count === needed : TOKEN_IDS.every((t) => assigned[t]);
+  const choose = (t: (typeof TOKEN_IDS)[number], unitId: string) => {
+    // A second click takes the token off again.
+    if (assigned[t] === unitId) {
+      const { [t]: _off, ...rest } = assigned;
+      return setAssigned(rest);
+    }
+    const next: TokenAssignment = { ...assigned, [t]: unitId };
+    // A unit holds one token: the one it had goes back.
+    if (spread) for (const other of TOKEN_IDS) if (other !== t && next[other] === unitId) delete next[other];
+    setAssigned(next);
+  };
 
   return (
     <section className="panel token-panel" aria-label="Place activation tokens">
       <h2>{names.player(player)}: place your tokens</h2>
       <p className="muted small">
-        Tokens 1, 2 and 3 decide which unit acts on each of your three turns this round. X is a bluff. One unit can
-        hold several tokens.
+        Tokens 1, 2 and 3 decide which unit acts on each of your three turns this round. X is a bluff.{" "}
+        {!spread
+          ? "One unit can hold several tokens."
+          : needed < TOKEN_IDS.length
+            ? `Each unit holds one token. With ${needed} unit${needed === 1 ? "" : "s"} left, place ${needed} token${needed === 1 ? "" : "s"}; the rest stay off, and a turn whose token is off is skipped.`
+            : "Each unit holds one token."}
       </p>
       <table className="token-table">
         <thead>
@@ -83,7 +103,7 @@ export function TokenPanel({
                     className={`token-chip ${assigned[t] === u.id ? "on" : ""} ${t === "X" ? "bluff" : ""}`}
                     aria-pressed={assigned[t] === u.id}
                     aria-label={`Token ${t} on ${names.unit(u.id)}`}
-                    onClick={() => setAssigned({ ...assigned, [t]: u.id })}
+                    onClick={() => choose(t, u.id)}
                   >
                     {t}
                   </button>
@@ -99,7 +119,11 @@ export function TokenPanel({
         disabled={!complete}
         onClick={() => complete && onSubmit(assigned as TokenAssignment)}
       >
-        {complete ? "Lock in tokens" : `Place ${TOKEN_IDS.filter((t) => !assigned[t]).join(", ")}`}
+        {complete
+          ? "Lock in tokens"
+          : spread
+            ? `Place ${needed - count} more token${needed - count === 1 ? "" : "s"}`
+            : `Place ${TOKEN_IDS.filter((t) => !assigned[t]).join(", ")}`}
       </button>
     </section>
   );

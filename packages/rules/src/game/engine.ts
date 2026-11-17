@@ -15,7 +15,7 @@ import {
 } from "./draft";
 import { fail, RulesError } from "./errors";
 import { moveFigure } from "./movement";
-import { findUnit, isUnitAlive } from "./queries";
+import { findUnit, isUnitAlive, tokensToPlace } from "./queries";
 import { advance, checkGameOver, eliminate, maybeStartTurns, stepPointer } from "./rounds";
 import {
   TOKEN_IDS,
@@ -26,6 +26,7 @@ import {
   type GameState,
   type PlayerId,
   type RulesContext,
+  type TokenAssignment,
 } from "./types";
 
 /**
@@ -67,6 +68,7 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
       factionPure: setup.factionPure ?? false,
       draft: setup.draft ?? "snake",
       initiative: setup.initiative ?? "auto",
+      tokenRule: setup.tokenRule ?? "stack",
     },
     rng: setup.seed >>> 0,
     round: 0,
@@ -211,15 +213,26 @@ function placeTokens(
   if (state.phase !== "placeTokens") fail("Tokens can only be placed before the round's turns begin");
   if (state.tokens[player]) fail("Tokens have already been placed this round");
   const keys = Object.keys(tokens);
-  if (keys.length !== TOKEN_IDS.length || !TOKEN_IDS.every((t) => typeof tokens[t] === "string")) {
-    fail("All four tokens (1, 2, 3 and X) must be placed");
+  if (keys.some((k) => !(TOKEN_IDS as readonly string[]).includes(k)) || keys.some((k) => typeof tokens[k] !== "string")) {
+    fail("Tokens are 1, 2, 3 and X, each placed on a unit");
   }
+  const spread = state.config.tokenRule === "onePerUnit";
+  const needed = tokensToPlace(state, player);
+  if (!spread && keys.length !== TOKEN_IDS.length) fail("All four tokens (1, 2, 3 and X) must be placed");
+  if (spread && keys.length !== needed) {
+    fail(needed === TOKEN_IDS.length ? "All four tokens (1, 2, 3 and X) must be placed" : `Place ${needed} token${needed === 1 ? "" : "s"}, one on each of your units`);
+  }
+  const placed: TokenAssignment = {};
   for (const t of TOKEN_IDS) {
-    const unit = findUnit(state, tokens[t]!);
+    const unitId = tokens[t];
+    if (unitId === undefined) continue;
+    const unit = findUnit(state, unitId);
     if (!unit || unit.owner !== player) fail(`Token ${t} must go on one of your own units`);
     if (!isUnitAlive(unit)) fail(`Token ${t} cannot go on a destroyed unit`);
+    placed[t] = unitId;
   }
-  state.tokens[player] = { "1": tokens["1"]!, "2": tokens["2"]!, "3": tokens["3"]!, X: tokens["X"]! };
+  if (spread && new Set(Object.values(placed)).size !== keys.length) fail("Each unit can hold only one token");
+  state.tokens[player] = placed;
   events.push({ type: "tokensPlaced", player });
   maybeStartTurns(state, events, ctx);
 }

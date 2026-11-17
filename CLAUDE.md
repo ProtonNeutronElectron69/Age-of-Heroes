@@ -30,6 +30,7 @@
 - **Stores:** `session.ts` holds the game in play, `online.ts` the connection and lobby, `saves.ts` named saves, `settings.ts` each player's display choices.
 - **Online sends:** online commands set `session.pending` until the server answers; the UI blocks repeat actions meanwhile.
 - **Online rules:** the server sets `draft: "open"` (everyone drafts at once, each card once) and `initiative: "players"` (a round waits for every player's `rollInitiative`) in each online `GameSetup` (`apps/server/src/rooms.ts`). Hot-seat games and older saves leave both out and keep the snake draft and the automatic roll.
+- **Token rule:** new games, hot-seat (`SetupScreen.tsx`) and online, set `tokenRule: "onePerUnit"`: one token per unit, and `tokensToPlace` (fewer than four when a player has fewer units). Older saves leave it out and keep "stack" (all four, stacking allowed), so they still replay exactly. Keep both working.
 - **Pings:** P points at a spot for everyone online, in play and on the draft map (`useOnlinePings` and `PingInput` in `scene/Pings.tsx`). A ping is a protocol message, not a game command: the server passes it on at most once a second per player (`PING_INTERVAL_MS`) and never logs, saves or replays it. The sender's arrow shows at once.
 
 ### Drawing the board

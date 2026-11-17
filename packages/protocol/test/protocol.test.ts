@@ -28,6 +28,8 @@ describe("message validation", () => {
       commandSchema.safeParse({ type: "placeTokens", player: "p1", tokens: { "1": "a", "2": "a", "3": "a", X: "a", Y: "b" } })
         .success,
     ).toBe(false);
+    // Under the one-per-unit rule a player with fewer units places fewer tokens.
+    expect(commandSchema.safeParse({ type: "placeTokens", player: "p1", tokens: { "1": "a", X: "b" } }).success).toBe(true);
   });
 
   it("normalises room codes and names", () => {

@@ -11,6 +11,8 @@ import {
   drafters,
   draftableCards,
   livingUnitsOf,
+  tokensToPlace,
+  TOKEN_IDS,
   moveOptions,
   specialActions,
   replayGame,
@@ -29,6 +31,14 @@ const { ctx } = contextFor(map);
 
 function pick<T>(rng: Rng, items: readonly T[]): T {
   return items[rng.int(0, items.length - 1)]!;
+}
+
+function shuffle<T>(rng: Rng, items: T[]): T[] {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = rng.int(0, i);
+    [items[i], items[j]] = [items[j]!, items[i]!];
+  }
+  return items;
 }
 
 /** Choose a random legal command for whoever the game is waiting on. */
@@ -57,11 +67,13 @@ function randomCommand(state: GameState, rng: Rng, c: RulesContext): Command {
     case "placeTokens": {
       const player = state.players.find((p) => !p.eliminated && !state.tokens[p.id])!.id;
       const units = livingUnitsOf(state, player).map((u) => u.id);
-      return {
-        type: "placeTokens",
-        player,
-        tokens: { "1": pick(rng, units), "2": pick(rng, units), "3": pick(rng, units), X: pick(rng, units) },
-      };
+      if (state.config.tokenRule !== "onePerUnit") {
+        return { type: "placeTokens", player, tokens: { "1": pick(rng, units), "2": pick(rng, units), "3": pick(rng, units), X: pick(rng, units) } };
+      }
+      // One token on each of some units: random tokens on random units, as many as the rules ask for.
+      const tokens = shuffle(rng, [...TOKEN_IDS]).slice(0, tokensToPlace(state, player));
+      const holders = shuffle(rng, units);
+      return { type: "placeTokens", player, tokens: Object.fromEntries(tokens.map((t, i) => [t, holders[i]!])) };
     }
     case "initiative": {
       const player = state.players.find((p) => !p.eliminated && !(state.initiativeReady ?? []).includes(p.id))!.id;
@@ -145,6 +157,8 @@ function playRandomGame(seed: number, players: number, budget: number, online = 
     budget,
     players: Array.from({ length: players }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}`, color: "#fff" })),
     ...(online ? { draft: "open" as const, initiative: "players" as const } : {}),
+    // New games keep one token on each unit; older games' stacking is covered by the engine's tests.
+    tokenRule: "onePerUnit",
   };
   const rng = new Rng(seed * 7919 + 1);
   let state = createGame(setup, ctx).state;

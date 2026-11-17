@@ -12,6 +12,8 @@ import {
   deploymentPlacements,
   draftableCards,
   livingUnitsOf,
+  TOKEN_IDS,
+  tokensToPlace,
   replayGame,
   type Command,
   type GameSetup,
@@ -127,6 +129,20 @@ async function act(clients: Map<string, Client>, command: Command): Promise<void
   await Promise.all(updates);
 }
 
+/** Send a command the server should refuse; its error message. */
+async function rejected(clients: Map<string, Client>, command: Command): Promise<string> {
+  const sender = clients.get(command.player)!;
+  const error = sender.next("error");
+  sender.send({ t: "command", command });
+  return (await error).message;
+}
+
+/** A token on each of the player's units in turn, as many as the rules ask for. */
+function oneEach(state: GameState, player: string): Record<string, string> {
+  const units = livingUnitsOf(state, player);
+  return Object.fromEntries(TOKEN_IDS.slice(0, tokensToPlace(state, player)).map((t, i) => [t, units[i % units.length]!.id]));
+}
+
 /**
  * Play a game here, simply, until the acting figure can attack: the commands so far (to resume
  * on the server) and that attack. Everyone drafts the first card they can, and figures close in.
@@ -158,8 +174,7 @@ function playUntilAttack(setup: GameSetup): { commands: Command[]; attack: Comma
       }
       case "placeTokens": {
         const player = state.players.find((p) => !p.eliminated && !state.tokens[p.id])!.id;
-        const u = livingUnitsOf(state, player)[0]!.id;
-        command = { type: "placeTokens", player, tokens: { "1": u, "2": u, "3": u, X: u } };
+        command = { type: "placeTokens", player, tokens: oneEach(state, player) };
         break;
       }
       case "initiative": {
@@ -305,9 +320,13 @@ describe("a full online game", () => {
     }
 
     // p1 places tokens: p2 and the spectator see that p1 placed them, but not where.
+    const p1Tokens = oneEach(current(), "p1");
+    // Online games keep one token on each unit.
     const p1Unit = livingUnitsOf(current(), "p1")[0]!.id;
-    await act(clients, { type: "placeTokens", player: "p1", tokens: { "1": p1Unit, "2": p1Unit, "3": p1Unit, X: p1Unit } });
-    expect(host.client.lastView()!.tokens.p1).toEqual({ "1": p1Unit, "2": p1Unit, "3": p1Unit, X: p1Unit });
+    const stacked = await rejected(clients, { type: "placeTokens", player: "p1", tokens: { "1": p1Unit, "2": p1Unit } });
+    expect(stacked).toMatch(/one token|Place \d token|All four/);
+    await act(clients, { type: "placeTokens", player: "p1", tokens: p1Tokens });
+    expect(host.client.lastView()!.tokens.p1).toEqual(p1Tokens);
     expect(guest.client.lastView()!.tokensPlaced.p1).toBe(true);
     expect(guest.client.lastView()!.tokens.p1).toEqual({});
     expect(watcher.lastView()!.tokens.p1).toEqual({});
@@ -329,8 +348,7 @@ describe("a full online game", () => {
     await badRejoin.close();
 
     // p2 places tokens too. Nobody's initiative is rolled until both players have rolled.
-    const p2Unit = livingUnitsOf(current(), "p2")[0]!.id;
-    await act(clients, { type: "placeTokens", player: "p2", tokens: { "1": p2Unit, "2": p2Unit, "3": p2Unit, X: p2Unit } });
+    await act(clients, { type: "placeTokens", player: "p2", tokens: oneEach(current(), "p2") });
     expect(current().phase).toBe("initiative");
     await act(clients, { type: "rollInitiative", player: "p1" });
     expect(back.lastView()!.initiativeReady).toEqual(["p1"]);

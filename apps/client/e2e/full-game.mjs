@@ -198,6 +198,8 @@ async function handleInitiative() {
 
 /** Set once the intro has been seen to name the fight and the board has floated a wound number. */
 let introChecked = false;
+/** The token panel was checked to keep one token on each unit. */
+let tokensChecked = false;
 let introSkipped = false;
 let woundsChecked = false;
 let woundsBefore = null;
@@ -406,8 +408,19 @@ try {
       await page.locator(".pass-card button").click();
       const rows = page.locator(".token-table tbody tr");
       const n = await rows.count();
-      for (const [row, token] of [[0, "1"], [n - 1, "2"], [0, "3"], [n - 1, "X"]]) {
+      // One token on each unit (the rule now), as many as there are units, up to four.
+      const tokens = ["1", "2", "3", "X"].slice(0, Math.min(4, n));
+      for (const [row, token] of tokens.entries()) {
         await rows.nth(row).getByRole("button", { name: new RegExp(`^Token ${token} on`) }).click();
+      }
+      // A second token on a unit takes the first one's place.
+      if (!tokensChecked && n >= 2) {
+        tokensChecked = true;
+        await rows.nth(0).getByRole("button", { name: /^Token 2 on/ }).click();
+        if ((await rows.nth(0).getByRole("button", { name: /^Token 1 on/ }).getAttribute("aria-pressed")) !== "false") fail("A unit kept two tokens");
+        if (await page.getByRole("button", { name: "Lock in tokens" }).count()) fail("Tokens could be locked in with one left off");
+        await rows.nth(0).getByRole("button", { name: /^Token 1 on/ }).click();
+        await rows.nth(1).getByRole("button", { name: /^Token 2 on/ }).click();
       }
       if (step === 0 || attacks === 0) await shot("4-tokens");
       await page.getByRole("button", { name: "Lock in tokens" }).click();

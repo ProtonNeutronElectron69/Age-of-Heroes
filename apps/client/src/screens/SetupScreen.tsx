@@ -175,6 +175,8 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
         roundLimit,
         budget: noLimit ? null : budget,
         factionPure,
+        // At most one activation token on each unit.
+        tokenRule: "onePerUnit",
         players: Array.from({ length: players }, (_, i) => ({
           id: `p${i + 1}`,
           name: names[i]!.trim() || `Player ${i + 1}`,

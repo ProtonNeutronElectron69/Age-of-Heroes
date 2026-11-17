@@ -129,7 +129,9 @@ Online, the host picks the options above and shares a room code. Seats and color
 Each round has three parts.
 
 ### 5.1 Place activation tokens
-Every player has four tokens: **1, 2, 3** and a bluff token **X**. In secret, each player places all four on their own living units' cards. One card may hold several tokens. The X token does nothing; it hides which units will act.
+Every player has four tokens: **1, 2, 3** and a bluff token **X**. In secret, each player places them on their own living units' cards, **one token per card**. A player with four or more living units places all four. A player with fewer places one token on each unit and chooses which tokens to leave off. The X token does nothing; it hides which units will act.
+
+Games saved before this rule keep the older one: all four tokens placed, and one card may hold several.
 
 ### 5.2 Roll initiative
 Every player rolls a d20. If several players tie for the highest roll, only they roll again, until one is highest. That player goes first, and play passes to the left (increasing seat order, wrapping around) for the rest of the round. Online, the round waits until every player has rolled before any roll is made or shown (see Playing online).
@@ -140,7 +142,7 @@ Every player rolls a d20. If several players tie for the highest roll, only they
 3. Then the same for the **3** token.
 4. Finally all X tokens are revealed, and a new round begins with token placement.
 
-If the unit holding a token has been destroyed by the time the token is revealed, **that turn is lost.**
+If the unit holding a token has been destroyed by the time the token is revealed, **that turn is lost.** A token that was left off gives that player no turn at that step.
 
 If a player loses their last figure during their own turn (to lava, a fall or a passing strike), they are out and play moves straight on to the next turn.
 

@@ -46,7 +46,8 @@ export const commandSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("placeTokens"),
     player: id,
-    tokens: z.object({ "1": id, "2": id, "3": id, X: id }).strict(),
+    // Every token in older games; under the "onePerUnit" rule, one for each of the player's units, up to four.
+    tokens: z.object({ "1": id.optional(), "2": id.optional(), "3": id.optional(), X: id.optional() }).strict(),
   }),
   z.object({ type: z.literal("move"), player: id, figureId: id, path: z.array(stepSchema).min(1).max(64) }),
   z.object({ type: z.literal("attack"), player: id, figureId: id, targetId: id, ability: id.optional(), aim: hexSchema.optional() }),
@@ -90,6 +91,8 @@ const setupSchema = z
     /** Online games: everyone drafts at once, and each player rolls their own initiative. Older files leave these out. */
     draft: z.enum(["snake", "open"]).optional(),
     initiative: z.enum(["auto", "players"]).optional(),
+    /** New games: at most one activation token on each unit. Older files leave it out. */
+    tokenRule: z.enum(["stack", "onePerUnit"]).optional(),
   })
   .superRefine((s, ctx) => {
     if (s.mode === "basic") ctx.addIssue({ code: "custom", path: ["mode"], message: BASIC_RULES_GONE });
@@ -275,7 +278,8 @@ export function stateFromView(view: PlayerView): GameState {
       continue;
     }
     const known = tokens[p.id] ?? {};
-    full[p.id] = { "1": known["1"] ?? "", "2": known["2"] ?? "", "3": known["3"] ?? "", X: known.X ?? "" };
+    // The viewer's own tokens are all known, placed or not; another player's hidden ones are blank.
+    full[p.id] = p.id === view.viewer ? { ...known } : { "1": known["1"] ?? "", "2": known["2"] ?? "", "3": known["3"] ?? "", X: known.X ?? "" };
   }
   return { ...rest, rng: 0, tokens: full };
 }
