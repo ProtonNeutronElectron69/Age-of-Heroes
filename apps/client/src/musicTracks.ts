@@ -56,6 +56,7 @@ export const PLAYLISTS: Readonly<Record<Mood, readonly Track[]>> = {
   ],
   battle: [
     { file: "battle-theme-a", title: "Battle Theme A", composer: "cynicmusic", licence: "CC0", source: `${OGA}battle-theme-a` },
+    { file: "battle-theme", title: "Battle Theme", composer: "Wolfgang_", licence: "CC0", source: `${OGA}battle-theme-0` },
     {
       file: "clash-defiant",
       title: "Clash Defiant",
