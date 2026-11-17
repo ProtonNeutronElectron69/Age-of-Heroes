@@ -1638,3 +1638,51 @@ p.bad {
     height: 60vh;
   }
 }
+
+/* ---- Music: the on/off box and volume, and the credits ---------------------- */
+
+.music-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.music-control .check {
+  margin-top: 0;
+}
+
+.music-control input[type="range"] {
+  flex: 1;
+  min-width: 60px;
+  accent-color: #e8c374;
+}
+
+.credits {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.credits h3 {
+  margin: 12px 0 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.credits ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.credits li {
+  margin-top: 3px;
+}
+
+.credits a {
+  color: inherit;
+}
+
+.credits > button {
+  margin-top: 12px;
+}

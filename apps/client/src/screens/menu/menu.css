@@ -1639,6 +1639,12 @@
    Compact: a narrow or upright window flows the menu into one column.
    ===================================================================== */
 
+/* Decor may hang past the stage (the Hex Command lattice does). Clip it, so that a click or a
+   focus can never scroll the menu to it; the one-column menu below still scrolls. */
+.screen.main-menu:not(.compact) {
+  overflow: clip;
+}
+
 .main-menu.compact {
   overflow-y: auto;
 }
@@ -1849,4 +1855,72 @@
 
 .ms-banner-hall .mc.on::after {
   bottom: -14px;
+}
+
+/* Music on or off, its volume, and the credits: a pill like the style picker, placed by each style. */
+.menu-sound {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  box-sizing: border-box;
+  padding: 0 6px 0 12px;
+  border-radius: 999px;
+  background: rgba(10, 8, 6, 0.72);
+  border: 1px solid rgba(240, 200, 120, 0.3);
+  color: #efe3cb;
+  font-size: 13px;
+}
+
+.ms-war-table .menu-sound {
+  left: 56px;
+  bottom: 62px;
+}
+
+.menu-sound .check {
+  font-size: 13px;
+  color: inherit;
+  gap: 6px;
+}
+
+.menu-sound input[type="range"] {
+  width: 84px;
+  flex: none;
+}
+
+.menu-sound .credits-button {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+}
+
+.menu-sound .credits-button:hover {
+  background: rgba(240, 200, 120, 0.16);
+}
+
+.ms-atlas .menu-sound {
+  left: 64px;
+  bottom: 86px;
+  background: rgba(51, 36, 26, 0.88);
+}
+
+.ms-banner-hall .menu-sound {
+  left: 22px;
+  top: 14px;
+}
+
+.ms-hex-command .menu-sound {
+  left: 60px;
+  top: 118px;
+}
+
+.main-menu.compact .menu-sound {
+  position: static;
+  height: auto;
+  padding: 4px 6px 4px 12px;
+  align-self: flex-start;
 }

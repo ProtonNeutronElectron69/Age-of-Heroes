@@ -42,6 +42,7 @@ import { PingInput, Pings, useOnlinePings } from "../scene/Pings";
 import { downloadGameFile } from "../saves";
 import { canControl, clearError, dispatch, endSession, replayOf, type Session } from "../session";
 import { DisplayMenu } from "../ui/DisplayMenu";
+import { useBattleMusic } from "../music";
 import { toggleFigures, useDisplay } from "../settings";
 import { GameMenu } from "../ui/GameMenu";
 import { HexTip, useHexTip, zoneOwners } from "../ui/HexTip";
@@ -148,6 +149,8 @@ export function PlayScreen({ session }: { session: Session }) {
   const [beat, setBeat] = useState<Beat | null>(null);
   const beatRef = useRef(beat);
   beatRef.current = beat;
+  // The battle music comes in with an attack and stays a while after it.
+  useBattleMusic(beat !== null);
   const online = useOnline();
   const watching = isOnline ? online.watching : null;
   /** The show whose wait has run out (HOLD_LIMIT_MS). */

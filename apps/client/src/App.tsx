@@ -11,6 +11,7 @@ import { PlayScreen } from "./screens/PlayScreen";
 import { ReplayScreen } from "./screens/ReplayScreen";
 import { SetupScreen } from "./screens/SetupScreen";
 import { UnitGalleryScreen } from "./screens/UnitGalleryScreen";
+import { useMusicScene } from "./music";
 import { useSession } from "./session";
 
 type View =
@@ -23,6 +24,9 @@ export function App() {
   const session = useSession();
   const online = useOnline();
   const [view, setView] = useState<View>({ name: "setup" });
+  // Menu music everywhere outside a game; a game has its own, and its end has the victory music.
+  const inGame = session !== null || view.name === "replay";
+  useMusicScene(session?.state.phase === "gameOver" ? "victory" : inGame ? "play" : "menu");
 
   // The card and model galleries are design pages, opened with ?cards or ?models in the address.
   const query = new URLSearchParams(window.location.search);

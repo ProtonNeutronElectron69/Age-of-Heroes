@@ -20,6 +20,9 @@ export interface DisplaySettings {
   readonly autoPan: boolean;
   readonly autoRotate: boolean;
   readonly autoZoom: boolean;
+  /** Whether music plays, and how loud (0 to 1). */
+  readonly music: boolean;
+  readonly musicVolume: number;
 }
 
 /**
@@ -62,6 +65,8 @@ const DEFAULTS: DisplaySettings = {
   autoPan: true,
   autoRotate: true,
   autoZoom: true,
+  music: true,
+  musicVolume: 0.6,
 };
 
 function load(): DisplaySettings {
@@ -76,6 +81,9 @@ function load(): DisplaySettings {
       autoPan: saved.autoPan !== false,
       autoRotate: saved.autoRotate !== false,
       autoZoom: saved.autoZoom !== false,
+      music: saved.music !== false,
+      musicVolume:
+        typeof saved.musicVolume === "number" && saved.musicVolume >= 0 && saved.musicVolume <= 1 ? saved.musicVolume : DEFAULTS.musicVolume,
     };
   } catch {
     return DEFAULTS;
@@ -100,7 +108,12 @@ export function toggleFigures(): void {
   setDisplay({ figures: settings.figures === "models" ? "tokens" : "models" });
 }
 
-function subscribe(listener: () => void) {
+/** The settings now, for code outside React (the music player). */
+export function getDisplay(): DisplaySettings {
+  return settings;
+}
+
+export function subscribe(listener: () => void) {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
