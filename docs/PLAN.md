@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with six premade maps, hot-seat and online play, saved games and replays. 562 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 562 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 - **On hold (Phase 6):** a computer opponent, and a tutorial.
@@ -274,3 +274,6 @@ Small changes asked for after playing, online games especially.
 - [x] The Glyphs panel lists held glyphs, the stat glyphs in play and the curses counting down; the hex tooltip says where one lies; the online lobby shows how many; the initiative show adds the bonus to the roll
 - [x] Glyph changes: the Herald counts for the next initiative roll only, then is spent; the Hawk gives +3 range and goes only on a unit with a Range above 1; Return is renamed Resurrection
 - [x] Resurrected units are placed by hand: the player clicks highlighted hexes for each figure, as at deployment, with Auto place, Clear, Cancel and Confirm
+
+### Riverbend
+- [x] A new 2-player map, built from the textured tile mockup: a river bends across open fields below a rocky hill with a snowy top, with a cobbled road and ford, a grassy knoll, a wood, a swamp, a frozen pond and a lava vent on the hill's flank. Scenery: four trees in the wood, a large tree, two boulders, a ruined wall, a small ruined wall on the knoll, a large wall by the pond and a low wall at the ford. Start zones run along the west and east edges and grow to fit the armies
