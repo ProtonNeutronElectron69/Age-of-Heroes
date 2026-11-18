@@ -92,6 +92,16 @@ try {
   await clickHex(-5, -3, 1);
   await clickHex(-4, -3, 1);
   if (!(await stats()).includes("2 scenery")) fail(`Trees were not placed: ${await stats()}`);
+  // A large tree fills four hexes: refused where it would overlap the trees, placed on open ground.
+  await page.getByRole("button", { name: "Large tree" }).click();
+  await clickHex(-5, -3, 1);
+  if (!(await status()).startsWith("Two pieces of scenery stand here")) fail(`Large tree on the trees: ${await status()}`);
+  await clickHex(3, 2, 1);
+  // A low wall stands between two rows of hexes; it turns with R, so it has the rotate buttons.
+  await page.getByRole("button", { name: "Low wall" }).click();
+  if (!(await page.getByRole("button", { name: "Rotate right" }).count())) fail("A low wall cannot be turned");
+  await clickHex(-6, -1, 1);
+  if (!(await stats()).includes("4 scenery")) fail(`The large tree and low wall were not placed: ${await stats()}`);
 
   // Without start zones the map cannot be played yet.
   if (!(await page.getByRole("button", { name: "Save and play" }).isDisabled())) fail("Play should need start zones");
@@ -167,7 +177,7 @@ try {
   const file = join(tmpdir(), `aoh-e2e-${Date.now()}.json`);
   await download.saveAs(file);
   const exported = JSON.parse(await readFile(file, "utf8"));
-  if (exported.name !== "Test Bridge" || exported.pieces.length !== 13 || exported.scenery.length !== 2) {
+  if (exported.name !== "Test Bridge" || exported.pieces.length !== 13 || exported.scenery.length !== 4) {
     fail(`Exported file looks wrong: ${exported.name}, ${exported.pieces.length} pieces`);
   }
   await page.getByRole("button", { name: "New", exact: true }).click();

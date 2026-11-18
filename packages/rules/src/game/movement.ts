@@ -62,7 +62,8 @@ export function stopsMovement(from: Step, to: Step, ctx: RulesContext): boolean 
 
 /**
  * Can a figure physically step between two adjacent spots? The destination
- * must have room for the figure and no scenery, climbing needs headroom in
+ * must have room for the figure and no scenery, no wall may stand between the
+ * two hexes (unless the figure is above it), climbing needs headroom in
  * the current hex, and dropping needs headroom in the destination. A single
  * step may not climb more levels than the figure's Height.
  */
@@ -72,6 +73,8 @@ export function canStep(from: Step, to: Step, height: number, ctx: RulesContext)
   const here = ctx.board.surfaceAt(from.hex, from.elevation);
   if (!dest || !here) return false;
   if (ctx.board.sceneryAt(to.hex, to.elevation)) return false;
+  // No stepping across a wall between the two hexes.
+  if (ctx.board.wallBetween(from, to)) return false;
   const rise = to.elevation - from.elevation;
   if (dest.clearance < Math.max(height, -rise)) return false;
   if (rise > 0 && here.clearance < rise) return false;
@@ -620,6 +623,7 @@ function slideTarget(mover: Mover, from: Step, at: Step, occ: Map<string, Occupa
   if (!s) return null;
   const step = { hex, elevation: s.elevation };
   if (ctx.board.sceneryAt(hex, s.elevation)) return null;
+  if (ctx.board.wallBetween(at, step)) return null;
   if (s.clearance < Math.max(mover.stats.height, at.elevation - s.elevation)) return null;
   const occupant = occ.get(stepKey(step));
   if (occupant && occupant.figure.id !== mover.figure.id) return null;

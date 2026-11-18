@@ -185,24 +185,27 @@ function pickWeighted<T>(rng: Rng, items: readonly [T, number][]): T {
  * Scatter small pieces (1 to 4 hexes) on level `level` (2 or more): each one
  * sits on top of standard terrain and copies it, so grass grows on grass.
  * Only hexes whose top is at the level below are used, which keeps the space
- * under bridges open, and hexes with scenery are left alone.
+ * under bridges open, and hexes with scenery are left alone, as are the hexes a wall
+ * between hexes stands on (pass the scenery table so bigger scenery and walls are known).
  */
 export function populateTerrain(
   map: MapDefinition,
   level: number,
   rng: Rng,
   terrain: TerrainTable,
+  scenery?: SceneryTable,
 ): { map: MapDefinition; added: number } {
   const layer = level - 1;
   if (layer < 1) return { map, added: 0 };
-  const board = Board.fromMap(map).board;
+  const board = Board.fromMap(map, undefined, scenery).board;
+  const wallRows = new Set(board.walls().flatMap((w) => w.wall!.row.map(hexKey)));
   const open = new Map<string, string>();
   for (const h of board.hexes()) {
     const col = board.column(h);
     const top = col[col.length - 1];
     if (!top || top.layer !== layer - 1) continue;
     if (terrain.get(top.terrain)?.category !== "standard") continue;
-    if (board.sceneryAt(h, layer)) continue;
+    if (board.sceneryAt(h, layer) || wallRows.has(hexKey(h))) continue;
     open.set(hexKey(h), top.terrain);
   }
   if (open.size === 0) return { map, added: 0 };
@@ -243,7 +246,8 @@ export function populateScenery(
   const board = Board.fromMap(map, terrain, scenery).board;
   const zone = new Set(map.startZones.flatMap((z) => z.hexes.map(hexKey)));
   const crowded = new Set(map.scenery.flatMap((s) => [s.hex, ...hexNeighbors(s.hex)].map(hexKey)));
-  const kinds: SceneryRules[] = [...scenery.values()];
+  // One-hex scenery only: bigger pieces and walls between hexes are placed by hand.
+  const kinds: SceneryRules[] = [...scenery.values()].filter((k) => !k.footprint && !k.between);
   const open: { hex: Hex; clearance: number }[] = [];
   for (const h of board.hexes()) {
     const s = board.surfaceAt(h, level);
@@ -268,9 +272,10 @@ export function populateScenery(
   return { map: next, added };
 }
 
-export function addScenery(map: MapDefinition, kind: string, hex: Hex, elevation: number): MapDefinition {
+/** Add a piece of scenery; `rotation` turns pieces bigger than one hex and walls between hexes. */
+export function addScenery(map: MapDefinition, kind: string, hex: Hex, elevation: number, rotation = 0): MapDefinition {
   const id = nextId("s", map.scenery.map((s) => s.id));
-  const placement: SceneryPlacement = { id, kind, hex, elevation };
+  const placement: SceneryPlacement = rotation ? { id, kind, hex, elevation, rotation } : { id, kind, hex, elevation };
   return { ...map, scenery: [...map.scenery, placement] };
 }
 

@@ -27,7 +27,7 @@ import {
   shapeCells,
   sidePlacement,
   toggleZoneHex,
-  type Board,
+  Board,
   type Cell,
   type Hex,
   type MapDefinition,
@@ -37,6 +37,8 @@ import {
   type Step,
   type TerrainRules,
   type Vec3,
+  footprintCells,
+  wallLine,
 } from "@aoh/rules";
 import { Canvas, useThree } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -44,7 +46,7 @@ import { createPortal } from "react-dom";
 import { CylinderGeometry, Matrix4, Vector3, type InstancedMesh } from "three";
 import { terrainEffect } from "../describe";
 import { customMaps, downloadMap, isPremade, newMapId, readMapFile, saveCustomMap } from "../maps";
-import { BoardScene, boardCenter, type Marker } from "../scene/BoardScene";
+import { BoardScene, SceneryMesh, boardCenter, type Marker } from "../scene/BoardScene";
 import { HEX_GAP, SEAT_COLORS } from "../scene/scale";
 import { TestHook } from "../scene/TestHook";
 
@@ -429,18 +431,46 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
     commit(next);
   };
 
+  // ---- Scenery: where the chosen kind would stand, and why it cannot -------
+  const sceneryRules = SCENERY_TABLE.get(sceneryKind)!;
+  /** Bigger scenery and walls between hexes turn with the rotation (R). */
+  const turnsScenery = !!(sceneryRules.footprint || sceneryRules.between);
+  const sceneryProblem = (h: Hex, elevation: number): string | null => {
+    const placement = { id: "new-scenery", kind: sceneryKind, hex: h, elevation, rotation: turnsScenery ? rotation : 0 };
+    const cells = sceneryRules.between ? [] : sceneryRules.footprint ? footprintCells(sceneryRules.footprint, h, placement.rotation) : [h];
+    const zoned = new Set(map.startZones.flatMap((z) => z.hexes.map(hexKey)));
+    if (cells.some((c) => zoned.has(hexKey(c)))) return "Scenery cannot go in a start zone.";
+    const issue = Board.fromMap({ ...map, scenery: [...map.scenery, placement] }, TERRAIN_TABLE, SCENERY_TABLE).issues.find(
+      (i) => i.sceneryId === placement.id,
+    );
+    return issue ? issue.message.replace(/ at -?\d+,-?\d+ level \d+/, " here") : null;
+  };
+  const ghostAt = tool === "scenery" && hoverCell ? board.surfaces(hoverCell.hex).find((s) => s.elevation > hoverCell.layer) : undefined;
+  const ghostKey = ghostAt ? `${hexKey(ghostAt.hex)}@${ghostAt.elevation}:${sceneryKind}:${rotation}` : "";
+  const ghostScenery = useMemo(() => {
+    if (!ghostAt) return null;
+    const placement = { id: "ghost", kind: sceneryKind, hex: ghostAt.hex, elevation: ghostAt.elevation, rotation: turnsScenery ? rotation : 0 };
+    const spot: ScenerySpot = {
+      placement,
+      rules: sceneryRules,
+      cells: sceneryRules.between ? [] : sceneryRules.footprint ? footprintCells(sceneryRules.footprint, placement.hex, placement.rotation) : [placement.hex],
+      ...(sceneryRules.between ? { wall: wallLine(placement.hex, placement.rotation, sceneryRules.between) } : {}),
+    };
+    return { spot, problem: sceneryProblem(ghostAt.hex, ghostAt.elevation) };
+  }, [ghostKey, map]);
+
   const onSurfaceClick = (step: Step, cell: Cell) => {
     switch (tool) {
       case "piece":
         if (shiftHeld && side && side.cell === cell) placePiece(side.origin, (rotation + side.direction) % 6, cell.layer);
         else placePiece(cell.hex);
         break;
-      case "scenery":
-        if (board.sceneryAt(step.hex, step.elevation)) setStatus("There is already scenery there.");
-        else if (map.startZones.some((z) => z.hexes.some((h) => hexKey(h) === hexKey(step.hex)))) {
-          setStatus("Scenery cannot go in a start zone.");
-        } else commit(addScenery(map, sceneryKind, step.hex, step.elevation));
+      case "scenery": {
+        const problem = sceneryProblem(step.hex, step.elevation);
+        if (problem) setStatus(problem);
+        else commit(addScenery(map, sceneryKind, step.hex, step.elevation, turnsScenery ? rotation : 0));
         break;
+      }
       case "zone": {
         const inZone = map.startZones.find((z) => z.seat === seat)?.hexes.some((h) => hexKey(h) === hexKey(cell.hex));
         const problem = inZone ? null : board.zoneProblem(cell.hex);
@@ -470,7 +500,13 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
       }
     }
   }
-  if (hoverCell && (tool === "scenery" || tool === "zone")) {
+  if (ghostScenery) {
+    // The hexes a piece would fill, or a wall's row; red where it cannot go.
+    const color = ghostScenery.problem ? "#ff3b30" : "#ffffff";
+    const under = ghostScenery.spot.wall ? ghostScenery.spot.wall.row : ghostScenery.spot.cells;
+    for (const h of under) markers.push({ step: { hex: h, elevation: ghostScenery.spot.placement.elevation }, color, opacity: 0.5 });
+  }
+  if (hoverCell && tool === "zone") {
     const top = board.surfaces(hoverCell.hex).find((s) => s.elevation > hoverCell.layer);
     if (top) markers.push({ step: { hex: hoverCell.hex, elevation: top.elevation }, color: "#ffffff", opacity: 0.6 });
   }
@@ -499,7 +535,7 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
     setStatus(done.length > 0 ? `Fixed: ${done.join(", ")}.` : "Nothing could be fixed automatically.");
   };
   const fillTerrain = () => {
-    const result = populateTerrain(map, fillLevel, fillRng(), TERRAIN_TABLE);
+    const result = populateTerrain(map, fillLevel, fillRng(), TERRAIN_TABLE, SCENERY_TABLE);
     if (result.added === 0) {
       setStatus(
         fillLevel < 2
@@ -636,6 +672,7 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
               color={ghostBlocked ? "#ff3b30" : ghostLoose ? "#ff9f1c" : (TERRAIN_TABLE.get(terrain)?.color ?? "#ffffff")}
             />
           )}
+          {ghostScenery && !ghostScenery.problem && <SceneryMesh spot={ghostScenery.spot} ghost />}
           <CellBoxes cells={board.sealedGaps()} color="#b45cff" opacity={0.5} overlay />
           <CellBoxes cells={pieceCells(board, problemPieces)} color="#ff9f1c" opacity={0.3} overlay />
           {focusedIssue?.pieceId && (
@@ -765,7 +802,23 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
                   </button>
                 ))}
               </div>
-              <p className="muted small">Click terrain to place. Scenery blocks movement and line of sight.</p>
+              {turnsScenery && (
+                <div className="control-row">
+                  <span>Rotate</span>
+                  <button type="button" aria-label="Rotate left" onClick={() => setRotation((r) => (r + 5) % 6)}>
+                    ⟲
+                  </button>
+                  <button type="button" aria-label="Rotate right" onClick={() => setRotation((r) => (r + 1) % 6)}>
+                    ⟳
+                  </button>
+                  <span className="muted small">R key</span>
+                </div>
+              )}
+              <p className="muted small">
+                {sceneryRules.between
+                  ? `${sceneryRules.name}: stands between two rows of hexes and leaves them open. No figure can step across it, and it blocks line of sight.${sceneryRules.cover ? ` A figure behind it gets +${sceneryRules.cover} defense against attacks from range across it.` : ""}`
+                  : "Click terrain to place. Scenery blocks movement and line of sight."}
+              </p>
               <h2>Random fill</h2>
               {fillLevelControl}
               <div className="actions">

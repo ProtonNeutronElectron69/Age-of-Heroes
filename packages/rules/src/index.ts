@@ -7,6 +7,7 @@ export * from "./terrain";
 export * from "./schema";
 export * from "./board";
 export * from "./world";
+export * from "./walls";
 export * from "./tuning";
 export * from "./los";
 export * from "./editor";

@@ -33,6 +33,7 @@ Dependencies only point downwards: `client` and `server` use `protocol`, `conten
 | `terrain.ts`, `tuning.ts` | The shape of terrain rules and tunable numbers (the values live in `content`) |
 | `dice.ts`, `rng.ts` | Attack and defense dice, and the seeded RNG (mulberry32) |
 | `los.ts` | Line of sight: a strict check from the eye point to the hit band, with terrain, scenery and other figures blocking |
+| `walls.ts` | Walls between hexes: which edges a wall stands on (`wallLine`) and its line on the ground. The board stores them by edge (`wallBetween`, `wallsAround`); `canStep` and `placementSpots` refuse to cross or straddle one, `los.ts` treats each as a thin upright box, and `coverFrom` in `game/combat.ts` gives a low wall's cover |
 | `editor.ts` | Pure map-editing operations used by the map editor: placing and removing pieces, side placement, start zones, fixing problems, and seeded random fills |
 | `game/types.ts` | `GameState`, `Command`, `GameEvent`, `PlayerView` and friends |
 | `game/engine.ts` | `createGame`, `applyCommand`, `replayGame`, `waitingOn` and the turn flow |

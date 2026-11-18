@@ -28,7 +28,7 @@ export function footprintSize(footprint: Footprint): number {
 /**
  * The spots a figure covers at a placement, front hex first, or null if it
  * cannot stand there. Every hex needs ground with room for the figure's
- * Height and no scenery. The front hex stands at the placement's elevation;
+ * Height and no scenery, and no wall may stand between two of its hexes. The front hex stands at the placement's elevation;
  * the others use the ground closest to it, at most `maxStraddle` levels away.
  */
 export function placementSpots(
@@ -54,6 +54,12 @@ export function placementSpots(
     const best = candidates[0];
     if (!best) return null;
     spots.push({ hex: h, elevation: best.elevation });
+  }
+  // A larger figure cannot stand astride a wall between hexes.
+  for (let i = 0; i < spots.length; i++) {
+    for (let j = i + 1; j < spots.length; j++) {
+      if (board.wallBetween(spots[i]!, spots[j]!)) return null;
+    }
   }
   return spots;
 }

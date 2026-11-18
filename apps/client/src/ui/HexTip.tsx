@@ -80,6 +80,7 @@ export function HexTip({
   const rules = terrain.get(surface?.terrain ?? cell.terrain);
   const effect = rules ? terrainEffect(rules) : null;
   const scenery = board.sceneryIn(step.hex).filter((s) => s.placement.elevation === step.elevation);
+  const walls = board.wallsAround(step.hex).filter((w) => step.elevation >= w.placement.elevation && step.elevation < w.placement.elevation + w.rules.height);
   const zone = zones?.get(hexKey(step.hex));
   const headroom = surface && Number.isFinite(surface.clearance) ? surface.clearance : null;
   const bridge = surface ? board.isSpanPiece(surface.pieceId) : false;
@@ -98,6 +99,13 @@ export function HexTip({
       {scenery.map((s) => (
         <p key={s.placement.id}>
           {s.rules.name}, {s.rules.height} levels tall: no figure can stand here, and it blocks line of sight.
+        </p>
+      ))}
+      {walls.map((w) => (
+        <p key={w.placement.id}>
+          {w.rules.name}, {w.rules.height} levels tall, on an edge of this hex: no figure can step across it, and it blocks
+          line of sight.
+          {w.rules.cover ? ` A figure here gets +${w.rules.cover} defense against an attack from range across it.` : ""}
         </p>
       ))}
       {zone && (

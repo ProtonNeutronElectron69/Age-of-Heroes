@@ -1,7 +1,9 @@
 import { rollCombat } from "../dice";
-import { DIRECTIONS, hexAdd, hexDistance, hexEquals, hexKey, hexSub, isAdjacent, type Hex } from "../hex";
+import { DIRECTIONS, hexAdd, hexDistance, hexEquals, hexKey, hexSub, hexToWorld, isAdjacent, type Hex } from "../hex";
 import { hasLineOfSight, type Token } from "../los";
 import { Rng } from "../rng";
+import { segmentsCross } from "../walls";
+import { HEX_SIZE } from "../world";
 import { isUnique } from "../schema";
 import type { Tuning } from "../tuning";
 import {
@@ -364,6 +366,33 @@ export function attackTargets(state: GameState, figureId: string, ctx: RulesCont
   return targets;
 }
 
+/**
+ * Cover from a wall between hexes that gives it (a low wall): the defender stands on a hex next
+ * to the wall, below its top, the attack comes from range (not from a neighbouring hex), and the
+ * line from the attacker to the defender crosses the wall. Several walls do not add up.
+ */
+export function coverFrom(
+  attackerSpots: readonly Step[],
+  defenderSpots: readonly Step[],
+  ctx: RulesContext,
+): { dice: number; name: string } | null {
+  if (attackerSpots.length === 0 || defenderSpots.length === 0) return null;
+  if (spotDistance(attackerSpots, defenderSpots) <= 1) return null;
+  let best: { dice: number; name: string } | null = null;
+  for (const d of defenderSpots) {
+    const to = hexToWorld(d.hex, HEX_SIZE);
+    for (const w of ctx.board.wallsAround(d.hex)) {
+      const dice = w.rules.cover ?? 0;
+      if (dice <= (best?.dice ?? 0)) continue;
+      const base = w.placement.elevation;
+      if (d.elevation < base || d.elevation >= base + w.rules.height) continue;
+      const crosses = attackerSpots.some((a) => segmentsCross(hexToWorld(a.hex, HEX_SIZE), to, w.wall!.from, w.wall!.to));
+      if (crosses) best = { dice, name: w.rules.name };
+    }
+  }
+  return best;
+}
+
 /** The dice an attack would roll, with height and ability bonuses and the reasons for them. */
 export function attackDice(
   state: GameState,
@@ -391,9 +420,11 @@ function diceFor(state: GameState, ctx: RulesContext, attacker: Combatant, defen
   if (height.attackBonus > 0) notes.push(`Higher ground +${height.attackBonus} attack`);
   if (height.defenseBonus > 0) notes.push(`Higher ground +${height.defenseBonus} defense`);
   const mods = abilityModifiers(state, ctx, attacker, defender, spotDistance(attacker.spots, defender.spots));
+  const cover = coverFrom(attacker.spots, defender.spots, ctx);
   const attackBonus = height.attackBonus + mods.attack;
-  const defenseBonus = height.defenseBonus + mods.defense;
+  const defenseBonus = height.defenseBonus + mods.defense + (cover?.dice ?? 0);
   notes.push(...mods.notes);
+  if (cover) notes.push(`Behind a ${cover.name.toLowerCase()} +${cover.dice} defense`);
   return {
     attack: (baseAttack ?? aStats.attack) + attackBonus,
     defense: Math.max(0, tStats.defense + defenseBonus),

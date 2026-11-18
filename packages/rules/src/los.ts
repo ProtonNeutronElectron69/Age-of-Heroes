@@ -1,5 +1,6 @@
 import type { Board } from "./board";
 import { hexKey, hexLine, hexNeighbors, hexToWorld, type Hex } from "./hex";
+import { WALL_HALF_THICKNESS } from "./walls";
 import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS } from "./world";
 
 /**
@@ -118,6 +119,32 @@ export function segmentHitsCylinder(
   return Math.max(span[0], t0) <= Math.min(span[1], t1);
 }
 
+/**
+ * Does a segment pass through a thin upright wall: a box `halfThickness` either side of the
+ * line from `p0` to `p1` in the ground plane, from `yMin` to `yMax`?
+ */
+export function segmentHitsWall(
+  a: Vec3,
+  b: Vec3,
+  p0: { x: number; z: number },
+  p1: { x: number; z: number },
+  halfThickness: number,
+  yMin: number,
+  yMax: number,
+): boolean {
+  const span: [number, number] = [0, 1];
+  if (!clip(a.y, b.y - a.y, yMin + EPS, yMax - EPS, span)) return false;
+  const lx = p1.x - p0.x;
+  const lz = p1.z - p0.z;
+  const length = Math.hypot(lx, lz);
+  if (length < 1e-9) return false;
+  const ux = lx / length;
+  const uz = lz / length;
+  // Along the wall, then across it.
+  if (!clip(ux * (a.x - p0.x) + uz * (a.z - p0.z), ux * (b.x - a.x) + uz * (b.z - a.z), 0, length, span)) return false;
+  return clip(-uz * (a.x - p0.x) + ux * (a.z - p0.z), -uz * (b.x - a.x) + ux * (b.z - a.z), -halfThickness, halfThickness, span);
+}
+
 /** Hexes that a segment between two hexes could pass through. */
 function corridor(a: Hex, b: Hex): Hex[] {
   const seen = new Map<string, Hex>();
@@ -163,6 +190,11 @@ function segmentBlocked(
           : segmentHitsCylinder(eye, target, x, z, (rules.radius ?? 0.6) * HEX_SIZE, y0, y1);
       if (hit) return true;
     }
+  }
+  // Walls between hexes are thin upright boxes along their line.
+  for (const { placement, rules, wall } of board.walls()) {
+    const y0 = placement.elevation * LEVEL_HEIGHT;
+    if (segmentHitsWall(eye, target, wall!.from, wall!.to, WALL_HALF_THICKNESS, y0, y0 + rules.height * LEVEL_HEIGHT)) return true;
   }
   for (const t of opts.blockers ?? []) {
     const { x, z } = hexToWorld(t.hex, HEX_SIZE);

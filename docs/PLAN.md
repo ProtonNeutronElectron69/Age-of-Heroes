@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with six premade maps, hot-seat and online play, saved games and replays. 531 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with six premade maps, hot-seat and online play, saved games and replays. 545 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 - **On hold (Phase 6):** a computer opponent, and a tutorial.
@@ -261,3 +261,7 @@ Small changes asked for after playing, online games especially.
 - [x] Activation tokens: one token per unit. A player with fewer than four living units places one on each and leaves the rest off; a token left off skips that turn. New games use it (`tokenRule: "onePerUnit"`); older saves keep stacking, so they replay exactly
 - [x] The attack intro shows the melee sign for a normal attack on a neighbouring figure, whatever the attacker's Range
 - [x] The gaming table no longer flickers when zoomed far out: the camera's near plane now scales with its distance, and the table's slab sits clear of its top surface
+
+### More scenery
+- [x] Four new pieces, after the owner's reference art: a **large tree** (12 levels, on 4 hexes), a **large wall** (a ruined castle wall, 7 levels, 3 hexes long), a **small ruined wall** (5 levels, 2 hexes long) and a **low wall** (3 levels, 3 hexes long). The last two stand between hexes and leave the hexes open; nobody can step across them, and a figure behind a low wall rolls 1 extra defense die against attacks from range across it
+- [x] The editor turns bigger scenery and walls with R and previews where they go; random fill still scatters only one-hex scenery, and leaves the hexes under walls and bigger scenery alone
