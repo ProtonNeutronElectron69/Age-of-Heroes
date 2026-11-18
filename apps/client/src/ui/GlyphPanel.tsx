@@ -2,7 +2,6 @@ import { GLYPHS, glyphEffect } from "@aoh/content";
 import {
   glyphProblem,
   summonPlacements,
-  type FigurePlacement,
   type GameState,
   type GlyphKind,
   type PlayerId,
@@ -19,7 +18,11 @@ interface Props {
   shown: readonly PlayerId[];
   /** The player who may use a glyph now (their turn, on this device, nothing pending), or null. */
   user: PlayerId | null;
-  onUse: (glyphId: string, unitId: string, placements?: FigurePlacement[]) => void;
+  onUse: (glyphId: string, unitId: string) => void;
+  /** A Glyph of Resurrection: the player places the unit's figures on the board next. */
+  onResurrect: (glyphId: string, unitId: string) => void;
+  /** The Glyph of Resurrection whose unit is being placed, if any. */
+  resurrecting: string | null;
 }
 
 function Chip({ kind }: { kind: GlyphKind }) {
@@ -35,23 +38,20 @@ function Chip({ kind }: { kind: GlyphKind }) {
  * The glyphs off to the side of the board: each player's held glyphs (face up only to their owner),
  * the stat glyphs in play, the curses counting down, and how many still lie on the battlefield.
  */
-export function GlyphPanel({ state, ctx, names, shown, user, onUse }: Props) {
+export function GlyphPanel({ state, ctx, names, shown, user, onUse, onResurrect, resurrecting }: Props) {
   const [choosing, setChoosing] = useState<string | null>(null);
   const glyphs = state.glyphs;
   if (!glyphs) return null;
   const held = state.players.filter((p) => (glyphs.held[p.id]?.length ?? 0) > 0);
   if (glyphs.onBoard.length === 0 && held.length === 0 && glyphs.boosts.length === 0 && glyphs.curses.length === 0) return null;
 
-  /** The units a held glyph may go on now, with the spots for a summoned unit. */
+  /** The units a held glyph may go on now; a unit to resurrect needs room for all its figures. */
   const targets = (glyphId: string, kind: GlyphKind) =>
     user === null
       ? []
-      : state.units.flatMap((u) => {
-          if (glyphProblem(state, user, glyphId, u.id, ctx)) return [];
-          if (kind !== "summon") return [{ unitId: u.id, placements: undefined as FigurePlacement[] | undefined }];
-          const placements = summonPlacements(state, user, u.id, ctx);
-          return placements ? [{ unitId: u.id, placements }] : [];
-        });
+      : state.units.filter(
+          (u) => !glyphProblem(state, user, glyphId, u.id, ctx) && (kind !== "summon" || summonPlacements(state, user, u.id, ctx) !== null),
+        );
 
   return (
     <section className="panel glyph-panel" aria-label="Glyphs">
@@ -87,7 +87,7 @@ export function GlyphPanel({ state, ctx, names, shown, user, onUse }: Props) {
                             type="button"
                             className="glyph-use"
                             aria-expanded={choosing === h.id}
-                            disabled={options.length === 0}
+                            disabled={options.length === 0 || resurrecting !== null}
                             title={options.length === 0 ? "No unit it can be used on now" : "Choose a unit for it"}
                             onClick={() => setChoosing(choosing === h.id ? null : h.id)}
                           >
@@ -98,16 +98,17 @@ export function GlyphPanel({ state, ctx, names, shown, user, onUse }: Props) {
                       <p className="muted small">{glyphEffect(kind, ctx.tuning?.glyphs)}</p>
                       {mine && choosing === h.id && options.length > 0 && (
                         <div className="glyph-targets" role="group" aria-label={`Use ${GLYPHS[kind].name} on`}>
-                          {options.map((o) => (
+                          {options.map((u) => (
                             <button
-                              key={o.unitId}
+                              key={u.id}
                               type="button"
                               onClick={() => {
                                 setChoosing(null);
-                                onUse(h.id, o.unitId, o.placements);
+                                if (kind === "summon") onResurrect(h.id, u.id);
+                                else onUse(h.id, u.id);
                               }}
                             >
-                              {names.unit(o.unitId)}
+                              {names.unit(u.id)}
                             </button>
                           ))}
                         </div>

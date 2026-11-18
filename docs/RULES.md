@@ -113,7 +113,7 @@ Glyphs are small hex tiles scattered face down on the battlefield after every un
 | Glyph of the Hawk | Stat glyph: +3 range for normal attacks (3), only on a unit whose card has a Range above 1; special attacks keep their own range |
 | Glyph of the Stag | Stat glyph: +2 move (2) |
 | Glyph of Mending | Heals every wound on one of the player's living units |
-| Glyph of Resurrection | Resurrects one of the player's destroyed units, whole and unwounded. Every figure goes on a free spot within 3 hexes (3) of another of the player's figures on the battlefield: the game places them on the nearest free spots it finds, closest to those figures first. Its old stat glyph does not come back |
+| Glyph of Resurrection | Resurrects one of the player's destroyed units, whole and unwounded. The player places every figure, one hex at a time as at deployment, each on a free spot within 3 hexes (3) of another of the player's figures on the battlefield (**Auto place** fills the nearest spots). The unit can be chosen only if all its figures fit. Its old stat glyph does not come back |
 | Glyph of Blight | One enemy unit: a squad takes 1 wound on every figure; a hero loses half the Life it has left, rounded down, but at least 1 |
 | Glyph of Undoing | Cancels the stat glyph on one enemy unit |
 | Glyph of the Pit | A trap: the figure that picks it up takes 1 wound (1) at once |

@@ -3,7 +3,7 @@ import { Rng } from "../rng";
 import { isSquad } from "../schema";
 import { DEFAULT_GLYPHS, type GlyphTuning } from "../tuning";
 import { fail } from "./errors";
-import { figureSpots, placementSpots, tuningOf } from "./placement";
+import { figureSpots, placementSpots, tuningOf, type Placement } from "./placement";
 import { cardOf, findFigure, findUnit, isUnitAlive, occupancy, statsOf, stepKey } from "./queries";
 import { checkGameOver, destroyFigure, woundFigure } from "./rounds";
 import {
@@ -221,41 +221,62 @@ export function summonProblem(state: GameState, player: PlayerId, unitId: string
 }
 
 /**
- * Spots for every figure of a destroyed unit being summoned: the free spots nearest the player's
- * other figures, within reach of them. Null when there is no room.
+ * Where one more figure of a destroyed unit being resurrected may go: free spots that fit it,
+ * within reach of another of the player's figures, nearest first. `extraTaken` holds the spots
+ * of its figures already placed. Empty when there is no figure to place it beside.
  */
-export function summonPlacements(state: GameState, player: PlayerId, unitId: string, ctx: RulesContext): FigurePlacement[] | null {
+export function summonOptions(
+  state: GameState,
+  player: PlayerId,
+  unitId: string,
+  ctx: RulesContext,
+  extraTaken: readonly Step[] = [],
+): { placement: Placement; spots: Step[] }[] {
   const unit = findUnit(state, unitId);
-  if (!unit) return null;
+  if (!unit) return [];
   const card = cardOf(unit, ctx);
   const reach = glyphTuning(ctx).summonRange;
   const friends = state.units
     .filter((u) => u.owner === player && u.id !== unitId)
     .flatMap((u) => u.figures.flatMap((f) => figureSpots(f, cardOf(u, ctx).footprint, cardOf(u, ctx).height, ctx)));
-  if (friends.length === 0) return null;
+  if (friends.length === 0) return [];
   const near = (h: { q: number; r: number }) => Math.min(...friends.map((f) => hexDistance(f.hex, h)));
-  const candidates = ctx.board
-    .hexes()
-    .filter((h) => near(h) <= reach)
-    .sort((a, b) => near(a) - near(b) || hexKey(a).localeCompare(hexKey(b)));
-  const taken = new Set(occupancy(state, ctx).keys());
+  const taken = new Set([...occupancy(state, ctx).keys(), ...extraTaken.map(stepKey)]);
+  const rotations = card.footprint === "1" ? [0] : [0, 1, 2, 3, 4, 5];
+  const out: { placement: Placement; spots: Step[]; gap: number }[] = [];
+  for (const h of ctx.board.hexes()) {
+    // A figure's other hexes lie at most 3 further than the one it is placed by.
+    if (near(h) > reach + 3) continue;
+    for (const s of ctx.board.surfaces(h)) {
+      for (const rotation of rotations) {
+        const placement = { hex: h, elevation: s.elevation, rotation };
+        const spots = placementSpots(card.footprint, card.height, placement, ctx);
+        if (!spots || spots.some((p) => taken.has(stepKey(p)))) continue;
+        const gap = Math.min(...spots.map((p) => near(p.hex)));
+        if (gap <= reach) out.push({ placement, spots, gap });
+      }
+    }
+  }
+  out.sort((a, b) => a.gap - b.gap || hexKey(a.placement.hex).localeCompare(hexKey(b.placement.hex)) || a.placement.elevation - b.placement.elevation);
+  return out.map(({ placement, spots }) => ({ placement, spots }));
+}
+
+/**
+ * Spots for every figure of a destroyed unit being resurrected, each the nearest still free.
+ * Null when there is no room for the whole unit.
+ */
+export function summonPlacements(state: GameState, player: PlayerId, unitId: string, ctx: RulesContext): FigurePlacement[] | null {
+  const unit = findUnit(state, unitId);
+  if (!unit) return null;
+  const big = cardOf(unit, ctx).footprint !== "1";
+  const taken: Step[] = [];
   const out: FigurePlacement[] = [];
   for (const f of unit.figures) {
-    let found: FigurePlacement | null = null;
-    for (const h of candidates) {
-      for (const s of ctx.board.surfaces(h)) {
-        for (let rotation = 0; rotation < (card.footprint === "1" ? 1 : 6) && !found; rotation++) {
-          const spots = placementSpots(card.footprint, card.height, { hex: h, elevation: s.elevation, rotation }, ctx);
-          if (!spots || spots.some((p) => taken.has(stepKey(p)))) continue;
-          found = card.footprint === "1" ? { figureId: f.id, hex: h, elevation: s.elevation } : { figureId: f.id, hex: h, elevation: s.elevation, rotation };
-          for (const p of spots) taken.add(stepKey(p));
-        }
-        if (found) break;
-      }
-      if (found) break;
-    }
-    if (!found) return null;
-    out.push(found);
+    const next = summonOptions(state, player, unitId, ctx, taken)[0];
+    if (!next) return null;
+    taken.push(...next.spots);
+    const { hex, elevation, rotation } = next.placement;
+    out.push(big ? { figureId: f.id, hex, elevation, rotation } : { figureId: f.id, hex, elevation });
   }
   return summonProblem(state, player, unitId, out, ctx) === null ? out : null;
 }

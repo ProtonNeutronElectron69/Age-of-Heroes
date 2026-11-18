@@ -15,6 +15,8 @@ import {
   type GlyphKind,
   type GlyphState,
   summonPlacements,
+  summonOptions,
+  hexDistance,
   glyphBonus,
   maybeStartTurns,
   type GameEvent,
@@ -197,6 +199,13 @@ describe("using glyphs", () => {
       f.destroyed = true;
       f.position = null;
     }
+    // Every spot offered is free and within 3 hexes of another of p1's figures (the hero at (3,0)).
+    const options = summonOptions(s, "p1", "p1:1", ctx);
+    expect(options.length).toBeGreaterThan(0);
+    expect(options.every((o) => hexDistance(o.placement.hex, hex(3, 0)) <= 3)).toBe(true);
+    // A spot already chosen for one figure is not offered again.
+    const first = options[0]!;
+    expect(summonOptions(s, "p1", "p1:1", ctx, first.spots).some((o) => hexKey(o.placement.hex) === hexKey(first.placement.hex))).toBe(false);
     const spots = summonPlacements(s, "p1", "p1:1", ctx)!;
     expect(spots).toHaveLength(s.units[1]!.figures.length);
     const r = use(s, "p1:1", "p1", { placements: spots });
