@@ -7,6 +7,7 @@ import {
   blastSpots,
   currentDeployment,
   deploymentPlacements,
+  summonOptions,
   engagedEnemies,
   eyePoint,
   figureSpots,
@@ -188,6 +189,8 @@ export function PlayScreen({ session }: { session: Session }) {
     items: [],
   });
   const [rotation, setRotation] = useState(0);
+  /** A Glyph of Resurrection being used: the unit coming back and the spots chosen so far. */
+  const [resurrect, setResurrect] = useState<{ glyphId: string; unitId: string; items: Pending[] } | null>(null);
   const [eyeView, setEyeView] = useState(false);
   /** Which action an attack click uses: null for a normal attack, or a special action's id. */
   const [attackMode, setAttackMode] = useState<string | null>(null);
@@ -272,6 +275,42 @@ export function PlayScreen({ session }: { session: Session }) {
   const turnKey = active ? `${state.round}:${active.token}:${active.player}` : "";
   // Eye view belongs to one figure's turn; a new turn (or the end of the round) starts outside it.
   useEffect(() => setEyeView(false), [turnKey]);
+  // A resurrection being placed belongs to this turn, and ends once its glyph has been used.
+  useEffect(() => setResurrect(null), [turnKey]);
+  const resurrectUnit =
+    resurrect && active && myTurn && state.glyphs?.held[active.player]?.some((h) => h.id === resurrect.glyphId)
+      ? (state.units.find((u) => u.id === resurrect.unitId && u.figures.every((f) => f.destroyed)) ?? null)
+      : null;
+  const resurrecting = resurrectUnit ? resurrect : null;
+  const resurrectCard = resurrectUnit ? ctx.cards.get(resurrectUnit.cardId)! : null;
+  const resurrectBig = resurrectCard ? resurrectCard.footprint !== "1" : false;
+  const resurrectOptions = useMemo(
+    () => (resurrecting && active ? summonOptions(state, active.player, resurrecting.unitId, ctx, resurrecting.items.flatMap((p) => p.spots)) : []),
+    [state, ctx, active, resurrecting],
+  );
+  const resurrectAt = (step: Step) =>
+    resurrectOptions.find((o) => sameStep(o.placement, step) && o.placement.rotation === rotation) ??
+    resurrectOptions.find((o) => sameStep(o.placement, step));
+  const setResurrectItems = (items: Pending[]) => setResurrect((r) => (r ? { ...r, items } : r));
+  const autoResurrect = () => {
+    if (!resurrecting || !resurrectUnit || !active) return;
+    const filled = [...resurrecting.items];
+    while (filled.length < resurrectUnit.figures.length) {
+      const next = summonOptions(state, active.player, resurrectUnit.id, ctx, filled.flatMap((p) => p.spots))[0];
+      if (!next) break;
+      filled.push(next);
+    }
+    setResurrectItems(filled);
+  };
+  const confirmResurrect = () => {
+    if (!resurrecting || !resurrectUnit || !active || !resurrectCard) return;
+    const placements: FigurePlacement[] = resurrectUnit.figures.map((f, i) => {
+      const { hex, elevation, rotation: turn } = resurrecting.items[i]!.placement;
+      return resurrectBig ? { figureId: f.id, hex, elevation, rotation: turn } : { figureId: f.id, hex, elevation };
+    });
+    setResurrect(null);
+    dispatch({ type: "useGlyph", player: active.player, glyphId: resurrecting.glyphId, unitId: resurrectUnit.id, placements });
+  };
   // A new turn brings the camera to the unit that acts and shows its card, on every player's turn.
   useEffect(() => {
     if (!active || !activeUnit) return;
@@ -518,7 +557,7 @@ export function PlayScreen({ session }: { session: Session }) {
   const blast = activeCard && attackMode ? areaAttackOf(activeCard, attackMode) : undefined;
 
   const options = useMemo<Map<string, MoveOption>>(() => {
-    if (!active || !selected) return new Map();
+    if (!active || !selected || resurrecting) return new Map();
     const bonus = active.attacked.includes(selected) && (active.bonusMoves[selected] ?? 0) > 0;
     if (!bonus && (active.moved.includes(selected) || active.attacked.includes(selected))) return new Map();
     try {
@@ -526,11 +565,11 @@ export function PlayScreen({ session }: { session: Session }) {
     } catch {
       return new Map();
     }
-  }, [state, ctx, active, selected]);
+  }, [state, ctx, active, selected, resurrecting]);
   const targets = useMemo(() => {
-    if (!active || !selected || active.attacked.includes(selected)) return new Set<string>();
+    if (!active || !selected || resurrecting || active.attacked.includes(selected)) return new Set<string>();
     return new Set(attackTargets(state, selected, ctx, attackMode ?? undefined));
-  }, [state, ctx, active, selected, attackMode]);
+  }, [state, ctx, active, selected, attackMode, resurrecting]);
   const moveBig = activeCard ? activeCard.footprint !== "1" : false;
   /** The hexes of the aimed-at figure a blast may land on. */
   const aimSpots = useMemo<Step[]>(() => {
@@ -571,6 +610,8 @@ export function PlayScreen({ session }: { session: Session }) {
     const key = e.key.toLowerCase();
     if (key === "escape" && aiming) {
       setAiming(null);
+    } else if (key === "escape" && resurrecting) {
+      setResurrect(null);
     } else if (key === "t") {
       toggleFigures();
     } else if (key === "r") {
@@ -748,7 +789,38 @@ export function PlayScreen({ session }: { session: Session }) {
     });
   }
 
+  if (resurrecting && resurrectUnit && resurrectCard) {
+    resurrecting.items.forEach((p, i) => {
+      const f = resurrectUnit.figures[i]!;
+      figures.push({
+        id: f.id,
+        cardId: resurrectCard.id,
+        footprint: resurrectCard.footprint,
+        faction: resurrectCard.faction,
+        owner: resurrectUnit.owner,
+        pose: i,
+        spots: p.spots,
+        height: resurrectCard.height,
+        color: names.playerColor(resurrectUnit.owner),
+        label: names.tokenLabel(f.id),
+        hero: resurrectCard.figureCount === 1,
+        status: "selected",
+      });
+    });
+  }
+
   const markers: Marker[] = [];
+  if (resurrecting && resurrectUnit && resurrecting.items.length < resurrectUnit.figures.length) {
+    const seen = new Set<string>();
+    for (const o of resurrectOptions) {
+      const key = stepKey(o.placement);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      markers.push({ step: o.placement, color: names.playerColor(resurrectUnit.owner), opacity: 0.4 });
+    }
+    const preview = hoverStep && resurrectBig ? resurrectAt(hoverStep) : undefined;
+    if (preview) for (const s of preview.spots) markers.push({ step: s, color: "#ffffff", opacity: 0.6 });
+  }
   if (deploying) {
     const seen = new Set<string>();
     for (const o of deployOptions) {
@@ -808,6 +880,15 @@ export function PlayScreen({ session }: { session: Session }) {
       }
       return;
     }
+    if (resurrecting && resurrectUnit) {
+      if (resurrecting.items.length >= resurrectUnit.figures.length) return;
+      const option = resurrectAt(step);
+      if (option) {
+        setRotation(option.placement.rotation);
+        setResurrectItems([...resurrecting.items, option]);
+      }
+      return;
+    }
     if (active && selected && attackMode && blastHexes.some((s) => sameStep(s, step))) {
       dispatch({ type: "blast", player: active.player, figureId: selected, ability: attackMode, at: { hex: step.hex, elevation: step.elevation } });
       return;
@@ -823,6 +904,11 @@ export function PlayScreen({ session }: { session: Session }) {
     if (deploying && deployUnit?.figures.some((f) => f.id === id)) {
       const i = deployUnit.figures.findIndex((f) => f.id === id);
       if (i >= 0 && i < pending.length) setPending(pending.filter((_, j) => j !== i));
+      return;
+    }
+    if (resurrecting && resurrectUnit?.figures.some((f) => f.id === id)) {
+      const i = resurrectUnit.figures.findIndex((f) => f.id === id);
+      if (i >= 0 && i < resurrecting.items.length) setResurrectItems(resurrecting.items.filter((_, j) => j !== i));
       return;
     }
     if (active && selected && targets.has(id)) {
@@ -866,7 +952,7 @@ export function PlayScreen({ session }: { session: Session }) {
   useEffect(() => {
     if (drag?.dropped && !session.pending) setDrag(null);
   }, [drag, session.state, session.pending, session.error]);
-  const canDrag = (id: string) => !busy && !eyeView && !deploying && canAct(id);
+  const canDrag = (id: string) => !busy && !eyeView && !deploying && !resurrecting && canAct(id);
   const onDragStart = (id: string) => {
     if (!canDrag(id)) return;
     setSelected(id);
@@ -891,7 +977,11 @@ export function PlayScreen({ session }: { session: Session }) {
   const tableShape = tableKey(state);
   const table = useMemo(() => tableFor(state, ctx), [tableShape, ctx]);
   // Figures being placed are on the board, not their card; so are destroyed figures still shaking.
-  const placing = new Set([...(deployUnit ? deployUnit.figures.slice(0, pending.length).map((f) => f.id) : []), ...ghosts.map((g) => g.id)]);
+  const placing = new Set([
+    ...(deployUnit ? deployUnit.figures.slice(0, pending.length).map((f) => f.id) : []),
+    ...(resurrecting && resurrectUnit ? resurrectUnit.figures.slice(0, resurrecting.items.length).map((f) => f.id) : []),
+    ...ghosts.map((g) => g.id),
+  ]);
   const cardsOnTable = tableUnits(state, ctx, (p) => names.playerColor(p), placing);
   const firstFigure = (unitId: string | null) => (unitId ? state.units.find((u) => u.id === unitId)?.figures[0]?.id ?? null : null);
 
@@ -1253,15 +1343,55 @@ export function PlayScreen({ session }: { session: Session }) {
           </section>
         )}
 
+        {resurrecting && resurrectUnit && resurrectCard && (
+          <section className="panel" aria-label="Resurrection">
+            <h2>Resurrection</h2>
+            <p className="turn-banner" style={{ borderColor: names.playerColor(resurrectUnit.owner) }}>
+              <span className="swatch" style={{ background: names.playerColor(resurrectUnit.owner) }} />
+              <span>
+                Place <strong>{resurrectCard.name}</strong>
+              </span>
+            </p>
+            <p className="muted small">
+              Click highlighted hexes, each within {ctx.tuning?.glyphs?.summonRange ?? 3} hexes of one of your figures.{" "}
+              {resurrecting.items.length} of {resurrectUnit.figures.length} placed. Click a placed figure to pick it up again.
+              {resurrectBig ? " This figure covers several hexes: press R to turn it." : ""} Escape cancels.
+            </p>
+            <div className="actions">
+              <button type="button" onClick={autoResurrect} disabled={resurrecting.items.length === resurrectUnit.figures.length}>
+                Auto place
+              </button>
+              <button type="button" onClick={() => setResurrectItems([])} disabled={resurrecting.items.length === 0}>
+                Clear
+              </button>
+              <button type="button" onClick={() => setResurrect(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="primary"
+                disabled={resurrecting.items.length !== resurrectUnit.figures.length || busy}
+                onClick={confirmResurrect}
+              >
+                Confirm
+              </button>
+            </div>
+          </section>
+        )}
+
         <GlyphPanel
           state={state}
           ctx={ctx}
           names={names}
           shown={isOnline ? (me ? [me] : []) : active && myTurn ? [active.player] : []}
           user={active && myTurn && !busy && !eyeView ? active.player : null}
-          onUse={(glyphId, unitId, placements) =>
-            active && dispatch({ type: "useGlyph", player: active.player, glyphId, unitId, ...(placements ? { placements } : {}) })
-          }
+          onUse={(glyphId, unitId) => active && dispatch({ type: "useGlyph", player: active.player, glyphId, unitId })}
+          onResurrect={(glyphId, unitId) => {
+            setAiming(null);
+            setEyeView(false);
+            setResurrect({ glyphId, unitId, items: [] });
+          }}
+          resurrecting={resurrecting?.glyphId ?? null}
         />
 
         {tokenPlayer && tokenPanelOpen && (
