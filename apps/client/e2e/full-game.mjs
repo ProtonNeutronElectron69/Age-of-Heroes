@@ -379,6 +379,15 @@ try {
       }
       const back = await trianglesAfter({ expect: models });
       if (back !== models) fail(`The models did not come back: ${back} triangles, not ${models}`);
+      // The tiles are detailed at first, with bold outlines drawn as wide lines (triangles); the classic
+      // look has thin ones (lines). The choice switches them on the spot, and B does too.
+      if (!(await page.getByRole("radio", { name: "Detailed" }).isChecked())) fail("The tiles are not detailed at first");
+      if ((await page.evaluate(() => window.__aoh.stats().lines)) !== 0) fail("The detailed tiles drew thin outlines");
+      await page.getByRole("radio", { name: "Classic" }).click();
+      await page.waitForFunction(() => window.__aoh.stats().lines > 0);
+      await page.keyboard.press("b");
+      await page.waitForFunction(() => window.__aoh.stats().lines === 0);
+      if (!(await page.getByRole("radio", { name: "Detailed" }).isChecked())) fail("B did not bring the detailed tiles back");
       // The board stands on a gaming table, in one of three styles.
       const tables = new Set([back]);
       let last = back;

@@ -14,6 +14,8 @@ export interface DisplaySettings {
   readonly menu: MenuStyle;
   /** The gaming table the board stands on. */
   readonly table: TableStyle;
+  /** The board's tiles: textured and moulded with bold outlines, or the classic flat colours. */
+  readonly tiles: TileLook;
   /** How attacks and initiative show their dice. */
   readonly dice: DiceShow;
   /** The play screen's camera follows the acting figure: moving to it, turning to face the board, and zooming. */
@@ -41,6 +43,13 @@ export const DICE_SHOWS: readonly { readonly id: DiceShow; readonly name: string
   { id: "none", name: "None" },
 ];
 
+/** The two looks of the board's tiles. */
+export type TileLook = "detailed" | "classic";
+export const TILE_LOOKS: readonly { readonly id: TileLook; readonly name: string }[] = [
+  { id: "detailed", name: "Detailed" },
+  { id: "classic", name: "Classic" },
+];
+
 /** The three gaming tables. */
 export type TableStyle = "tavern" | "felt" | "mat";
 export const TABLE_STYLES: readonly { readonly id: TableStyle; readonly name: string }[] = [
@@ -64,6 +73,7 @@ const DEFAULTS: DisplaySettings = {
   scheme: "faction",
   menu: "war-table",
   table: "tavern",
+  tiles: "detailed",
   dice: "scene",
   autoPan: true,
   autoRotate: true,
@@ -82,6 +92,7 @@ function load(): DisplaySettings {
       scheme: COLOR_SCHEMES.some((s) => s.id === saved.scheme) ? saved.scheme! : DEFAULTS.scheme,
       menu: MENU_STYLES.some((m) => m.id === saved.menu) ? saved.menu! : DEFAULTS.menu,
       table: TABLE_STYLES.some((t) => t.id === saved.table) ? saved.table! : DEFAULTS.table,
+      tiles: saved.tiles === "classic" ? "classic" : "detailed",
       dice: DICE_SHOWS.some((d) => d.id === saved.dice) ? saved.dice! : DEFAULTS.dice,
       autoPan: saved.autoPan !== false,
       autoRotate: saved.autoRotate !== false,
@@ -114,6 +125,11 @@ export function setDisplay(change: Partial<DisplaySettings>): void {
 /** Switches the board between figure models and tokens (the T key on the play screen). */
 export function toggleFigures(): void {
   setDisplay({ figures: settings.figures === "models" ? "tokens" : "models" });
+}
+
+/** Switches the board's tiles between the detailed and the classic look (the B key on the play screen). */
+export function toggleTiles(): void {
+  setDisplay({ tiles: settings.tiles === "detailed" ? "classic" : "detailed" });
 }
 
 /** The settings now, for code outside React (the music player). */
