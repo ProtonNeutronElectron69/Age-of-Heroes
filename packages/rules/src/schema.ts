@@ -43,11 +43,7 @@ export const sceneryPlacementSchema = z.object({
   hex: hexSchema,
   /** Elevation of the surface it stands on. */
   elevation: z.number().int().min(1).max(MAX_LAYER + 1),
-  /**
-   * Turn, in 60 degree steps, for scenery bigger than one hex. For a wall between hexes:
-   * the wall runs from `hex` along direction `rotation` and stands on the side of that row
-   * toward direction `rotation + 1` (see `wallEdges`).
-   */
+  /** Turn, in 60 degree steps, for scenery bigger than one hex (its footprint turns about `hex`). */
   rotation: z.number().int().min(0).max(5).optional(),
 });
 

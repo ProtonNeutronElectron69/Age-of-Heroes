@@ -46,10 +46,8 @@ export function moveCostOf(t: TerrainRules | undefined): number {
 }
 
 /**
- * Scenery stands on the terrain. Most of it fills one hex, or several (`footprint`): no figure
- * can enter or stand there, and it blocks line of sight. A wall `between` hexes stands on the
- * edges between two rows of hexes instead: the hexes stay open, but no figure can step across
- * it, and it blocks line of sight as a thin wall.
+ * Scenery stands on the terrain and fills one hex, or several (`footprint`): no figure can
+ * enter or stand there, and it blocks line of sight.
  */
 export interface SceneryRules {
   readonly id: string;
@@ -64,9 +62,7 @@ export interface SceneryRules {
   readonly color: string;
   /** The hexes it fills when bigger than one, turned with the placement's rotation. */
   readonly footprint?: Footprint;
-  /** A wall between hexes: how many hexes long it is. */
-  readonly between?: number;
-  /** Extra defense dice for a figure behind it against an attack from range (low walls). */
+  /** Extra defense dice for a figure next to it against an attack from range across it (low walls). */
   readonly cover?: number;
 }
 

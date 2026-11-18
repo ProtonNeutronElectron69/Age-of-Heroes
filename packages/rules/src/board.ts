@@ -4,7 +4,6 @@ import { MAX_PLAYERS, MIN_PLAYERS } from "./schema";
 import { footprintCells, shapeCells } from "./shapes";
 import { isBalanced, type Point2 } from "./support";
 import { DEFAULT_SCENERY, type SceneryRules, type SceneryTable, type TerrainTable } from "./terrain";
-import { edgeKey, wallLine, type WallLine } from "./walls";
 
 /** One solid block of terrain: a single hex of a piece, one layer thick. */
 export interface Cell {
@@ -29,10 +28,8 @@ export interface Surface {
 export interface ScenerySpot {
   readonly placement: SceneryPlacement;
   readonly rules: SceneryRules;
-  /** The hexes it fills; none for a wall between hexes. */
+  /** The hexes it fills. */
   readonly cells: readonly Hex[];
-  /** Where a wall between hexes stands. */
-  readonly wall?: WallLine;
 }
 
 export type MapIssueCode =
@@ -85,8 +82,6 @@ export class Board {
   private readonly sceneryBySpot = new Map<string, ScenerySpot>();
   private readonly sceneryByHex = new Map<string, ScenerySpot[]>();
   private readonly sceneryList: ScenerySpot[] = [];
-  /** Walls between hexes, by the edges they stand on. */
-  private readonly wallsByEdge = new Map<string, ScenerySpot>();
   private readonly spanPieces = new Set<string>();
   private sealed: Gap[] = [];
 
@@ -174,27 +169,6 @@ export class Board {
       if (table && !known) problem("unknownScenery", `Unknown scenery "${placement.kind}" at ${where}`);
       const rules = known ?? DEFAULT_SCENERY;
       const rotation = placement.rotation ?? 0;
-
-      if (rules.between) {
-        // A wall between hexes stands on the row of hexes it runs along.
-        const wall = wallLine(placement.hex, rotation, rules.between);
-        const grounds = wall.row.map((h) => this.surfaceAt(h, placement.elevation));
-        if (grounds.some((g) => !g)) {
-          problem("sceneryOffBoard", `${rules.name} at ${where} needs level ground along its whole length`);
-          continue;
-        }
-        if (wall.edges.some(([a, b]) => this.wallsByEdge.has(edgeKey(a, b)))) {
-          problem("sceneryOverlap", `${rules.name} at ${where} crosses another wall`);
-          continue;
-        }
-        if (grounds.some((g) => g!.clearance < rules.height)) {
-          problem("sceneryTooTall", `${rules.name} at ${where} does not fit under the terrain above it`);
-        }
-        const spot: ScenerySpot = { placement, rules, cells: [], wall };
-        for (const [a, b] of wall.edges) this.wallsByEdge.set(edgeKey(a, b), spot);
-        this.sceneryList.push(spot);
-        continue;
-      }
 
       const cells = rules.footprint ? footprintCells(rules.footprint, placement.hex, rotation) : [placement.hex];
       const grounds = cells.map((h) => this.surfaceAt(h, placement.elevation));
@@ -554,39 +528,9 @@ export class Board {
     return this.sceneryByHex.get(hexKey(h)) ?? [];
   }
 
-  /** Every piece of scenery once, walls between hexes included. */
+  /** Every piece of scenery once. */
   scenery(): ScenerySpot[] {
     return [...this.sceneryList];
-  }
-
-  /** Walls between hexes. */
-  walls(): ScenerySpot[] {
-    return this.sceneryList.filter((s) => s.wall);
-  }
-
-  /**
-   * The wall standing between two neighbouring spots that a figure cannot step across, if any:
-   * one on the edge between their hexes, unless the figure is above its top on both sides, or
-   * below its foot on both.
-   */
-  wallBetween(a: { hex: Hex; elevation: number }, b: { hex: Hex; elevation: number }): ScenerySpot | undefined {
-    const wall = this.wallsByEdge.get(edgeKey(a.hex, b.hex));
-    if (!wall) return undefined;
-    const base = wall.placement.elevation;
-    const top = base + wall.rules.height;
-    if (a.elevation >= top && b.elevation >= top) return undefined;
-    if (a.elevation < base && b.elevation < base) return undefined;
-    return wall;
-  }
-
-  /** Every wall standing on an edge of this hex. */
-  wallsAround(h: Hex): ScenerySpot[] {
-    const found = new Set<ScenerySpot>();
-    for (const n of hexNeighbors(h)) {
-      const w = this.wallsByEdge.get(edgeKey(h, n));
-      if (w) found.add(w);
-    }
-    return [...found];
   }
 
   /** Player counts this map can host: every player needs their own start zone. */

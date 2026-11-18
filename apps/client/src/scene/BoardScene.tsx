@@ -516,8 +516,7 @@ function SceneryMaterial({ color, ghost }: { color: string; ghost?: boolean }) {
   return <meshStandardMaterial color={color} flatShading transparent={ghost} opacity={ghost ? 0.55 : 1} depthWrite={!ghost} />;
 }
 
-/** A wall between hexes has a thin stone base on its row of hexes, thin enough for a figure to stand on. */
-const WALL_BASE = 0.05;
+/** The grey stone base under the smaller walls. */
 const STONE_BASE = "#83878c";
 
 /** A number from 0 to 1 that stays the same for one piece of scenery, so a ruin keeps its shape. */
@@ -534,8 +533,8 @@ const lighter = (hex: string, by: number) => {
 };
 
 /**
- * One piece of scenery. One-hex pieces stand on their hex; bigger ones (a large tree, a large
- * wall) on all their hexes; walls between hexes along the line between two rows of hexes.
+ * One piece of scenery. One-hex pieces stand on their hex; bigger ones (a large tree, the walls)
+ * on all their hexes, each on a base.
  */
 export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onClick?: (spot: ScenerySpot) => void; ghost?: boolean }) {
   const { placement, rules } = spot;
@@ -552,75 +551,6 @@ export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onCli
     : { raycast: () => null };
   const m = (color: string) => <SceneryMaterial color={color} ghost={ghost} />;
 
-  if (spot.wall) {
-    const { from, to } = spot.wall;
-    const length = Math.hypot(to.x - from.x, to.z - from.z);
-    const yaw = -Math.atan2(to.z - from.z, to.x - from.x);
-    const centre: [number, number, number] = [(from.x + to.x) / 2, base, (from.z + to.z) / 2];
-    // A thin grey base on each hex of the row the wall stands against; figures can still stand there.
-    const rowPlates = spot.wall.row.map((c, i) => {
-      const p = hexToWorld(c, HEX_SIZE);
-      return (
-        <mesh key={`b${i}`} position={[p.x, base + WALL_BASE / 2, p.z]} {...handlers}>
-          <cylinderGeometry args={[HEX_SIZE * 0.9, HEX_SIZE * 0.9, WALL_BASE, 6]} />
-          {m(STONE_BASE)}
-        </mesh>
-      );
-    });
-    if (rules.cover) {
-      // A low stone wall with a row of capstones along its top.
-      const body = h * 0.82;
-      return (
-        <group>
-          {rowPlates}
-          <group position={centre} rotation={[0, yaw, 0]}>
-            <mesh position={[0, body / 2, 0]} {...handlers}>
-              <boxGeometry args={[length * 0.98, body, 0.2 * HEX_SIZE]} />
-              {m(rules.color)}
-            </mesh>
-            {Array.from({ length: Math.round(length / 0.5) }, (_, i) => {
-              const w = (length * 0.98) / Math.round(length / 0.5);
-              return (
-                <mesh key={i} position={[-length * 0.49 + w * (i + 0.5), body + h * 0.08, 0]} {...handlers}>
-                  <boxGeometry args={[w * 0.92, h * 0.16, 0.28 * HEX_SIZE]} />
-                  {m(lighter(rules.color, i % 2 ? 0.06 : 0.1))}
-                </mesh>
-              );
-            })}
-          </group>
-        </group>
-      );
-    }
-    // A broken wall: stretches of uneven height between thicker pillars.
-    const parts = 6;
-    const w = length / parts;
-    return (
-      <group>
-        {rowPlates}
-        <group position={centre} rotation={[0, yaw, 0]}>
-          {Array.from({ length: parts }, (_, i) => {
-            const tall = h * (0.5 + 0.45 * steady(placement.id, i));
-            return (
-              <mesh key={i} position={[-length / 2 + w * (i + 0.5), tall / 2, 0]} {...handlers}>
-                <boxGeometry args={[w * 1.01, tall, 0.22 * HEX_SIZE]} />
-                {m(i % 2 ? rules.color : lighter(rules.color, -0.04))}
-              </mesh>
-            );
-          })}
-          {[-0.5, 0, 0.5].map((at, i) => {
-            const tall = h * (0.85 + 0.15 * steady(placement.id, 10 + i));
-            return (
-              <mesh key={`p${i}`} position={[at * length * 0.96, tall / 2, 0]} rotation={[0, 0, (steady(placement.id, 20 + i) - 0.5) * 0.08]} {...handlers}>
-                <boxGeometry args={[0.3 * HEX_SIZE, tall, 0.34 * HEX_SIZE]} />
-                {m(lighter(rules.color, 0.05))}
-              </mesh>
-            );
-          })}
-        </group>
-      </group>
-    );
-  }
-
   // Bigger pieces stand centred on their hexes, turned along them, on a base for each hex.
   const cells = spot.cells.length > 0 ? spot.cells : [placement.hex];
   const points = cells.map((c) => hexToWorld(c, HEX_SIZE));
@@ -635,7 +565,7 @@ export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onCli
       {points.map((p, i) => (
         <mesh key={`b${i}`} position={[p.x - cx, 0.04, p.z - cz]} {...handlers}>
           <cylinderGeometry args={[HEX_SIZE * 0.9, HEX_SIZE * 0.9, 0.08, 6]} />
-          {m(rules.id === "large-tree" || rules.id === "tree" ? "#7a5a36" : lighter(rules.color, -0.12))}
+          {m(rules.id === "large-tree" || rules.id === "tree" ? "#7a5a36" : rules.id === "large-wall" ? lighter(rules.color, -0.12) : STONE_BASE)}
         </mesh>
       ))}
     </>
@@ -666,9 +596,67 @@ export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onCli
     );
   }
 
+  // The length of a line of hexes, end to end, for walls drawn along it.
+  const span = Math.hypot(last.x - first.x, last.z - first.z) + Math.sqrt(3) * HEX_SIZE * 0.9;
+
+  if (rules.id === "low-wall") {
+    // A low stone wall with a row of capstones along its top.
+    const body = h * 0.82;
+    const stones = Math.round(span / 0.5);
+    const w = (span * 0.94) / stones;
+    return (
+      <group position={[cx, base, cz]}>
+        {plates}
+        <group rotation={[0, yaw, 0]}>
+          <mesh position={[0, body / 2, 0]} {...handlers}>
+            <boxGeometry args={[span * 0.94, body, 0.34 * HEX_SIZE]} />
+            {m(rules.color)}
+          </mesh>
+          {Array.from({ length: stones }, (_, i) => (
+            <mesh key={i} position={[-span * 0.47 + w * (i + 0.5), body + h * 0.08, 0]} {...handlers}>
+              <boxGeometry args={[w * 0.92, h * 0.16, 0.44 * HEX_SIZE]} />
+              {m(lighter(rules.color, i % 2 ? 0.06 : 0.1))}
+            </mesh>
+          ))}
+        </group>
+      </group>
+    );
+  }
+
+  if (rules.id === "small-ruin") {
+    // A broken wall: stretches of uneven height between thicker pillars.
+    const parts = 5;
+    const w = (span * 0.92) / parts;
+    return (
+      <group position={[cx, base, cz]}>
+        {plates}
+        <group rotation={[0, yaw, 0]}>
+          {Array.from({ length: parts }, (_, i) => {
+            const tall = h * (0.5 + 0.45 * steady(placement.id, i));
+            return (
+              <mesh key={i} position={[-span * 0.46 + w * (i + 0.5), tall / 2, 0]} {...handlers}>
+                <boxGeometry args={[w * 1.01, tall, 0.36 * HEX_SIZE]} />
+                {m(i % 2 ? rules.color : lighter(rules.color, -0.04))}
+              </mesh>
+            );
+          })}
+          {[-0.46, 0, 0.46].map((at, i) => {
+            const tall = h * (0.85 + 0.15 * steady(placement.id, 10 + i));
+            return (
+              <mesh key={`p${i}`} position={[at * span, tall / 2, 0]} rotation={[0, 0, (steady(placement.id, 20 + i) - 0.5) * 0.08]} {...handlers}>
+                <boxGeometry args={[0.34 * HEX_SIZE, tall, 0.5 * HEX_SIZE]} />
+                {m(lighter(rules.color, 0.05))}
+              </mesh>
+            );
+          })}
+        </group>
+      </group>
+    );
+  }
+
   if (rules.id === "large-wall") {
     // A ruined castle wall: a battlemented wall braced by tall broken pillars.
-    const length = Math.hypot(last.x - first.x, last.z - first.z) + Math.sqrt(3) * HEX_SIZE * 0.9;
+    const length = span;
     const body = h * 0.66;
     const thick = 0.5 * HEX_SIZE;
     return (

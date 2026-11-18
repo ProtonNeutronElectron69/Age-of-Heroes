@@ -97,7 +97,7 @@ try {
   await clickHex(-5, -3, 1);
   if (!(await status()).startsWith("Two pieces of scenery stand here")) fail(`Large tree on the trees: ${await status()}`);
   await clickHex(3, 2, 1);
-  // A low wall stands between two rows of hexes; it turns with R, so it has the rotate buttons.
+  // A low wall fills three hexes in a line; it turns with R, so it has the rotate buttons.
   await page.getByRole("button", { name: "Low wall" }).click();
   if (!(await page.getByRole("button", { name: "Rotate right" }).count())) fail("A low wall cannot be turned");
   await clickHex(-6, -1, 1);

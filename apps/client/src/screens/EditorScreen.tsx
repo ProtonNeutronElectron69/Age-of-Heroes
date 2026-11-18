@@ -38,7 +38,6 @@ import {
   type TerrainRules,
   type Vec3,
   footprintCells,
-  wallLine,
 } from "@aoh/rules";
 import { Canvas, useThree } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -433,11 +432,11 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
 
   // ---- Scenery: where the chosen kind would stand, and why it cannot -------
   const sceneryRules = SCENERY_TABLE.get(sceneryKind)!;
-  /** Bigger scenery and walls between hexes turn with the rotation (R). */
-  const turnsScenery = !!(sceneryRules.footprint || sceneryRules.between);
+  /** Scenery bigger than one hex turns with the rotation (R). */
+  const turnsScenery = !!sceneryRules.footprint;
   const sceneryProblem = (h: Hex, elevation: number): string | null => {
     const placement = { id: "new-scenery", kind: sceneryKind, hex: h, elevation, rotation: turnsScenery ? rotation : 0 };
-    const cells = sceneryRules.between ? [] : sceneryRules.footprint ? footprintCells(sceneryRules.footprint, h, placement.rotation) : [h];
+    const cells = sceneryRules.footprint ? footprintCells(sceneryRules.footprint, h, placement.rotation) : [h];
     const zoned = new Set(map.startZones.flatMap((z) => z.hexes.map(hexKey)));
     if (cells.some((c) => zoned.has(hexKey(c)))) return "Scenery cannot go in a start zone.";
     const issue = Board.fromMap({ ...map, scenery: [...map.scenery, placement] }, TERRAIN_TABLE, SCENERY_TABLE).issues.find(
@@ -453,8 +452,7 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
     const spot: ScenerySpot = {
       placement,
       rules: sceneryRules,
-      cells: sceneryRules.between ? [] : sceneryRules.footprint ? footprintCells(sceneryRules.footprint, placement.hex, placement.rotation) : [placement.hex],
-      ...(sceneryRules.between ? { wall: wallLine(placement.hex, placement.rotation, sceneryRules.between) } : {}),
+      cells: sceneryRules.footprint ? footprintCells(sceneryRules.footprint, placement.hex, placement.rotation) : [placement.hex],
     };
     return { spot, problem: sceneryProblem(ghostAt.hex, ghostAt.elevation) };
   }, [ghostKey, map]);
@@ -501,10 +499,9 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
     }
   }
   if (ghostScenery) {
-    // The hexes a piece would fill, or a wall's row; red where it cannot go.
+    // The hexes a piece would fill; red where it cannot go.
     const color = ghostScenery.problem ? "#ff3b30" : "#ffffff";
-    const under = ghostScenery.spot.wall ? ghostScenery.spot.wall.row : ghostScenery.spot.cells;
-    for (const h of under) markers.push({ step: { hex: h, elevation: ghostScenery.spot.placement.elevation }, color, opacity: 0.5 });
+    for (const h of ghostScenery.spot.cells) markers.push({ step: { hex: h, elevation: ghostScenery.spot.placement.elevation }, color, opacity: 0.5 });
   }
   if (hoverCell && tool === "zone") {
     const top = board.surfaces(hoverCell.hex).find((s) => s.elevation > hoverCell.layer);
@@ -815,9 +812,8 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
                 </div>
               )}
               <p className="muted small">
-                {sceneryRules.between
-                  ? `${sceneryRules.name}: stands between two rows of hexes and leaves them open. No figure can step across it, and it blocks line of sight.${sceneryRules.cover ? ` A figure behind it gets +${sceneryRules.cover} defense against attacks from range across it.` : ""}`
-                  : "Click terrain to place. Scenery blocks movement and line of sight."}
+                Click terrain to place. Scenery blocks movement and line of sight.
+                {sceneryRules.cover ? ` A figure next to a ${sceneryRules.name.toLowerCase()} gets +${sceneryRules.cover} defense against attacks from range across it.` : ""}
               </p>
               <h2>Random fill</h2>
               {fillLevelControl}

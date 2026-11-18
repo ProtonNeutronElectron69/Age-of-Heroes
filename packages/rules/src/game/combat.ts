@@ -1,8 +1,7 @@
 import { rollCombat } from "../dice";
-import { DIRECTIONS, hexAdd, hexDistance, hexEquals, hexKey, hexSub, hexToWorld, isAdjacent, type Hex } from "../hex";
-import { hasLineOfSight, type Token } from "../los";
+import { DIRECTIONS, hexAdd, hexDistance, hexEquals, hexKey, hexNeighbors, hexSub, hexToWorld, isAdjacent, type Hex } from "../hex";
+import { hasLineOfSight, segmentHitsHexPrism, type Token } from "../los";
 import { Rng } from "../rng";
-import { segmentsCross } from "../walls";
 import { HEX_SIZE } from "../world";
 import { isUnique } from "../schema";
 import type { Tuning } from "../tuning";
@@ -367,9 +366,10 @@ export function attackTargets(state: GameState, figureId: string, ctx: RulesCont
 }
 
 /**
- * Cover from a wall between hexes that gives it (a low wall): the defender stands on a hex next
- * to the wall, below its top, the attack comes from range (not from a neighbouring hex), and the
- * line from the attacker to the defender crosses the wall. Several walls do not add up.
+ * Cover from scenery that gives it (a low wall): the defender stands on a hex next to one of
+ * the wall's hexes, below its top, the attack comes from range (not from a neighbouring hex),
+ * and the line from the attacker to the defender passes over that hex of the wall. Several
+ * walls do not add up.
  */
 export function coverFrom(
   attackerSpots: readonly Step[],
@@ -381,13 +381,20 @@ export function coverFrom(
   let best: { dice: number; name: string } | null = null;
   for (const d of defenderSpots) {
     const to = hexToWorld(d.hex, HEX_SIZE);
-    for (const w of ctx.board.wallsAround(d.hex)) {
-      const dice = w.rules.cover ?? 0;
-      if (dice <= (best?.dice ?? 0)) continue;
-      const base = w.placement.elevation;
-      if (d.elevation < base || d.elevation >= base + w.rules.height) continue;
-      const crosses = attackerSpots.some((a) => segmentsCross(hexToWorld(a.hex, HEX_SIZE), to, w.wall!.from, w.wall!.to));
-      if (crosses) best = { dice, name: w.rules.name };
+    for (const n of hexNeighbors(d.hex)) {
+      for (const s of ctx.board.sceneryIn(n)) {
+        const dice = s.rules.cover ?? 0;
+        if (dice <= (best?.dice ?? 0)) continue;
+        const base = s.placement.elevation;
+        if (d.elevation < base || d.elevation >= base + s.rules.height) continue;
+        const wall = hexToWorld(n, HEX_SIZE);
+        // In the ground plane: a flat segment through a hex prism from y 0 to 1.
+        const crosses = attackerSpots.some((a) => {
+          const from = hexToWorld(a.hex, HEX_SIZE);
+          return segmentHitsHexPrism({ x: from.x, y: 0.5, z: from.z }, { x: to.x, y: 0.5, z: to.z }, wall.x, wall.z, 0, 1);
+        });
+        if (crosses) best = { dice, name: s.rules.name };
+      }
     }
   }
   return best;
