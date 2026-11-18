@@ -4,13 +4,13 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 562 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 564 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 - **On hold (Phase 6):** a computer opponent, and a tutorial.
 - **Phase 7, figure models:** stage 1 is done. Every unit has a low polygon model in flat colour, drawn on the board in place of tokens (the Display button or the T key switches back to tokens and picks one of three colour schemes; see every model at `?models`). **Next, when the owner asks:** later stages add detail and colour.
 - **Phase 7, music and sound effects:** done. Menu, play, battle and victory music, and sound effects for hops, landings in water and lava, attacks, dice, wounds, destroyed figures, rounds, drafting and placing, menu hover and clicks, and pings. Each has an on/off box and a volume slider on the menu and under Display.
-- **Phase 7, art:** the board tiles are done (below). **Next:** scenery art.
+- **Phase 7, art:** the board tiles and the scenery are done (below).
 - **Done lately:** Phase 8 (the tabletop feel) and Phase 9 (playtest updates, below). The game as it stood after Phase 9 is version 1.0.
 - **Done lately:** more scenery, and glyphs (below).
 
@@ -197,7 +197,7 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 - [x] The play screen follows the action. On every player's turn the camera glides to the acting unit at a standard zoom and angle and its card comes up; after a squad figure acts, the camera moves on to the next figure. Resting the pointer on another unit for half a second shows its card, smaller, below the acting unit's card until the pointer leaves; clicking a unit keeps its card there (#26)
 - [x] One set of rules. The simpler second rule set was removed, with its card fronts and its card-count drafts: every game has Life, abilities, height bonuses, engagement and strict line of sight, and armies are drafted to a points budget. Saves and replays of games under the removed rules are refused with a message (#27)
 
-### Phase 7: Sound, models and art (models in progress; sound and board tiles done; scenery art next)
+### Phase 7: Sound, models and art (models in progress; sound, board tiles and scenery art done)
 - [x] Unit cards redrawn as seven-hex cards in faction colours, for the whole roster, on the draft, play and replay screens. Each faction has a colour theme and an emblem. The card shows the unit's token label in its owner's colour and counts down Life as wounds land; clicking a card shows it large. Open the game with `?cards` in the address to see every card
 - [x] Unit art and hit zone pictures for all 48 cards, drawn in five batches. The art style is ink and colour: dark outlines, flat natural colours and hatched shadows. The hit zone picture is the same drawing in greys, with the hit band (the top 40% of the body) in red and gear left grey. The faint emblem that stood in for art is gone. Open the game with `?cards` in the address to see every card
   - [x] Batch 1 (10 of 48): Captain Marisol Vance, Harrow Line Riflemen, Lady Asagiri, Glade Wardens, Sentinel K-7, Nexus Breachers, Vorhal, Barrow Legion, Dame Rowena Ashgrove, Stormwake Huscarls
@@ -228,7 +228,7 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
     - [x] Draw the models on the board in place of tokens, with Models or Tokens and the colour scheme as settings under Display (T switches). Line of sight and the hit band keep using the token shape
   - [ ] Later stages: more detail and colour
 - [x] Board tiles: a detailed look for each of the ten terrains, painted in code (a moulded relief and colour variation under a plastic finish; the tile sides show a lip of the top over layers of earth or stone; lava glows), each tile turned by a random sixth so neighbours differ, and bold black outlines so the levels of a stack are easy to count. The classic flat look stays: **Board tiles** under Display, or the B key, switches between them during a game
-- [ ] Scenery art
+- [x] Scenery art, in the same detailed look: stone blocks with moss (and ivy on the small ruined wall), fieldstones under capstones on the low wall, sandstone on the large wall, bark and needled tiers on the trees, a lumpy lichen-spotted boulder, and forest-floor or flagstone bases. Shapes stay within the classic outlines, so line of sight is unchanged. The classic look keeps the flat colours
 
 ### Phase 8: Tabletop feel (done)
 The game should feel like a game played on a table. Nothing here changes the rules: the engine, saves, replays and online play are untouched.

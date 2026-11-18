@@ -37,6 +37,7 @@ import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { useDisplay } from "../settings";
 import { TEST_MODE } from "../testMode";
+import { boulderGeometry, sceneryMaterial, worldUV, type SceneryFinish } from "./sceneryArt";
 import { detailedMaterials, tileGeometry } from "./tileMaterials";
 import { HEX_GAP } from "./scale";
 import { useBoardActivity } from "./activity";
@@ -537,11 +538,20 @@ const lighter = (hex: string, by: number) => {
   return `#${c.getHexString()}`;
 };
 
+type SceneryProps = { spot: ScenerySpot; onClick?: (spot: ScenerySpot) => void; ghost?: boolean };
+
 /**
  * One piece of scenery. One-hex pieces stand on their hex; bigger ones (a large tree, the walls)
- * on all their hexes, each on a base.
+ * on all their hexes, each on a base. It follows the board's look: textured in the detailed look
+ * (`sceneryArt.ts`), flat colours in the classic one and in the editor's see-through preview.
  */
-export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onClick?: (spot: ScenerySpot) => void; ghost?: boolean }) {
+export function SceneryMesh(props: SceneryProps) {
+  const detailed = useDisplay().tiles === "detailed" && !props.ghost;
+  // A new look builds the piece again, so its texture coordinates are set from the start.
+  return <SceneryModel key={detailed ? "detailed" : "classic"} {...props} detailed={detailed} />;
+}
+
+function SceneryModel({ spot, onClick, ghost, detailed }: SceneryProps & { detailed: boolean }) {
   const { placement, rules } = spot;
   const base = placement.elevation * LEVEL_HEIGHT;
   const h = rules.height * LEVEL_HEIGHT;
@@ -554,7 +564,11 @@ export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onCli
         },
       }
     : { raycast: () => null };
-  const m = (color: string) => <SceneryMaterial color={color} ghost={ghost} />;
+  // The flat colour, or in the detailed look the textured finish.
+  const m = (color: string, finish: SceneryFinish) =>
+    detailed ? <primitive object={sceneryMaterial(finish)} attach="material" /> : <SceneryMaterial color={color} ghost={ghost} />;
+  // Detailed stone keeps one size whatever the face's size: its texture coordinates come from position.
+  const uv = (scale: number) => (detailed ? { onUpdate: (g: BufferGeometry) => worldUV(g, scale) } : {});
 
   // Bigger pieces stand centred on their hexes, turned along them, on a base for each hex.
   const cells = spot.cells.length > 0 ? spot.cells : [placement.hex];
@@ -569,8 +583,12 @@ export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onCli
     <>
       {points.map((p, i) => (
         <mesh key={`b${i}`} position={[p.x - cx, 0.04, p.z - cz]} {...handlers}>
-          <cylinderGeometry args={[HEX_SIZE * 0.9, HEX_SIZE * 0.9, 0.08, 6]} />
-          {m(rules.id === "large-tree" || rules.id === "tree" ? "#7a5a36" : rules.id === "large-wall" ? lighter(rules.color, -0.12) : STONE_BASE)}
+          <cylinderGeometry args={[HEX_SIZE * 0.9, HEX_SIZE * 0.9, 0.08, 6]} {...uv(0.9)} />
+          {rules.id === "large-tree" || rules.id === "tree"
+            ? m("#7a5a36", "soil")
+            : rules.id === "large-wall"
+              ? m(lighter(rules.color, -0.12), "sandstone")
+              : m(STONE_BASE, "capstone")}
         </mesh>
       ))}
     </>
@@ -584,16 +602,16 @@ export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onCli
       <group position={[cx, base, cz]}>
         {plates}
         <mesh position={[0, h * 0.06, 0]} {...handlers}>
-          <cylinderGeometry args={[0.22, 0.3, h * 0.12, 8]} />
-          {m("#6d4c2f")}
+          <cylinderGeometry args={[0.22, 0.3, h * 0.12, detailed ? 10 : 8]} />
+          {m("#6d4c2f", "bark")}
         </mesh>
         {Array.from({ length: tiers }, (_, i) => {
           const f = i / tiers;
           const tall = (h * 0.95) / tiers + h * 0.08;
           return (
             <mesh key={i} position={[0, h * 0.06 + f * h * 0.82 + tall / 2, 0]} {...handlers}>
-              <coneGeometry args={[width * (1 - f * 0.78), tall, 9]} />
-              {m(lighter(rules.color, (i % 2 ? 0.03 : -0.02) + f * 0.05))}
+              <coneGeometry args={[width * (1 - f * 0.78), tall, detailed ? 14 : 9]} />
+              {m(lighter(rules.color, (i % 2 ? 0.03 : -0.02) + f * 0.05), i % 2 ? "needlesLight" : "needles")}
             </mesh>
           );
         })}
@@ -614,13 +632,13 @@ export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onCli
         {plates}
         <group rotation={[0, yaw, 0]}>
           <mesh position={[0, body / 2, 0]} {...handlers}>
-            <boxGeometry args={[span * 0.94, body, 0.34 * HEX_SIZE]} />
-            {m(rules.color)}
+            <boxGeometry args={[span * 0.94, body, 0.34 * HEX_SIZE]} {...uv(1.2)} />
+            {m(rules.color, "fieldstone")}
           </mesh>
           {Array.from({ length: stones }, (_, i) => (
             <mesh key={i} position={[-span * 0.47 + w * (i + 0.5), body + h * 0.08, 0]} {...handlers}>
-              <boxGeometry args={[w * 0.92, h * 0.16, 0.44 * HEX_SIZE]} />
-              {m(lighter(rules.color, i % 2 ? 0.06 : 0.1))}
+              <boxGeometry args={[w * 0.92, h * 0.16, 0.44 * HEX_SIZE]} {...uv(0.6 + i * 0.07)} />
+              {m(lighter(rules.color, i % 2 ? 0.06 : 0.1), "capstone")}
             </mesh>
           ))}
         </group>
@@ -640,8 +658,8 @@ export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onCli
             const tall = h * (0.5 + 0.45 * steady(placement.id, i));
             return (
               <mesh key={i} position={[-span * 0.46 + w * (i + 0.5), tall / 2, 0]} {...handlers}>
-                <boxGeometry args={[w * 1.01, tall, 0.36 * HEX_SIZE]} />
-                {m(i % 2 ? rules.color : lighter(rules.color, -0.04))}
+                <boxGeometry args={[w * 1.01, tall, 0.36 * HEX_SIZE]} {...uv(1.1)} />
+                {m(i % 2 ? rules.color : lighter(rules.color, -0.04), "greystone")}
               </mesh>
             );
           })}
@@ -649,8 +667,8 @@ export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onCli
             const tall = h * (0.85 + 0.15 * steady(placement.id, 10 + i));
             return (
               <mesh key={`p${i}`} position={[at * span, tall / 2, 0]} rotation={[0, 0, (steady(placement.id, 20 + i) - 0.5) * 0.08]} {...handlers}>
-                <boxGeometry args={[0.34 * HEX_SIZE, tall, 0.5 * HEX_SIZE]} />
-                {m(lighter(rules.color, 0.05))}
+                <boxGeometry args={[0.34 * HEX_SIZE, tall, 0.5 * HEX_SIZE]} {...uv(0.9)} />
+                {m(lighter(rules.color, 0.05), "greystone")}
               </mesh>
             );
           })}
@@ -669,13 +687,13 @@ export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onCli
         {plates}
         <group rotation={[0, yaw, 0]}>
           <mesh position={[0, body / 2, 0]} {...handlers}>
-            <boxGeometry args={[length * 0.94, body, thick]} />
-            {m(rules.color)}
+            <boxGeometry args={[length * 0.94, body, thick]} {...uv(1.4)} />
+            {m(rules.color, "sandstone")}
           </mesh>
           {Array.from({ length: 9 }, (_, i) => (
             <mesh key={`c${i}`} position={[-length * 0.42 + (length * 0.84 * i) / 8, body + h * 0.05, 0]} {...handlers}>
-              <boxGeometry args={[length * 0.05, h * 0.1, thick]} />
-              {m(lighter(rules.color, -0.03))}
+              <boxGeometry args={[length * 0.05, h * 0.1, thick]} {...uv(1.4)} />
+              {m(lighter(rules.color, -0.03), "sandstone")}
             </mesh>
           ))}
           {[-0.47, -0.16, 0.16, 0.47].map((at, i) => {
@@ -683,12 +701,12 @@ export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onCli
             return (
               <group key={`p${i}`} position={[at * length, 0, 0]}>
                 <mesh position={[0, tall / 2, 0]} {...handlers}>
-                  <boxGeometry args={[0.36 * HEX_SIZE, tall, thick * 1.5]} />
-                  {m(lighter(rules.color, 0.04))}
+                  <boxGeometry args={[0.36 * HEX_SIZE, tall, thick * 1.5]} {...uv(1.3)} />
+                  {m(lighter(rules.color, 0.04), "sandstone")}
                 </mesh>
                 <mesh position={[0, tall, 0]} rotation={[0.5 * (steady(placement.id, 5 + i) - 0.5), 0.6, 0.4]} {...handlers}>
-                  <boxGeometry args={[0.32 * HEX_SIZE, 0.32 * HEX_SIZE, 0.32 * HEX_SIZE]} />
-                  {m(lighter(rules.color, 0.02))}
+                  <boxGeometry args={[0.32 * HEX_SIZE, 0.32 * HEX_SIZE, 0.32 * HEX_SIZE]} {...uv(1.3)} />
+                  {m(lighter(rules.color, 0.02), "sandstone")}
                 </mesh>
               </group>
             );
@@ -705,25 +723,40 @@ export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onCli
       {rules.id === "tree" ? (
         <>
           <mesh position={[0, h * 0.15, 0]} {...handlers}>
-            <cylinderGeometry args={[0.12, 0.16, h * 0.3, 8]} />
-            {m("#6d4c2f")}
+            <cylinderGeometry args={[0.12, 0.16, h * 0.3, detailed ? 10 : 8]} />
+            {m("#6d4c2f", "bark")}
           </mesh>
-          <mesh position={[0, h * 0.62, 0]} {...handlers}>
-            <coneGeometry args={[r, h * 0.76, 8]} />
-            {m(rules.color)}
-          </mesh>
+          {detailed ? (
+            // Three needled tiers, inside the plain cone's outline.
+            [0, 1, 2].map((i) => (
+              <mesh key={i} position={[0, h * 0.24 + (i / 3) * h * 0.42 + h * 0.17, 0]} {...handlers}>
+                <coneGeometry args={[r * (1 - (i / 3) * 0.55), h * 0.34, 12]} />
+                {m(rules.color, i % 2 ? "needlesLight" : "needles")}
+              </mesh>
+            ))
+          ) : (
+            <mesh position={[0, h * 0.62, 0]} {...handlers}>
+              <coneGeometry args={[r, h * 0.76, 8]} />
+              {m(rules.color, "needles")}
+            </mesh>
+          )}
         </>
       ) : rules.shape === "prism" ? (
         points.map((p, i) => (
           <mesh key={i} position={[p.x - cx, h / 2, p.z - cz]} {...handlers}>
-            <cylinderGeometry args={[HEX_SIZE * 0.86, HEX_SIZE * 0.86, h, 6]} />
-            {m(rules.color)}
+            <cylinderGeometry args={[HEX_SIZE * 0.86, HEX_SIZE * 0.86, h, 6]} {...uv(1.1)} />
+            {m(rules.color, "greystone")}
           </mesh>
         ))
+      ) : detailed ? (
+        // A lumpy weathered rock.
+        <mesh position={[0, h / 2, 0]} scale={[1, h / (2 * r), 1]} geometry={boulderGeometry(r)} {...handlers}>
+          {m(rules.color, "rock")}
+        </mesh>
       ) : (
         <mesh position={[0, h / 2, 0]} scale={[1, h / (2 * r), 1]} {...handlers}>
           <dodecahedronGeometry args={[r, 0]} />
-          {m(rules.color)}
+          {m(rules.color, "rock")}
         </mesh>
       )}
     </group>
