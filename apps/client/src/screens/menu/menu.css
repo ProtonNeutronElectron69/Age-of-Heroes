@@ -370,7 +370,7 @@
   flex: 1;
 }
 
-/* Six premade maps in two columns of compact cards, so the panel still fits the stage. */
+/* Seven premade maps in two columns of compact cards, so the panel still fits the stage. */
 .mp-maps {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -429,6 +429,10 @@
 
 .m-mirewood-fen {
   background: linear-gradient(120deg, #2f6e3a 0 30%, #6b6b3a 30% 52%, #3d80c8 52% 70%, #2f6e3a 70%);
+}
+
+.m-riverbend {
+  background: linear-gradient(135deg, #eef3f6 0 16%, #9b968e 16% 34%, #6aa84f 34% 46%, #3d80c8 46% 60%, #6aa84f 60% 78%, #2f6e3a 78%);
 }
 
 .mp-mine {
@@ -956,8 +960,27 @@
   border-color: #33241a;
 }
 
+/* The map cards are tighter here, so the online panel's seven maps fit the page. */
 .ms-atlas .mp-mapbtn {
   border-radius: 6px;
+  padding: 1px 7px;
+}
+
+.ms-atlas .mp-maps {
+  gap: 3px;
+}
+
+.ms-atlas .mp-mapname b {
+  line-height: 1.05;
+}
+
+.ms-atlas .mp-mapname small {
+  line-height: 1.05;
+}
+
+.ms-atlas .mp-mapbtn .mp-mhex {
+  width: 17px;
+  height: 19px;
 }
 
 .ms-atlas .mp-mhex {
@@ -1319,11 +1342,11 @@
 
 .ms-banner-hall .mp-maps {
   grid-template-columns: 1fr;
-  gap: 2px;
+  gap: 1px;
 }
 
 .ms-banner-hall .mp-mapbtn {
-  padding: 1px 9px;
+  padding: 0 9px;
 }
 
 .ms-banner-hall .mp-mapname b {
