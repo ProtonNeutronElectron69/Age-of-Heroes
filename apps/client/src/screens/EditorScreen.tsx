@@ -813,7 +813,8 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
               )}
               <p className="muted small">
                 Click terrain to place. Scenery blocks movement and line of sight.
-                {sceneryRules.cover ? ` A figure next to a ${sceneryRules.name.toLowerCase()} gets +${sceneryRules.cover} defense against attacks from range across it.` : ""}
+                {sceneryRules.climb ? ` Figures that walk can climb across a ${sceneryRules.name.toLowerCase()} for ${sceneryRules.climb} extra move, but cannot stop on it.` : ""}
+                {sceneryRules.cover ? ` A figure next to it gets +${sceneryRules.cover} defense against attacks from range across it.` : ""}
               </p>
               <h2>Random fill</h2>
               {fillLevelControl}
@@ -823,7 +824,7 @@ export function EditorScreen({ initial, onDone }: { initial: MapDefinition | nul
                 </button>
               </div>
               <p className="muted small">
-                Scatters scenery on standard terrain at that level, away from start zones and other scenery.
+                Scatters scenery of every kind on standard terrain at that level, bigger pieces turned at random, away from start zones and other scenery.
               </p>
             </>
           )}

@@ -98,6 +98,7 @@ export function HexTip({
       {scenery.map((s) => (
         <p key={s.placement.id}>
           {s.rules.name}, {s.rules.height} levels tall: no figure can stand here, and it blocks line of sight.
+          {s.rules.climb ? ` Figures that walk can climb across it for ${s.rules.climb} extra move.` : ""}
           {s.rules.cover ? ` A figure next to it gets +${s.rules.cover} defense against attacks from range across it.` : ""}
         </p>
       ))}

@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   Board,
+  applyCommand,
   canStep,
   coverFrom,
+  createGame,
+  moveOptions,
+  placementKey,
   hasLineOfSight,
   hex,
   hexKey,
@@ -16,10 +20,10 @@ import {
   type RulesContext,
   type SceneryPlacement,
 } from "../src";
-import { CARDS, TERRAIN } from "./fixtures";
+import { CARDS, TERRAIN, setup, turnState } from "./fixtures";
 
 const KINDS = sceneryTable([
-  { id: "low-wall", name: "Low wall", height: 3, shape: "prism", color: "#888", footprint: "3x1", cover: 1 },
+  { id: "low-wall", name: "Low wall", height: 3, shape: "prism", color: "#888", footprint: "3x1", cover: 1, climb: 1 },
   { id: "ruin", name: "Small ruined wall", height: 5, shape: "prism", color: "#999", footprint: "2x1" },
   { id: "big-tree", name: "Large tree", height: 12, shape: "cylinder", radius: 0.8, color: "#2a5", footprint: "2x2" },
   { id: "big-wall", name: "Large wall", height: 7, shape: "prism", color: "#aaa", footprint: "3x1" },
@@ -31,7 +35,12 @@ function field(scenery: SceneryPlacement[]): MapDefinition {
   for (let q = -3; q <= 4; q++) {
     for (let r = -3; r <= 2; r++) pieces.push({ id: `g${q}_${r}`, shape: "single", terrain: "grass", origin: hex(q, r), rotation: 0, layer: 0 });
   }
-  return { formatVersion: 1, id: "big", name: "Big scenery", description: "", pieces, scenery, startZones: [], layouts: {} };
+  const startZones = [
+    // Along the bottom row, out of the way of the scenery the tests place.
+    { seat: 0, hexes: [hex(-3, 2), hex(-2, 2), hex(-1, 2), hex(0, 2)] },
+    { seat: 1, hexes: [hex(1, 2), hex(2, 2), hex(3, 2), hex(4, 2)] },
+  ];
+  return { formatVersion: 1, id: "big", name: "Big scenery", description: "", pieces, scenery, startZones, layouts: {} };
 }
 
 function context(scenery: SceneryPlacement[]): { ctx: RulesContext; codes: string[] } {
@@ -45,6 +54,22 @@ const lowWall: SceneryPlacement = { id: "w", kind: "low-wall", hex: hex(0, -1), 
 const at = (q: number, r: number, elevation = 1) => ({ hex: hex(q, r), elevation });
 
 describe("the editor's random scenery fill", () => {
+  it("places every kind, bigger ones turned at random, without problems", () => {
+    const kinds = sceneryTable([...KINDS.values(), { id: "tree", name: "Tree", height: 9, shape: "cylinder", radius: 0.55, color: "#2a5" }]);
+    const placed = new Set<string>();
+    const turns = new Set<number>();
+    for (let seed = 1; seed <= 40; seed++) {
+      const { map } = populateScenery(field([]), 1, new Rng(seed), terrainTable(TERRAIN), kinds);
+      expect(Board.fromMap(map, terrainTable(TERRAIN), kinds).issues.filter((i) => i.sceneryId)).toEqual([]);
+      for (const s of map.scenery) {
+        placed.add(s.kind);
+        turns.add(s.rotation ?? 0);
+      }
+    }
+    expect([...placed].sort()).toEqual(["big-tree", "big-wall", "low-wall", "ruin", "tree"]);
+    expect(turns.size).toBeGreaterThan(2);
+  });
+
   it("keeps clear of every hex of bigger scenery", () => {
     const kinds = sceneryTable([...KINDS.values(), { id: "tree", name: "Tree", height: 9, shape: "cylinder", radius: 0.55, color: "#2a5" }]);
     for (let seed = 1; seed <= 20; seed++) {
@@ -88,6 +113,34 @@ describe("scenery bigger than one hex", () => {
     // Tall figures see over a low wall.
     const tall = (q: number, r: number) => ({ hex: hex(q, r), elevation: 1, height: 6 });
     expect(hasLineOfSight(context([lowWall]).ctx.board, tall(1, 0), tall(1, -2))).toBe(true);
+  });
+});
+
+describe("climbing across a low wall", () => {
+  const { ctx } = context([lowWall]);
+  /** The hero at (1,0), south of the wall's middle hex (1,-1); everyone else off the board. */
+  const game = () => turnState(createGame(setup(2, { mapId: "big" }), ctx).state, "p1:0", { "p1:0#1": { q: 1, r: 0, elevation: 1 } });
+
+  it("costs one extra move, and leaves the figure on the far side", () => {
+    const options = moveOptions(game(), "p1:0#1", ctx);
+    // Straight over: onto the wall (1 + 1 to climb), then down the far side (1).
+    expect(options.get(placementKey({ hex: hex(1, -2), elevation: 1, rotation: 0 }))?.cost).toBe(3);
+    // No move ends on the wall itself.
+    for (const h of [hex(0, -1), hex(1, -1), hex(2, -1)]) expect(options.has(placementKey({ hex: h, elevation: 1, rotation: 0 }))).toBe(false);
+  });
+
+  it("refuses a move that would end on the wall", () => {
+    const r = applyCommand(game(), { type: "move", player: "p1", figureId: "p1:0#1", path: [{ hex: hex(1, -1), elevation: 1 }] }, ctx);
+    expect(!r.ok && r.error).toMatch(/cannot end its move on a wall/);
+  });
+
+  it("is not allowed over the other walls or trees", () => {
+    const ruins = context([{ id: "r", kind: "ruin", hex: hex(1, -1), elevation: 1 }, { id: "t", kind: "big-tree", hex: hex(-2, -2), elevation: 1 }]).ctx;
+    expect(canStep(at(1, 0), at(1, -1), 5, ruins, true)).toBe(false);
+    expect(canStep(at(-2, 0), at(-2, -1), 5, ruins, true)).toBe(false);
+    // Only while passing over it; a figure never stands on a low wall.
+    expect(canStep(at(1, 0), at(1, -1), 5, ctx, true)).toBe(true);
+    expect(canStep(at(1, 0), at(1, -1), 5, ctx)).toBe(false);
   });
 });
 

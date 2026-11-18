@@ -64,6 +64,11 @@ export interface SceneryRules {
   readonly footprint?: Footprint;
   /** Extra defense dice for a figure next to it against an attack from range across it (low walls). */
   readonly cover?: number;
+  /**
+   * Figures that walk can climb across it (low walls): entering one of its hexes costs this many
+   * extra move points. No figure may end its move on it.
+   */
+  readonly climb?: number;
 }
 
 export type SceneryTable = ReadonlyMap<string, SceneryRules>;

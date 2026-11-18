@@ -36,11 +36,15 @@ export function placementSpots(
   height: number,
   p: Placement,
   ctx: RulesContext,
+  /** On the way through a move, scenery a figure can climb across (a low wall) does not get in the way. */
+  passing = false,
 ): Step[] | null {
   const board = ctx.board;
   const fits = (h: Hex, elevation: number) => {
     const s = board.surfaceAt(h, elevation);
-    return s !== undefined && s.clearance >= height && board.sceneryAt(h, elevation) === undefined;
+    if (s === undefined || s.clearance < height) return false;
+    const scenery = board.sceneryAt(h, elevation);
+    return scenery === undefined || (passing && scenery.rules.climb !== undefined);
   };
   if (!fits(p.hex, p.elevation)) return null;
   const cells = footprintCells(footprint, p.hex, p.rotation);

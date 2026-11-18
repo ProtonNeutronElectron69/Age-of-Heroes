@@ -3,7 +3,7 @@ import { DIRECTIONS, hexAdd, hexEquals, hexKey, hexNeighbors, hexToWorld, type H
 import type { Rng } from "./rng";
 import type { MapDefinition, PlacedPiece, SceneryPlacement } from "./schema";
 import { MAX_PLAYERS } from "./schema";
-import { shapeCells, type ShapeId } from "./shapes";
+import { footprintCells, shapeCells, type ShapeId } from "./shapes";
 import type { SceneryRules, SceneryTable, TerrainTable } from "./terrain";
 import { HEX_SIZE } from "./world";
 
@@ -231,9 +231,10 @@ export function populateTerrain(
 }
 
 /**
- * Scatter scenery on surfaces at elevation `level` (the top of level `level`
- * pieces): only on standard terrain, outside start zones, where it fits under
- * anything above, and never next to other scenery.
+ * Scatter scenery of every kind on surfaces at elevation `level` (the top of
+ * level `level` pieces): only on standard terrain, outside start zones, where it
+ * fits under anything above, and never next to other scenery. Pieces bigger
+ * than one hex are turned at random and need every hex they fill to be free.
  */
 export function populateScenery(
   map: MapDefinition,
@@ -246,8 +247,7 @@ export function populateScenery(
   const zone = new Set(map.startZones.flatMap((z) => z.hexes.map(hexKey)));
   // Every hex a piece fills, bigger pieces included, and the hexes around them.
   const crowded = new Set(board.scenery().flatMap((s) => s.cells.flatMap((c) => [c, ...hexNeighbors(c)]).map(hexKey)));
-  // One-hex scenery only: bigger pieces are placed by hand.
-  const kinds: SceneryRules[] = [...scenery.values()].filter((k) => !k.footprint);
+  const kinds: SceneryRules[] = [...scenery.values()];
   const open: { hex: Hex; clearance: number }[] = [];
   for (const h of board.hexes()) {
     const s = board.surfaceAt(h, level);
@@ -259,14 +259,17 @@ export function populateScenery(
   const target = Math.max(1, Math.ceil(open.length * SCENERY_FILL));
   let next = map;
   let added = 0;
+  const clearance = new Map(open.map((o) => [hexKey(o.hex), o.clearance]));
   for (let attempt = 0; attempt < target * 30 && added < target && open.length > 0; attempt++) {
     const spot = open[rng.int(0, open.length - 1)]!;
     if (crowded.has(hexKey(spot.hex))) continue;
-    const fits = kinds.filter((k) => k.height <= spot.clearance);
-    if (fits.length === 0) continue;
-    const kind = fits[rng.int(0, fits.length - 1)]!;
-    next = addScenery(next, kind.id, spot.hex, level);
-    for (const h of [spot.hex, ...hexNeighbors(spot.hex)]) crowded.add(hexKey(h));
+    const kind = kinds[rng.int(0, kinds.length - 1)]!;
+    const rotation = kind.footprint ? rng.int(0, 5) : 0;
+    const cells = kind.footprint ? footprintCells(kind.footprint, spot.hex, rotation) : [spot.hex];
+    // Every hex it fills must be open, uncrowded and tall enough.
+    if (!cells.every((c) => !crowded.has(hexKey(c)) && (clearance.get(hexKey(c)) ?? -1) >= kind.height)) continue;
+    next = addScenery(next, kind.id, spot.hex, level, rotation);
+    for (const c of cells) for (const h of [c, ...hexNeighbors(c)]) crowded.add(hexKey(h));
     added += 1;
   }
   return { map: next, added };

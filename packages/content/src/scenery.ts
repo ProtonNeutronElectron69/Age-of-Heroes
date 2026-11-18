@@ -12,7 +12,7 @@ export const SCENERY: readonly SceneryRules[] = [
   // A broken stretch of wall two hexes long.
   { id: "small-ruin", name: "Small ruined wall", height: 5, shape: "prism", color: "#b3a98d", footprint: "2x1" },
   // A low stone wall three hexes long; figures behind it are harder to hit from range.
-  { id: "low-wall", name: "Low wall", height: 3, shape: "prism", color: "#8f8b80", footprint: "3x1", cover: 1 },
+  { id: "low-wall", name: "Low wall", height: 3, shape: "prism", color: "#8f8b80", footprint: "3x1", cover: 1, climb: 1 },
 ];
 
 export const SCENERY_TABLE = sceneryTable(SCENERY);

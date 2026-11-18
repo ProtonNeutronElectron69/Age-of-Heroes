@@ -33,7 +33,7 @@ Dependencies only point downwards: `client` and `server` use `protocol`, `conten
 | `terrain.ts`, `tuning.ts` | The shape of terrain rules and tunable numbers (the values live in `content`) |
 | `dice.ts`, `rng.ts` | Attack and defense dice, and the seeded RNG (mulberry32) |
 | `los.ts` | Line of sight: a strict check from the eye point to the hit band, with terrain, scenery and other figures blocking |
-| `game/combat.ts` cover | `coverFrom` gives the cover of scenery with `cover` (the low wall) to a figure next to it, against an attack from range whose line passes over it. Scenery bigger than one hex (`footprint`, turned by the placement's `rotation`) is stored in every hex it fills, so movement, placement and line of sight treat each hex like one-hex scenery |
+| `game/combat.ts` cover | `coverFrom` gives the cover of scenery with `cover` (the low wall) to a figure next to it, against an attack from range whose line passes over it. Scenery bigger than one hex (`footprint`, turned by the placement's `rotation`) is stored in every hex it fills, so movement, placement and line of sight treat each hex like one-hex scenery. Scenery with `climb` (the low wall) can be crossed by walking figures at that extra cost: moves pass over it (`placementSpots` and `canStep` with `passing`) but never end on it |
 | `editor.ts` | Pure map-editing operations used by the map editor: placing and removing pieces, side placement, start zones, fixing problems, and seeded random fills |
 | `game/types.ts` | `GameState`, `Command`, `GameEvent`, `PlayerView` and friends |
 | `game/engine.ts` | `createGame`, `applyCommand`, `replayGame`, `waitingOn` and the turn flow |

@@ -87,7 +87,8 @@ Scenery stands on the terrain and fills one hex or more:
 | **Small ruined wall** | 5 levels | 2 hexes in a line |
 | **Low wall** | 3 levels | 3 hexes in a line; gives cover |
 
-- No figure can enter or stand on a hex that scenery fills (at that level).
+- No figure can enter or stand on a hex that scenery fills (at that level), except that figures that walk can **climb across a low wall**: entering one of its hexes costs **1 extra move**, and no figure may end its move on it. Trees, the small ruined wall and the large wall cannot be crossed.
+- Walls do not make figures engaged: figures on opposite sides of a wall are at least 2 hexes apart.
 - Scenery blocks line of sight just like terrain. A short wall or boulder can be seen over by taller figures.
 - Scenery must stand on terrain and fit under anything above it. Scenery bigger than one hex needs level ground under all of it.
 - Flying figures fly over scenery but cannot land on it (see Flying in section 7).
