@@ -1,5 +1,5 @@
 import { Rng } from "../rng";
-import { initiativeBonus } from "./glyphs";
+import { initiativeBonus, spendInitiativeGlyphs } from "./glyphs";
 import { activePlayers, findUnit, isUnitAlive, livingUnitsOf, scoreOf } from "./queries";
 import {
   NUMBERED_TOKENS,
@@ -80,6 +80,7 @@ export function maybeStartTurns(state: GameState, events: GameEvent[], ctx: Rule
   state.rng = rng.state;
   state.initiative = order;
   events.push({ type: "initiativeRolled", rolls, order });
+  spendInitiativeGlyphs(state, events);
   state.phase = "turns";
   state.pointer = { token: "1", orderIndex: 0 };
   advance(state, events, ctx);

@@ -15,6 +15,9 @@ import {
   type GlyphKind,
   type GlyphState,
   summonPlacements,
+  glyphBonus,
+  maybeStartTurns,
+  type GameEvent,
 } from "../src";
 import { apply, ctx, deployAll, setup, turnState } from "./fixtures";
 
@@ -125,11 +128,27 @@ describe("using glyphs", () => {
     expect(r.ok && most(r.state)).toBe(most(game()) + 2);
   });
 
-  it("adds to its player's initiative rolls", () => {
+  it("adds to its player's next initiative roll only", () => {
     const r = use(game(holding("initiative")), "p1:0");
     const { rolls } = rollOff(r.ok ? r.state : null!, new Rng(1), ctx);
     expect(rolls.find((x) => x.player === "p1")!.bonus).toBe(8);
     expect(rolls.find((x) => x.player === "p2")!.bonus).toBeUndefined();
+    // The next round's roll uses it up, and the unit is free for another glyph.
+    const s = r.ok ? r.state : null!;
+    s.phase = "placeTokens";
+    s.active = null;
+    const events: GameEvent[] = [];
+    maybeStartTurns(s, events, ctx);
+    expect(events.find((e) => e.type === "initiativeRolled")).toMatchObject({ rolls: expect.arrayContaining([expect.objectContaining({ player: "p1", bonus: 8 })]) });
+    expect(events.some((e) => e.type === "glyphSpent")).toBe(true);
+    expect(s.glyphs!.boosts).toEqual([]);
+    expect(rollOff(s, new Rng(1), ctx).rolls.every((x) => x.bonus === undefined)).toBe(true);
+  });
+
+  it("puts the Hawk only on a unit with a Range above 1, for +3 range", () => {
+    expect(use(game(holding("range")), "p1:0").ok).toBe(false);
+    const r = use(game(holding("range")), "p1:1");
+    expect(r.ok && glyphBonus(r.state, "p1:1", "range", ctx)).toBe(3);
   });
 
   it("negates a stat glyph on an enemy unit", () => {

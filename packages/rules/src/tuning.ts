@@ -35,7 +35,7 @@ export interface GlyphTuning {
   readonly summonRange: number;
 }
 
-export const DEFAULT_GLYPHS: GlyphTuning = { attack: 1, defense: 1, initiative: 8, range: 4, move: 2, pitWounds: 1, curseTurns: 2, summonRange: 3 };
+export const DEFAULT_GLYPHS: GlyphTuning = { attack: 1, defense: 1, initiative: 8, range: 3, move: 2, pitWounds: 1, curseTurns: 2, summonRange: 3 };
 
 export const DEFAULT_TUNING: Tuning = {
   falling: { minorDice: 2, majorDice: 4 },

@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with six premade maps, hot-seat and online play, saved games and replays. 560 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with six premade maps, hot-seat and online play, saved games and replays. 561 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 - **On hold (Phase 6):** a computer opponent, and a tutorial.
@@ -269,5 +269,6 @@ Small changes asked for after playing, online games especially.
 
 ### Glyphs
 - [x] Glyphs: small hex tiles scattered face down on the battlefield once every unit is placed, from none to all 11 (a menu setting, 4 at first; one of each kind). A figure that ends a move on one picks it up; only its player learns what it is, and holds it beside the board to use at any time in their own turn
-- [x] Five stat glyphs (+1 attack, +1 defense, +8 initiative, +4 range, +2 move), one per unit, lasting until the unit is destroyed; healing a unit fully; bringing back a destroyed unit beside the player's other figures; wounding an enemy unit; cancelling an enemy's stat glyph; and two traps that spring when picked up (a wound, and a curse that destroys the figure two of its player's turns later)
+- [x] Five stat glyphs (+1 attack, +1 defense, +8 initiative, +3 range, +2 move), one per unit, lasting until the unit is destroyed; healing a unit fully; resurrecting a destroyed unit beside the player's other figures; wounding an enemy unit; cancelling an enemy's stat glyph; and two traps that spring when picked up (a wound, and a curse that destroys the figure two of its player's turns later)
 - [x] The Glyphs panel lists held glyphs, the stat glyphs in play and the curses counting down; the hex tooltip says where one lies; the online lobby shows how many; the initiative show adds the bonus to the roll
+- [x] Glyph changes: the Herald counts for the next initiative roll only, then is spent; the Hawk gives +3 range and goes only on a unit with a Range above 1; Return is renamed Resurrection

@@ -18,7 +18,7 @@ export const GLYPHS: Readonly<Record<GlyphKind, GlyphInfo>> = {
   range: { kind: "range", name: "Glyph of the Hawk", color: "#3b9c9c", mark: "R" },
   move: { kind: "move", name: "Glyph of the Stag", color: "#5a9e3c", mark: "M" },
   heal: { kind: "heal", name: "Glyph of Mending", color: "#7cc576", mark: "H" },
-  summon: { kind: "summon", name: "Glyph of Return", color: "#e08a2c", mark: "S" },
+  summon: { kind: "summon", name: "Glyph of Resurrection", color: "#e08a2c", mark: "S" },
   wound: { kind: "wound", name: "Glyph of Blight", color: "#8e44ad", mark: "W" },
   negate: { kind: "negate", name: "Glyph of Undoing", color: "#9aa3ad", mark: "N" },
   pit: { kind: "pit", name: "Glyph of the Pit", color: "#6b4f32", mark: "P" },
@@ -33,15 +33,15 @@ export function glyphEffect(kind: GlyphKind, t: GlyphTuning = TUNING.glyphs ?? D
     case "defense":
       return `+${t.defense} defense die for one of your units until it is destroyed.`;
     case "initiative":
-      return `+${t.initiative} to your initiative rolls while the unit you put it on lives.`;
+      return `+${t.initiative} to your next initiative roll, rerolls included, then it is spent. Lost if the unit you put it on is destroyed first.`;
     case "range":
-      return `+${t.range} range for one of your units' normal attacks until it is destroyed.`;
+      return `+${t.range} range for normal attacks, until it is destroyed, for one of your units with a Range above 1.`;
     case "move":
       return `+${t.move} move for one of your units until it is destroyed.`;
     case "heal":
       return "Heals every wound on one of your units.";
     case "summon":
-      return `Brings back one of your destroyed units, each figure within ${t.summonRange} hexes of another of your figures.`;
+      return `Resurrects one of your destroyed units, unwounded, each figure on a free spot within ${t.summonRange} hexes of another of your figures.`;
     case "wound":
       return "An enemy squad takes a wound on every figure; an enemy hero loses half the Life it has left (at least 1).";
     case "negate":

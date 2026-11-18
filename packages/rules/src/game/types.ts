@@ -344,6 +344,8 @@ export type GameEvent =
   | { readonly type: "glyphUsed"; readonly player: PlayerId; readonly glyphId: string; readonly kind: GlyphKind; readonly unitId: string }
   /** A boost a glyph gave a unit was cancelled (Negation). */
   | { readonly type: "glyphCancelled"; readonly glyphId: string; readonly kind: GlyphKind; readonly unitId: string }
+  /** A one-roll glyph (the Herald) has been rolled with and is gone. */
+  | { readonly type: "glyphSpent"; readonly glyphId: string; readonly kind: GlyphKind; readonly unitId: string }
   /** A cursed figure's time ran out. */
   | { readonly type: "curseStruck"; readonly figureId: string }
   /** A start zone grew by `added` hexes so the army fits (maps with `growZones`). */

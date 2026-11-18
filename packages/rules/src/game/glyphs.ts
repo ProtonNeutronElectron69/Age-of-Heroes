@@ -130,12 +130,25 @@ export function glyphBonus(state: GameState, unitId: string, stat: "attack" | "d
   return glyphOn(state, unitId) === stat ? glyphTuning(ctx)[stat] : 0;
 }
 
-/** What a player adds to their initiative rolls (a glyph of initiative on a living unit). */
+/**
+ * What a player adds to this round's initiative rolls: a glyph of initiative on a living unit,
+ * played in an earlier round. It counts for one roll-off only (`spendInitiativeGlyphs`).
+ */
 export function initiativeBonus(state: GameState, player: PlayerId, ctx?: RulesContext): number {
   const g = state.glyphs;
   if (!g) return 0;
   const per = (ctx ? glyphTuning(ctx) : DEFAULT_GLYPHS).initiative;
   return g.boosts.filter((b) => b.kind === "initiative" && findUnit(state, b.unitId)?.owner === player && glyphOn(state, b.unitId) === "initiative").length * per;
+}
+
+/** Initiative has been rolled: every glyph of initiative has had its one roll and is gone. */
+export function spendInitiativeGlyphs(state: GameState, events: GameEvent[]): void {
+  const g = state.glyphs;
+  if (!g) return;
+  for (const b of g.boosts.filter((x) => x.kind === "initiative")) {
+    events.push({ type: "glyphSpent", glyphId: b.glyphId, kind: b.kind, unitId: b.unitId });
+  }
+  g.boosts = g.boosts.filter((x) => x.kind !== "initiative");
 }
 
 /** Why a held glyph cannot be used on this unit now, or null. */
@@ -157,6 +170,7 @@ export function glyphProblem(state: GameState, player: PlayerId, glyphId: string
       if (!own) return "A stat glyph goes on one of your own units";
       if (!alive) return "That unit has been destroyed";
       if (glyphOn(state, unitId)) return "That unit already has a glyph";
+      if (held.kind === "range" && statsOf(cardOf(unit, ctx)).range <= 1) return "The Glyph of the Hawk goes only on a unit with a Range above 1";
       return null;
     case "heal":
       if (!own) return "Healing is for one of your own units";
