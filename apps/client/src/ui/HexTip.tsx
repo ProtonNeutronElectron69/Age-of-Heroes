@@ -33,12 +33,15 @@ export function HexTip({
   board,
   terrain,
   zones,
+  glyphs,
   onClose,
 }: {
   tip: HexInspect | null;
   board: Board;
   terrain: TerrainTable;
   zones?: ZoneOwners;
+  /** Glyphs lying face down on the battlefield. */
+  glyphs?: readonly { hex: { q: number; r: number }; elevation: number }[];
   onClose: () => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
@@ -102,6 +105,9 @@ export function HexTip({
           {s.rules.cover ? ` A figure next to it gets +${s.rules.cover} defense against attacks from range across it.` : ""}
         </p>
       ))}
+      {glyphs?.some((g) => hexKey(g.hex) === hexKey(step.hex) && g.elevation === step.elevation) && (
+        <p className="hex-tip-glyph">A glyph lies face down here. A figure that ends its move on it picks it up.</p>
+      )}
       {zone && (
         <p className="hex-tip-zone">
           <span className="swatch" style={{ background: zone.color }} />

@@ -4,6 +4,7 @@ import { fail } from "./errors";
 import { placementSpots, type Placement } from "./placement";
 import { cardSpace } from "./draft";
 import { cardOf, findUnit, occupancy, statsOf, stepKey } from "./queries";
+import { scatterGlyphs } from "./glyphs";
 import { startRound } from "./rounds";
 import type { FigurePlacement, GameEvent, GameState, PlayerId, RulesContext, Step } from "./types";
 
@@ -50,9 +51,9 @@ export function advanceDeployment(state: GameState, events: GameEvent[], ctx: Ru
   for (;;) {
     skipDepartedDeployers(state);
     const current = currentDeployment(state);
-    if (!current) return finishDeployment(state, events);
+    if (!current) return finishDeployment(state, events, ctx);
     const unit = findUnit(state, current.unitId);
-    if (!unit) return finishDeployment(state, events);
+    if (!unit) return finishDeployment(state, events, ctx);
     if (ensureRoom(state, current.player, cardOf(unit, ctx), events, ctx)) return;
     // Not even a grown zone has room: the unit sits this game out rather than stalling it.
     for (const f of unit.figures) {
@@ -197,8 +198,9 @@ export function skipDepartedDeployers(state: GameState): void {
   }
 }
 
-function finishDeployment(state: GameState, events: GameEvent[]): void {
+function finishDeployment(state: GameState, events: GameEvent[], ctx: RulesContext): void {
   events.push({ type: "deploymentEnded" });
+  scatterGlyphs(state, events, ctx);
   startRound(state, events);
 }
 

@@ -88,6 +88,39 @@ export type InitiativeMode = "auto" | "players";
  */
 export type TokenRule = "stack" | "onePerUnit";
 
+/**
+ * Glyphs: small tiles scattered face down on the battlefield. A figure that ends a move on one
+ * picks it up. Traps act at once (`pit`, `curse`); the rest are held off the board and used later.
+ */
+export type GlyphKind =
+  | "attack"
+  | "defense"
+  | "initiative"
+  | "range"
+  | "move"
+  | "heal"
+  | "summon"
+  | "wound"
+  | "negate"
+  | "pit"
+  | "curse";
+export const GLYPH_KINDS: readonly GlyphKind[] = ["attack", "defense", "initiative", "range", "move", "heal", "summon", "wound", "negate", "pit", "curse"];
+/** Glyphs that boost one card's stats while it lives. */
+export const STAT_GLYPHS: readonly GlyphKind[] = ["attack", "defense", "initiative", "range", "move"];
+/** Glyphs that act on the figure that picks them up. */
+export const TRAP_GLYPHS: readonly GlyphKind[] = ["pit", "curse"];
+
+export interface GlyphState {
+  /** Glyphs still on the battlefield. `kind` is null where the viewer may not know it. */
+  onBoard: { readonly id: string; readonly kind: GlyphKind | null; readonly hex: Hex; readonly elevation: number }[];
+  /** Glyphs each player holds, ready to use. `kind` is null where the viewer may not know it. */
+  held: Record<PlayerId, { readonly id: string; readonly kind: GlyphKind | null }[]>;
+  /** Stat glyphs in use: each boosts one unit until it is destroyed. */
+  boosts: { readonly glyphId: string; readonly kind: GlyphKind; readonly unitId: string }[];
+  /** Figures under a curse: each dies when its player has ended `turnsLeft` more turns. */
+  curses: { readonly glyphId: string; readonly figureId: string; readonly player: PlayerId; turnsLeft: number }[];
+}
+
 export interface ActiveTurn {
   readonly player: PlayerId;
   readonly unitId: string;
@@ -112,6 +145,8 @@ export interface TurnPointer {
 export interface RollOff {
   readonly player: PlayerId;
   readonly values: number[];
+  /** Added to each roll (a glyph of initiative). */
+  readonly bonus?: number;
 }
 
 export interface DraftState {
@@ -152,6 +187,8 @@ export interface GameConfig {
   readonly initiative: InitiativeMode;
   /** Left out by games saved before the rule existed, which keep "stack". */
   readonly tokenRule?: TokenRule;
+  /** How many glyphs are scattered when deployment ends; left out (or 0) for none. */
+  readonly glyphs?: number;
 }
 
 export interface GameState {
@@ -187,6 +224,8 @@ export interface GameState {
   pointer: TurnPointer | null;
   active: ActiveTurn | null;
   result: GameResult | null;
+  /** Glyphs, in games that have them. */
+  glyphs?: GlyphState;
 }
 
 export interface PlayerSetup {
@@ -216,6 +255,8 @@ export interface GameSetup {
   readonly initiative?: InitiativeMode;
   /** New games use "onePerUnit"; older ones leave it out and keep "stack". */
   readonly tokenRule?: TokenRule;
+  /** How many glyphs to scatter on the battlefield when deployment ends (0 to 11). */
+  readonly glyphs?: number;
 }
 
 export interface RulesContext {
@@ -265,9 +306,21 @@ export type Command =
   /** A player rolls for initiative (`initiative: "players"` games). */
   | { readonly type: "rollInitiative"; readonly player: PlayerId }
   | { readonly type: "endTurn"; readonly player: PlayerId }
+  /**
+   * Use a held glyph. `unitId` is the unit it acts on: one of the player's own for a stat glyph,
+   * Healer and Summoning (a destroyed one), an enemy's for Wound and Negation. Summoning also
+   * places every figure of the unit.
+   */
+  | {
+      readonly type: "useGlyph";
+      readonly player: PlayerId;
+      readonly glyphId: string;
+      readonly unitId: string;
+      readonly placements?: readonly FigurePlacement[];
+    }
   | { readonly type: "concede"; readonly player: PlayerId };
 
-export type DamageSource = "attack" | "swamp" | "lava" | "fall" | "passingStrike" | "ability";
+export type DamageSource = "attack" | "swamp" | "lava" | "fall" | "passingStrike" | "ability" | "glyph";
 
 export type GameEvent =
   | { readonly type: "draftStarted"; readonly rolls: RollOff[]; readonly order: PlayerId[] }
@@ -283,6 +336,16 @@ export type GameEvent =
       readonly placements: FigurePlacement[];
     }
   | { readonly type: "deploymentEnded" }
+  /** Glyphs laid face down on the battlefield. */
+  | { readonly type: "glyphsPlaced"; readonly glyphs: readonly { readonly id: string; readonly hex: Hex; readonly elevation: number }[] }
+  /** A figure picked up a glyph. Its kind is told only for a trap, which acts at once. */
+  | { readonly type: "glyphTaken"; readonly player: PlayerId; readonly figureId: string; readonly glyphId: string; readonly trap?: GlyphKind }
+  /** A held glyph was used on a unit. */
+  | { readonly type: "glyphUsed"; readonly player: PlayerId; readonly glyphId: string; readonly kind: GlyphKind; readonly unitId: string }
+  /** A boost a glyph gave a unit was cancelled (Negation). */
+  | { readonly type: "glyphCancelled"; readonly glyphId: string; readonly kind: GlyphKind; readonly unitId: string }
+  /** A cursed figure's time ran out. */
+  | { readonly type: "curseStruck"; readonly figureId: string }
   /** A start zone grew by `added` hexes so the army fits (maps with `growZones`). */
   | { readonly type: "startZoneGrown"; readonly player: PlayerId; readonly added: number }
   /** Not even a grown start zone had room for the unit, so it sits this game out. */

@@ -1,4 +1,5 @@
 import { Rng } from "../rng";
+import { initiativeBonus } from "./glyphs";
 import { activePlayers, findUnit, isUnitAlive, livingUnitsOf, scoreOf } from "./queries";
 import {
   NUMBERED_TOKENS,
@@ -20,13 +21,18 @@ import {
  * (increasing seat order, wrapping around). Used for initiative and for
  * choosing the first drafter.
  */
-export function rollOff(state: GameState, rng: Rng): { order: PlayerId[]; rolls: RollOff[] } {
+export function rollOff(state: GameState, rng: Rng, ctx?: RulesContext): { order: PlayerId[]; rolls: RollOff[] } {
   const seated = state.players.filter((p) => !p.eliminated).sort((a, b) => a.seat - b.seat);
-  const rolls = seated.map((p) => ({ player: p.id, values: [rng.d20()] }));
+  // A glyph of initiative adds to every roll its player makes.
+  const rolls: RollOff[] = seated.map((p) => {
+    const bonus = initiativeBonus(state, p.id, ctx);
+    return bonus ? { player: p.id, values: [rng.d20()], bonus } : { player: p.id, values: [rng.d20()] };
+  });
+  const total = (r: RollOff) => r.values[r.values.length - 1]! + (r.bonus ?? 0);
   let contenders = rolls;
   for (;;) {
-    const best = Math.max(...contenders.map((r) => r.values[r.values.length - 1]!));
-    const tied = contenders.filter((r) => r.values[r.values.length - 1] === best);
+    const best = Math.max(...contenders.map(total));
+    const tied = contenders.filter((r) => total(r) === best);
     if (tied.length === 1) {
       const first = seated.findIndex((p) => p.id === tied[0]!.player);
       const order = [...seated.slice(first), ...seated.slice(0, first)].map((p) => p.id);
@@ -70,7 +76,7 @@ export function maybeStartTurns(state: GameState, events: GameEvent[], ctx: Rule
     delete state.initiativeReady;
   }
   const rng = new Rng(state.rng);
-  const { order, rolls } = rollOff(state, rng);
+  const { order, rolls } = rollOff(state, rng, ctx);
   state.rng = rng.state;
   state.initiative = order;
   events.push({ type: "initiativeRolled", rolls, order });

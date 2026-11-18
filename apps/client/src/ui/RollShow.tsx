@@ -251,7 +251,8 @@ export function InitiativeShow({
 }) {
   const reduced = useReducedMotion();
   const together = onRoll !== undefined;
-  const rolls = event?.rolls ?? players.map((player) => ({ player, values: [] as number[] }));
+  const rolls: readonly { player: PlayerId; values: readonly number[]; bonus?: number }[] =
+    event?.rolls ?? players.map((player) => ({ player, values: [] as number[] }));
   /** For each player, which of their values the die is showing (-1 before it is rolled), and whether it has landed. */
   const [stage, setStage] = useState<number[]>(() => rolls.map(() => -1));
   const [landed, setLanded] = useState<boolean[]>(() => rolls.map(() => false));
@@ -350,7 +351,7 @@ export function InitiativeShow({
                   </button>
                 ) : (
                   <span className="initiative-value" data-value={value ?? undefined}>
-                    {value === null ? "rolling..." : value}
+                    {value == null ? "rolling..." : r.bonus ? `${value} + ${r.bonus} = ${value + r.bonus}` : value}
                     {value !== null && s < r.values.length - 1 ? ", tied: rolling again" : ""}
                   </span>
                 )}

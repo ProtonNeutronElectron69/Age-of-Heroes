@@ -1925,3 +1925,11 @@
   padding: 4px 6px 4px 12px;
   align-self: flex-start;
 }
+
+/* The glyph count: minus, the number, plus. */
+.mp-stepper output {
+  min-width: 3.4em;
+  text-align: center;
+  font-size: 15px;
+  color: var(--p-text);
+}

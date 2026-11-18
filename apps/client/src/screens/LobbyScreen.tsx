@@ -137,7 +137,8 @@ export function LobbyScreen() {
         <h2>Game</h2>
         <p className="small">
           {room.mapName}, {room.budget !== null ? `${room.budget} points` : "no points limit"}
-          {room.factionPure ? ", faction-pure" : ""}, {room.roundLimit === null ? "no round limit" : `${room.roundLimit} rounds`}.
+          {room.factionPure ? ", faction-pure" : ""}, {room.roundLimit === null ? "no round limit" : `${room.roundLimit} rounds`},{" "}
+          {room.glyphs ? `${room.glyphs} ${room.glyphs === 1 ? "glyph" : "glyphs"}` : "no glyphs"}.
         </p>
 
         {online.error && (

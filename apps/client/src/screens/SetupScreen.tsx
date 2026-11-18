@@ -1,6 +1,6 @@
 import { CARDS, MAPS, buildBoard, contextFor } from "@aoh/content";
 import { MAX_NAME_LENGTH, parseReplay, type Replay, type RoomSettings } from "@aoh/protocol";
-import { MAX_BUDGET, MAX_PLAYERS, MIN_PLAYERS, replayGame, seedFromString, type MapDefinition } from "@aoh/rules";
+import { GLYPH_KINDS, MAX_BUDGET, MAX_PLAYERS, MIN_PLAYERS, replayGame, seedFromString, type MapDefinition } from "@aoh/rules";
 import { useMemo, useRef, useState } from "react";
 import { customMaps, deleteCustomMap, findMap } from "../maps";
 import {
@@ -69,6 +69,8 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
   const [noLimit, setNoLimit] = useState(false);
   const [factionPure, setFactionPure] = useState(false);
   const [roundLimit, setRoundLimit] = useState<number | null>(null);
+  /** Glyphs scattered on the battlefield when deployment ends: 0 (none) to one of each kind. */
+  const [glyphs, setGlyphs] = useState(4);
   const [mine, setMine] = useState(() => customMaps());
   const [mapId, setMapId] = useState(() => (initialMapId && findMap(initialMapId) ? initialMapId : MAPS[0]!.id));
   const map = MAPS.find((m) => m.id === mapId) ?? mine.find((m) => m.id === mapId) ?? MAPS[0]!;
@@ -91,6 +93,7 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
       roundLimit,
       budget: noLimit ? null : budget,
       factionPure,
+      glyphs,
       map,
     };
     createRoom(serverUrl, myName.trim(), settings);
@@ -177,6 +180,7 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
         factionPure,
         // At most one activation token on each unit.
         tokenRule: "onePerUnit",
+        glyphs,
         players: Array.from({ length: players }, (_, i) => ({
           id: `p${i + 1}`,
           name: names[i]!.trim() || `Player ${i + 1}`,
@@ -364,6 +368,21 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
             {n === null ? "None" : n}
           </button>
         ))}
+      </div>
+      <h3 className="mp-label">Glyphs</h3>
+      <div className="mp-seg mp-stepper" role="group" aria-label="Glyphs">
+        <button type="button" aria-label="Fewer glyphs" disabled={glyphs <= 0} onClick={() => setGlyphs(Math.max(0, glyphs - 1))}>
+          −
+        </button>
+        <output aria-label="Glyphs on the battlefield">{glyphs === 0 ? "None" : glyphs === GLYPH_KINDS.length ? `All ${glyphs}` : glyphs}</output>
+        <button
+          type="button"
+          aria-label="More glyphs"
+          disabled={glyphs >= GLYPH_KINDS.length}
+          onClick={() => setGlyphs(Math.min(GLYPH_KINDS.length, glyphs + 1))}
+        >
+          +
+        </button>
       </div>
     </section>
   );

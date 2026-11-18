@@ -130,5 +130,9 @@ export function useEventSounds(events: readonly GameEvent[] | null, count: numbe
     if (before === null || count <= before) return;
     if (events.some((e) => e.type === "roundStarted")) playSound("round");
     if (events.some((e) => e.type === "cardDrafted" || e.type === "unitDeployed")) playSound("placed");
+    // Glyphs: picked up or used like a card laid down; a pit trap wounds, a curse destroys.
+    if (events.some((e) => (e.type === "glyphTaken" && !e.trap) || e.type === "glyphUsed")) playSound("placed");
+    if (events.some((e) => e.type === "glyphTaken" && e.trap === "pit")) playSound("wounds");
+    if (events.some((e) => e.type === "curseStruck")) playSound("destroyed");
   }, [events, count]);
 }

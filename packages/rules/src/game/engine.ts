@@ -14,10 +14,12 @@ import {
   zoneCapacity,
 } from "./draft";
 import { fail, RulesError } from "./errors";
+import { curseTurnEnded, useGlyph } from "./glyphs";
 import { moveFigure } from "./movement";
 import { findUnit, isUnitAlive, tokensToPlace } from "./queries";
 import { advance, checkGameOver, eliminate, maybeStartTurns, stepPointer } from "./rounds";
 import {
+  GLYPH_KINDS,
   TOKEN_IDS,
   type Command,
   type CommandResult,
@@ -69,6 +71,7 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
       draft: setup.draft ?? "snake",
       initiative: setup.initiative ?? "auto",
       tokenRule: setup.tokenRule ?? "stack",
+      ...(setup.glyphs ? { glyphs: Math.max(0, Math.min(GLYPH_KINDS.length, Math.floor(setup.glyphs))) } : {}),
     },
     rng: setup.seed >>> 0,
     round: 0,
@@ -147,6 +150,9 @@ export function applyCommand(state: GameState, command: Command, ctx: RulesConte
         break;
       case "endTurn":
         endTurn(next, command.player, events, ctx);
+        break;
+      case "useGlyph":
+        useGlyph(next, command.player, command.glyphId, command.unitId, command.placements, events, ctx);
         break;
       case "concede":
         concede(next, command.player, events, ctx);
@@ -253,6 +259,7 @@ function endTurn(state: GameState, player: PlayerId, events: GameEvent[], ctx: R
   const { token, unitId } = active;
   endOfTurnTerrain(state, unitId, events, ctx);
   endOfTurnAbilities(state, unitId, ctx, events);
+  curseTurnEnded(state, player, events);
   if (checkGameOver(state, events, ctx)) return;
   if (state.active !== active) return; // the player was knocked out and play has moved on
   events.push({ type: "turnEnded", player, token, unitId });
