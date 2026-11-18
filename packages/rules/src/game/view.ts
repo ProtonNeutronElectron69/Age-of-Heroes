@@ -31,6 +31,13 @@ export function viewFor(state: GameState, viewer: PlayerId | null): PlayerView {
       visible[p.id] = shown;
     }
   }
+  // Glyphs lie face down: nobody sees what one on the board is, and only its holder sees a held one.
+  if (rest.glyphs) {
+    rest.glyphs.onBoard = rest.glyphs.onBoard.map((g) => ({ ...g, kind: null }));
+    for (const id of Object.keys(rest.glyphs.held)) {
+      if (id !== viewer) rest.glyphs.held[id] = rest.glyphs.held[id]!.map((g) => ({ ...g, kind: null }));
+    }
+  }
   return { ...rest, config: { ...rest.config, seed: 0 }, viewer, tokens: visible, tokensPlaced: placed };
 }
 

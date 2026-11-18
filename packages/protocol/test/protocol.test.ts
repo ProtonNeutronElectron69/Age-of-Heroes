@@ -30,6 +30,11 @@ describe("message validation", () => {
     ).toBe(false);
     // Under the one-per-unit rule a player with fewer units places fewer tokens.
     expect(commandSchema.safeParse({ type: "placeTokens", player: "p1", tokens: { "1": "a", X: "b" } }).success).toBe(true);
+    // Glyphs: a glyph on a unit, and a summoned unit's places.
+    const glyph = { type: "useGlyph", player: "p1", glyphId: "g1", unitId: "u1" };
+    expect(commandSchema.safeParse(glyph).success).toBe(true);
+    expect(commandSchema.safeParse({ ...glyph, placements: [{ figureId: "f1", hex: { q: 1, r: 2 }, elevation: 1 }] }).success).toBe(true);
+    expect(commandSchema.safeParse({ ...glyph, glyphId: 3 }).success).toBe(false);
   });
 
   it("normalises room codes and names", () => {

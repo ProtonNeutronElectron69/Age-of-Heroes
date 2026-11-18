@@ -25,6 +25,7 @@ import {
   type ReachSpec,
 } from "./abilities";
 import { engagedEnemies, spotsEngaged } from "./engagement";
+import { glyphBonus } from "./glyphs";
 import { fail } from "./errors";
 import { forcedMove, freeSpotFor } from "./movement";
 import { figureSpots, placementSpots, standingElevation, tuningOf } from "./placement";
@@ -127,7 +128,7 @@ export function attackProblem(
   }
   if (!ability) {
     return actionProblem(state, attackerId, targetId, ctx, {
-      range: statsOf(card).range,
+      range: statsOf(card).range + glyphBonus(state, a.unit.id, "range", ctx),
       minRange: 1,
       ignoresSight: false,
     });
@@ -334,7 +335,7 @@ function shoveSpot(state: GameState, ctx: RulesContext, attacker: Combatant, tar
 
 /** Can a figure (even one just destroyed) reach another with a normal attack? Used by Last Stand. */
 function canReach(state: GameState, ctx: RulesContext, from: Combatant, to: Combatant): boolean {
-  const range = statsOf(from.card).range;
+  const range = statsOf(from.card).range + glyphBonus(state, from.unit.id, "range", ctx);
   if (spotDistance(from.spots, to.spots) > range) return false;
   if (range === 1 && !spotsEngaged(from.spots, from.card.height, to.spots, to.card.height)) return false;
   const blockers: Token[] = [];
@@ -428,8 +429,12 @@ function diceFor(state: GameState, ctx: RulesContext, attacker: Combatant, defen
   if (height.defenseBonus > 0) notes.push(`Higher ground +${height.defenseBonus} defense`);
   const mods = abilityModifiers(state, ctx, attacker, defender, spotDistance(attacker.spots, defender.spots));
   const cover = coverFrom(attacker.spots, defender.spots, ctx);
-  const attackBonus = height.attackBonus + mods.attack;
-  const defenseBonus = height.defenseBonus + mods.defense + (cover?.dice ?? 0);
+  const glyphAttack = glyphBonus(state, attacker.unit.id, "attack", ctx);
+  const glyphDefense = glyphBonus(state, defender.unit.id, "defense", ctx);
+  if (glyphAttack) notes.push(`Glyph +${glyphAttack} attack`);
+  if (glyphDefense) notes.push(`Glyph +${glyphDefense} defense`);
+  const attackBonus = height.attackBonus + mods.attack + glyphAttack;
+  const defenseBonus = height.defenseBonus + mods.defense + (cover?.dice ?? 0) + glyphDefense;
   notes.push(...mods.notes);
   if (cover) notes.push(`Behind a ${cover.name.toLowerCase()} +${cover.dice} defense`);
   return {

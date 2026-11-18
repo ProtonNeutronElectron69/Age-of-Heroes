@@ -9,4 +9,7 @@ export const TUNING: Tuning = {
   // Maps whose start zones grow: the most hexes of figures one army may draft (a 600-point army of
   // 4-figure squads needs 32).
   grownZoneSize: 40,
+  // Glyphs: what the stat glyphs add, the pit trap's wounds, the curse's countdown in its
+  // player's turns, and how near another friendly figure a summoned unit appears.
+  glyphs: { attack: 1, defense: 1, initiative: 8, range: 4, move: 2, pitWounds: 1, curseTurns: 2, summonRange: 3 },
 };

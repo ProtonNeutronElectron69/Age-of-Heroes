@@ -5,6 +5,7 @@ import { Canvas } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Names } from "../describe";
 import { BoardScene, boardCenter } from "../scene/BoardScene";
+import { GlyphTiles } from "../scene/Glyphs";
 import { FigureLabels, Figures, SHAKE_SECONDS, type FigureMotions, type FigureShake, type FigureView } from "../scene/Figures";
 import { WoundNumbers, anchorOf, type WoundNumber } from "../scene/FightFx";
 import { fallenSpots, woundMarksIn } from "../fight";
@@ -220,6 +221,7 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
               setPinned(pinned === id ? null : id);
             }}
           />
+          {state.glyphs && <GlyphTiles glyphs={state.glyphs.onBoard} />}
           <Figures figures={figures} onClick={(id) => setPinned(pinned === id ? null : id)} onHover={setHovered} labels={labelLayer} motions={motions} shake={shake} />
           {marks.length > 0 && (
             <WoundNumbers
@@ -234,7 +236,7 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
         </BoardScene>
       </Canvas>
       <FigureLabels figures={figures} layer={labelLayer} />
-      <HexTip tip={hexTip} board={ctx.board} terrain={ctx.terrain} zones={zones} onClose={() => setHexTip(null)} />
+      <HexTip tip={hexTip} board={ctx.board} terrain={ctx.terrain} zones={zones} glyphs={state.glyphs?.onBoard} onClose={() => setHexTip(null)} />
 
       {state.round > 0 && state.phase !== "deploy" && <RoundBar state={state} names={names} />}
 

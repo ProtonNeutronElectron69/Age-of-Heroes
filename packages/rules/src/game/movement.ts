@@ -8,6 +8,7 @@ import { canTrample, combatant, hasAbility, isPinned, moveBonus, trampleRoll } f
 import { spotsEngaged } from "./engagement";
 import { fail } from "./errors";
 import { figureSpots, placementKey, placementSpots, standingElevation, tuningOf, type Placement } from "./placement";
+import { glyphBonus, pickUpGlyphs } from "./glyphs";
 import { cardOf, findFigure, occupancy, statsOf, stepKey, type EffectiveStats, type Occupant } from "./queries";
 import { checkGameOver, destroyFigure, woundFigure } from "./rounds";
 import type { FigureState, GameEvent, GameState, PathStep, PlayerId, RulesContext, Step, UnitState } from "./types";
@@ -99,7 +100,7 @@ function moverFor(state: GameState, figureId: string, ctx: RulesContext): Mover 
     footprint: card.footprint,
     start,
     startSpots: figureSpots(figure, card.footprint, stats.height, ctx),
-    budget: bonus ?? stats.move + drums,
+    budget: bonus ?? stats.move + drums + glyphBonus(state, unit.id, "move", ctx),
     noStrikes: bonus !== undefined,
     flying: card.footprint === "1" && hasAbility(card, "flying"),
     trample: hasAbility(card, "trample"),
@@ -512,6 +513,7 @@ export function moveFigure(
 
   if (mover.flying) {
     flyTo(state, mover, toPlacement(path[0]!, from, "1"), rng, enemies, after, traversed, lavaRolls, ctx);
+    pickUpGlyphs(state, unit, figure, after, ctx);
     state.rng = rng.state;
     events.push({ type: "figureMoved", figureId, from: asPathStep(mover.start, mover.footprint), path: traversed }, ...after);
     checkGameOver(state, events, ctx);
@@ -585,6 +587,8 @@ export function moveFigure(
     }
   }
 
+  // Ending the move on a glyph picks it up.
+  pickUpGlyphs(state, unit, figure, after, ctx);
   state.rng = rng.state;
   events.push({ type: "figureMoved", figureId, from: asPathStep(mover.start, mover.footprint), path: traversed }, ...after);
   checkGameOver(state, events, ctx);

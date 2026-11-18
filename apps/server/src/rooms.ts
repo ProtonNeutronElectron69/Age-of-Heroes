@@ -236,6 +236,7 @@ export class RoomManager {
         roundLimit: s.roundLimit ?? null,
         budget: s.budget ?? null,
         factionPure: s.factionPure ?? false,
+        glyphs: s.glyphs ?? 0,
         map: record.map,
       },
       ctx,
@@ -347,6 +348,7 @@ export class RoomManager {
       initiative: "players",
       // At most one activation token on each unit.
       tokenRule: "onePerUnit",
+      glyphs: s.glyphs ?? 0,
     };
     const { state, events } = createGame(setup, room.ctx);
     room.setup = setup;
@@ -536,6 +538,7 @@ export class RoomManager {
       roundLimit: s.roundLimit,
       budget: s.budget ?? null,
       factionPure: s.factionPure ?? false,
+      glyphs: s.glyphs ?? 0,
       members: room.members.map((m, i) => {
         const setupPlayers = (room.setup ?? room.resume?.record.setup)?.players;
         const seat = setupPlayers ? setupPlayers.findIndex((p) => p.id === m.playerId) : i;

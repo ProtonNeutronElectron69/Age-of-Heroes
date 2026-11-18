@@ -297,6 +297,12 @@ try {
   await page.getByLabel("Points per player").blur();
   await page.getByRole("radio", { name: `${ROUNDS} rounds` }).click();
   await shot("1-setup");
+  // Glyphs: four at first; the stepper goes up to all eleven and back.
+  const glyphCount = page.getByLabel("Glyphs on the battlefield");
+  if ((await glyphCount.innerText()) !== "4") fail(`Glyphs start at "${await glyphCount.innerText()}", not 4`);
+  await page.getByRole("button", { name: "More glyphs" }).click();
+  if ((await glyphCount.innerText()) !== "5") fail("More glyphs did not add one");
+  await page.getByRole("button", { name: "Fewer glyphs" }).click();
   await page.getByRole("button", { name: "Start draft" }).click();
 
   // Draft: it opens on the battlefield, with every player's start zone marked, before anyone picks.
@@ -392,6 +398,8 @@ try {
   }
 
   phase("play");
+  // The glyphs are scattered face down once every unit is placed, and listed beside the board.
+  await page.getByRole("region", { name: "Glyphs" }).getByText("4 face down on the battlefield").waitFor();
   const handled = new Set();
   let turnKey = "";
   let roundSeen = "";

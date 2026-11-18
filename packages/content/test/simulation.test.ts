@@ -11,6 +11,7 @@ import {
   drafters,
   draftableCards,
   livingUnitsOf,
+  glyphProblem,
   tokensToPlace,
   TOKEN_IDS,
   moveOptions,
@@ -82,6 +83,13 @@ function randomCommand(state: GameState, rng: Rng, c: RulesContext): Command {
     case "turns": {
       const active = state.active!;
       const unit = state.units.find((u) => u.id === active.unitId)!;
+      // Sometimes use a held glyph on a unit it can go on (not Summoning, which needs placing).
+      const held = (state.glyphs?.held[active.player] ?? []).filter((h) => h.kind !== "summon");
+      if (held.length > 0 && rng.float() < 0.5) {
+        const glyph = pick(rng, held);
+        const targets = state.units.filter((u) => glyphProblem(state, active.player, glyph.id, u.id, c) === null);
+        if (targets.length > 0) return { type: "useGlyph", player: active.player, glyphId: glyph.id, unitId: pick(rng, targets).id };
+      }
       for (const f of unit.figures) {
         if (f.destroyed || !f.position) continue;
         if (!active.moved.includes(f.id) && !active.attacked.includes(f.id) && rng.float() < 0.7) {
@@ -159,6 +167,8 @@ function playRandomGame(seed: number, players: number, budget: number, online = 
     ...(online ? { draft: "open" as const, initiative: "players" as const } : {}),
     // New games keep one token on each unit; older games' stacking is covered by the engine's tests.
     tokenRule: "onePerUnit",
+    // Glyphs on the board: picked up, sprung and used along the way.
+    glyphs: 8,
   };
   const rng = new Rng(seed * 7919 + 1);
   let state = createGame(setup, ctx).state;
@@ -176,6 +186,8 @@ function playRandomGame(seed: number, players: number, budget: number, online = 
     state = r.state;
     for (const e of r.events) {
       if (e.type === "abilityUsed" || e.type === "abilityRoll") abilityEvents.push(e.ability);
+      if (e.type === "glyphTaken") abilityEvents.push(`glyph:${e.trap ?? "taken"}`);
+      if (e.type === "glyphUsed") abilityEvents.push(`glyph:${e.kind}`);
       if (e.type === "attackRolled" && e.ability) abilityEvents.push(e.ability);
       if (e.type === "attackRolled" && e.notes) abilityEvents.push(...e.notes.map((n) => n.split(" +")[0]!.split(" -")[0]!));
       if (e.type === "figureMoved" && cmd.type === "move" && cmd.path.length === 1 && e.path.length === 1) {
@@ -228,5 +240,7 @@ describe("random games on the Proving Grounds", () => {
       (globalThis as { console?: { log: (s: string) => void } }).console?.log([...used].sort().join(", "));
     }
     expect(used.size).toBeGreaterThanOrEqual(6);
+    // Glyphs are picked up and used along the way.
+    expect([...used].filter((a) => a.startsWith("glyph:")).length).toBeGreaterThanOrEqual(3);
   });
 });

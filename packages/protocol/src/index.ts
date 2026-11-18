@@ -53,6 +53,13 @@ export const commandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("attack"), player: id, figureId: id, targetId: id, ability: id.optional(), aim: hexSchema.optional() }),
   z.object({ type: z.literal("blast"), player: id, figureId: id, ability: id, at: stepSchema.omit({ rotation: true }) }),
   z.object({ type: z.literal("endTurn"), player: id }),
+  z.object({
+    type: z.literal("useGlyph"),
+    player: id,
+    glyphId: id,
+    unitId: id,
+    placements: z.array(stepSchema.extend({ figureId: id })).max(20).optional(),
+  }),
   z.object({ type: z.literal("concede"), player: id }),
 ]);
 
@@ -64,6 +71,8 @@ export const roomSettingsSchema = z.object({
   /** Each player's points budget; null means no limit. */
   budget: z.number().int().min(50).max(MAX_BUDGET).nullable().optional(),
   factionPure: z.boolean().optional(),
+  /** Glyphs scattered on the battlefield, 0 to 11. */
+  glyphs: z.number().int().min(0).max(11).optional(),
   map: mapSchema,
 });
 export type RoomSettings = z.infer<typeof roomSettingsSchema>;
@@ -93,6 +102,8 @@ const setupSchema = z
     initiative: z.enum(["auto", "players"]).optional(),
     /** New games: at most one activation token on each unit. Older files leave it out. */
     tokenRule: z.enum(["stack", "onePerUnit"]).optional(),
+    /** How many glyphs are scattered on the battlefield; older files leave it out (none). */
+    glyphs: z.number().int().min(0).max(11).optional(),
   })
   .superRefine((s, ctx) => {
     if (s.mode === "basic") ctx.addIssue({ code: "custom", path: ["mode"], message: BASIC_RULES_GONE });
@@ -171,6 +182,8 @@ export interface RoomInfo {
   readonly roundLimit: number | null;
   readonly budget: number | null;
   readonly factionPure: boolean;
+  /** Glyphs scattered on the battlefield. */
+  readonly glyphs: number;
   readonly members: RoomMember[];
   readonly spectators: number;
   readonly started: boolean;

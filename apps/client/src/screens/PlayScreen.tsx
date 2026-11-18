@@ -52,6 +52,8 @@ import { OnlineBar } from "../ui/OnlineBar";
 import { DiceOverlay, EventLog, GameOver, KeysPanel, PassScreen, RoundBar, TokenPanel } from "../ui/panels";
 import { AttackShow, InitiativeShow, attackTitle, initiativeIn } from "../ui/RollShow";
 import { UnitCardView } from "../ui/UnitCardView";
+import { GlyphPanel } from "../ui/GlyphPanel";
+import { GlyphTiles } from "../scene/Glyphs";
 
 interface Pending {
   readonly placement: Placement;
@@ -1019,6 +1021,7 @@ export function PlayScreen({ session }: { session: Session }) {
           onInspect={setHexTip}
         >
           <Pings pings={pings} center={center} />
+          {state.glyphs && <GlyphTiles glyphs={state.glyphs.onBoard} />}
           {intro && <FightIntro key={beat!.stamp} pairs={intro.pairs} attackers={intro.attackers} targets={intro.targets} center={center} />}
           {batches.map((b) => (
             <WoundNumbers
@@ -1063,7 +1066,7 @@ export function PlayScreen({ session }: { session: Session }) {
         <TestHook offset={center} />
       </Canvas>
       <FigureLabels figures={figures} layer={labelLayer} />
-      <HexTip tip={hexTip} board={board} terrain={ctx.terrain} zones={zones} onClose={() => setHexTip(null)} />
+      <HexTip tip={hexTip} board={board} terrain={ctx.terrain} zones={zones} glyphs={state.glyphs?.onBoard} onClose={() => setHexTip(null)} />
 
       {state.phase !== "deploy" && state.round > 0 && <RoundBar state={state} names={names} />}
       <OnlineBar session={session} />
@@ -1249,6 +1252,17 @@ export function PlayScreen({ session }: { session: Session }) {
             </div>
           </section>
         )}
+
+        <GlyphPanel
+          state={state}
+          ctx={ctx}
+          names={names}
+          shown={isOnline ? (me ? [me] : []) : active && myTurn ? [active.player] : []}
+          user={active && myTurn && !busy && !eyeView ? active.player : null}
+          onUse={(glyphId, unitId, placements) =>
+            active && dispatch({ type: "useGlyph", player: active.player, glyphId, unitId, ...(placements ? { placements } : {}) })
+          }
+        />
 
         {tokenPlayer && tokenPanelOpen && (
           <TokenPanel

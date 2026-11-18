@@ -41,6 +41,7 @@ Dependencies only point downwards: `client` and `server` use `protocol`, `conten
 | `game/rounds.ts` | Token placement, initiative, turn order, wounds, elimination and game over. Under `GameSetup.tokenRule: "onePerUnit"` (new games) each unit holds at most one token and a player places `tokensToPlace` of them; a token left off skips that turn. Older games keep "stack". With `GameSetup.initiative: "players"` (online games) a round waits in the `initiative` phase for every player's `rollInitiative` command before rolling |
 | `game/placement.ts`, `game/movement.ts` | Multi-hex footprints, reachable placements (Dijkstra with hazard tie-breaks), moving, falling, passing strikes, flying, trample |
 | `game/engagement.ts`, `game/combat.ts` | Engagement, attack legality, dice, height bonuses, special actions, mind control |
+| `game/glyphs.ts` | Glyphs: `scatterGlyphs` after deployment (seeded, out of start zones, spread out), `pickUpGlyphs` at the end of a move (traps spring at once), `useGlyph` (the `useGlyph` command, checked by `glyphProblem`; `summonPlacements` finds spots for a unit brought back), `glyphBonus` and `initiativeBonus` for the stat glyphs, and `curseTurnEnded`. All of it is in `GameState.glyphs`, absent in games without glyphs. `viewFor` turns every glyph on the board, and other players' held glyphs, face down (`kind: null`) |
 | `game/abilities.ts` | Every ability: attack and defense modifiers, reactions after an attack, end-of-turn effects, special action specs |
 | `game/queries.ts`, `game/view.ts` | Read-only helpers (stats, scores, figures) and per-player views |
 
@@ -50,7 +51,7 @@ Abilities hook in at fixed points: `abilityModifiers` (extra or fewer dice), `ta
 
 - `cards/starter.json` (the first 16 units), `cards/legends.json` (14 more) and `cards/reinforcements.json` (18 more, for 48); `cards.ts` loads and validates them into `CARDS`, `CARD_CATALOG` and `FACTIONS`.
 - `maps/*.json` and `maps/index.ts` (`MAPS`): the premade map library.
-- `terrain.ts`, `scenery.ts`, `tuning.ts`, `players.ts` (seat colours).
+- `terrain.ts`, `scenery.ts`, `tuning.ts`, `players.ts` (seat colours), `glyphs.ts` (each glyph's name, colour and mark, and `glyphEffect`, its rules in words).
 - `context.ts`: `contextFor(map)` builds the `RulesContext` (board, terrain, cards, tuning) the engine needs.
 - `balance.ts`: the balance model that sets point costs (`BALANCE_REPORT=1 pnpm test balance`).
 
@@ -83,6 +84,7 @@ The play screen:
 - **Unit cards.** The right-hand column shows the acting unit's card (`.unit-card-main`, shown again at each new turn) and below it, smaller, the card of a unit the pointer has rested on for half a second or that was clicked (`.unit-card-other`). `useDelayedHover` keeps the hover card from flickering as the pointer crosses a figure's parts.
 - **Camera follow.** A new turn, or a squad passing the selection to its next figure, asks `BoardScene` (its `focus` prop) for a framed glide to that figure, which stops as soon as the player turns or zooms the camera. The glide makes only the parts the player has ticked under Display (Auto pan, Auto rotate, Auto zoom; the request's `parts`); the glide to a fight (every attack) always makes all three, and looks across the line between the two figures so they stand side by side (from whichever side is nearer the current view: the request's `either`). It waits until every figure has finished hopping: `scene/activity.ts` keeps, per canvas, which figures are hopping and whether a glide is due, and browser tests read the latter through `window.__aoh.cameraBusy()`.
 - **Hex tooltip.** A middle click on the play, replay or draft board (`BoardScene`'s `onInspect`, a ray cast to the terrain under any figure) opens `ui/HexTip.tsx`: the hex's terrain, elevation, headroom, special rules, scenery and start zone.
+- **Glyphs.** `scene/Glyphs.tsx` draws the face-down tiles on the play and replay boards; `ui/GlyphPanel.tsx`, in the left column, lists what each player holds (face up only for this device's player, or in hot-seat the player whose turn it is), the stat glyphs in play and the curses counting down. A held glyph's **Use** opens the units it can go on now (`glyphProblem`); a summoned unit's figures are placed by `summonPlacements`. The hex tooltip says when a glyph lies on the hex.
 - **Pings (online).** `scene/Pings.tsx` reads the P key (`PingInput`), keeps the pings on screen (`useOnlinePings`, shared with the draft map) and draws the arcing arrows.
 
 The draft: `DraftScreen` opens on `DraftMap`, the board with each player's start zone in their colour and a name label over it, until the first pick has been made; **View map** brings it back at any time. In an open draft (online) every player picks from the same cards at once, and a card someone has taken shows who took it.

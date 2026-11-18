@@ -98,6 +98,30 @@ Scenery stands on the terrain and fills one hex or more:
 ### Start zones
 Each map has up to 6 start zones. The map says which zones are used for each player count, so that, for example, two players start in opposite corners. Turn order still goes round the table in seat order. Players set up their figures only in their own zone. Start zones may not hold scenery, and a zone that grows at deployment never grows onto scenery. A map can be played by any number of players it has a separate start zone for.
 
+### Glyphs
+Glyphs are small hex tiles scattered face down on the battlefield after every unit has been deployed. The game options say how many: none, or 1 to 11 (all of them); new games start at 4, and games saved before glyphs existed have none. There is one of each kind. Each lies on a random open hex of standard terrain, never in a start zone, under a figure or on scenery, and at least 3 hexes from any other glyph where the board allows.
+
+**Picking up**: a figure that ends a move on a glyph's hex picks it up (a flying figure too). Its player learns what it is; the other players are only told that a glyph was picked up, until it is used. A held glyph sits off to the side of the board with its player.
+
+**Using**: a player can use any glyph they hold at any time during their own turn, before or after moving and attacking, even with a unit other than the one taking the turn. A used glyph is gone. The number in brackets is tunable (`TUNING.glyphs`).
+
+| Glyph | Effect |
+| --- | --- |
+| Glyph of Fury | Stat glyph: +1 attack die (1) |
+| Glyph of the Bulwark | Stat glyph: +1 defense die (1) |
+| Glyph of the Herald | Stat glyph: +8 to its player's initiative rolls (8) |
+| Glyph of the Hawk | Stat glyph: +4 range for normal attacks (4); special attacks keep their own range |
+| Glyph of the Stag | Stat glyph: +2 move (2) |
+| Glyph of Mending | Heals every wound on one of the player's living units |
+| Glyph of Return | Brings back one of the player's destroyed units, whole and unwounded. Every figure goes on a free spot within 3 hexes (3) of another of the player's figures. Its old stat glyph does not come back |
+| Glyph of Blight | One enemy unit: a squad takes 1 wound on every figure; a hero loses half the Life it has left, rounded down, but at least 1 |
+| Glyph of Undoing | Cancels the stat glyph on one enemy unit |
+| Glyph of the Pit | A trap: the figure that picks it up takes 1 wound (1) at once |
+| Glyph of Doom | A trap: the figure that picks it up is destroyed at the end of its player's second turn after the one it was picked up in (2) |
+
+- **Stat glyphs** go on one of the player's own living units and boost every figure on that card until the whole unit is destroyed (or the glyph is cancelled). A unit can hold only one glyph at a time.
+- **Traps** are sprung when picked up and are not held. Everyone sees what a trap was. A Doom figure's countdown is shown beside the board; only the turns of the figure's own player count. **Assumption.**
+
 ## 4. Setting up a game
 
 Game options:
@@ -106,6 +130,7 @@ Game options:
 - **Army points**: a points budget per player (default 1000; the menu offers 500, 750, 1000 and 1500), any whole number from 50 to 9999, or **no limit**. With no limit, players draft until they choose to stop or their start zone is full.
 - **Faction-pure mode** (optional): every unit in an army must share the faction of that player's first pick. There is no extra reward; it is a theme restriction. **Assumption.**
 - **Round limit**: none (the default), or a number of rounds.
+- **Glyphs**: how many glyphs are scattered on the battlefield, from none to all 11 (default 4; see Glyphs).
 
 ### Drafting
 Armies are drafted from a shared pool. Hot-seat games use a **snake draft** (online games use an open draft; see Playing online): the pick order reverses each round of picks (seat 1, 2, 3, 3, 2, 1, 1, 2, 3 and so on). The first picker is decided by a d20 roll.
@@ -121,7 +146,7 @@ After the draft, units are deployed one at a time in the order they were drafted
 ### Playing online
 Online, the host picks the options above and shares a room code. Seats and colors follow the order players join, and the host can start once the room holds a player count the map supports. The rules are the same, with these differences:
 - **Who acts**: each device acts only for its own player. The game server checks every action, so nobody can move another player's units.
-- **Hidden information**: each device sees only what that player could see at a table. Other players' activation tokens stay hidden until revealed, and the dice are rolled on the server, so no device can predict them.
+- **Hidden information**: each device sees only what that player could see at a table. Other players' activation tokens and held glyphs stay hidden until revealed or used, glyphs on the battlefield stay face down, and the dice are rolled on the server, so no device can predict them.
 - **Open draft**: everyone drafts at the same time instead of in snake order, and each unit can be drafted by only one player, common units too: once someone takes a unit it is greyed out for everyone. The points, faction and room rules are the same. Each player presses "Done drafting" when finished (or is finished for them when nothing left fits), and the draft ends when everyone is done. The d20 roll-off still happens: its winner deploys first, and then players deploy one unit each in turn, in roll-off order, each in the order they drafted their units.
 - **Rolling initiative**: each player rolls their own d20 (section 5.2), and no roll is made, or shown to anyone, until every player has rolled.
 - **Pinging**: a player can press P to point at the spot under their pointer, on the battlefield in play or on the map during the draft. An arrow in their colour arcs down onto it on every screen in the game, for about half a second; the player who pinged sees it at once, everyone else a moment later. A player looking at the draft cards rather than the map is told who pinged it. Each player can ping once a second; spectators see pings but cannot make them. A ping is not part of the game: it is not saved or replayed.
@@ -141,7 +166,7 @@ Every player has four tokens: **1, 2, 3** and a bluff token **X**. In secret, ea
 Games saved before this rule keep the older one: all four tokens placed, and one card may hold several.
 
 ### 5.2 Roll initiative
-Every player rolls a d20. If several players tie for the highest roll, only they roll again, until one is highest. That player goes first, and play passes to the left (increasing seat order, wrapping around) for the rest of the round. Online, the round waits until every player has rolled before any roll is made or shown (see Playing online).
+Every player rolls a d20; a player whose unit holds the Glyph of the Herald adds its bonus to each roll, rerolls too. If several players tie for the highest roll, only they roll again, until one is highest. That player goes first, and play passes to the left (increasing seat order, wrapping around) for the rest of the round. Online, the round waits until every player has rolled before any roll is made or shown (see Playing online).
 
 ### 5.3 Take turns
 1. In initiative order, each player reveals their **1** token and takes a turn with the unit holding it.

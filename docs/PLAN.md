@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with six premade maps, hot-seat and online play, saved games and replays. 546 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with six premade maps, hot-seat and online play, saved games and replays. 560 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 3 minutes ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 - **On hold (Phase 6):** a computer opponent, and a tutorial.
@@ -12,6 +12,7 @@ The core game is complete and playable, online too: the game server runs on Rend
 - **Phase 7, music and sound effects:** done. Menu, play, battle and victory music, and sound effects for hops, landings in water and lava, attacks, dice, wounds, destroyed figures, rounds, drafting and placing, menu hover and clicks, and pings. Each has an on/off box and a volume slider on the menu and under Display.
 - **On hold (Phase 7):** terrain and scenery art.
 - **Done lately:** Phase 8 (the tabletop feel) and Phase 9 (playtest updates, below). The game as it stood after Phase 9 is version 1.0.
+- **Done lately:** more scenery, and glyphs (below).
 
 ### Ideas, not scheduled
 - More premade maps.
@@ -265,3 +266,8 @@ Small changes asked for after playing, online games especially.
 ### More scenery
 - [x] Four new pieces, after the owner's reference art, each filling its hexes on a base: a **large tree** (12 levels, 4 hexes), a **large wall** (a ruined castle wall, 7 levels, 3 hexes in a line), a **small ruined wall** (5 levels, 2 hexes) and a **low wall** (3 levels, 3 hexes). A figure next to a low wall rolls 1 extra defense die against attacks from range across it, and walking figures can climb across a low wall for 1 extra move but not stop on it. The one-hex tree has a base too
 - [x] The editor turns bigger scenery with R and previews where it goes; random scenery fill scatters every kind, bigger pieces turned at random, and random terrain fill leaves the hexes under bigger scenery alone
+
+### Glyphs
+- [x] Glyphs: small hex tiles scattered face down on the battlefield once every unit is placed, from none to all 11 (a menu setting, 4 at first; one of each kind). A figure that ends a move on one picks it up; only its player learns what it is, and holds it beside the board to use at any time in their own turn
+- [x] Five stat glyphs (+1 attack, +1 defense, +8 initiative, +4 range, +2 move), one per unit, lasting until the unit is destroyed; healing a unit fully; bringing back a destroyed unit beside the player's other figures; wounding an enemy unit; cancelling an enemy's stat glyph; and two traps that spring when picked up (a wound, and a curse that destroys the figure two of its player's turns later)
+- [x] The Glyphs panel lists held glyphs, the stat glyphs in play and the curses counting down; the hex tooltip says where one lies; the online lobby shows how many; the initiative show adds the bonus to the roll

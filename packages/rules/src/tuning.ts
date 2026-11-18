@@ -16,7 +16,26 @@ export interface Tuning {
    * grow at deployment to fit what was drafted (default 40).
    */
   readonly grownZoneSize?: number;
+  /** Glyph numbers (defaults in `DEFAULT_GLYPHS`). */
+  readonly glyphs?: GlyphTuning;
 }
+
+export interface GlyphTuning {
+  /** What each stat glyph adds while its card lives. Initiative is added to its player's initiative rolls. */
+  readonly attack: number;
+  readonly defense: number;
+  readonly initiative: number;
+  readonly range: number;
+  readonly move: number;
+  /** Wounds the pit trap deals to the figure that picks it up. */
+  readonly pitWounds: number;
+  /** How many of its player's turns a cursed figure survives after the one it was cursed in. */
+  readonly curseTurns: number;
+  /** How far from another of the player's figures a summoned unit may be placed, in hexes. */
+  readonly summonRange: number;
+}
+
+export const DEFAULT_GLYPHS: GlyphTuning = { attack: 1, defense: 1, initiative: 8, range: 4, move: 2, pitWounds: 1, curseTurns: 2, summonRange: 3 };
 
 export const DEFAULT_TUNING: Tuning = {
   falling: { minorDice: 2, majorDice: 4 },
@@ -24,4 +43,5 @@ export const DEFAULT_TUNING: Tuning = {
   elevationBonus: { higher: 1, extreme: 1 },
   maxStraddle: 1,
   grownZoneSize: 40,
+  glyphs: DEFAULT_GLYPHS,
 };

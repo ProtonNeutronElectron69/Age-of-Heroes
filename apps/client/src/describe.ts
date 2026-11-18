@@ -1,3 +1,4 @@
+import { GLYPHS, glyphEffect } from "@aoh/content";
 import { findFigure, type GameEvent, type GameState, type RulesContext, type TerrainRules, type UnitCard } from "@aoh/rules";
 
 /** Human-readable names for players, units and figures. */
@@ -60,7 +61,7 @@ export class Names {
   }
 }
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : /[sx]$/.test(word) ? "es" : "s"}`;
 
 /** One line of the game log, or null for events not worth showing. */
 export function describeEvent(e: GameEvent, names: Names): string | null {
@@ -88,7 +89,9 @@ export function describeEvent(e: GameEvent, names: Names): string | null {
     case "tokensPlaced":
       return `${names.player(e.player)} has placed their tokens.`;
     case "initiativeRolled": {
-      const rolls = e.rolls.map((r) => `${names.player(r.player)} ${r.values.join(" then ")}`).join(", ");
+      const rolls = e.rolls
+        .map((r) => `${names.player(r.player)} ${r.values.map((v) => (r.bonus ? `${v}+${r.bonus}` : `${v}`)).join(" then ")}`)
+        .join(", ");
       return `Initiative: ${rolls}. ${names.player(e.order[0]!)} goes first.`;
     }
     case "tokenRevealed":
@@ -159,6 +162,18 @@ export function describeEvent(e: GameEvent, names: Names): string | null {
       return `${names.figure(e.figureId)} returns to the battle.`;
     case "figureControlled":
       return `${names.figure(e.figureId)} now fights for ${names.player(e.player)}.`;
+    case "glyphsPlaced":
+      return `${plural(e.glyphs.length, "glyph")} ${e.glyphs.length === 1 ? "lies" : "lie"} face down on the battlefield.`;
+    case "glyphTaken":
+      return e.trap
+        ? `${names.figure(e.figureId)} picks up the ${GLYPHS[e.trap].name}: ${glyphEffect(e.trap)}`
+        : `${names.figure(e.figureId)} picks up a glyph for ${names.player(e.player)}.`;
+    case "glyphUsed":
+      return `${names.player(e.player)} uses the ${GLYPHS[e.kind].name} on ${names.unit(e.unitId)}.`;
+    case "glyphCancelled":
+      return `The ${GLYPHS[e.kind].name} on ${names.unit(e.unitId)} is cancelled.`;
+    case "curseStruck":
+      return `The curse takes ${names.figure(e.figureId)}.`;
     case "gameOver": {
       const winners = e.result.winners.map((w) => names.player(w)).join(" and ");
       return winners ? `${winners} ${e.result.winners.length > 1 ? "share the win" : "wins"}!` : "Nobody wins.";
