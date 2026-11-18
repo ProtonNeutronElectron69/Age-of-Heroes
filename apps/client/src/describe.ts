@@ -172,6 +172,8 @@ export function describeEvent(e: GameEvent, names: Names): string | null {
       return `${names.player(e.player)} uses the ${GLYPHS[e.kind].name} on ${names.unit(e.unitId)}.`;
     case "glyphCancelled":
       return `The ${GLYPHS[e.kind].name} on ${names.unit(e.unitId)} is cancelled.`;
+    case "glyphSpent":
+      return `The ${GLYPHS[e.kind].name} on ${names.unit(e.unitId)} has had its roll and is spent.`;
     case "curseStruck":
       return `The curse takes ${names.figure(e.figureId)}.`;
     case "gameOver": {

@@ -109,17 +109,17 @@ Glyphs are small hex tiles scattered face down on the battlefield after every un
 | --- | --- |
 | Glyph of Fury | Stat glyph: +1 attack die (1) |
 | Glyph of the Bulwark | Stat glyph: +1 defense die (1) |
-| Glyph of the Herald | Stat glyph: +8 to its player's initiative rolls (8) |
-| Glyph of the Hawk | Stat glyph: +4 range for normal attacks (4); special attacks keep their own range |
+| Glyph of the Herald | Stat glyph: +8 to its player's next initiative roll (8), rerolls in that roll-off included. Once that roll is made it is spent, and the unit can take another glyph. It is lost if the unit is destroyed (or the glyph cancelled) before the roll |
+| Glyph of the Hawk | Stat glyph: +3 range for normal attacks (3), only on a unit whose card has a Range above 1; special attacks keep their own range |
 | Glyph of the Stag | Stat glyph: +2 move (2) |
 | Glyph of Mending | Heals every wound on one of the player's living units |
-| Glyph of Return | Brings back one of the player's destroyed units, whole and unwounded. Every figure goes on a free spot within 3 hexes (3) of another of the player's figures. Its old stat glyph does not come back |
+| Glyph of Resurrection | Resurrects one of the player's destroyed units, whole and unwounded. Every figure goes on a free spot within 3 hexes (3) of another of the player's figures on the battlefield: the game places them on the nearest free spots it finds, closest to those figures first. Its old stat glyph does not come back |
 | Glyph of Blight | One enemy unit: a squad takes 1 wound on every figure; a hero loses half the Life it has left, rounded down, but at least 1 |
 | Glyph of Undoing | Cancels the stat glyph on one enemy unit |
 | Glyph of the Pit | A trap: the figure that picks it up takes 1 wound (1) at once |
 | Glyph of Doom | A trap: the figure that picks it up is destroyed at the end of its player's second turn after the one it was picked up in (2) |
 
-- **Stat glyphs** go on one of the player's own living units and boost every figure on that card until the whole unit is destroyed (or the glyph is cancelled). A unit can hold only one glyph at a time.
+- **Stat glyphs** go on one of the player's own living units and boost every figure on that card until the whole unit is destroyed (or the glyph is cancelled); the Herald lasts for one initiative roll only. A unit can hold only one glyph at a time.
 - **Traps** are sprung when picked up and are not held. Everyone sees what a trap was. A Doom figure's countdown is shown beside the board; only the turns of the figure's own player count. **Assumption.**
 
 ## 4. Setting up a game
@@ -166,7 +166,7 @@ Every player has four tokens: **1, 2, 3** and a bluff token **X**. In secret, ea
 Games saved before this rule keep the older one: all four tokens placed, and one card may hold several.
 
 ### 5.2 Roll initiative
-Every player rolls a d20; a player whose unit holds the Glyph of the Herald adds its bonus to each roll, rerolls too. If several players tie for the highest roll, only they roll again, until one is highest. That player goes first, and play passes to the left (increasing seat order, wrapping around) for the rest of the round. Online, the round waits until every player has rolled before any roll is made or shown (see Playing online).
+Every player rolls a d20; a player whose unit holds the Glyph of the Herald (played in an earlier round) adds its bonus to each roll of this roll-off, rerolls too, and the glyph is then spent. If several players tie for the highest roll, only they roll again, until one is highest. That player goes first, and play passes to the left (increasing seat order, wrapping around) for the rest of the round. Online, the round waits until every player has rolled before any roll is made or shown (see Playing online).
 
 ### 5.3 Take turns
 1. In initiative order, each player reveals their **1** token and takes a turn with the unit holding it.

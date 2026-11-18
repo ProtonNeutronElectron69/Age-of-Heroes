@@ -11,5 +11,5 @@ export const TUNING: Tuning = {
   grownZoneSize: 40,
   // Glyphs: what the stat glyphs add, the pit trap's wounds, the curse's countdown in its
   // player's turns, and how near another friendly figure a summoned unit appears.
-  glyphs: { attack: 1, defense: 1, initiative: 8, range: 4, move: 2, pitWounds: 1, curseTurns: 2, summonRange: 3 },
+  glyphs: { attack: 1, defense: 1, initiative: 8, range: 3, move: 2, pitWounds: 1, curseTurns: 2, summonRange: 3 },
 };
