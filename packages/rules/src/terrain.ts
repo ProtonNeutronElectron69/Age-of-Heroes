@@ -1,3 +1,5 @@
+import type { Footprint } from "./shapes";
+
 /**
  * Terrain rules are data. The engine reads these fields; the actual table of
  * terrain types lives in @aoh/content so it can be tuned without code changes.
@@ -44,20 +46,29 @@ export function moveCostOf(t: TerrainRules | undefined): number {
 }
 
 /**
- * Scenery (trees, walls, boulders) stands on a hex. No figure can enter or
- * stand on that spot, and it blocks line of sight in both rule sets.
+ * Scenery stands on the terrain and fills one hex, or several (`footprint`): no figure can
+ * enter or stand there, and it blocks line of sight.
  */
 export interface SceneryRules {
   readonly id: string;
   readonly name: string;
   /** Height in levels. */
   readonly height: number;
-  /** Shape used for line of sight: a full hex prism (walls) or a cylinder (trees, boulders). */
+  /** Shape used for line of sight in each hex it fills: a full hex prism (walls) or a cylinder (trees, boulders). */
   readonly shape: "prism" | "cylinder";
   /** Cylinder radius as a fraction of the hex size. */
   readonly radius?: number;
-  /** Flat display colour until real art exists. */
+  /** Display colour. */
   readonly color: string;
+  /** The hexes it fills when bigger than one, turned with the placement's rotation. */
+  readonly footprint?: Footprint;
+  /** Extra defense dice for a figure next to it against an attack from range across it (low walls). */
+  readonly cover?: number;
+  /**
+   * Figures that walk can climb across it (low walls): entering one of its hexes costs this many
+   * extra move points. No figure may end its move on it.
+   */
+  readonly climb?: number;
 }
 
 export type SceneryTable = ReadonlyMap<string, SceneryRules>;

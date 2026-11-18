@@ -75,18 +75,25 @@ A figure that starts its turn in water or swamp can keep moving through it, payi
 
 ### Scenery
 
-Scenery stands on a single hex, on top of the terrain there:
+Scenery stands on the terrain and fills one hex or more:
 
-| Scenery | Height |
-|---|---|
-| **Tree** | 9 levels |
-| **Ruined wall** | 3 levels |
-| **Boulder** | 2 levels |
+| Scenery | Height | Fills |
+|---|---|---|
+| **Tree** | 9 levels | 1 hex |
+| **Ruined wall** | 3 levels | 1 hex |
+| **Boulder** | 2 levels | 1 hex |
+| **Large tree** | 12 levels | 4 hexes (a 2 by 2 block) |
+| **Large wall** | 7 levels | 3 hexes in a line |
+| **Small ruined wall** | 5 levels | 2 hexes in a line |
+| **Low wall** | 3 levels | 3 hexes in a line; gives cover |
 
-- No figure can enter or stand on a hex where scenery stands (at that level).
+- No figure can enter or stand on a hex that scenery fills (at that level), except that figures that walk can **climb across a low wall**: entering one of its hexes costs **1 extra move**, and no figure may end its move on it. Trees, the small ruined wall and the large wall cannot be crossed.
+- Walls do not make figures engaged: figures on opposite sides of a wall are at least 2 hexes apart.
 - Scenery blocks line of sight just like terrain. A short wall or boulder can be seen over by taller figures.
-- Scenery must stand on terrain and fit under anything above it.
+- Scenery must stand on terrain and fit under anything above it. Scenery bigger than one hex needs level ground under all of it.
 - Flying figures fly over scenery but cannot land on it (see Flying in section 7).
+
+**Cover (low walls):** a figure standing on a hex next to a low wall, below its top, rolls **1 extra defense die** against an attack from range when the line from the attacker to it passes over the wall. An attack from a neighbouring hex is not from range and gets no cover. Several walls do not add up.
 
 ### Start zones
 Each map has up to 6 start zones. The map says which zones are used for each player count, so that, for example, two players start in opposite corners. Turn order still goes round the table in seat order. Players set up their figures only in their own zone. Start zones may not hold scenery, and a zone that grows at deployment never grows onto scenery. A map can be played by any number of players it has a separate start zone for.

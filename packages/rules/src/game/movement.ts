@@ -66,12 +66,13 @@ export function stopsMovement(from: Step, to: Step, ctx: RulesContext): boolean 
  * the current hex, and dropping needs headroom in the destination. A single
  * step may not climb more levels than the figure's Height.
  */
-export function canStep(from: Step, to: Step, height: number, ctx: RulesContext): boolean {
+export function canStep(from: Step, to: Step, height: number, ctx: RulesContext, passing = false): boolean {
   if (!isAdjacent(from.hex, to.hex)) return false;
   const dest = ctx.board.surfaceAt(to.hex, to.elevation);
   const here = ctx.board.surfaceAt(from.hex, from.elevation);
   if (!dest || !here) return false;
-  if (ctx.board.sceneryAt(to.hex, to.elevation)) return false;
+  const scenery = ctx.board.sceneryAt(to.hex, to.elevation);
+  if (scenery && !(passing && scenery.rules.climb !== undefined)) return false;
   const rise = to.elevation - from.elevation;
   if (dest.clearance < Math.max(height, -rise)) return false;
   if (rise > 0 && here.clearance < rise) return false;
@@ -125,6 +126,11 @@ function engagedIds(enemies: readonly Enemy[], spots: readonly Step[], height: n
   return ids;
 }
 
+/** Is any of these spots on scenery (a low wall being climbed across)? */
+function endsOnScenery(spots: readonly Step[], ctx: RulesContext): boolean {
+  return spots.some((s) => ctx.board.sceneryAt(s.hex, s.elevation) !== undefined);
+}
+
 /** What happens on one step of a move. */
 interface StepInfo {
   readonly to: Placement;
@@ -176,11 +182,12 @@ function evaluateStep(
     return "The figure cannot move that way";
   }
   const height = mover.stats.height;
-  const spots = placementSpots(mover.footprint, height, to, ctx);
+  // Passing over a low wall is allowed on the way; ending a move on one is not (see `endsOnScenery`).
+  const spots = placementSpots(mover.footprint, height, to, ctx, true);
   if (!spots) return "The figure does not fit there";
   if (!turning) {
     for (let i = 0; i < spots.length; i++) {
-      if (!canStep(fromSpots[i]!, spots[i]!, height, ctx)) return "The figure cannot move that way";
+      if (!canStep(fromSpots[i]!, spots[i]!, height, ctx, true)) return "The figure cannot move that way";
     }
   }
   const trampled: Occupant[] = [];
@@ -198,13 +205,15 @@ function evaluateStep(
   const entered = spots.filter((s) => !fromSpots.some((f) => hexEquals(f.hex, s.hex)));
   const extra = Math.max(0, ...entered.map((s) => moveCostOf(terrainOf(s, ctx)) - 1));
   const climb = Math.max(0, ...spots.map((s, i) => s.elevation - fromSpots[i]!.elevation));
+  // Climbing onto a low wall costs extra.
+  const overWall = Math.max(0, ...entered.map((s) => ctx.board.sceneryAt(s.hex, s.elevation)?.rules.climb ?? 0));
   const stops = spots.some((s, i) => entered.includes(s) && stopsMovement(fromSpots[i]!, s, ctx));
   const before = engagedIds(enemies, fromSpots, height);
   const after = engagedIds(enemies, spots, height);
   return {
     to,
     spots,
-    cost: (turning ? 0 : 1) + extra + climb,
+    cost: (turning ? 0 : 1) + extra + climb + overWall,
     stops,
     entered,
     lava: entered.filter((s) => terrainOf(s, ctx)?.entryDestroyOnOrBelow !== undefined).length,
@@ -299,6 +308,8 @@ function search(
   for (const label of labels.values()) {
     const key = placementKey(label.placement);
     if (key === startKey) continue;
+    // A figure cannot end its move on a wall it is climbing across.
+    if (endsOnScenery(label.spots, ctx)) continue;
     // A figure cannot end its move on another figure.
     if (label.spots.some((s) => {
       const o = occ.get(stepKey(s));
@@ -427,6 +438,7 @@ function validatePath(state: GameState, mover: Mover, path: readonly PathStep[],
     const o = occ.get(stepKey(s));
     if (o && o.figure.id !== mover.figure.id) fail("A figure cannot end its move on another figure");
   }
+  if (endsOnScenery(fromSpots, ctx)) fail("A figure cannot end its move on a wall");
   if (placementKey(from) === placementKey(mover.start)) fail("The figure must end somewhere new");
   const budget = mover.budget + (bonus && allBonusTerrain && !mover.noStrikes ? bonus.bonus : 0);
   if (cost > budget) fail(`That move costs ${cost} but the figure only has ${budget}`);

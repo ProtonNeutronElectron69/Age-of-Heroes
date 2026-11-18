@@ -1,7 +1,7 @@
 import { DIRECTIONS, hexAdd, hexKey, hexNeighbors, hexToWorld, parseHexKey, type Hex } from "./hex";
 import type { MapDefinition, PlacedPiece, SceneryPlacement } from "./schema";
 import { MAX_PLAYERS, MIN_PLAYERS } from "./schema";
-import { shapeCells } from "./shapes";
+import { footprintCells, shapeCells } from "./shapes";
 import { isBalanced, type Point2 } from "./support";
 import { DEFAULT_SCENERY, type SceneryRules, type SceneryTable, type TerrainTable } from "./terrain";
 
@@ -28,6 +28,8 @@ export interface Surface {
 export interface ScenerySpot {
   readonly placement: SceneryPlacement;
   readonly rules: SceneryRules;
+  /** The hexes it fills. */
+  readonly cells: readonly Hex[];
 }
 
 export type MapIssueCode =
@@ -79,6 +81,7 @@ export class Board {
   private readonly piecesById = new Map<string, PlacedPiece>();
   private readonly sceneryBySpot = new Map<string, ScenerySpot>();
   private readonly sceneryByHex = new Map<string, ScenerySpot[]>();
+  private readonly sceneryList: ScenerySpot[] = [];
   private readonly spanPieces = new Set<string>();
   private sealed: Gap[] = [];
 
@@ -155,57 +158,42 @@ export class Board {
     const ids = new Set<string>();
     for (const placement of this.definition.scenery ?? []) {
       const where = `${hexKey(placement.hex)} level ${placement.elevation}`;
+      const problem = (code: MapIssueCode, message: string) =>
+        issues.push({ severity: "error", code, message, sceneryId: placement.id, hex: placement.hex });
       if (ids.has(placement.id)) {
         issues.push({ severity: "error", code: "duplicateSceneryId", message: `Duplicate scenery id "${placement.id}"` });
         continue;
       }
       ids.add(placement.id);
-      const rules = table?.get(placement.kind);
-      if (table && !rules) {
-        issues.push({
-          severity: "error",
-          code: "unknownScenery",
-          message: `Unknown scenery "${placement.kind}" at ${where}`,
-          sceneryId: placement.id,
-          hex: placement.hex,
-        });
-      }
-      const surface = this.surfaceAt(placement.hex, placement.elevation);
-      if (!surface) {
-        issues.push({
-          severity: "error",
-          code: "sceneryOffBoard",
-          message: `Scenery at ${where} has no ground under it`,
-          sceneryId: placement.id,
-          hex: placement.hex,
-        });
+      const known = table?.get(placement.kind);
+      if (table && !known) problem("unknownScenery", `Unknown scenery "${placement.kind}" at ${where}`);
+      const rules = known ?? DEFAULT_SCENERY;
+      const rotation = placement.rotation ?? 0;
+
+      const cells = rules.footprint ? footprintCells(rules.footprint, placement.hex, rotation) : [placement.hex];
+      const grounds = cells.map((h) => this.surfaceAt(h, placement.elevation));
+      if (grounds.some((g) => !g)) {
+        problem(
+          "sceneryOffBoard",
+          cells.length > 1 ? `${rules.name} at ${where} needs level ground under every hex` : `Scenery at ${where} has no ground under it`,
+        );
         continue;
       }
-      const key = `${hexKey(placement.hex)}@${placement.elevation}`;
-      if (this.sceneryBySpot.has(key)) {
-        issues.push({
-          severity: "error",
-          code: "sceneryOverlap",
-          message: `Two pieces of scenery stand at ${where}`,
-          sceneryId: placement.id,
-          hex: placement.hex,
-        });
+      if (cells.some((h) => this.sceneryBySpot.has(`${hexKey(h)}@${placement.elevation}`))) {
+        problem("sceneryOverlap", `Two pieces of scenery stand at ${where}`);
         continue;
       }
-      const spot: ScenerySpot = { placement, rules: rules ?? DEFAULT_SCENERY };
-      if (surface.clearance < spot.rules.height) {
-        issues.push({
-          severity: "error",
-          code: "sceneryTooTall",
-          message: `${spot.rules.name} at ${where} does not fit under the terrain above it`,
-          sceneryId: placement.id,
-          hex: placement.hex,
-        });
+      if (grounds.some((g) => g!.clearance < rules.height)) {
+        problem("sceneryTooTall", `${rules.name} at ${where} does not fit under the terrain above it`);
       }
-      this.sceneryBySpot.set(key, spot);
-      const list = this.sceneryByHex.get(hexKey(placement.hex)) ?? [];
-      list.push(spot);
-      this.sceneryByHex.set(hexKey(placement.hex), list);
+      const spot: ScenerySpot = { placement, rules, cells };
+      for (const h of cells) {
+        this.sceneryBySpot.set(`${hexKey(h)}@${placement.elevation}`, spot);
+        const list = this.sceneryByHex.get(hexKey(h)) ?? [];
+        list.push(spot);
+        this.sceneryByHex.set(hexKey(h), list);
+      }
+      this.sceneryList.push(spot);
     }
     return issues;
   }
@@ -540,8 +528,9 @@ export class Board {
     return this.sceneryByHex.get(hexKey(h)) ?? [];
   }
 
+  /** Every piece of scenery once. */
   scenery(): ScenerySpot[] {
-    return [...this.sceneryBySpot.values()];
+    return [...this.sceneryList];
   }
 
   /** Player counts this map can host: every player needs their own start zone. */
