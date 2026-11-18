@@ -46,7 +46,7 @@ import { DisplayMenu } from "../ui/DisplayMenu";
 import { useBattleMusic } from "../music";
 import { playSound } from "../sfx";
 import { landingSound } from "../soundEffects";
-import { toggleFigures, useDisplay } from "../settings";
+import { toggleFigures, toggleTiles, useDisplay } from "../settings";
 import { GameMenu } from "../ui/GameMenu";
 import { HexTip, useHexTip, zoneOwners } from "../ui/HexTip";
 import { OnlineBar } from "../ui/OnlineBar";
@@ -614,6 +614,8 @@ export function PlayScreen({ session }: { session: Session }) {
       setResurrect(null);
     } else if (key === "t") {
       toggleFigures();
+    } else if (key === "b") {
+      toggleTiles();
     } else if (key === "r") {
       setRotation((r) => (r + (e.shiftKey ? 5 : 1)) % 6);
     } else if (key === "c") {

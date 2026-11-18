@@ -99,4 +99,5 @@ Rule numbers that may change with playtesting live in data, not engine code:
 - `packages/content/src/tuning.ts`: falling dice, passing strike dice, height bonuses, straddle, and the glyphs' numbers (`glyphs`: each stat glyph's bonus, the pit's wounds, the curse's turns and how far a summoned unit may be placed).
 - `packages/content/src/glyphs.ts`: each glyph's name, colour and mark, and the words that explain it (`glyphEffect`, which reads the tuned numbers). Glyph names are original, like unit names.
 - `packages/content/src/terrain.ts`: move costs, lava and ice rolls, swamp damage.
+- A new terrain gets its detailed look in `apps/client/src/scene/tileArt.ts`: a painter for its top in `TOPS`, one for its sides in `SIDES`, and its finish in `TILE_FINISH`. Without them it is drawn in its flat colour.
 - Ability `params` on each card.

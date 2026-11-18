@@ -32,7 +32,12 @@ import {
   type Material,
   PerspectiveCamera,
 } from "three";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
+import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
+import { useDisplay } from "../settings";
 import { TEST_MODE } from "../testMode";
+import { detailedMaterials, tileGeometry } from "./tileMaterials";
 import { HEX_GAP } from "./scale";
 import { useBoardActivity } from "./activity";
 import { useWake } from "./wake";
@@ -735,7 +740,13 @@ interface CellHandlers {
 /** Hexes of a bridge span are drawn full width, so the span reads as one piece; its outlines stay. */
 const SPAN_SCALE = new Vector3(1 / HEX_GAP, 1, 1 / HEX_GAP);
 const NO_SCALE = new Vector3(1, 1, 1);
-const NO_TURN = new Quaternion();
+const UP = new Vector3(0, 1, 0);
+/** Each tile is turned by a whole number of sixths, so neighbouring tiles' pictures never line up. */
+const TURNS = Array.from({ length: 6 }, (_, k) => new Quaternion().setFromAxisAngle(UP, (k * Math.PI) / 3));
+function turnOf(cell: Cell): Quaternion {
+  const h = Math.imul(cell.hex.q, 73856093) ^ Math.imul(cell.hex.r, 19349663) ^ Math.imul(cell.layer, 83492791);
+  return TURNS[(h >>> 0) % 6]!;
+}
 
 /**
  * Every cell of one terrain as a single instanced mesh: one draw call instead of
@@ -755,7 +766,7 @@ function TerrainCells({
   board: Board;
   cells: readonly Cell[];
   geometry: BufferGeometry;
-  material: Material;
+  material: Material | Material[];
   center: { x: number; z: number };
 }) {
   const mesh = useRef<InstancedMesh>(null);
@@ -768,7 +779,7 @@ function TerrainCells({
     cells.forEach((cell, i) => {
       const { x, z } = hexToWorld(cell.hex, HEX_SIZE);
       at.set(x, cell.layer * LEVEL_HEIGHT + LEVEL_HEIGHT / 2, z);
-      m.setMatrixAt(i, matrix.compose(at, NO_TURN, board.isSpanPiece(cell.pieceId) ? SPAN_SCALE : NO_SCALE));
+      m.setMatrixAt(i, matrix.compose(at, turnOf(cell), board.isSpanPiece(cell.pieceId) ? SPAN_SCALE : NO_SCALE));
     });
     m.instanceMatrix.needsUpdate = true;
     m.computeBoundingSphere();
@@ -810,8 +821,14 @@ function TerrainCells({
   );
 }
 
-/** The outline of every cell, as one set of line segments. */
-function CellEdges({ cells, geometry }: { cells: readonly Cell[]; geometry: BufferGeometry }) {
+/** How wide the detailed look's outlines are, in world units (a hex is 2 across). */
+const BOLD_EDGE = 0.05;
+
+/**
+ * The outline of every cell, as one set of line segments. The detailed look draws them bold,
+ * as wide lines that scale with the board, so the levels of a stack are easy to count.
+ */
+function CellEdges({ cells, geometry, bold }: { cells: readonly Cell[]; geometry: BufferGeometry; bold: boolean }) {
   const lines = useMemo(() => {
     const edges = new EdgesGeometry(geometry, 20);
     const src = edges.getAttribute("position").array;
@@ -832,6 +849,23 @@ function CellEdges({ cells, geometry }: { cells: readonly Cell[]; geometry: Buff
     return g;
   }, [cells, geometry]);
   useEffect(() => () => lines.dispose(), [lines]);
+  const wide = useMemo(() => {
+    if (!bold) return null;
+    const g = new LineSegmentsGeometry();
+    g.setPositions(lines.getAttribute("position").array as Float32Array);
+    const m = new LineMaterial({ color: 0x0b0b0b, linewidth: BOLD_EDGE, worldUnits: true });
+    const l = new LineSegments2(g, m);
+    l.raycast = () => {};
+    return l;
+  }, [bold, lines]);
+  useEffect(
+    () => () => {
+      wide?.geometry.dispose();
+      (wide?.material as LineMaterial | undefined)?.dispose();
+    },
+    [wide],
+  );
+  if (wide) return <primitive object={wide} />;
   return (
     <lineSegments geometry={lines} raycast={() => null}>
       <lineBasicMaterial color="#141414" />
@@ -903,10 +937,10 @@ export function BoardScene({
     return [...groups];
   }, [cells]);
   const scenery = useMemo(() => board.scenery(), [board]);
-  const geometry = useMemo(
-    () => new CylinderGeometry(HEX_SIZE * HEX_GAP, HEX_SIZE * HEX_GAP, LEVEL_HEIGHT, 6),
-    [],
-  );
+  const geometry = useMemo(() => tileGeometry(), []);
+  // The detailed or the classic look of the tiles, as each player chooses under Display.
+  const detailed = useDisplay().tiles === "detailed";
+  const anisotropy = useThree((s) => s.gl.capabilities.getMaxAnisotropy());
   const markerGeometry = useMemo(() => new CylinderGeometry(HEX_SIZE * 0.82, HEX_SIZE * 0.82, 0.03, 6), []);
   const materials = useMemo(() => {
     const m = new Map<string, MeshStandardMaterial>();
@@ -949,12 +983,13 @@ export function BoardScene({
         )}
         {cellsByTerrain.map(([terrainId, list]) => (
           <TerrainCells
-            // A new key when the count changes, since an instanced mesh cannot grow.
-            key={`${terrainId}:${list.length}`}
+            // A new key when the count or the look changes: an instanced mesh cannot grow, and a
+            // new material rebuilds it, so its tiles must be placed again.
+            key={`${terrainId}:${list.length}:${detailed ? "detailed" : "classic"}`}
             board={board}
             cells={list}
             geometry={geometry}
-            material={materials.get(terrainId) ?? fallback}
+            material={(detailed && detailedMaterials(terrainId, Math.min(8, anisotropy))) || (materials.get(terrainId) ?? fallback)}
             onSurfaceClick={onSurfaceClick}
             onSurfaceHover={onSurfaceHover}
             onCellPointer={onCellPointer}
@@ -962,7 +997,7 @@ export function BoardScene({
             center={center}
           />
         ))}
-        <CellEdges cells={cells} geometry={geometry} />
+        <CellEdges cells={cells} geometry={geometry} bold={detailed} />
         {scenery.map((spot) => (
           <SceneryMesh key={spot.placement.id} spot={spot} onClick={onSceneryClick} />
         ))}

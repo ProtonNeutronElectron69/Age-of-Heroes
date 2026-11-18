@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { COLOR_SCHEMES, type ColorScheme } from "../models";
 import { SoundControls } from "./MusicControl";
-import { DICE_SHOWS, TABLE_STYLES, setDisplay, useDisplay, type DiceShow, type TableStyle } from "../settings";
+import { DICE_SHOWS, TABLE_STYLES, TILE_LOOKS, setDisplay, useDisplay, type DiceShow, type TableStyle } from "../settings";
 
 /**
  * How this screen draws the game: figure models or tokens, the colour scheme
@@ -46,6 +46,22 @@ export function DisplayMenu() {
               ))}
             </select>
           </label>
+          <h2>Board tiles</h2>
+          <div className="segmented" role="radiogroup" aria-label="Board tiles">
+            {TILE_LOOKS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="radio"
+                aria-checked={display.tiles === t.id}
+                className={display.tiles === t.id ? "on" : ""}
+                onClick={() => setDisplay({ tiles: t.id })}
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
+          <p className="muted small">Detailed tiles are textured, with bold outlines to count the levels. Press B to switch.</p>
           <label className="field">
             <span>Table</span>
             <select aria-label="Table" value={display.table} onChange={(e) => setDisplay({ table: e.target.value as TableStyle })}>

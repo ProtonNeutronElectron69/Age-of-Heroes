@@ -334,6 +334,7 @@ function hotKeys(online: boolean): readonly (readonly [string, string])[] {
     ["Space", "End the turn"],
     ["C", "Show or hide the unit card"],
     ["T", "Models or tokens"],
+    ["B", "Detailed or classic tiles"],
     ["Esc", "Stop aiming a blast"],
     ...(online ? ([["P", "Ping the spot under the pointer"]] as const) : []),
   ];
