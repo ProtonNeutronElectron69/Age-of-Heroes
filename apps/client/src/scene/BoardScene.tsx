@@ -516,6 +516,10 @@ function SceneryMaterial({ color, ghost }: { color: string; ghost?: boolean }) {
   return <meshStandardMaterial color={color} flatShading transparent={ghost} opacity={ghost ? 0.55 : 1} depthWrite={!ghost} />;
 }
 
+/** A wall between hexes has a thin stone base on its row of hexes, thin enough for a figure to stand on. */
+const WALL_BASE = 0.05;
+const STONE_BASE = "#83878c";
+
 /** A number from 0 to 1 that stays the same for one piece of scenery, so a ruin keeps its shape. */
 function steady(seed: string, i: number): number {
   let h = 2166136261 ^ i;
@@ -553,24 +557,37 @@ export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onCli
     const length = Math.hypot(to.x - from.x, to.z - from.z);
     const yaw = -Math.atan2(to.z - from.z, to.x - from.x);
     const centre: [number, number, number] = [(from.x + to.x) / 2, base, (from.z + to.z) / 2];
+    // A thin grey base on each hex of the row the wall stands against; figures can still stand there.
+    const rowPlates = spot.wall.row.map((c, i) => {
+      const p = hexToWorld(c, HEX_SIZE);
+      return (
+        <mesh key={`b${i}`} position={[p.x, base + WALL_BASE / 2, p.z]} {...handlers}>
+          <cylinderGeometry args={[HEX_SIZE * 0.9, HEX_SIZE * 0.9, WALL_BASE, 6]} />
+          {m(STONE_BASE)}
+        </mesh>
+      );
+    });
     if (rules.cover) {
       // A low stone wall with a row of capstones along its top.
       const body = h * 0.82;
       return (
-        <group position={centre} rotation={[0, yaw, 0]}>
-          <mesh position={[0, body / 2, 0]} {...handlers}>
-            <boxGeometry args={[length * 0.98, body, 0.2 * HEX_SIZE]} />
-            {m(rules.color)}
-          </mesh>
-          {Array.from({ length: Math.round(length / 0.5) }, (_, i) => {
-            const w = (length * 0.98) / Math.round(length / 0.5);
-            return (
-              <mesh key={i} position={[-length * 0.49 + w * (i + 0.5), body + h * 0.08, 0]} {...handlers}>
-                <boxGeometry args={[w * 0.92, h * 0.16, 0.28 * HEX_SIZE]} />
-                {m(lighter(rules.color, i % 2 ? 0.06 : 0.1))}
-              </mesh>
-            );
-          })}
+        <group>
+          {rowPlates}
+          <group position={centre} rotation={[0, yaw, 0]}>
+            <mesh position={[0, body / 2, 0]} {...handlers}>
+              <boxGeometry args={[length * 0.98, body, 0.2 * HEX_SIZE]} />
+              {m(rules.color)}
+            </mesh>
+            {Array.from({ length: Math.round(length / 0.5) }, (_, i) => {
+              const w = (length * 0.98) / Math.round(length / 0.5);
+              return (
+                <mesh key={i} position={[-length * 0.49 + w * (i + 0.5), body + h * 0.08, 0]} {...handlers}>
+                  <boxGeometry args={[w * 0.92, h * 0.16, 0.28 * HEX_SIZE]} />
+                  {m(lighter(rules.color, i % 2 ? 0.06 : 0.1))}
+                </mesh>
+              );
+            })}
+          </group>
         </group>
       );
     }
@@ -578,25 +595,28 @@ export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onCli
     const parts = 6;
     const w = length / parts;
     return (
-      <group position={centre} rotation={[0, yaw, 0]}>
-        {Array.from({ length: parts }, (_, i) => {
-          const tall = h * (0.5 + 0.45 * steady(placement.id, i));
-          return (
-            <mesh key={i} position={[-length / 2 + w * (i + 0.5), tall / 2, 0]} {...handlers}>
-              <boxGeometry args={[w * 1.01, tall, 0.22 * HEX_SIZE]} />
-              {m(i % 2 ? rules.color : lighter(rules.color, -0.04))}
-            </mesh>
-          );
-        })}
-        {[-0.5, 0, 0.5].map((at, i) => {
-          const tall = h * (0.85 + 0.15 * steady(placement.id, 10 + i));
-          return (
-            <mesh key={`p${i}`} position={[at * length * 0.96, tall / 2, 0]} rotation={[0, 0, (steady(placement.id, 20 + i) - 0.5) * 0.08]} {...handlers}>
-              <boxGeometry args={[0.3 * HEX_SIZE, tall, 0.34 * HEX_SIZE]} />
-              {m(lighter(rules.color, 0.05))}
-            </mesh>
-          );
-        })}
+      <group>
+        {rowPlates}
+        <group position={centre} rotation={[0, yaw, 0]}>
+          {Array.from({ length: parts }, (_, i) => {
+            const tall = h * (0.5 + 0.45 * steady(placement.id, i));
+            return (
+              <mesh key={i} position={[-length / 2 + w * (i + 0.5), tall / 2, 0]} {...handlers}>
+                <boxGeometry args={[w * 1.01, tall, 0.22 * HEX_SIZE]} />
+                {m(i % 2 ? rules.color : lighter(rules.color, -0.04))}
+              </mesh>
+            );
+          })}
+          {[-0.5, 0, 0.5].map((at, i) => {
+            const tall = h * (0.85 + 0.15 * steady(placement.id, 10 + i));
+            return (
+              <mesh key={`p${i}`} position={[at * length * 0.96, tall / 2, 0]} rotation={[0, 0, (steady(placement.id, 20 + i) - 0.5) * 0.08]} {...handlers}>
+                <boxGeometry args={[0.3 * HEX_SIZE, tall, 0.34 * HEX_SIZE]} />
+                {m(lighter(rules.color, 0.05))}
+              </mesh>
+            );
+          })}
+        </group>
       </group>
     );
   }
@@ -609,12 +629,13 @@ export function SceneryMesh({ spot, onClick, ghost }: { spot: ScenerySpot; onCli
   const first = points[0]!;
   const last = points[points.length - 1]!;
   const yaw = -Math.atan2(last.z - first.z, last.x - first.x);
-  const plates = cells.length > 1 && (
+  // Trees and bigger pieces stand on a base filling each of their hexes.
+  const plates = (cells.length > 1 || rules.id === "tree") && (
     <>
       {points.map((p, i) => (
         <mesh key={`b${i}`} position={[p.x - cx, 0.04, p.z - cz]} {...handlers}>
           <cylinderGeometry args={[HEX_SIZE * 0.9, HEX_SIZE * 0.9, 0.08, 6]} />
-          {m(rules.id === "large-tree" ? "#7a5a36" : lighter(rules.color, -0.12))}
+          {m(rules.id === "large-tree" || rules.id === "tree" ? "#7a5a36" : lighter(rules.color, -0.12))}
         </mesh>
       ))}
     </>
