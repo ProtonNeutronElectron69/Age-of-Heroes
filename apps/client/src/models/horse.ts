@@ -29,7 +29,7 @@ export const TROT: HorsePose = {
 
 const LEG_X = 0.118;
 
-function leg(points: HorseLeg, x: number, hind: boolean): Part {
+function leg(points: HorseLeg, x: number, hind: boolean, sides: number): Part {
   const [a, b, c, d] = points;
   const thick = hind ? 0.115 : 0.095;
   return spine(
@@ -40,15 +40,16 @@ function leg(points: HorseLeg, x: number, hind: boolean): Part {
       [d[0], d[1] + 0.05, 0.056, 0.062],
       [d[0] + 0.014, d[1], 0.064, 0.07],
     ],
-    { sides: 6, x },
+    { sides, x },
   );
 }
 
 /**
  * A horse, written to the same scale as `human` (a standing rider is 1 tall):
- * its back is 0.89 high and it is 1.45 long from nose to tail.
+ * its back is 0.89 high and it is 1.45 long from nose to tail. `sides` makes the barrel and legs
+ * coarser, to leave triangles for a painted horse's tack.
  */
-export function horse(pose: HorsePose): Part[] {
+export function horse(pose: HorsePose, sides: { barrel: number; leg: number } = { barrel: 8, leg: 6 }): Part[] {
   return [
     // Barrel, from the rump to the chest.
     spine(
@@ -61,7 +62,7 @@ export function horse(pose: HorsePose): Part[] {
         [0.38, 0.78, 0.13, 0.16],
         [0.43, 0.8, 0.06, 0.08],
       ],
-      { sides: 8 },
+      { sides: sides.barrel },
     ),
     // Neck and head.
     spine(
@@ -103,9 +104,9 @@ export function horse(pose: HorsePose): Part[] {
       ],
       { sides: 5 },
     ),
-    leg(pose.frontL, LEG_X, false),
-    leg(pose.frontR, -LEG_X, false),
-    leg(pose.hindL, LEG_X, true),
-    leg(pose.hindR, -LEG_X, true),
+    leg(pose.frontL, LEG_X, false, sides.leg),
+    leg(pose.frontR, -LEG_X, false, sides.leg),
+    leg(pose.hindL, LEG_X, true, sides.leg),
+    leg(pose.hindR, -LEG_X, true, sides.leg),
   ];
 }

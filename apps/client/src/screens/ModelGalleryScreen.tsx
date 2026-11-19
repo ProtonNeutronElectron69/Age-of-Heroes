@@ -58,7 +58,7 @@ export function ModelGalleryScreen({ filter = "" }: { filter?: string }) {
         <div>
           <h1>Figure models</h1>
           <p className="muted">
-            In the detailed look, units with a stage 2 model are painted part by part; the rest, and every unit in the classic look, show the stage 1 model in flat colours. The fit and triangles below are the stage 1 model's. Drag to turn the board, scroll to zoom, and pick a unit to look closer.
+            In the detailed look, every unit shows its stage 2 model, painted part by part; the classic look shows the stage 1 models in flat colours. The fit and triangles below are the stage 1 model's. Drag to turn the board, scroll to zoom, and pick a unit to look closer.
           </p>
         </div>
         <div className="model-gallery-controls">
