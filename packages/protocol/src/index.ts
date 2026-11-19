@@ -53,6 +53,7 @@ export const commandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("attack"), player: id, figureId: id, targetId: id, ability: id.optional(), aim: hexSchema.optional() }),
   z.object({ type: z.literal("blast"), player: id, figureId: id, ability: id, at: stepSchema.omit({ rotation: true }) }),
   z.object({ type: z.literal("endTurn"), player: id }),
+  z.object({ type: z.literal("face"), player: id, figureId: id, facing: z.number().int().min(0).max(359) }),
   z.object({
     type: z.literal("useGlyph"),
     player: id,
@@ -104,6 +105,8 @@ const setupSchema = z
     tokenRule: z.enum(["stack", "onePerUnit"]).optional(),
     /** How many glyphs are scattered on the battlefield; older files leave it out (none). */
     glyphs: z.number().int().min(0).max(11).optional(),
+    /** New games: figures face a way. Older files leave it out (no facing). */
+    facing: z.boolean().optional(),
   })
   .superRefine((s, ctx) => {
     if (s.mode === "basic") ctx.addIssue({ code: "custom", path: ["mode"], message: BASIC_RULES_GONE });

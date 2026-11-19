@@ -1,6 +1,7 @@
 import { hexDistance, hexKey, hexNeighbors, type Hex } from "../hex";
 import type { UnitCard } from "../schema";
 import { fail } from "./errors";
+import { faceTowardsMiddle } from "./facing";
 import { placementSpots, type Placement } from "./placement";
 import { cardSpace } from "./draft";
 import { cardOf, findUnit, occupancy, statsOf, stepKey } from "./queries";
@@ -292,6 +293,7 @@ export function deployUnit(
   for (const p of placements) {
     const figure = unit.figures.find((f) => f.id === p.figureId)!;
     figure.position = { hex: p.hex, elevation: p.elevation, rotation: rotationOf(p) };
+    faceTowardsMiddle(state, figure, card.footprint, ctx);
   }
   events.push({
     type: "unitDeployed",

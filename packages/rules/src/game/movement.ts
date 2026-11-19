@@ -7,6 +7,7 @@ import { moveCostOf, type TerrainRules } from "../terrain";
 import { canTrample, combatant, hasAbility, isPinned, moveBonus, trampleRoll } from "./abilities";
 import { spotsEngaged } from "./engagement";
 import { fail } from "./errors";
+import { faceAfterMove } from "./facing";
 import { figureSpots, placementKey, placementSpots, standingElevation, tuningOf, type Placement } from "./placement";
 import { glyphBonus, pickUpGlyphs } from "./glyphs";
 import { cardOf, findFigure, occupancy, statsOf, stepKey, type EffectiveStats, type Occupant } from "./queries";
@@ -513,6 +514,7 @@ export function moveFigure(
 
   if (mover.flying) {
     flyTo(state, mover, toPlacement(path[0]!, from, "1"), rng, enemies, after, traversed, lavaRolls, ctx);
+    faceMoved(state, mover, traversed);
     pickUpGlyphs(state, unit, figure, after, ctx);
     state.rng = rng.state;
     events.push({ type: "figureMoved", figureId, from: asPathStep(mover.start, mover.footprint), path: traversed }, ...after);
@@ -587,11 +589,29 @@ export function moveFigure(
     }
   }
 
+  faceMoved(state, mover, traversed);
   // Ending the move on a glyph picks it up.
   pickUpGlyphs(state, unit, figure, after, ctx);
   state.rng = rng.state;
   events.push({ type: "figureMoved", figureId, from: asPathStep(mover.start, mover.footprint), path: traversed }, ...after);
   checkGameOver(state, events, ctx);
+}
+
+/**
+ * After a move (games with facing): the figure faces along its last step, and a single-hex
+ * figure may be turned until it attacks.
+ */
+function faceMoved(state: GameState, mover: Mover, traversed: readonly PathStep[]): void {
+  const { figure } = mover;
+  if (!state.config.facing || figure.destroyed || !figure.position) return;
+  const route = [mover.start.hex, ...traversed.map((t) => t.hex)];
+  if (!route.some((h) => hexEquals(h, figure.position!.hex))) route.push(figure.position.hex);
+  faceAfterMove(state, figure, mover.footprint, route);
+  const active = state.active!;
+  if (mover.footprint === "1") {
+    const turnable = (active.turnable ??= []);
+    if (!turnable.includes(figure.id)) turnable.push(figure.id);
+  }
 }
 
 /** A flight: passing strikes on take-off, then only the landing hex matters (lava). */

@@ -181,6 +181,8 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
         // At most one activation token on each unit.
         tokenRule: "onePerUnit",
         glyphs,
+        // Figures face a way.
+        facing: true,
         players: Array.from({ length: players }, (_, i) => ({
           id: `p${i + 1}`,
           name: names[i]!.trim() || `Player ${i + 1}`,

@@ -155,6 +155,7 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
         hero: card.figureCount === 1,
         status: state.active?.unitId === unit.id ? "ready" : "idle",
         ...(life > 1 ? { lifeLeft: life - f.wounds } : {}),
+        ...(state.config.facing && f.facing !== undefined ? { facing: f.facing } : {}),
       });
     }
   }
@@ -178,6 +179,7 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
         hero: card.figureCount === 1,
         status: "idle",
         ...(statsOf(card).life > 1 ? { lifeLeft: 0 } : {}),
+        ...(state.config.facing && hit.figure.facing !== undefined ? { facing: hit.figure.facing } : {}),
       });
     }
   }

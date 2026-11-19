@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 664 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 672 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 Nothing is in progress. Open, when the owner asks:
@@ -278,3 +278,9 @@ Small changes asked for after playing, online games especially.
 
 ### Riverbend
 - [x] A new 2-player map, built from the textured tile mockup: a river bends across open fields below a rocky hill with a snowy top, with a cobbled road and ford, a grassy knoll, a wood, a swamp, a frozen pond and a lava vent on the hill's flank. Scenery: four trees in the wood, a large tree, two boulders, a ruined wall, a small ruined wall on the knoll, a large wall by the pond and a low wall at the ford. Start zones run along the west and east edges and grow to fit the armies
+
+### Facing
+- [x] Figures face a way in new games (`facing`; older saves have none and play as before). A single-hex figure faces one of eight directions; a multi-hex figure faces along its base. Figures start facing the middle of the battlefield
+- [x] After a move a figure faces along its last step; until it attacks, R turns it an eighth (Shift+R the other way), with an outline of its front cone on the ground. Tokens show their facing with a pointer on the cap
+- [x] A ranged attack needs its target in the attacker's front cone (180 degrees); a melee attack from wholly behind the defender's cone rolls 2 more attack dice (`TUNING.behindBonus`), adding to the higher-ground bonus
+- [x] Eye view turns only as far as the figure's front cone, so nothing behind it is ever on screen

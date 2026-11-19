@@ -104,6 +104,22 @@ async function tagOf(id) {
  * Waits until the camera has stopped moving: `frames` frames in a row project the same point.
  * The camera glides to the acting figure after a turn starts or a squad figure acts, so clicks wait for it.
  */
+/** Once: after a move, R turns the figure that moved an eighth (new games have facing). */
+let turnChecked = false;
+async function checkTurning() {
+  if (turnChecked) return;
+  const ui = await page.evaluate(() => window.__aohUi);
+  if (!ui?.turning) return;
+  const { id, facing } = ui.turning;
+  await page.keyboard.press("r");
+  const want = (facing + 45) % 360;
+  const turned = await page
+    .waitForFunction(({ id, want }) => window.__aohUi?.turning?.id === id && window.__aohUi.turning.facing === want, { id, want }, { timeout: 5000 })
+    .then(() => true, () => false);
+  if (!turned) fail(`R did not turn ${id} from ${facing} to ${want} degrees: ${JSON.stringify(await page.evaluate(() => window.__aohUi?.turning))}`);
+  turnChecked = true;
+}
+
 async function steadyCamera(frames = 5) {
   await page.evaluate(
     (frames) =>
@@ -641,6 +657,7 @@ try {
               moves++;
               if (squad) squadMoves++;
               if (squad && after.selected && after.selected !== ui.selected) cycled++;
+              await checkTurning();
               continue;
             }
           } else {
@@ -660,6 +677,7 @@ try {
           // Squads hand the selection to the next figure after a move.
           if (squad) squadMoves++;
           if (squad && after.selected && after.selected !== ui.selected) cycled++;
+          await checkTurning();
           break;
         }
       }
@@ -726,6 +744,7 @@ try {
   const heading = await over.getByRole("heading").innerText();
   if (!/wins|share the win|Nobody/.test(heading)) fail(`Unexpected result: ${heading}`);
   if (moves === 0) fail("No figure moved during the game");
+  if (!turnChecked) fail("No figure that had moved was turned with R");
   if (!dragged) fail("No figure was ever moved by dragging it");
   if (!jumpChecked) fail("The H key was never tried");
   if (!followChecked) fail("The camera was never checked following the acting figure");

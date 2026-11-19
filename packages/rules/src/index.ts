@@ -23,5 +23,6 @@ export * from "./game/deploy";
 export * from "./game/movement";
 export * from "./game/combat";
 export * from "./game/glyphs";
+export * from "./game/facing";
 export * from "./game/engine";
 export * from "./game/view";

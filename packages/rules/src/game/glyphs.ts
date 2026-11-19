@@ -3,6 +3,7 @@ import { Rng } from "../rng";
 import { isSquad } from "../schema";
 import { DEFAULT_GLYPHS, type GlyphTuning } from "../tuning";
 import { fail } from "./errors";
+import { faceTowardsMiddle } from "./facing";
 import { figureSpots, placementSpots, tuningOf, type Placement } from "./placement";
 import { cardOf, findFigure, findUnit, isUnitAlive, occupancy, statsOf, stepKey } from "./queries";
 import { checkGameOver, destroyFigure, woundFigure } from "./rounds";
@@ -332,6 +333,7 @@ export function useGlyph(
         f.destroyed = false;
         f.wounds = 0;
         f.position = { hex: p.hex, elevation: p.elevation, rotation: p.rotation ?? 0 };
+        faceTowardsMiddle(state, f, card.footprint, ctx);
         events.push({ type: "figureRevived", figureId: f.id, at: { hex: p.hex, elevation: p.elevation } });
       }
       return;

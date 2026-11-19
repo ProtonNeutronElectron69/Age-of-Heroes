@@ -40,6 +40,8 @@ declare global {
       aiming: { id: string; spots: UiStep[] } | null;
       /** Empty hexes the chosen blast may be aimed at. */
       blastHexes: UiStep[];
+      /** The figure R turns (games with facing), and its facing in degrees. */
+      turning: { id: string; facing: number } | null;
 
     };
   }
