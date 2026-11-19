@@ -7,8 +7,8 @@ Checks run only for the parts of the game a change can affect. The browser tests
 | Check | What it covers | Time |
 |---|---|---|
 | Typecheck and build | Every package compiles, and the client and server build | under a minute |
-| Unit tests | Vitest, by package: `packages/rules`, `packages/content`, `packages/protocol`, `apps/server`, `apps/client` (the figure models, the table layout and the 3D dice) | seconds |
-| Browser tests | Seven Playwright scripts in `apps/client/e2e`: `full-game`, `editor`, `saves`, `online`, `models`, `gallery`, `menu` | under a minute to about 2 minutes each in CI; `full-game` is the longest, at about 2.5 to 4 |
+| Unit tests | Vitest, by package: `packages/rules`, `packages/content`, `packages/protocol`, `apps/server`, `apps/client` (the figure models, the table layout, the 3D dice, the tile and scenery shapes, the jukebox, the music and sound lists, the version) | seconds |
+| Browser tests | Seven Playwright scripts in `apps/client/e2e`: `full-game`, `editor`, `saves`, `online`, `models`, `gallery`, `menu` | under a minute to about 4 minutes each in CI; `full-game` is the longest, at about 8 (9 locally), since the detailed tiles and scenery cost more to draw in software |
 
 ## The browser tests
 

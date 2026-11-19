@@ -26,8 +26,10 @@ import {
  * it up. A trap acts on that figure at once: the pit wounds it, the curse kills it at the end of
  * its player's turn `curseTurns` turns later. Any other glyph is held by the player and used on
  * their own turn (`useGlyph`): a stat glyph boosts one of their units while it lives (one glyph per
- * unit), Healer heals one of their units, Summoning brings back one of their destroyed units,
- * Wound hurts an enemy unit, and Negation cancels the stat glyph on an enemy unit.
+ * unit; the initiative glyph lasts one roll-off, `spendInitiativeGlyphs`), healing heals one of
+ * their units, resurrection (kind "summon") brings back one of their destroyed units, placed by
+ * the player (`summonOptions`), wound hurts an enemy unit, and negation cancels the stat glyph on
+ * an enemy unit. Names and descriptions for players are in `@aoh/content` (`GLYPHS`).
  */
 
 export function glyphTuning(ctx: RulesContext): GlyphTuning {
@@ -178,8 +180,8 @@ export function glyphProblem(state: GameState, player: PlayerId, glyphId: string
       if (!unit.figures.some((f) => !f.destroyed && f.wounds > 0)) return "That unit has no wounds to heal";
       return null;
     case "summon":
-      if (!own) return "Summoning brings back one of your own units";
-      if (alive) return "Only a unit that has been destroyed can be summoned";
+      if (!own) return "Resurrection brings back one of your own units";
+      if (alive) return "Only a unit that has been destroyed can be resurrected";
       return null;
     case "wound":
     case "negate":
@@ -192,6 +194,13 @@ export function glyphProblem(state: GameState, player: PlayerId, glyphId: string
   }
 }
 
+/** Every spot the player's figures stand on, apart from the unit being resurrected. */
+function friendSpots(state: GameState, player: PlayerId, unitId: string, ctx: RulesContext) {
+  return state.units
+    .filter((u) => u.owner === player && u.id !== unitId)
+    .flatMap((u) => u.figures.flatMap((f) => figureSpots(f, cardOf(u, ctx).footprint, cardOf(u, ctx).height, ctx)));
+}
+
 /** Where a summoned figure may stand: within reach of another of the player's figures, free and fitting. */
 export function summonProblem(state: GameState, player: PlayerId, unitId: string, placements: readonly FigurePlacement[], ctx: RulesContext): string | null {
   const unit = findUnit(state, unitId)!;
@@ -200,10 +209,8 @@ export function summonProblem(state: GameState, player: PlayerId, unitId: string
     return "Place every figure of the unit";
   }
   const reach = glyphTuning(ctx).summonRange;
-  const friends = state.units
-    .filter((u) => u.owner === player && u.id !== unitId)
-    .flatMap((u) => u.figures.flatMap((f) => figureSpots(f, cardOf(u, ctx).footprint, cardOf(u, ctx).height, ctx)));
-  if (friends.length === 0) return "No figure of yours is on the battlefield to summon beside";
+  const friends = friendSpots(state, player, unitId, ctx);
+  if (friends.length === 0) return "No figure of yours is on the battlefield to resurrect it beside";
   const occ = occupancy(state, ctx);
   const taken = new Set<string>();
   for (const p of placements) {
@@ -236,9 +243,7 @@ export function summonOptions(
   if (!unit) return [];
   const card = cardOf(unit, ctx);
   const reach = glyphTuning(ctx).summonRange;
-  const friends = state.units
-    .filter((u) => u.owner === player && u.id !== unitId)
-    .flatMap((u) => u.figures.flatMap((f) => figureSpots(f, cardOf(u, ctx).footprint, cardOf(u, ctx).height, ctx)));
+  const friends = friendSpots(state, player, unitId, ctx);
   if (friends.length === 0) return [];
   const near = (h: { q: number; r: number }) => Math.min(...friends.map((f) => hexDistance(f.hex, h)));
   const taken = new Set([...occupancy(state, ctx).keys(), ...extraTaken.map(stepKey)]);

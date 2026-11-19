@@ -12,6 +12,7 @@
 - The engine is a reducer: `applyCommand(state, command, ctx)` never mutates its input and returns events. New player actions are new `Command` variants. Validate them, fail with `RulesError`, and add them to `commandSchema` in `packages/protocol`.
 - Anything secret must be removed in `viewFor`. The server only ever sends views.
 - Rule numbers that may need tuning belong in data (`packages/content`), not in engine code.
+- **New rule options** are optional fields of `GameSetup` and `GameConfig` (as `tokenRule`, `glyphs`, `draft` and `initiative` are): new games set them, and a save without them keeps the old behaviour, so it still replays exactly. A change to how an existing option plays breaks the replays of games that used it; say so in the pull request.
 - Abilities are implemented in `packages/rules/src/game/abilities.ts`.
 
 ## Content rules
@@ -72,7 +73,8 @@
 - **Screenshots:** `E2E_SCREENSHOTS=<folder>` saves a run's screenshots, `E2E_FAILURE_SCREENSHOTS=<folder>` only a failure's (CI attaches them to a failed run).
 
 ## Checks and delivery
-- **Before pushing:** run `pnpm check:affected`. It runs the typecheck, build, unit tests and browser tests that the branch's changes affect (`pnpm affected` shows the plan). Docs-only changes need nothing. Browser tests render WebGL in software, so wait for state, not for time, and avoid fixed sleeps.
+- **Before pushing:** run `pnpm check:affected`. It runs the typecheck, build, unit tests and browser tests that the branch's changes affect (`pnpm affected` shows the plan). Docs-only changes need nothing. Browser tests render WebGL in software, so wait for state, not for time, and avoid fixed sleeps. With every browser test in the plan it takes about 20 minutes; run it in the background and wait on its log.
+- **Trying a change in the browser:** a throwaway script in `apps/client/e2e` (it needs Playwright from there) can serve the build with Vite's `preview`, load a save file made by a script against the engine, and take screenshots. Delete it before committing.
 - **Test routing:** `scripts/affected.mjs` decides what runs, in CI too. When you add a package, a browser test or a client file only one browser test uses, update its rules, `docs/TESTING.md` and `scripts/affected.test.mjs` in the same pull request.
 - **Pull requests:** work goes to a branch and lands as one pull request per phase or content drop, with CI green. The owner decides when to merge. Pull requests are squash merged, so start the next piece of work from the latest `origin/main`, not from the old branch.
 - **Writing style for docs and UI text:** plain, short sentences; no em dashes (use commas or semicolons).
