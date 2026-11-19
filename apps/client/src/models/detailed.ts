@@ -1,5 +1,5 @@
 import { ball, both, box, figure, gear, limb, mirror, place, plate, spine, squad } from "./build";
-import { arrow, bow, roundShield, spear } from "./gear";
+import { arrow, bow, pointing, roundShield, spear } from "./gear";
 import { HEAD, human, type Human } from "./human";
 import type { Paint } from "./paint";
 import { AIM_TURN, DRAWN, aiming, loosing } from "./poses";
@@ -657,6 +657,316 @@ const wardenWatchingP = (() => {
   return [...wardenBody(body), ...faceOnly(body), ...hood, ...mantle, ...wardenCloak(body, 0), ...wardenQuiver(body), ...wardenBow(body.handL, 0, [0, 12, 0]), ...wardenArrow([-0.22, 0.5, 0.09], [-0.26, 0.2, 0.3])];
 })();
 
+// ---------- Harrow Riflemen, stage 2 ----------
+function rifleP(at: V3, turn: V3): Part[] {
+  return gear(place([
+    ...paint([box([0.045, 0.08, 0.24], [0, -0.005, -0.15]), box([0.032, 0.042, 0.74], [0, 0.035, 0.31])], "wood"),
+    ...paint([limb([0, 0.06, 0.02], [0, 0.06, 0.67], 0.011, 0.011, 5), box([0.014, 0.03, 0.03], [0, 0.072, 0.64])], "steel"),
+    ...paint([box([0.047, 0.083, 0.02], [0, -0.005, -0.265]), box([0.05, 0.03, 0.06], [0.012, 0.05, 0.02])], "gold"),
+  ], { at, turn }));
+}
+const riflemanBody = (b: Human) => paintBody(b, { hips: "hakama", chest: "coat", sleeve: "coat", hand: "skin", thigh: "hakama", shin: "black", foot: "black" });
+const riflemanKitP = (body: Human, pelvis: V3): Part[] => [
+  ...body.onHead([
+    ...paint([limb([0, 0.04, 0], [0, 0.18, 0], 0.09, 0.1, 8)], "hat"),
+    ...paint([limb([0, 0.165, 0], [0, 0.181, 0], 0.099, 0.101, 8), box([0.055, 0.06, 0.012], [0, 0.11, 0.096])], "gold"),
+    ...paint([box([0.14, 0.018, 0.08], [0, 0.05, 0.11])], "black"),
+    ...gear(paint([limb([0, 0.18, 0.06], [0, 0.27, 0.06], 0.026, 0.018, 5)], "leaf")),
+  ]),
+  ...place(paint([spine([[0, 0.12, 0.118, 0.088], [-0.005, -0.02, 0.15, 0.115], [-0.01, -0.1, 0.158, 0.122]])], "coat"), { at: pelvis }),
+  ...belt(pelvis, "black", 0.1, [0.125, 0.094]),
+  ...body.onChest([
+    ...paint([limb([-0.14, 0.31, -0.135], [0.14, 0.31, -0.135], 0.055, 0.055, 6)], "blanket"),
+    ...paint([box([0.1, 0.1, 0.07], [-0.17, 0.02, -0.05])], "black"),
+    // A black crossbelt, front and back, a facing collar and a row of buttons.
+    ...paint([...place([box([0.036, 0.42, 0.016])], { at: [0, 0.19, 0.108], turn: [0, 0, 36] }), ...place([box([0.036, 0.42, 0.016])], { at: [0, 0.19, -0.104], turn: [0, 0, -36] })], "black"),
+    ...paint([limb([0, 0.33, 0], [0, 0.37, 0.004], 0.064, 0.058, 8)], "facing"),
+    ...paint([0.18, 0.24, 0.3].map((y) => box([0.018, 0.018, 0.012], [0.04, y, 0.102])), "steel"),
+  ]),
+];
+const riflemanAimingP = (() => {
+  const pose = aiming(false);
+  const body = human(pose);
+  return [...riflemanBody(body), ...face(body, "hair"), ...riflemanKitP(body, pose.pelvis), ...cuffs(body, "facing", 0.05), ...rifleP(body.handR, AIM_TURN)];
+})();
+const riflemanReadyP = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human({ pelvis, twist: 12, look: -8, handR: [-0.13, 0.6, 0.17], handL: [0.13, 0.86, 0.19], footL: [0.09, 0, 0.05], footR: [-0.09, 0, -0.03] });
+  return [...riflemanBody(body), ...face(body, "hair"), ...riflemanKitP(body, pelvis), ...cuffs(body, "facing", 0.05), ...rifleP(body.handR, pointing(body.handR, body.handL))];
+})();
+
+// ---------- Sergeant Brannock, stage 2 ----------
+const brannockDetailed = (() => {
+  const pelvis: V3 = [0, 0.47, 0];
+  const body = human({
+    pelvis, lean: 6, twist: -35, look: 30,
+    handR: [-0.3, 0.95, -0.28], elbowR: [-1, 0, -0.5], handL: [0.2, 0.82, 0.36],
+    footL: [0.1, 0, 0.24], footR: [-0.12, 0, -0.2],
+  }, { shoulders: 0.2, bulk: 1.25 });
+  const parts = paintBody(body, { hips: "hakama", chest: "coat", sleeve: "coat", hand: "skin", thigh: "hakama", shin: "boot", foot: "boot" });
+  const cap = body.onHead([
+    ...paint([limb([0, 0.05, 0], [0, 0.105, 0], 0.094, 0.086, 8)], "coat"),
+    ...paint([limb([0, 0.05, 0], [0, 0.066, 0], 0.096, 0.095, 8)], "facing"),
+    ...paint([box([0.13, 0.02, 0.08], [0, 0.055, 0.1])], "black"),
+    ...paint([limb([0, -0.05, 0.065], [0, -0.17, 0.085], 0.06, 0.02, 5), box([0.07, 0.02, 0.02], [0, -0.03, 0.09])], "beard"),
+  ]);
+  const apron = place(paint([spine([[0, 0.13, 0.145, 0.105], [0.01, -0.06, 0.18, 0.14], [0.02, -0.24, 0.19, 0.15]], { sides: 6 })], "leather"), { at: pelvis });
+  // Tool pouches on a belt, a hammer's handle and a wrench sticking out of them.
+  const tools = [
+    ...belt(pelvis, "black", 0.11, [0.15, 0.11]),
+    ...body.onChest([
+      ...paint([box([0.1, 0.12, 0.09], [0.19, 0.03, 0.02]), box([0.1, 0.12, 0.09], [-0.19, 0.03, -0.02])], "leather"),
+      ...paint([box([0.104, 0.03, 0.094], [0.19, 0.08, 0.02]), box([0.104, 0.03, 0.094], [-0.19, 0.08, -0.02])], "boot"),
+      ...gear([...paint([limb([0.18, 0.09, 0.03], [0.17, 0.17, 0.04], 0.012, 0.012, 4)], "wood"), ...paint([limb([-0.2, 0.09, -0.02], [-0.21, 0.16, -0.02], 0.01, 0.014, 4)], "steel")]),
+    ]),
+  ];
+  const [x, y, z] = body.handR;
+  const charge = gear([
+    ...paint([box([0.17, 0.13, 0.1], [x, y - 0.03, z - 0.02])], "blanket"),
+    ...paint([box([0.175, 0.02, 0.105], [x, y - 0.03, z - 0.02])], "leather"),
+    ...paint([limb([x + 0.05, y + 0.03, z - 0.02], [x + 0.09, y + 0.16, z - 0.05], 0.012, 0.008, 4)], "black"),
+    ...paint([ball([x + 0.09, y + 0.165, z - 0.05], 0.022, 0)], "glow"),
+  ]);
+  const spade = gear(body.onChest([
+    ...paint([limb([-0.14, 0.02, -0.13], [0.12, 0.42, -0.14], 0.016, 0.016, 5)], "wood"),
+    ...paint([plate([[-0.06, 0], [0.06, 0], [0.07, 0.13], [0, 0.17], [-0.07, 0.13]], 0.016, "front", -0.14)], "steel"),
+  ]));
+  return figure([...parts, ...faceOnly(body), ...cap, ...apron, ...tools, ...cuffs(body, "facing", 0.072), ...charge, ...spade], 5);
+})();
+
+// ---------- Shirokage Ronin, stage 2 ----------
+function roninP(coiled: boolean): Part[] {
+  const pelvis: V3 = [0, coiled ? 0.4 : 0.5, 0];
+  const body = human({
+    pelvis, lean: coiled ? 20 : 2, twist: coiled ? 20 : -8, look: coiled ? -16 : 10,
+    handR: coiled ? [0.12, 0.52, 0.14] : [-0.25, 0.5, 0.06], handL: coiled ? [0.18, 0.47, 0.02] : [0.21, 0.56, 0.08],
+    footL: coiled ? [0.1, 0, -0.22] : [0.09, 0, 0.05], footR: coiled ? [-0.1, 0, 0.24] : [-0.1, 0, -0.03],
+  });
+  const parts = paintBody(body, { hips: "hakama", chest: "coat", sleeve: "coat", hand: "skin", thigh: "hakama", shin: "hakama", foot: "tabi" });
+  const hair = body.onHead([
+    ...paint([ball([0, 0.012, -0.018], [HEAD * 0.96, HEAD * 0.92, HEAD * 0.95], 0), limb([0, 0.075, -0.03], [0, 0.16, -0.08], 0.032, 0.022, 5)], "hair"),
+    ...paint([limb([0, 0.085, -0.035], [0, 0.1, -0.045], 0.036, 0.036, 5)], "white"),
+  ]);
+  const trousers = place(paint([spine([[0, 0.1, 0.13, 0.09], [0, -0.12, 0.2, 0.15], [0, coiled ? -0.28 : -0.4, 0.24, 0.18]], { sides: 8 })], "hakama"), { at: pelvis });
+  // A white under-collar, a sash at the waist and a worn cord across the back.
+  const dress = [
+    ...body.onChest(paint([limb([0, 0.33, 0], [0, 0.37, 0.004], 0.064, 0.058, 8)], "white")),
+    ...belt(pelvis, "obi", 0.1, [0.136, 0.096]),
+  ];
+  const a: V3 = [0.14, 0.5, 0.24], b: V3 = [0.21, 0.41, -0.46];
+  const sword = coiled
+    ? gear([
+      ...paint([limb(a, lerp(a, b, 0.24), 0.02, 0.02, 5)], "black"),
+      ...paint([limb(lerp(a, b, 0.24), lerp(a, b, 0.27), 0.04, 0.04, 8)], "gold"),
+      ...paint([limb(lerp(a, b, 0.27), b, 0.024, 0.018, 5)], "sash"),
+    ])
+    : katanaP(body.handR, [112, 0, 0]);
+  return [...parts, ...faceOnly(body), ...hair, ...trousers, ...dress, ...sword];
+}
+
+// ---------- Kenzo the Lantern Monk, stage 2 ----------
+const kenzoDetailed = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human({ pelvis, lean: 3, handR: [-0.276, 0.75, 0.168], handL: [0.05, 0.72, 0.2], elbowL: [0.6, -1, 0], footL: [0.08, 0, 0.05], footR: [-0.09, 0, -0.02] });
+  const parts = paintBody(body, { hips: "coat", chest: "coat", sleeve: "coat", hand: "skin", thigh: "coat", shin: "coat", foot: "tabi" });
+  const hat = body.onHead([
+    ...paint([limb([0, 0.03, 0], [0, 0.15, 0], 0.25, 0.02, 10)], "straw"),
+    ...paint([limb([0, 0.03, 0], [0, 0.045, 0], 0.252, 0.238, 10)], "leather"),
+  ]);
+  const robe = [
+    ...place(paint([spine([[0, 0.12, 0.125, 0.092], [0, -0.1, 0.175, 0.135], [0, -0.44, 0.23, 0.185]])], "coat"), { at: pelvis }),
+    ...belt(pelvis, "obi", 0.1, [0.13, 0.096]),
+    ...body.onChest(paint([spine([[0.02, 0.37, 0.085, 0.075], [0.03, 0.27, 0.16, 0.115]], { sides: 6 })], "coatDark")),
+    ...paint([
+      ball([body.handL[0] + 0.04, body.handL[1] - 0.07, body.handL[2] - 0.06], [0.07, 0.1, 0.09], 0),
+      ball([body.handR[0] + 0.02, body.handR[1] - 0.08, body.handR[2] - 0.07], [0.07, 0.1, 0.09], 0),
+    ], "coat"),
+    // Prayer beads hanging on his chest.
+    ...body.onChest(paint(Array.from({ length: 9 }, (_, i) => {
+      const t = (i / 8 - 0.5) * 2.4;
+      const y = 0.35 - Math.cos(t) * 0.09;
+      return ball([Math.sin(t) * 0.075, y, 0.105 + (0.37 - y) * 0.45], 0.016, 0);
+    }), "wood")),
+  ];
+  const staff = gear([
+    ...paint([limb([-0.3, 0, 0.12], [-0.26, 1.25, 0.2], 0.018, 0.016, 5), limb([-0.26, 1.25, 0.2], [-0.25, 1.24, 0.37], 0.014, 0.012, 4)], "wood"),
+    ...paint([limb([-0.25, 1.24, 0.37], [-0.25, 1.14, 0.37], 0.007, 0.007, 3)], "black"),
+    ...paint([ball([-0.25, 1.05, 0.37], [0.075, 0.1, 0.075], 0)], "glow"),
+    ...paint([limb([-0.25, 1.158, 0.37], [-0.25, 1.138, 0.37], 0.042, 0.048, 6), limb([-0.25, 0.962, 0.37], [-0.25, 0.942, 0.37], 0.048, 0.042, 6)], "lacquer"),
+  ]);
+  return figure([...parts, ...faceOnly(body), ...hat, ...robe, ...staff], 5);
+})();
+
+// ---------- Mossback Treefolk, stage 2 ----------
+function treefolkP(reach: number): Part[] {
+  const r = reach;
+  return [
+    ...paint([spine([[0, 0.3, 0.31, 0.29], [0.02, 0.85, 0.26, 0.24], [0, 1.4, 0.31, 0.28], [0, 1.72, 0.22, 0.2]], { sides: 7 })], "bark"),
+    ...paint(both([limb([0.15, 0.45, 0], [0.3, 0, 0.06], 0.18, 0.2, 6), limb([0.3, 0.07, 0.06], [0.44, 0, 0.32], 0.1, 0.03, 5), limb([0.3, 0.07, 0.06], [0.5, 0, -0.14], 0.09, 0.03, 5)]), "bark"),
+    ...paint([
+      limb([0.27, 1.36, 0], [0.56, 1.06, 0.16], 0.115, 0.085, 5),
+      limb([0.56, 1.06, 0.16], [0.64, 0.7, 0.3], 0.085, 0.055, 5),
+      limb([0.64, 0.7, 0.3], [0.6, 0.5, 0.42], 0.05, 0, 4),
+      limb([0.64, 0.7, 0.3], [0.74, 0.54, 0.3], 0.05, 0, 4),
+      limb([-0.27, 1.4, 0], [-0.6, 1.4 + r * 0.2, 0.12], 0.115, 0.085, 5),
+      limb([-0.6, 1.4 + r * 0.2, 0.12], [-0.72, 1.2 + r * 0.72, 0.24], 0.085, 0.055, 5),
+      limb([-0.72, 1.2 + r * 0.72, 0.24], [-0.7, 1.05 + r * 0.98, 0.36], 0.05, 0, 4),
+      limb([-0.72, 1.2 + r * 0.72, 0.24], [-0.84, 1.1 + r * 0.86, 0.22], 0.05, 0, 4),
+      box([0.4, 0.07, 0.1], [0, 1.42, 0.25]),
+      limb([0, 1.34, 0.26], [0, 1.2, 0.36], 0.06, 0.03, 5),
+    ], "bark"),
+    // Deep-set glowing eyes under the brow, and a gash of a mouth.
+    ...paint([box([0.08, 0.035, 0.03], [0.1, 1.35, 0.276]), box([0.08, 0.035, 0.03], [-0.1, 1.35, 0.276])], "glowGreen"),
+    ...paint([box([0.16, 0.025, 0.03], [0, 1.12, 0.256])], "black"),
+    // The crown of leaves, moss on the shoulders and roots, and a tuft at each bough's elbow.
+    ...paint([ball([0, 2.04, 0], [0.56, 0.38, 0.52], 1)], "coat"),
+    ...paint([ball([0.4, 1.86, 0.12], 0.26, 0), ball([-0.38, 1.9, -0.14], 0.28, 0), ball([0.05, 1.88, -0.36], 0.25, 0)], "leaf"),
+    ...paint([
+      ball([0.17, 1.6, 0.13], [0.13, 0.05, 0.11], 0), ball([-0.16, 1.62, 0.1], [0.12, 0.05, 0.12], 0),
+      ball([0.2, 0.5, 0.2], [0.12, 0.06, 0.1], 0), ball([-0.18, 0.95, 0.18], [0.1, 0.12, 0.08], 0),
+    ], "moss"),
+    ...paint([ball([0.64, 0.7, 0.3], 0.08, 0), ball([-0.72, 1.2 + r * 0.72, 0.24], 0.08, 0)], "leaf"),
+  ];
+}
+
+// ---------- Sylvanne, stage 2 ----------
+const sylvanneDetailed = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human({ pelvis, twist: 6, handR: [-0.27, 0.78, 0.14], handL: [0.26, 0.84, 0.2], elbowL: [1, -0.8, -0.2], footL: [0.07, 0, 0.04], footR: [-0.08, 0, -0.02] }, WARDEN);
+  const parts = paintBody(body, { hips: "coat", chest: "coat", sleeve: "coat", hand: "skin", thigh: "coat", shin: "boot", foot: "boot" });
+  const antlers = gear(body.onHead(paint(both([
+    limb([0.05, 0.07, 0], [0.15, 0.2, -0.03], 0.024, 0.018, 4),
+    limb([0.15, 0.2, -0.03], [0.22, 0.34, 0], 0.018, 0, 4),
+    limb([0.15, 0.2, -0.03], [0.1, 0.33, 0.05], 0.016, 0, 4),
+    limb([0.1, 0.135, -0.015], [0.2, 0.15, 0.07], 0.014, 0, 4),
+  ]), "horn")));
+  // A circlet of leaves at her brow.
+  const circlet = body.onHead(paint([limb([0, 0.035, -0.01], [0, 0.055, -0.01], 0.094, 0.092, 8)], "leaf"));
+  const robe = [
+    ...place([
+      ...paint([spine([[0, 0.12, 0.11, 0.082], [0, -0.1, 0.165, 0.13], [-0.02, -0.44, 0.24, 0.19]])], "coat"),
+      ...paint([spine([[-0.02, -0.405, 0.234, 0.186], [-0.02, -0.44, 0.244, 0.194]])], "gold"),
+    ], { at: pelvis }),
+    ...belt(pelvis, "leaf", 0.1, [0.118, 0.088]),
+    ...body.onChest(paint([spine([[0, 0.37, 0.08, 0.075], [-0.01, 0.31, 0.19, 0.125], [-0.02, 0.2, 0.21, 0.14]], { sides: 7 })], "leaf")),
+  ];
+  const staff = gear([
+    ...paint([limb([-0.3, 0, 0.1], [-0.27, 0.8, 0.14], 0.022, 0.02, 5), limb([-0.27, 0.8, 0.14], [-0.2, 1.24, 0.18], 0.02, 0.016, 5), limb([-0.2, 1.24, 0.18], [-0.08, 1.32, 0.2], 0.016, 0.01, 4)], "wood"),
+    ...paint([ball([-0.24, 1.28, 0.16], 0.075, 0), ball([-0.12, 1.36, 0.22], 0.055, 0)], "leaf"),
+    ...paint([ball([-0.17, 1.31, 0.23], 0.026, 0)], "glowGreen"),
+  ]);
+  const mote = gear(paint([ball([body.handL[0], body.handL[1] + 0.13, body.handL[2]], 0.055, 0)], "glowGreen"));
+  return figure([...parts, ...face(body, "hairLight"), ...wardenEars(body), ...circlet, ...antlers, ...robe, ...staff, ...mote], 5);
+})();
+
+// ---------- Sentinel K-7, stage 2 ----------
+const sentinelDetailed = (() => {
+  const pelvis: V3 = [0, 0.48, 0];
+  const body = human({ pelvis, twist: -10, handL: [0.3, 0.7, 0.3], handR: [-0.32, 0.7, 0.1], elbowR: [-1, -0.6, -0.6], footL: [0.17, 0, 0.1], footR: [-0.17, 0, -0.06] }, { shoulders: 0.27, bulk: 1.45 });
+  const parts = paintBody(body, { hips: "machine", chest: "machine", sleeve: "machine", hand: "machine", thigh: "machine", shin: "coat", foot: "machine", skin: "machine" });
+  const plating = [
+    ...body.onChest([
+      ...paint([box([0.5, 0.3, 0.3], [0, 0.22, 0.01]), box([0.17, 0.12, 0.19], [0.3, 0.33, 0]), box([0.17, 0.12, 0.19], [-0.3, 0.33, 0])], "coat"),
+      ...paint([box([0.3, 0.24, 0.12], [0, 0.24, -0.2])], "machine"),
+      ...paint([limb([0.11, 0.36, -0.22], [0.13, 0.62, -0.24], 0.018, 0.012, 4)], "steel"),
+      // A glowing core in the chest, vents on the power unit and warning stripes on the shoulders.
+      ...paint([box([0.11, 0.09, 0.02], [0, 0.24, 0.162])], "glowCyan"),
+      ...paint([-0.07, 0.07].map((x) => box([0.08, 0.035, 0.012], [x, 0.22, -0.262])), "glowCyan"),
+      ...paint([0.3, -0.3].map((x) => box([0.176, 0.03, 0.196], [x, 0.31, 0])), "gold"),
+      ...paint([box([0.3, 0.03, 0.306], [0, 0.1, 0.01])], "machine"),
+    ]),
+    ...body.onHead([...paint([box([0.2, 0.15, 0.21], [0, 0.005, 0])], "coat"), ...paint([box([0.17, 0.04, 0.05], [0, 0.01, 0.1])], "glowCyan")]),
+    ...place(paint([box([0.34, 0.16, 0.24], [0, 0, 0])], "machine"), { at: pelvis }),
+    ...paint([box([0.17, 0.09, 0.3], [0.17, 0.045, 0.13]), box([0.17, 0.09, 0.3], [-0.17, 0.045, -0.03])], "coat"),
+    ...paint([box([0.176, 0.025, 0.04], [0.17, 0.06, 0.27]), box([0.176, 0.025, 0.04], [-0.17, 0.06, 0.11])], "steel"),
+  ];
+  const cannon = place([
+    ...paint([limb([0, 0, -0.12], [0, 0, 0.24], 0.1, 0.085, 8)], "machine"),
+    ...paint([limb([0, 0, 0.24], [0, 0, 0.31], 0.1, 0.1, 8)], "steel"),
+    ...paint([0.04, 0.14].map((zz) => limb([0, 0, zz], [0, 0, zz + 0.03], 0.098, 0.096, 8)), "glowCyan"),
+  ], { at: body.handR });
+  const deflector = gear(place(paint([limb([0, 0, -0.012], [0, 0, 0.012], 0.25, 0.25, 6)], "glowCyan"), { at: [body.handL[0] + 0.1, body.handL[1] + 0.02, body.handL[2] + 0.08], turn: [0, 24, 0] }));
+  return figure([...parts, ...plating, ...cannon, ...deflector], 7);
+})();
+
+// ---------- Nexus Breachers, stage 2 ----------
+const BREACHER = { shoulders: 0.19, bulk: 1.15 };
+const gauntletP = (at: V3): Part[] => [
+  ...paint([box([0.12, 0.12, 0.15], at)], "coat"),
+  ...paint([box([0.14, 0.05, 0.05], [at[0], at[1] + 0.02, at[2] + 0.08])], "steel"),
+  ...paint([box([0.05, 0.012, 0.1], [at[0], at[1] + 0.054, at[2] - 0.01])], "glowCyan"),
+];
+const breacherClosingP = (() => {
+  const body = human({ pelvis: [0, 0.47, 0], lean: 12, twist: -18, look: 14, handL: [0.12, 0.84, 0.32], handR: [-0.15, 0.78, 0.22], elbowL: [1, -1, 0], elbowR: [-1, -1, 0], footL: [0.1, 0, 0.2], footR: [-0.11, 0, -0.16] }, BREACHER);
+  return [...reclaimerBody(body), ...reclaimerKitP(body), ...gauntletP(body.handL), ...gauntletP(body.handR)];
+})();
+const breacherChargedP = (() => {
+  const body = human({ handR: [-0.32, 1.0, 0.08], elbowR: [-1, -0.4, -0.3], handL: [0.24, 0.56, 0.1], footL: [0.11, 0, 0.04], footR: [-0.11, 0, -0.03] }, BREACHER);
+  const sparks = gear(place(paint(([[0, 0.24, 0], [0.17, 0.15, 0], [-0.17, 0.15, 0], [0, 0.13, 0.17]] as V3[]).map((d) => limb([d[0] * 0.4, d[1] * 0.4, d[2] * 0.4], d, 0.02, 0, 4)), "glowCyan"), { at: body.handR }));
+  return [...reclaimerBody(body), ...reclaimerKitP(body), ...gauntletP(body.handL), ...gauntletP(body.handR), ...sparks];
+})();
+
+// ---------- Bonebow Archers, stage 2 ----------
+const bonebowKitP = (body: Human): Part[] => [
+  ...body.onHead([
+    ...paint([box([0.1, 0.05, 0.09], [0, -0.085, 0.03])], "bone"),
+    ...paint([ball([0, 0.008, -0.014], [HEAD * 1.16, HEAD * 1.2, HEAD * 1.2]), limb([0, 0.05, -0.05], [0, 0.0, -0.19], 0.055, 0, 5)], "coatDark"),
+    // The dark of the hood's opening, and the eyes burning in it.
+    ...paint([box([0.12, 0.1, 0.008], [0, 0.0, 0.094])], "black"),
+    ...paint([box([0.024, 0.016, 0.01], [0.03, 0.012, 0.097]), box([0.024, 0.016, 0.01], [-0.03, 0.012, 0.097])], "glowGreen"),
+  ]),
+  ...body.onChest([
+    ...paint([ball([0, 0.23, 0.005], [0.125, 0.105, 0.085], 0)], "bone"),
+    ...paint([0.19, 0.23, 0.27].map((y) => box([0.16, 0.01, 0.012], [0, y, 0.088])), "black"),
+    ...paint([spine([[-0.05, 0.36, 0.12, 0.05], [-0.09, 0.2, 0.16, 0.035], [-0.12, 0.06, 0.17, 0.02]], { sides: 6 })], "coatDark"),
+    ...paint([limb([-0.07, 0.1, -0.1], [0.06, 0.4, -0.115], 0.036, 0.04, 6)], "leather"),
+    ...gear(paint([-0.015, 0.015].map((dx) => limb([0.065 + dx, 0.39, -0.115], [0.075 + dx, 0.45, -0.115], 0.011, 0.006, 3)), "coatDark")),
+  ]),
+];
+const bonebowArrow = (from: V3, to: V3) => each(arrow(from, to), ["wood", "glowGreen"]);
+const bonebowLoosingP = (() => {
+  const body = human(loosing(), SKELETON);
+  return [...skeletonBody(body), ...bonebowKitP(body), ...paint(bow(body.handL, 0.09), "horn"), ...bonebowArrow(...DRAWN)];
+})();
+const bonebowNockingP = (() => {
+  const body = human({ lean: 6, twist: -20, look: 16, handL: [0.2, 0.58, 0.2], handR: [0.02, 0.62, 0.16], footL: [0.09, 0, 0.08], footR: [-0.09, 0, -0.05] }, SKELETON);
+  return [...skeletonBody(body), ...bonebowKitP(body), ...paint(bow(body.handL, 0, [0, 0, 35]), "horn"), ...bonebowArrow(body.handR, [body.handL[0] + 0.03, body.handL[1] + 0.02, body.handL[2] + 0.02])];
+})();
+
+// ---------- Covenant Crossbowmen, stage 2 ----------
+const crossbowmanBody = (b: Human) => paintBody(b, { hips: "coatDark", chest: "mail", sleeve: "mail", hand: "leather", thigh: "coatDark", shin: "boot", foot: "boot" });
+const crossbowmanKitP = (body: Human, pelvis: V3): Part[] => [
+  ...body.onHead(paint([ball([0, 0.03, 0], [0.097, 0.081, 0.099], 0), limb([0, 0.02, 0], [0, 0.04, 0], 0.18, 0.165, 10)], "steel")),
+  ...faceOnly(body),
+  ...place(paint([spine([[0, 0.13, 0.125, 0.095], [0, -0.2, 0.175, 0.135]], { sides: 6 })], "coat"), { at: pelvis }),
+  ...belt(pelvis, "leather", 0.1, [0.135, 0.103]),
+  ...body.onChest([
+    // The tabard's front over the mail, with a gold sun on it.
+    ...paint([box([0.17, 0.26, 0.012], [0, 0.2, 0.098]), box([0.17, 0.26, 0.012], [0, 0.2, -0.096])], "coat"),
+    ...paint([ball([0, 0.24, 0.105], [0.035, 0.035, 0.008], 0)], "gold"),
+    ...paint([box([0.07, 0.2, 0.07], [0.15, 0, -0.1])], "leather"),
+    ...gear(paint([-0.015, 0.015].map((dx) => limb([0.15 + dx, 0.1, -0.1], [0.15 + dx, 0.15, -0.1], 0.01, 0.006, 3)), "white")),
+  ]),
+];
+function crossbowP(at: V3, turn: V3): Part[] {
+  return gear(place([
+    ...paint([box([0.042, 0.05, 0.44], [0, 0.02, 0.09])], "wood"),
+    ...paint([plate([[-0.22, 0.2], [-0.11, 0.275], [0, 0.3], [0.11, 0.275], [0.22, 0.2], [0.11, 0.245], [0, 0.265], [-0.11, 0.245]], 0.026, "top", 0.03)], "steel"),
+    ...paint([limb([-0.215, 0.045, 0.205], [0, 0.05, 0.06], 0.004, 0.004, 3), limb([0.215, 0.045, 0.205], [0, 0.05, 0.06], 0.004, 0.004, 3)], "black"),
+    ...paint([box([0.012, 0.05, 0.05], [0, -0.025, 0.0])], "steel"),
+  ], { at, turn }));
+}
+const crossbowmanAimingP = (() => {
+  const pose = aiming(false);
+  const body = human(pose);
+  return [...crossbowmanBody(body), ...crossbowmanKitP(body, pose.pelvis), ...crossbowP(body.handR, AIM_TURN)];
+})();
+const crossbowmanMarchingP = (() => {
+  const pelvis: V3 = [0, 0.5, 0];
+  const body = human({ pelvis, lean: 3, handR: [-0.2, 0.72, 0.14], elbowR: [-0.6, -1, 0.3], handL: [0.22, 0.5, -0.08], footL: [0.09, 0, 0.18], footR: [-0.09, 0, -0.14] });
+  return [...crossbowmanBody(body), ...crossbowmanKitP(body, pelvis), ...crossbowP(body.handR, [-125, 0, 0])];
+})();
+
 export const DETAILED_MODELS: Readonly<Record<string, UnitModel>> = {
   "marisol-vance": { figures: [vanceDetailed] },
   "concord-fusiliers": { figures: fusiliersDetailed },
@@ -674,4 +984,14 @@ export const DETAILED_MODELS: Readonly<Record<string, UnitModel>> = {
   "sister-maren": { figures: [marenDetailed] },
   "teppo-gunners": { figures: squad([teppoGunnerP(false), teppoGunnerP(true)], 5) },
   "glade-wardens": { figures: squad([wardenLoosingP, wardenWatchingP], 5) },
+  "harrow-riflemen": { figures: squad([riflemanAimingP, riflemanReadyP], 5) },
+  brannock: { figures: [brannockDetailed] },
+  "shirokage-ronin": { figures: squad([roninP(true), roninP(false)], 5) },
+  kenzo: { figures: [kenzoDetailed] },
+  "mossback-treefolk": { figures: squad([treefolkP(0), treefolkP(1)], 8) },
+  sylvanne: { figures: [sylvanneDetailed] },
+  "sentinel-k7": { figures: [sentinelDetailed] },
+  "nexus-breachers": { figures: squad([breacherClosingP, breacherChargedP], 5) },
+  "bonebow-archers": { figures: squad([bonebowLoosingP, bonebowNockingP], 5) },
+  "covenant-crossbowmen": { figures: squad([crossbowmanAimingP, crossbowmanMarchingP], 5) },
 };
