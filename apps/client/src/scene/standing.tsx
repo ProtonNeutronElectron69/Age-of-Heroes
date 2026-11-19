@@ -3,7 +3,7 @@ import { useThree } from "@react-three/fiber";
 import { HEX_SIZE, LEVEL_HEIGHT, TOKEN_RADIUS, footprintCells, hex, hexKey, hexNeighbors, hexToWorld, type Hex, type UnitCard } from "@aoh/rules";
 import { useEffect, useMemo } from "react";
 import { CylinderGeometry } from "three";
-import { BASE_COLOR, DETAILED_MODELS, UNIT_MODELS, baseFrame, baseGeometry, measure, paintedGeometry, type BaseFrame, type ColorScheme, type Fit, type UnitModel } from "../models";
+import { BASE_COLOR, DETAILED_MODELS, UNIT_MODELS, baseFrame, baseGeometry, measure, type BaseFrame, type ColorScheme, type Fit, type UnitModel } from "../models";
 import { useDisplay } from "../settings";
 import { PaintedModel } from "./Figures";
 import { HEX_GAP } from "./scale";
@@ -94,9 +94,8 @@ export function StandingUnit({ standing, colors, tokens, scheme }: { standing: S
   // The detailed look shows a unit's detailed model where it has one (the fit is measured on the classic one).
   const detailed = useDisplay().tiles === "detailed";
   const model = (detailed && DETAILED_MODELS[standing.card.id]) || standing.unit;
-  const figures = useMemo(() => model.figures.map(paintedGeometry), [model]);
+  const figures = model.figures;
   const base = useMemo(() => baseGeometry(standing.card.footprint), [standing.card.footprint]);
-  useEffect(() => () => figures.forEach((parts) => parts.forEach((p) => p.geometry.dispose())), [figures]);
   useEffect(
     () => () => {
       base.top.dispose();
@@ -110,7 +109,7 @@ export function StandingUnit({ standing, colors, tokens, scheme }: { standing: S
       {standing.frames.map((frame, i) => (
         <group key={i}>
           <group position={[frame.x, 0, frame.z]} rotation={[0, frame.yaw, 0]}>
-            <PaintedModel parts={figures[i % figures.length]!} context={{ scheme, main: colors.model, faction: standing.card.faction }} />
+            <PaintedModel model={figures[i % figures.length]!} context={{ scheme, main: colors.model, faction: standing.card.faction }} />
             <mesh geometry={base.top}>
               <meshStandardMaterial color={BASE_COLOR} roughness={0.75} />
             </mesh>

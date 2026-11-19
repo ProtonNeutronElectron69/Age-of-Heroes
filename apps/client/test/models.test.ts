@@ -18,6 +18,7 @@ import {
   figureGeometry,
   figureModel,
   measure,
+  bakedGeometry,
   paintLook,
   paintedGeometry,
   unitModel,
@@ -278,6 +279,23 @@ describe("detailed figure models", () => {
         expect(meshes.reduce((n, m) => n + m.geometry.getAttribute("position").count, 0)).toBe(fit.triangles * 3);
       }
     });
+  });
+
+  it("bake into one coloured mesh, plus one for glowing parts, keeping every triangle", () => {
+    const context = { scheme: "faction" as const, main: "#2d6136", faction: "Verdant Court" };
+    const dragon = DETAILED_MODELS["cinderjaw"]!.figures[0]!;
+    const { solid, glow } = bakedGeometry(dragon, context);
+    const triangles = measure(dragon, "1").triangles;
+    expect(glow).not.toBeNull();
+    expect(solid.getAttribute("position").count + glow!.getAttribute("position").count).toBe(triangles * 3);
+    expect(solid.getAttribute("color").count).toBe(solid.getAttribute("position").count);
+    // A spent figure is darker (it fades towards a dark grey); a classic model has nothing that glows.
+    const bright = { ...context, main: "#e0c040" };
+    const fresh = bakedGeometry(UNIT_MODELS["marisol-vance"]!.figures[0]!, bright);
+    const spent = bakedGeometry(UNIT_MODELS["marisol-vance"]!.figures[0]!, bright, true);
+    const light = (g: typeof fresh.solid) => Array.from(g.getAttribute("color").array).reduce((a, b) => a + b, 0);
+    expect(fresh.glow).toBeNull();
+    expect(light(spent.solid)).toBeLessThan(light(fresh.solid));
   });
 
   it("paint the main parts in the scheme's model colour, and every part grey in the grey scheme", () => {

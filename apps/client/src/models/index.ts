@@ -1,8 +1,8 @@
 import type { Footprint } from "@aoh/rules";
-import { BufferGeometry, Float32BufferAttribute } from "three";
+import { BufferGeometry, Color, Float32BufferAttribute } from "three";
 import { baseParts } from "./base";
 import { DETAILED_MODELS } from "./detailed";
-import type { Paint } from "./paint";
+import { paintLook, type Paint, type PaintContext } from "./paint";
 import type { FigureModel, Part, UnitModel } from "./types";
 import { ASHEN } from "./units/ashen";
 import { CONCORD } from "./units/concord";
@@ -73,4 +73,41 @@ export function paintedGeometry(model: FigureModel): { paint: Paint; geometry: B
     else byPaint.set(p, [part]);
   }
   return [...byPaint].map(([paint, parts]) => ({ paint, geometry: geometry(parts) }));
+}
+
+/** A figure that has acted this turn is drawn darker, as a spent token is drawn faded. */
+export const SPENT_SHADE = "#30343a";
+
+/** A figure's painted meshes: its solid parts, and the parts that glow (eyes, fire), if any. */
+export interface BakedFigure {
+  readonly solid: BufferGeometry;
+  readonly glow: BufferGeometry | null;
+}
+
+/**
+ * A figure as at most two meshes, its paints baked into vertex colours, so a detailed figure takes
+ * no more draw calls than a classic one: the solid parts, and the glowing ones. `spent` darkens
+ * it. The caller disposes of the geometries.
+ */
+export function bakedGeometry(model: FigureModel, context: PaintContext, spent = false): BakedFigure {
+  const shade = new Color(SPENT_SHADE);
+  const solid: number[] = [], solidColors: number[] = [], glow: number[] = [], glowColors: number[] = [];
+  for (const part of model.parts) {
+    const look = paintLook(part.paint ?? "coat", context);
+    const c = new Color(look.color);
+    if (spent) c.lerp(shade, 0.45);
+    const [tris, colors] = look.glow ? [glow, glowColors] : [solid, solidColors];
+    for (let i = 0; i < part.tris.length; i += 3) {
+      tris.push(part.tris[i]!, part.tris[i + 1]!, part.tris[i + 2]!);
+      colors.push(c.r, c.g, c.b);
+    }
+  }
+  const make = (tris: number[], colors: number[]) => {
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(tris, 3));
+    g.setAttribute("color", new Float32BufferAttribute(colors, 3));
+    g.computeVertexNormals();
+    return g;
+  };
+  return { solid: make(solid, solidColors), glow: glow.length ? make(glow, glowColors) : null };
 }

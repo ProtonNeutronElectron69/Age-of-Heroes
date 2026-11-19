@@ -2,8 +2,8 @@ import type { ThreeEvent } from "@react-three/fiber";
 import { useFrame, useThree } from "@react-three/fiber";
 import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS, hex, hexKey, hexToWorld, type Footprint, type Step } from "@aoh/rules";
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
-import { BufferGeometry, Color, ExtrudeGeometry, MeshStandardMaterial, Shape, ShapeGeometry, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
-import { BASE_COLOR, BASE_RADIUS, UNIT_MODELS, baseFrame, baseGeometry, figureColors, paintLook, paintedGeometry, unitModel, type Paint, type PaintContext } from "../models";
+import { BufferGeometry, Color, ExtrudeGeometry, MeshBasicMaterial, MeshStandardMaterial, Shape, ShapeGeometry, Vector3, type Group, type Mesh } from "three";
+import { BASE_COLOR, BASE_RADIUS, UNIT_MODELS, baseFrame, baseGeometry, bakedGeometry, figureColors, unitModel, type BakedFigure, type FigureModel, type PaintContext } from "../models";
 import { useReducedMotion } from "../motion";
 import { useDisplay } from "../settings";
 import { useBoardActivity } from "./activity";
@@ -493,11 +493,8 @@ function facings(figures: readonly FigureView[]): Map<string, number> {
   return out;
 }
 
-/** A figure's meshes: one per paint (a classic model has just one). */
-export type PaintedParts = readonly { paint: Paint; geometry: BufferGeometry }[];
-
 interface UnitMeshes {
-  readonly poses: readonly PaintedParts[];
+  readonly poses: readonly FigureModel[];
   readonly base: { top: BufferGeometry; rim: BufferGeometry };
 }
 
@@ -509,43 +506,38 @@ function unitMeshes(cardId: string, footprint: Footprint, detailed: boolean): Un
   let found = meshCache.get(key);
   if (!found) {
     const unit = unitModel(cardId, detailed)!;
-    found = { poses: unit.figures.map(paintedGeometry), base: baseGeometry(footprint) };
+    found = { poses: unit.figures, base: baseGeometry(footprint) };
     meshCache.set(key, found);
   }
   return found;
 }
 
-/** A figure that has acted this turn is drawn darker, as a spent token is drawn faded. */
-const SPENT_SHADE = new Color("#30343a");
+/** The figures' two materials: their colours are in the meshes. Glowing parts are unlit, so they stay bright. */
+const SOLID = new MeshStandardMaterial({ vertexColors: true, roughness: 0.68 });
+const GLOWING = new MeshBasicMaterial({ vertexColors: true });
 
-/** Materials by colour and finish, shared by every figure that uses one. */
-const paintMaterials = new Map<string, MeshStandardMaterial>();
+/** Baked figures by model, colouring and state, kept for as long as the page is open. */
+const baked = new WeakMap<FigureModel, Map<string, BakedFigure>>();
 
-function paintMaterial(p: Paint, context: PaintContext, spent: boolean): MeshStandardMaterial {
-  const look = paintLook(p, context);
-  const key = `${look.color}|${look.roughness}|${look.metalness}|${look.glow}|${spent}`;
-  let m = paintMaterials.get(key);
-  if (!m) {
-    const color = new Color(look.color);
-    if (spent) color.lerp(SPENT_SHADE, 0.45);
-    m = new MeshStandardMaterial({
-      color,
-      roughness: look.roughness,
-      metalness: look.metalness,
-      ...(look.glow ? { emissive: color.clone(), emissiveIntensity: spent ? 0.4 : 0.9 } : {}),
-    });
-    paintMaterials.set(key, m);
-  }
-  return m;
+function bakedFor(model: FigureModel, context: PaintContext, spent: boolean): BakedFigure {
+  let byColour = baked.get(model);
+  if (!byColour) baked.set(model, (byColour = new Map()));
+  const key = `${context.scheme}|${context.main}|${context.faction}|${spent}`;
+  let found = byColour.get(key);
+  if (!found) byColour.set(key, (found = bakedGeometry(model, context, spent)));
+  return found;
 }
 
-/** A figure's model: each painted part in its colour, the main ones in the scheme's model colour. */
-export function PaintedModel({ parts, context, spent = false }: { parts: PaintedParts; context: PaintContext; spent?: boolean }) {
+/**
+ * A figure's model: a detailed one painted part by part, a classic one all in the model colour.
+ * Either way it is one mesh, plus one for any glowing parts.
+ */
+export function PaintedModel({ model, context, spent = false }: { model: FigureModel; context: PaintContext; spent?: boolean }) {
+  const { solid, glow } = bakedFor(model, context, spent);
   return (
     <>
-      {parts.map(({ paint, geometry }) => (
-        <mesh key={paint} geometry={geometry} material={paintMaterial(paint, context, spent)} raycast={() => null} />
-      ))}
+      <mesh geometry={solid} material={SOLID} raycast={() => null} />
+      {glow && <mesh geometry={glow} material={GLOWING} raycast={() => null} />}
     </>
   );
 }
@@ -579,7 +571,7 @@ function ModelFigure({
   const moving = useFigureAnimation(f);
   const down = useContext(AnimationContext)?.onDown;
   const meshes = unitMeshes(f.cardId, f.footprint, detailed);
-  const parts = meshes.poses[f.pose % meshes.poses.length]!;
+  const model = meshes.poses[f.pose % meshes.poses.length]!;
   const handlers = pointerHandlers(f.id, onClick, onHover, down);
   const h = f.height * LEVEL_HEIGHT;
   const ground = Math.max(...f.spots.map((s) => s.elevation)) * LEVEL_HEIGHT;
@@ -615,7 +607,7 @@ function ModelFigure({
       <group ref={moving}>
       <group position={[centre.x, ground, centre.z]}>
         <group rotation={[0, turn, 0]}>
-          <PaintedModel parts={parts} context={context} spent={f.status === "spent"} />
+          <PaintedModel model={model} context={context} spent={f.status === "spent"} />
           <mesh geometry={meshes.base.top} raycast={() => null}>
             <meshStandardMaterial color={BASE_COLOR} roughness={0.75} />
           </mesh>
@@ -913,7 +905,7 @@ export function CardFigure({
     const meshes = unitMeshes(cardId, footprint, display.tiles === "detailed");
     return (
       <group>
-        <PaintedModel parts={meshes.poses[pose % meshes.poses.length]!} context={{ scheme: display.scheme, main: colors.model, faction }} />
+        <PaintedModel model={meshes.poses[pose % meshes.poses.length]!} context={{ scheme: display.scheme, main: colors.model, faction }} />
         <mesh geometry={meshes.base.top} raycast={() => null}>
           <meshStandardMaterial color={BASE_COLOR} roughness={0.75} />
         </mesh>
