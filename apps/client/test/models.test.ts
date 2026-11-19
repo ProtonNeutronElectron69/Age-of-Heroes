@@ -10,6 +10,7 @@ import {
   MODEL_GREY,
   TRIANGLE_BUDGET,
   UNIT_MODELS,
+  DETAILED_MODELS,
   baseFrame,
   baseGeometry,
   baseParts,
@@ -17,6 +18,9 @@ import {
   figureGeometry,
   figureModel,
   measure,
+  paintLook,
+  paintedGeometry,
+  unitModel,
 } from "../src/models";
 import { box, figure, squad } from "../src/models/build";
 import type { Part } from "../src/models/types";
@@ -231,5 +235,57 @@ describe("bases and colours", () => {
     expect(figureColors("grey", "#234573", "#e53935")).toEqual({ model: MODEL_GREY, ring: "#e53935" });
     expect(figureColors("grey", "#2d6136", "#1e88e5")).toEqual({ model: MODEL_GREY, ring: "#1e88e5" });
     expect(COLOR_SCHEMES.map((s) => s.id)).toEqual(["faction", "player", "grey"]);
+  });
+});
+
+const detailed = Object.entries(DETAILED_MODELS).map(([id, unit]) => ({ id, unit, card: CARD_CATALOG.get(id)! }));
+
+describe("detailed figure models", () => {
+  it("belong to cards that have a classic model, with the same number of poses", () => {
+    expect(detailed.length).toBeGreaterThan(0);
+    for (const { id, unit, card } of detailed) {
+      expect(card, id).toBeDefined();
+      expect(unit.figures.length, id).toBe(UNIT_MODELS[id]!.figures.length);
+    }
+  });
+
+  it("are chosen in the detailed look only, where a unit has one", () => {
+    expect(unitModel("marisol-vance", true)).toBe(DETAILED_MODELS["marisol-vance"]);
+    expect(unitModel("marisol-vance", false)).toBe(UNIT_MODELS["marisol-vance"]);
+    const plain = CARDS.find((c) => !DETAILED_MODELS[c.id])!;
+    expect(unitModel(plain.id, true)).toBe(UNIT_MODELS[plain.id]);
+  });
+
+  describe.each(detailed)("$id", ({ unit, card }) => {
+    it("is made of solid, painted parts", () => {
+      for (const model of unit.figures) {
+        for (const part of model.parts) {
+          expect(part.paint).toBeDefined();
+          expect(volume(part)).toBeGreaterThan(0);
+        }
+      }
+    });
+
+    it("keeps the classic model's Height and fit, and stays low polygon", () => {
+      const heights = unit.figures.map((model) => measure(model, card.footprint).height);
+      expect(Math.abs(Math.max(...heights) - card.height)).toBeLessThanOrEqual(HEIGHT_TOLERANCE);
+      for (const model of unit.figures) {
+        const fit = measure(model, card.footprint);
+        expect(fit.fits).toBe(true);
+        expect(fit.triangles).toBeLessThanOrEqual(TRIANGLE_BUDGET);
+        // One mesh per paint, holding every triangle.
+        const meshes = paintedGeometry(model);
+        expect(meshes.reduce((n, m) => n + m.geometry.getAttribute("position").count, 0)).toBe(fit.triangles * 3);
+      }
+    });
+  });
+
+  it("paint the main parts in the scheme's model colour, and every part grey in the grey scheme", () => {
+    const context = { scheme: "faction" as const, main: "#123456", faction: "Iron Concord" };
+    expect(paintLook("coat", context).color).toBe("#123456");
+    expect(paintLook("skin", context).color).not.toBe("#123456");
+    expect(paintLook("gold", { ...context, scheme: "grey" }).color).toBe(MODEL_GREY);
+    // A classic model is one mesh, in the model colour.
+    expect(paintedGeometry(UNIT_MODELS["marisol-vance"]!.figures[0]!).map((m) => m.paint)).toEqual(["coat"]);
   });
 });

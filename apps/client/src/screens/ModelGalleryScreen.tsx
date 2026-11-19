@@ -97,7 +97,7 @@ export function ModelGalleryScreen({ filter = "" }: { filter?: string }) {
           <directionalLight position={[-12, 10, -3]} intensity={0.9} />
           <Tiles standings={standings} />
           {standings.map((s) => (
-            <StandingUnit key={s.card.id} standing={s} colors={colorsOf(s)} tokens={tokens} />
+            <StandingUnit key={s.card.id} standing={s} colors={colorsOf(s)} tokens={tokens} scheme={scheme} />
           ))}
           <OrbitControls makeDefault maxPolarAngle={Math.PI / 2.05} minDistance={2.5} maxDistance={140} />
           <Camera view={view} />

@@ -213,7 +213,8 @@ export function place(parts: readonly Part[], { at = [0, 0, 0], turn = [0, 0, 0]
       v.set(part.tris[i]!, part.tris[i + 1]!, part.tris[i + 2]!).applyMatrix4(m);
       tris.push(v.x, v.y, v.z);
     }
-    return { role: part.role, tris: s[0] * s[1] * s[2] < 0 ? flip(tris) : tris };
+    // Everything else about the part (its role, its paint) comes with it.
+    return { ...part, tris: s[0] * s[1] * s[2] < 0 ? flip(tris) : tris };
   });
 }
 

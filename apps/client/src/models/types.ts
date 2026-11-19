@@ -1,3 +1,5 @@
+import type { Paint } from "./paint";
+
 /** A point or a size: x, y, z. */
 export type V3 = readonly [number, number, number];
 
@@ -19,6 +21,8 @@ export interface Part {
   readonly role: Role;
   /** Triangles as x, y, z triples: 9 numbers each, wound counter-clockwise seen from outside. */
   readonly tris: readonly number[];
+  /** What the part is painted as, on a detailed model (`paint.ts`). Classic models have none: one colour. */
+  readonly paint?: Paint;
 }
 
 /**

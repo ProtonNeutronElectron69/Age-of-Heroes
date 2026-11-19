@@ -289,7 +289,7 @@ function ModelViewer({ card, onClose, onStep }: { card: UnitCard; onClose: () =>
               <directionalLight position={[14, 5, -12]} intensity={1.1} />
               <directionalLight position={[-12, 10, -3]} intensity={0.9} />
               <Tiles standings={standings} />
-              <StandingUnit standing={standing} colors={colors} tokens={false} />
+              <StandingUnit standing={standing} colors={colors} tokens={false} scheme={scheme} />
               <OrbitControls makeDefault enablePan={false} maxPolarAngle={Math.PI / 2.05} minDistance={1.5} maxDistance={Math.max(20, view.distance * 3)} />
               <Camera view={view} />
               <TestHook offset={{ x: 0, z: 0 }} />

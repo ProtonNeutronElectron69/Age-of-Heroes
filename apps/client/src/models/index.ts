@@ -1,6 +1,8 @@
 import type { Footprint } from "@aoh/rules";
 import { BufferGeometry, Float32BufferAttribute } from "three";
 import { baseParts } from "./base";
+import { DETAILED_MODELS } from "./detailed";
+import type { Paint } from "./paint";
 import type { FigureModel, Part, UnitModel } from "./types";
 import { ASHEN } from "./units/ashen";
 import { CONCORD } from "./units/concord";
@@ -14,12 +16,22 @@ export { BASE_BEVEL, BASE_RADIUS, baseParts } from "./base";
 export { BASE_HEIGHT } from "./build";
 export { BASE_COLOR, COLOR_SCHEMES, MODEL_GREY, figureColors, type ColorScheme } from "./colors";
 export type { FigureModel, Part, Role, UnitModel } from "./types";
+export { DETAILED_MODELS } from "./detailed";
+export { paintLook, type Paint, type PaintContext, type PaintLook } from "./paint";
 
 /**
  * Figure models by card id: every unit card has one. Stage 1 gives each unit
  * its size and shape in a single colour.
  */
 export const UNIT_MODELS: Readonly<Record<string, UnitModel>> = { ...CONCORD, ...KAGERO, ...VERDANT, ...NEXUS, ...ASHEN, ...DAWNHOLD };
+
+/**
+ * A unit's model for a look: its detailed model in the detailed look where it has one, and
+ * otherwise its classic model. Undefined for a card without a model.
+ */
+export function unitModel(cardId: string, detailed: boolean): UnitModel | undefined {
+  return (detailed ? DETAILED_MODELS[cardId] : undefined) ?? UNIT_MODELS[cardId];
+}
 
 /** The model for figure number `index` of a unit: a squad's figures take its poses in turn. */
 export function figureModel(unit: UnitModel, index: number): FigureModel {
@@ -46,4 +58,19 @@ export function figureGeometry(model: FigureModel): BufferGeometry {
 export function baseGeometry(footprint: Footprint): { top: BufferGeometry; rim: BufferGeometry } {
   const parts = baseParts(footprint);
   return { top: geometry(parts.filter((p) => p.role === "base")), rim: geometry(parts.filter((p) => p.role === "rim")) };
+}
+
+/**
+ * A figure as one mesh per paint, for a detailed model; a classic model's parts have no paint and
+ * come back as one "coat" mesh in the model colour. The caller disposes of the geometries.
+ */
+export function paintedGeometry(model: FigureModel): { paint: Paint; geometry: BufferGeometry }[] {
+  const byPaint = new Map<Paint, Part[]>();
+  for (const part of model.parts) {
+    const p = part.paint ?? "coat";
+    const list = byPaint.get(p);
+    if (list) list.push(part);
+    else byPaint.set(p, [part]);
+  }
+  return [...byPaint].map(([paint, parts]) => ({ paint, geometry: geometry(parts) }));
 }
