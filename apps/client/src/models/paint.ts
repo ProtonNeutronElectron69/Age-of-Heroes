@@ -11,7 +11,8 @@ export type Paint =
   | "leather" | "boot" | "white" | "black" | "sash" | "glove" | "blanket" | "eye"
   | "lacquer" | "lace" | "hakama" | "tabi" | "kimono" | "obi"
   | "fur" | "stripe" | "mane" | "belly" | "horn" | "glow" | "glowGreen" | "leaf" | "wing" | "wingbone"
-  | "bone" | "ironDark" | "mail" | "pelt" | "beard" | "hairLight" | "machine" | "glowCyan" | "coatDark" | "tunic";
+  | "bone" | "ironDark" | "mail" | "pelt" | "beard" | "hairLight" | "machine" | "glowCyan" | "coatDark" | "tunic"
+  | "bark" | "moss" | "straw";
 
 export interface PaintLook {
   readonly color: string;
@@ -82,5 +83,9 @@ export function paintLook(p: Paint, { scheme, main, faction }: PaintContext): Pa
     case "coatDark": return look(blend(main, "#000000", 0.4));
     // A tunic under a cloak: the main colour turned towards a woodland brown.
     case "tunic": return look(blend(main, "#5a4a30", 0.5));
+    case "bark": return look("#5e4834", 0.8);
+    // Moss on bark: the main colour turned towards a moss green.
+    case "moss": return look(blend(main, "#55762f", 0.55), 0.85);
+    case "straw": return look("#c9a865", 0.75);
   }
 }
