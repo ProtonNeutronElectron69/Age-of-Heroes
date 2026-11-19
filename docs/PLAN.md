@@ -4,11 +4,10 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 620 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 664 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 Nothing is in progress. Open, when the owner asks:
-- **Phase 7, figure models, stage 2:** more detail and colour, unit by unit. Twenty-six units have detailed, painted models so far, every faction among them (below); the other 22 come next. Stage 1 is done: every unit has a low polygon model in flat colour (see every model at `?models`).
 - **More premade maps.** Riverbend shows a quick way: lay the map out in code, check it with `buildBoard`, and save the JSON (see [CONTENT.md](CONTENT.md), Maps).
 - **A balance pass** from real playtests (costs come from the balance model so far), glyph numbers included (`TUNING.glyphs`).
 - **Further content drops:** units, factions and abilities.
@@ -195,7 +194,7 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
 - [x] The play screen follows the action. On every player's turn the camera glides to the acting unit at a standard zoom and angle and its card comes up; after a squad figure acts, the camera moves on to the next figure. Resting the pointer on another unit for half a second shows its card, smaller, below the acting unit's card until the pointer leaves; clicking a unit keeps its card there (#26)
 - [x] One set of rules. The simpler second rule set was removed, with its card fronts and its card-count drafts: every game has Life, abilities, height bonuses, engagement and strict line of sight, and armies are drafted to a points budget. Saves and replays of games under the removed rules are refused with a message (#27)
 
-### Phase 7: Sound, models and art (models in progress; sound, board tiles and scenery art done)
+### Phase 7: Sound, models and art (done)
 - [x] Unit cards redrawn as seven-hex cards in faction colours, for the whole roster, on the draft, play and replay screens. Each faction has a colour theme and an emblem. The card shows the unit's token label in its owner's colour and counts down Life as wounds land; clicking a card shows it large. Open the game with `?cards` in the address to see every card
 - [x] Unit art and hit zone pictures for all 48 cards, drawn in five batches. The art style is ink and colour: dark outlines, flat natural colours and hatched shadows. The hit zone picture is the same drawing in greys, with the hit band (the top 40% of the body) in red and gear left grey. The faint emblem that stood in for art is gone. Open the game with `?cards` in the address to see every card
   - [x] Batch 1 (10 of 48): Captain Marisol Vance, Harrow Line Riflemen, Lady Asagiri, Glade Wardens, Sentinel K-7, Nexus Breachers, Vorhal, Barrow Legion, Dame Rowena Ashgrove, Stormwake Huscarls
@@ -213,7 +212,7 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
   - [x] Game: a gong as each round begins, a card placed when a unit is drafted or deployed, a glass ping when another player pings
   - [x] Interface: a tick when the pointer moves onto a menu button or a unit card in the draft or the gallery, and a click for every button
   - Not wanted for now: sounds for a blocked attack, your turn, or a refused action
-- [ ] 3D models for the figures in place of tokens
+- [x] 3D models for the figures in place of tokens
   - [x] Stage 1: a low polygon model for every unit, sized to its Height and its base. Open the game with `?models` in the address to see them
     - [x] Mockup (4 of 48): Captain Marisol Vance, Brass Hussars, Glade Wardens, Old Rootback
     - [x] Light brown bases with a coloured ring round the edge, waisted between hexes on larger footprints, and two colour schemes to switch between: faction models with player rings, or player models with faction rings
@@ -224,11 +223,11 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
     - [x] Ten more (42 of 48): Sergeant Brannock, Concord Grenadiers, Lady Suzume, Sylvanne, Duskfang Prowlers, Nexus Breachers, Morvane, Bonebow Archers, Magister Orrin Vael, Silverlance Knights
     - [x] The last 6 units (48 of 48): Harrow Line Riflemen, Crimson Lotus Guard, Hollowsteel Hunters, Ruinmaw Orc Raiders, Dawn Acolytes, Sunbound Archers
     - [x] Draw the models on the board in place of tokens, with Models or Tokens and the colour scheme as settings under Display (T switches). Line of sight and the hit band keep using the token shape
-  - [ ] Stage 2: more detail and colour, painted part by part (a uniform, armour, scales or fur in the scheme's model colour, the rest in natural colours), drawn in the detailed look; the classic look keeps the stage 1 models
+  - [x] Stage 2: more detail and colour, painted part by part (a uniform, armour, scales or fur in the scheme's model colour, the rest in natural colours), drawn in the detailed look; the classic look keeps the stage 1 models
     - [x] Six units: Captain Marisol Vance and the Concord Fusiliers (Iron Concord), Lady Asagiri and the Crimson Lotus Guard (House Kagero), Cinderjaw and the Duskfang Prowlers (Verdant Court)
     - [x] Ten more: Siege Walker Atlas and the Nexus Reclaimers (Nexus Collective), Vorhal and the Barrow Legion (Ashen Host), Dame Rowena Ashgrove and the Stormwake Huscarls (Dawnhold Covenant), Sister Maren Holloway and the Gatewarden Pikemen (Iron Concord), the Teppo Gunners (House Kagero) and the Glade Wardens (Verdant Court)
     - [x] Ten more: Sergeant Brannock and the Harrow Line Riflemen (Iron Concord), Kenzo and the Shirokage Ronin (House Kagero), Sylvanne and the Mossback Treefolk (Verdant Court), Sentinel K-7 and the Nexus Breachers (Nexus Collective), the Bonebow Archers (Ashen Host) and the Covenant Crossbowmen (Dawnhold Covenant)
-    - [ ] The other 22
+    - [x] The last 22: the Brass Hussars (on painted horses) and the Concord Grenadiers (Iron Concord); Solenne, Magister Orrin Vael, the Silverlance Knights, the Dawn Acolytes and the Sunbound Archers (Dawnhold Covenant); Lady Suzume, the Ashfang Oni and the Hollow Reed Shinobi (House Kagero); Proxima, the Skyhook Raiders, the Swarmling Drones and the Hollowsteel Hunters (Nexus Collective); Marrowcoil, Morvane, Grubnak, the Ghoul Pack and the Ruinmaw Orc Raiders (Ashen Host); Old Rootback, Queen Ilyth and the Briar Sprites (Verdant Court). Every unit now has one
 - [x] Board tiles: a detailed look for each of the ten terrains, painted in code (a moulded relief and colour variation under a plastic finish; the tile sides show a lip of the top over layers of earth or stone; lava glows), each tile turned by a random sixth so neighbours differ, and bold black outlines so the levels of a stack are easy to count. The classic flat look stays: **Look** under Display, or the B key, switches between them during a game, along with the scenery and the figures
 - [x] Scenery art, in the same detailed look: stone blocks with moss (and ivy on the small ruined wall), fieldstones under capstones on the low wall, sandstone on the large wall, bark and needled tiers on the trees, a lumpy lichen-spotted boulder, and forest-floor or flagstone bases. Shapes stay within the classic outlines, so line of sight is unchanged. The classic look keeps the flat colours
 

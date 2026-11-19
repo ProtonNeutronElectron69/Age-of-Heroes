@@ -12,7 +12,8 @@ export type Paint =
   | "lacquer" | "lace" | "hakama" | "tabi" | "kimono" | "obi"
   | "fur" | "stripe" | "mane" | "belly" | "horn" | "glow" | "glowGreen" | "leaf" | "wing" | "wingbone"
   | "bone" | "ironDark" | "mail" | "pelt" | "beard" | "hairLight" | "machine" | "glowCyan" | "coatDark" | "tunic"
-  | "bark" | "moss" | "straw";
+  | "bark" | "moss" | "straw" | "horse" | "stand"
+  | "ghoul" | "orc" | "faeWing";
 
 export interface PaintLook {
   readonly color: string;
@@ -87,5 +88,12 @@ export function paintLook(p: Paint, { scheme, main, faction }: PaintContext): Pa
     // Moss on bark: the main colour turned towards a moss green.
     case "moss": return look(blend(main, "#55762f", 0.55), 0.85);
     case "straw": return look("#c9a865", 0.75);
+    case "horse": return look("#6e4529", 0.6);
+    // A flight stand: dark, like the clear plastic of a real one seen against the board.
+    case "stand": return look("#3d434c", 0.3);
+    case "ghoul": return look("#8e9883", 0.75);
+    case "orc": return look("#6c8a3e", 0.65);
+    // A fae's wing: pale and glossy, a hint of the main colour in it.
+    case "faeWing": return look(blend(main, "#e4f4f0", 0.75), 0.25);
   }
 }

@@ -250,11 +250,12 @@ describe("detailed figure models", () => {
     }
   });
 
-  it("are chosen in the detailed look only, where a unit has one", () => {
-    expect(unitModel("marisol-vance", true)).toBe(DETAILED_MODELS["marisol-vance"]);
-    expect(unitModel("marisol-vance", false)).toBe(UNIT_MODELS["marisol-vance"]);
-    const plain = CARDS.find((c) => !DETAILED_MODELS[c.id])!;
-    expect(unitModel(plain.id, true)).toBe(UNIT_MODELS[plain.id]);
+  it("cover every unit, and are chosen in the detailed look only", () => {
+    expect(CARDS.filter((c) => !DETAILED_MODELS[c.id]).map((c) => c.id)).toEqual([]);
+    for (const card of CARDS) {
+      expect(unitModel(card.id, true)).toBe(DETAILED_MODELS[card.id]);
+      expect(unitModel(card.id, false)).toBe(UNIT_MODELS[card.id]);
+    }
   });
 
   describe.each(detailed)("$id", ({ unit, card }) => {
