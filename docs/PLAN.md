@@ -4,11 +4,11 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 564 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 580 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 Nothing is in progress. Open, when the owner asks:
-- **Phase 7, figure models, later stages:** more detail and colour. Stage 1 is done: every unit has a low polygon model in flat colour (see every model at `?models`).
+- **Phase 7, figure models, stage 2:** more detail and colour, unit by unit. Six units have detailed, painted models so far (below); the other 42 come next, a faction or two at a time. Stage 1 is done: every unit has a low polygon model in flat colour (see every model at `?models`).
 - **More premade maps.** Riverbend shows a quick way: lay the map out in code, check it with `buildBoard`, and save the JSON (see [CONTENT.md](CONTENT.md), Maps).
 - **A balance pass** from real playtests (costs come from the balance model so far), glyph numbers included (`TUNING.glyphs`).
 - **Further content drops:** units, factions and abilities.
@@ -224,8 +224,10 @@ Saved games are done (#7); the computer opponent and the tutorial are on hold.
     - [x] Ten more (42 of 48): Sergeant Brannock, Concord Grenadiers, Lady Suzume, Sylvanne, Duskfang Prowlers, Nexus Breachers, Morvane, Bonebow Archers, Magister Orrin Vael, Silverlance Knights
     - [x] The last 6 units (48 of 48): Harrow Line Riflemen, Crimson Lotus Guard, Hollowsteel Hunters, Ruinmaw Orc Raiders, Dawn Acolytes, Sunbound Archers
     - [x] Draw the models on the board in place of tokens, with Models or Tokens and the colour scheme as settings under Display (T switches). Line of sight and the hit band keep using the token shape
-  - [ ] Later stages: more detail and colour
-- [x] Board tiles: a detailed look for each of the ten terrains, painted in code (a moulded relief and colour variation under a plastic finish; the tile sides show a lip of the top over layers of earth or stone; lava glows), each tile turned by a random sixth so neighbours differ, and bold black outlines so the levels of a stack are easy to count. The classic flat look stays: **Board tiles** under Display, or the B key, switches between them during a game
+  - [ ] Stage 2: more detail and colour, painted part by part (a uniform, armour, scales or fur in the scheme's model colour, the rest in natural colours), drawn in the detailed look; the classic look keeps the stage 1 models
+    - [x] Six units: Captain Marisol Vance and the Concord Fusiliers (Iron Concord), Lady Asagiri and the Crimson Lotus Guard (House Kagero), Cinderjaw and the Duskfang Prowlers (Verdant Court)
+    - [ ] The other 42
+- [x] Board tiles: a detailed look for each of the ten terrains, painted in code (a moulded relief and colour variation under a plastic finish; the tile sides show a lip of the top over layers of earth or stone; lava glows), each tile turned by a random sixth so neighbours differ, and bold black outlines so the levels of a stack are easy to count. The classic flat look stays: **Look** under Display, or the B key, switches between them during a game, along with the scenery and the figures
 - [x] Scenery art, in the same detailed look: stone blocks with moss (and ivy on the small ruined wall), fieldstones under capstones on the low wall, sandstone on the large wall, bark and needled tiers on the trees, a lumpy lichen-spotted boulder, and forest-floor or flagstone bases. Shapes stay within the classic outlines, so line of sight is unchanged. The classic look keeps the flat colours
 
 ### Phase 8: Tabletop feel (done)

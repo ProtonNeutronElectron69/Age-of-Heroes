@@ -14,7 +14,7 @@ export interface DisplaySettings {
   readonly menu: MenuStyle;
   /** The gaming table the board stands on. */
   readonly table: TableStyle;
-  /** The board's tiles: textured and moulded with bold outlines, or the classic flat colours. */
+  /** The look: detailed (textured tiles with bold outlines, textured scenery, painted figures where a unit has one) or classic (flat colours, plain figures). */
   readonly tiles: TileLook;
   /** How attacks and initiative show their dice. */
   readonly dice: DiceShow;
@@ -127,7 +127,7 @@ export function toggleFigures(): void {
   setDisplay({ figures: settings.figures === "models" ? "tokens" : "models" });
 }
 
-/** Switches the board's tiles between the detailed and the classic look (the B key on the play screen). */
+/** Switches between the detailed and the classic look (the B key on the play screen). */
 export function toggleTiles(): void {
   setDisplay({ tiles: settings.tiles === "detailed" ? "classic" : "detailed" });
 }

@@ -46,8 +46,8 @@ export function DisplayMenu() {
               ))}
             </select>
           </label>
-          <h2>Board tiles</h2>
-          <div className="segmented" role="radiogroup" aria-label="Board tiles">
+          <h2>Look</h2>
+          <div className="segmented" role="radiogroup" aria-label="Look">
             {TILE_LOOKS.map((t) => (
               <button
                 key={t.id}
@@ -61,7 +61,7 @@ export function DisplayMenu() {
               </button>
             ))}
           </div>
-          <p className="muted small">Detailed tiles are textured, with bold outlines to count the levels. Press B to switch.</p>
+          <p className="muted small">Detailed: textured tiles with bold outlines to count the levels, textured scenery, and painted figures where a unit has one so far. Classic: flat colours and plain figures. Press B to switch.</p>
           <label className="field">
             <span>Table</span>
             <select aria-label="Table" value={display.table} onChange={(e) => setDisplay({ table: e.target.value as TableStyle })}>
