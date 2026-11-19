@@ -54,6 +54,11 @@ export interface FigureState {
   destroyed: boolean;
   /** null before deployment and after destruction. */
   position: FigurePosition | null;
+  /**
+   * Which way the figure faces, in degrees (games with `config.facing`): one of eight for a
+   * single-hex figure, along its base for a larger one. See `facing.ts`.
+   */
+  facing?: number;
 }
 
 export interface UnitState {
@@ -133,6 +138,8 @@ export interface ActiveTurn {
   attackLog: { attackerId: string; targetId: string }[];
   /** Extra moves granted after attacking (Smoke Step), by figure id: movement points allowed. */
   bonusMoves: Record<string, number>;
+  /** Figures that may still be turned (games with facing): those that moved and have not attacked since. */
+  turnable?: string[];
 }
 
 export interface TurnPointer {
@@ -189,6 +196,11 @@ export interface GameConfig {
   readonly tokenRule?: TokenRule;
   /** How many glyphs are scattered when deployment ends; left out (or 0) for none. */
   readonly glyphs?: number;
+  /**
+   * Figures face a way: ranged attacks need the target in front, and a melee attack from behind
+   * rolls extra dice. Left out by games saved before the rule existed, which have no facing.
+   */
+  readonly facing?: boolean;
 }
 
 export interface GameState {
@@ -257,6 +269,8 @@ export interface GameSetup {
   readonly tokenRule?: TokenRule;
   /** How many glyphs to scatter on the battlefield when deployment ends (0 to 11). */
   readonly glyphs?: number;
+  /** New games turn facing on; older ones leave it out and have none. */
+  readonly facing?: boolean;
 }
 
 export interface RulesContext {
@@ -306,6 +320,8 @@ export type Command =
   /** A player rolls for initiative (`initiative: "players"` games). */
   | { readonly type: "rollInitiative"; readonly player: PlayerId }
   | { readonly type: "endTurn"; readonly player: PlayerId }
+  /** Turn a figure that has just moved (games with facing), to one of eight directions in degrees. */
+  | { readonly type: "face"; readonly player: PlayerId; readonly figureId: string; readonly facing: number }
   /**
    * Use a held glyph. `unitId` is the unit it acts on: one of the player's own for a stat glyph,
    * Healer and Summoning (a destroyed one), an enemy's for Wound and Negation. Summoning also
@@ -367,6 +383,7 @@ export type GameEvent =
       readonly outcome: "safe" | "destroyed" | "slipped";
     }
   | { readonly type: "figureSlid"; readonly figureId: string; readonly to: Step }
+  | { readonly type: "figureFaced"; readonly figureId: string; readonly facing: number }
   | {
       readonly type: "attackRolled";
       readonly source: DamageSource;

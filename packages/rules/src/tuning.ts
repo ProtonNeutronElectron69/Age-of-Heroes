@@ -9,6 +9,8 @@ export interface Tuning {
   readonly passingStrikeDice: number;
   /** Extra dice for higher ground, and the further extra when the difference is at least the lower figure's Height. */
   readonly elevationBonus: { readonly higher: number; readonly extreme: number };
+  /** Extra attack dice for a melee attack from behind the defender (games with facing). */
+  readonly behindBonus?: number;
   /** How many levels the hexes of a multi-hex figure may differ by. */
   readonly maxStraddle: number;
   /**
@@ -41,6 +43,7 @@ export const DEFAULT_TUNING: Tuning = {
   falling: { minorDice: 2, majorDice: 4 },
   passingStrikeDice: 1,
   elevationBonus: { higher: 1, extreme: 1 },
+  behindBonus: 2,
   maxStraddle: 1,
   grownZoneSize: 40,
   glyphs: DEFAULT_GLYPHS,

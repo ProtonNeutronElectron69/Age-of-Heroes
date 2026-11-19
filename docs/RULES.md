@@ -12,6 +12,7 @@ In short:
 - Higher ground gives combat bonuses, long drops cause falling damage, and a figure cannot climb a single step taller than its Height.
 - Line of sight is a strict 3D check, and other figures block it.
 - Figures next to enemies are engaged and draw passing strikes when they leave.
+- Figures face a way: a ranged attack needs its target in front, and a melee attack from behind rolls 2 more attack dice.
 - Every unit has special abilities, and terrain has its own effects.
 
 ## 2. Unit cards
@@ -141,6 +142,7 @@ Armies are drafted from a shared pool. Hot-seat games use a **snake draft** (onl
 ### Deployment
 After the draft, units are deployed one at a time in the order they were drafted (after an open draft online, one unit each in turn; see Playing online). (With preset armies, players take turns round the table, one unit each.) Each figure goes on a free spot in its owner's start zone where it fits.
 - **Growing zones**: on maps that allow it (all premade maps; custom maps choose in the editor), each start zone grows before deployment until it has a little more room than the army needs: the hexes the army covers, plus a quarter more, plus 2. Players take turns adding one hex at a time, in seat order. A zone grows into free, standable neighbouring hexes, keeping close to its own centre and away from other zones, and never takes another player's hexes. If a unit still has no spot where it fits when its turn to deploy comes, the zone grows again, up to 40 more hexes. **Assumption.**
+- **Facing**: each figure starts facing the middle of the battlefield (the nearest eighth; a multi-hex figure along its base). **Assumption.**
 - **No room**: if a unit cannot be placed at all (a map whose zones do not grow, or a board with no space left), it sits the game out and counts as destroyed. **Assumption.**
 
 ### Playing online
@@ -204,6 +206,15 @@ Some figures cover 2 or more hexes (2x1, 3x1 or 2x2 footprints). **Assumption** 
 - **Other figures:** nothing can stand on any of its hexes. It can pass through friendly figures but not enemies, like any figure.
 - **Deploying:** all of its hexes must be in the start zone. It can face any direction.
 
+### Facing
+
+New games give every figure a **facing**: the way it looks. Games saved before this rule have none. **Assumption** for all of this section.
+- **Front cone**: a figure sees the half of the battlefield in front of it, 180 degrees, the side line included. Behind it is the other half.
+- **After a move**: a single-hex figure faces along its last step, to the nearest eighth of a turn. Until it attacks, its player may turn it to any of the eight directions (the R key, 45 degrees a press; Shift+R the other way). A figure that has not moved this turn keeps its facing, and once it attacks it can no longer turn (a move after attacking, such as Smoke Step's, lets it turn again).
+- **Multi-hex figures** face along their base, from its middle to its front hex, so they turn by turning their base as they move.
+- Figures pushed, pulled or swapped by abilities keep their facing. A figure brought back faces the middle of the battlefield.
+- **Eye view** shows only what is in front of the figure: the view turns no further than the edge of its front cone.
+
 ### Flying (ability)
 - A flying figure's move is counted in hexes **straight to where it lands**. Terrain, height, scenery and figures on the way do not matter, and climbing costs nothing.
 - It can land on any free spot within its Move where it fits, at any height (not on scenery or another figure).
@@ -216,6 +227,7 @@ Some figures cover 2 or more hexes (2x1, 3x1 or 2x2 footprints). **Assumption** 
 - Range is counted in hexes from the attacker to the target. For multi-hex figures, count between the nearest hexes of each.
 - Range 1 means the target must be adjacent.
 - An attack at range 1 needs the two figures to be engaged (see 9).
+- **Ranged attacks** (a target 2 or more hexes away, blasts and other ranged powers included) need some part of the target in the attacker's front cone (see Facing). A melee attack (an adjacent target) can strike any side.
 
 ### Line of sight
 Line of sight treats every figure as a token as tall as its Height, whether the board shows it as a figure model or as that token (the Display setting). Each token has an **eye point** (the centre of its top) and a **hit band** (a coloured band around its upper part).
@@ -235,6 +247,9 @@ Dice:
 Compare the elevations of the surfaces the two figures stand on (for a multi-hex figure, its highest hex).
 - If the attacker is higher: **+1 attack die**, and **another +1** if the difference is at least the defender's Height.
 - If the defender is higher: **+1 defense die**, and **another +1** if the difference is at least the attacker's Height.
+
+### Strike from behind
+A **melee** attack (an adjacent target) from wholly outside the defender's front cone rolls **+2 attack dice** *(tunable)*. It adds to the higher-ground bonus and any others. A figure on the side line of the cone is in front, not behind. **Assumption.**
 
 ### Wounds and destruction
 - Wounds stay on the figure; when its wounds reach its Life it is destroyed. A destroyed figure is removed from the battlefield.

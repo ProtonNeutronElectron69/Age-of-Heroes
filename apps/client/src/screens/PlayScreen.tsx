@@ -264,6 +264,18 @@ export function PlayScreen({ session }: { session: Session }) {
   const activeCard = activeUnit ? ctx.cards.get(activeUnit.cardId)! : null;
   const myTurn = canControl(session, active?.player);
   // A figure can act until it has attacked (moving first is optional); Smoke Step allows a move after.
+  /** A figure of the acting unit that has moved and may still be turned (games with facing). */
+  const canTurn = (id: string) => !!state.config.facing && !!active?.turnable?.includes(id);
+  /**
+   * The figure R turns: the chosen one if it may turn, else the last of the unit's figures to move
+   * that may still turn (a squad hands the choice on to its next figure after each move).
+   */
+  const turning = (): string | null => {
+    if (!active || !myTurn) return null;
+    if (selected && canTurn(selected)) return selected;
+    return [...(active.turnable ?? [])].reverse().find((id) => canTurn(id) && findFigure(state, id)?.figure.position) ?? null;
+  };
+  const turner = turning();
   const mayAct = (id: string) =>
     !!active &&
     !!activeUnit?.figures.some((f) => f.id === id && !f.destroyed && f.position) &&
@@ -599,7 +611,7 @@ export function PlayScreen({ session }: { session: Session }) {
   };
   const hoverOption = optionAt(hoverStep);
 
-  // Keys: R turns a big figure, 1-4 pick a squad figure, E toggles eye view, C the unit card,
+  // Keys: R turns a figure that has just moved (games with facing) or a big figure being placed, 1-4 pick a squad figure, E toggles eye view, C the unit card,
   // T models or tokens, H makes the chosen figure jump, Space ends the turn. WASD pans the map (in BoardScene).
   const keys = useRef<(e: KeyboardEvent) => void>(() => {});
   keys.current = (e: KeyboardEvent) => {
@@ -616,6 +628,12 @@ export function PlayScreen({ session }: { session: Session }) {
       toggleFigures();
     } else if (key === "b") {
       toggleTiles();
+    } else if (key === "r" && active && turning()) {
+      // Turn the figure that has just moved an eighth (Shift+R the other way).
+      if (busy) return;
+      const id = turning()!;
+      const facing = findFigure(state, id)?.figure.facing ?? 0;
+      dispatch({ type: "face", player: active.player, figureId: id, facing: (facing + (e.shiftKey ? 315 : 45)) % 360 });
     } else if (key === "r") {
       setRotation((r) => (r + (e.shiftKey ? 5 : 1)) % 6);
     } else if (key === "c") {
@@ -683,8 +701,9 @@ export function PlayScreen({ session }: { session: Session }) {
       enemies: positioned.filter((x) => active && x.unit.owner !== active.player).map((x) => x.pos),
       aiming: aiming ? { id: aiming, spots: aimSpots } : null,
       blastHexes,
+      turning: turner ? { id: turner, facing: findFigure(state, turner)?.figure.facing ?? 0 } : null,
     };
-  }, [state, ctx, selected, options, targets, active, drag, hoverOption, aiming, aimSpots, blastHexes]);
+  }, [state, ctx, selected, options, targets, active, drag, hoverOption, aiming, aimSpots, blastHexes, turner]);
 
   // ---- Figure's-eye view -------------------------------------------------
   const eye = useMemo(() => {
@@ -713,7 +732,9 @@ export function PlayScreen({ session }: { session: Session }) {
     } else {
       look = { x: from.x + 1, y: from.y, z: from.z };
     }
-    return { eye: from, look };
+    // With facing, the view keeps to the figure's front cone.
+    const facing = findFigure(state, selected)?.figure.facing;
+    return { eye: from, look, ...(state.config.facing && facing !== undefined ? { facing: (facing * Math.PI) / 180 } : {}) };
   }, [eyeView, selected, activeUnit, activeCard, pinnedFigure, targets, state, ctx]);
 
   // ---- Board contents ------------------------------------------------------
@@ -747,6 +768,8 @@ export function PlayScreen({ session }: { session: Session }) {
         status,
         ...(status === "selected" ? { arrow: true } : {}),
         ...(life > 1 ? { lifeLeft: life - f.wounds } : {}),
+        ...(state.config.facing && f.facing !== undefined ? { facing: f.facing } : {}),
+        ...(f.id === turner ? { cone: true } : {}),
       });
     }
   }
@@ -769,6 +792,7 @@ export function PlayScreen({ session }: { session: Session }) {
       hero: card.figureCount === 1,
       status: "idle",
       ...(statsOf(card).life > 1 ? { lifeLeft: 0 } : {}),
+      ...(state.config.facing && hit.figure.facing !== undefined ? { facing: hit.figure.facing } : {}),
     });
   }
   if (deployUnit && deployCard) {
@@ -1314,6 +1338,7 @@ export function PlayScreen({ session }: { session: Session }) {
                   }`
                 : "This unit has finished."}
               {moveBig ? " Press R to turn." : ""}
+              {turner ? ` Press R to turn ${names.figure(turner)} an eighth (Shift+R the other way), until it attacks.` : ""}
               {myTurn ? ` Keys: ${activeUnit.figures.length > 1 ? "1-4 pick a figure, " : ""}E eye view, H shows where the chosen figure is, Space ends the turn, WASD moves the map; middle-click a hex to read its terrain${isOnline ? "; P points at the spot under the pointer for everyone" : ""}.` : ""}
               {hoverOption ? ` Move cost ${hoverOption.cost}.` : ""}
               {eyeView && myTurn ? " Drag or use the arrow keys to look around. Clicking an enemy faces it (a red-ringed one is attacked). Exit eye view to end the turn." : ""}

@@ -5,6 +5,8 @@ export const TUNING: Tuning = {
   falling: { minorDice: 2, majorDice: 4 },
   passingStrikeDice: 1,
   elevationBonus: { higher: 1, extreme: 1 },
+  // A melee attack from behind the defender's front cone (games with facing).
+  behindBonus: 2,
   maxStraddle: 1,
   // Maps whose start zones grow: the most hexes of figures one army may draft (a 600-point army of
   // 4-figure squads needs 32).

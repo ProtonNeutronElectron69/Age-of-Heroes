@@ -33,6 +33,13 @@ export interface FigureView {
   readonly lifeLeft?: number;
   /** Show a floating, spinning arrow above the figure (the figure chosen to act). */
   readonly arrow?: boolean;
+  /**
+   * Which way the figure faces, in degrees turned from +z towards +x (games with facing).
+   * Without it, a single-hex figure faces the nearest enemy.
+   */
+  readonly facing?: number;
+  /** Show the outline of the figure's front cone: it may still be turned (R). */
+  readonly cone?: boolean;
 }
 
 /** Figures that moved with the last command; a new `key` sets them hopping along their paths. */
@@ -721,7 +728,77 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
           </mesh>
         )}
         {f.arrow && <SelectionArrow top={f.height * LEVEL_HEIGHT} />}
+        {f.facing !== undefined && (
+          <mesh geometry={FACING_MARK} position={[0, h + 0.065, 0]} rotation={[-Math.PI / 2, 0, (f.facing * Math.PI) / 180]} raycast={() => null}>
+            <meshBasicMaterial color="#f4f1ea" />
+          </mesh>
+        )}
       </group>
+    </group>
+  );
+}
+
+/** The pointer on a token's cap that shows which way it faces: a flat wedge, its tip forward. */
+const FACING_MARK = (() => {
+  const s = new Shape();
+  s.moveTo(0, -TOKEN_RADIUS * 0.62);
+  s.lineTo(TOKEN_RADIUS * 0.3, TOKEN_RADIUS * 0.12);
+  s.lineTo(-TOKEN_RADIUS * 0.3, TOKEN_RADIUS * 0.12);
+  s.closePath();
+  return new ShapeGeometry(s);
+})();
+
+/** How far the front cone's outline reaches from the figure, in hexes. */
+const CONE_RADIUS = 1.7 * HEX_SIZE;
+const CONE_LINE = 0.07;
+
+/**
+ * The front cone's outline, flat on the ground under a figure that may still be turned: a half
+ * circle ahead of it, with the side line through its middle, over a faint fill.
+ */
+const CONE = (() => {
+  // Shape y runs opposite to world z, so ahead (+z, unturned) is -y.
+  const arc = (r: number, from: number, to: number, path: Shape) => {
+    const n = 24;
+    for (let i = 0; i <= n; i++) {
+      const t = from + ((to - from) * i) / n;
+      path.lineTo(Math.sin(t) * r, -Math.cos(t) * r);
+    }
+  };
+  const rim = new Shape();
+  rim.moveTo(-CONE_RADIUS, 0);
+  arc(CONE_RADIUS, -Math.PI / 2, Math.PI / 2, rim);
+  rim.lineTo(CONE_RADIUS - CONE_LINE, 0);
+  arc(CONE_RADIUS - CONE_LINE, Math.PI / 2, -Math.PI / 2, rim);
+  rim.closePath();
+  const side = new Shape();
+  side.moveTo(-CONE_RADIUS, -CONE_LINE / 2);
+  side.lineTo(CONE_RADIUS, -CONE_LINE / 2);
+  side.lineTo(CONE_RADIUS, CONE_LINE / 2);
+  side.lineTo(-CONE_RADIUS, CONE_LINE / 2);
+  side.closePath();
+  const fill = new Shape();
+  fill.moveTo(-CONE_RADIUS, 0);
+  arc(CONE_RADIUS, -Math.PI / 2, Math.PI / 2, fill);
+  fill.closePath();
+  return { line: new ShapeGeometry([rim, side]), fill: new ShapeGeometry(fill) };
+})();
+
+/** The outline of a figure's front cone, while it may still be turned. */
+function FacingCone({ f }: { f: FigureView }) {
+  const cells = f.spots.map((s) => hexToWorld(s.hex, HEX_SIZE));
+  const x = cells.reduce((n, c) => n + c.x, 0) / cells.length;
+  const z = cells.reduce((n, c) => n + c.z, 0) / cells.length;
+  const y = Math.max(...f.spots.map((s) => s.elevation)) * LEVEL_HEIGHT + 0.07;
+  const turn = ((f.facing ?? 0) * Math.PI) / 180;
+  return (
+    <group position={[x, y, z]} rotation={[0, turn, 0]}>
+      <mesh geometry={CONE.fill} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null} renderOrder={2}>
+        <meshBasicMaterial color="#ffe28a" transparent opacity={0.22} depthWrite={false} />
+      </mesh>
+      <mesh geometry={CONE.line} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null} renderOrder={3}>
+        <meshBasicMaterial color="#ffe28a" transparent opacity={0.9} depthWrite={false} />
+      </mesh>
     </group>
   );
 }
@@ -784,7 +861,7 @@ export function Figures({ figures, onClick, onHover, labels, style, motions = nu
             f={f}
             onClick={onClick}
             onHover={onHover}
-            yaw={facing.get(f.id) ?? SIDES[0]!}
+            yaw={f.facing !== undefined ? (f.facing * Math.PI) / 180 : (facing.get(f.id) ?? SIDES[0]!)}
             scheme={display.scheme}
             detailed={display.tiles === "detailed"}
           />
@@ -792,6 +869,7 @@ export function Figures({ figures, onClick, onHover, labels, style, motions = nu
           <Token key={f.id} f={f} onClick={onClick} onHover={onHover} />
         ),
       )}
+      {figures.map((f) => f.cone && f.facing !== undefined && <FacingCone key={`cone:${f.id}`} f={f} />)}
       {labels && <LabelTracker figures={figures} layer={labels} offsets={offsets} />}
     </AnimationContext.Provider>
   );

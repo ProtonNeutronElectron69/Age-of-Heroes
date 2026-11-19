@@ -76,7 +76,7 @@ interface Props {
   /** Move the camera to look at this point (board coordinates) whenever `key` changes. */
   focus?: CameraFocusRequest | null;
   /** Figure's-eye view: put the camera at `eye` looking at `look` (board coordinates). */
-  eyeView?: { eye: Vec3; look: Vec3 } | null;
+  eyeView?: EyeView | null;
   /** A backdrop only: no camera controls or keyboard panning; the caller moves the camera. */
   still?: boolean;
   /** The colour behind everything (the room a gaming table stands in). */
@@ -108,11 +108,29 @@ const LOOK_PITCH_LIMIT = Math.PI / 2 - 0.05;
  */
 const EYE_FOV = 70;
 
+/** Where eye view looks from and at; `facing` (radians, games with facing) keeps it to the figure's front cone. */
+export interface EyeView {
+  readonly eye: Vec3;
+  readonly look: Vec3;
+  readonly facing?: number;
+}
+
+/**
+ * How far eye view may turn either way from a figure's facing, and look up or down, so the edges
+ * of the view never pass the side of its front cone: nothing behind the figure is ever on screen.
+ */
+export function coneLimits(aspect: number): { yaw: number; pitch: number } {
+  const half = (EYE_FOV * Math.PI) / 360;
+  const wide = Math.atan(Math.tan(half) * aspect);
+  return { yaw: Math.max(0, Math.PI / 2 - wide), pitch: Math.max(0, Math.PI / 2 - half) };
+}
+
 /**
  * Drives the camera from a figure's eye point, and puts it back afterwards.
- * It starts facing `look`; dragging or the arrow keys turn it all the way around.
+ * It starts facing `look`; dragging or the arrow keys turn it all the way around, or with
+ * facing, only as far as the front cone allows.
  */
-function EyeCamera({ view, center }: { view: { eye: Vec3; look: Vec3 }; center: { x: number; z: number } }) {
+function EyeCamera({ view, center }: { view: EyeView; center: { x: number; z: number } }) {
   const camera = useThree((s) => s.camera);
   const dom = useThree((s) => s.gl.domElement);
   const invalidate = useThree((s) => s.invalidate);
@@ -205,6 +223,12 @@ function EyeCamera({ view, center }: { view: { eye: Vec3; look: Vec3 }; center: 
     if (k.has("ArrowRight")) a.yaw -= step;
     if (k.has("ArrowUp")) a.pitch = Math.min(LOOK_PITCH_LIMIT, a.pitch + step);
     if (k.has("ArrowDown")) a.pitch = Math.max(-LOOK_PITCH_LIMIT, a.pitch - step);
+    if (view.facing !== undefined) {
+      const limits = coneLimits((camera as PerspectiveCamera).aspect || 1);
+      const off = Math.atan2(Math.sin(a.yaw - view.facing), Math.cos(a.yaw - view.facing));
+      a.yaw = view.facing + Math.max(-limits.yaw, Math.min(limits.yaw, off));
+      a.pitch = Math.max(-limits.pitch, Math.min(limits.pitch, a.pitch));
+    }
     const x = eye.x - center.x;
     const z = eye.z - center.z;
     camera.position.set(x, eye.y, z);

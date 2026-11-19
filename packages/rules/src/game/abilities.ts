@@ -3,6 +3,7 @@ import { hexDistance, isAdjacent } from "../hex";
 import { Rng } from "../rng";
 import type { Ability, UnitCard } from "../schema";
 import { isSquad } from "../schema";
+import { faceTowardsMiddle } from "./facing";
 import { figureSpots, placementSpots } from "./placement";
 import type { Occupant } from "./queries";
 import { woundFigure } from "./rounds";
@@ -415,6 +416,7 @@ export function afterAttack(
         fallen.destroyed = false;
         fallen.wounds = 0;
         fallen.position = { hex: spot.hex, elevation: spot.elevation, rotation: 0 };
+        faceTowardsMiddle(state, fallen, attacker.card.footprint, ctx);
         events.push({ type: "figureRevived", figureId: fallen.id, at: spot });
         events.push({
           type: "abilityUsed",
@@ -574,6 +576,7 @@ function reassemble(state: GameState, unit: UnitState, card: UnitCard, ctx: Rule
   fallen.destroyed = false;
   fallen.wounds = 0;
   fallen.position = { hex: spot.hex, elevation: spot.elevation, rotation: 0 };
+  faceTowardsMiddle(state, fallen, card.footprint, ctx);
   events.push({ type: "figureRevived", figureId: fallen.id, at: spot });
 }
 

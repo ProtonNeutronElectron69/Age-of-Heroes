@@ -12,7 +12,7 @@
 - The engine is a reducer: `applyCommand(state, command, ctx)` never mutates its input and returns events. New player actions are new `Command` variants. Validate them, fail with `RulesError`, and add them to `commandSchema` in `packages/protocol`.
 - Anything secret must be removed in `viewFor`. The server only ever sends views.
 - Rule numbers that may need tuning belong in data (`packages/content`), not in engine code.
-- **New rule options** are optional fields of `GameSetup` and `GameConfig` (as `tokenRule`, `glyphs`, `draft` and `initiative` are): new games set them, and a save without them keeps the old behaviour, so it still replays exactly. A change to how an existing option plays breaks the replays of games that used it; say so in the pull request.
+- **New rule options** are optional fields of `GameSetup` and `GameConfig` (as `tokenRule`, `glyphs`, `facing`, `draft` and `initiative` are): new games set them, and a save without them keeps the old behaviour, so it still replays exactly. A change to how an existing option plays breaks the replays of games that used it; say so in the pull request.
 - Abilities are implemented in `packages/rules/src/game/abilities.ts`.
 
 ## Content rules
@@ -49,6 +49,7 @@
 - **Right panel:** the unit cards, then Display and Save/Quit. The cards are sized from the window's height (`--card-room` in `styles.css`) so the buttons always stay on screen; the Display panel opens over the cards. `full-game` checks it.
 - **Hex tooltip:** a middle click on the play, replay or draft board (`ui/HexTip.tsx`, through `BoardScene`'s `onInspect`); a middle drag still zooms.
 - **Glyphs:** face-down tiles on the board (`scene/Glyphs.tsx`) and the Glyphs panel (`ui/GlyphPanel.tsx`) in the left column. Held glyphs show face up only to their player (online the view hides the rest; hot-seat shows only the active player's). A glyph's Use lists the units `glyphProblem` allows; the Glyph of Resurrection then opens the Resurrection panel, where the player clicks the hexes `summonOptions` offers for each figure. New games (hot-seat and online) set `glyphs` (default 4); older saves leave it out and have none.
+- **Facing:** new games (hot-seat and online) set `facing`; older saves leave it out, have no facing and keep their models turned to the nearest enemy. A figure's `facing` is in degrees (`packages/rules/src/game/facing.ts`, the same turn the client draws a model with). R sends `face` for the figure `turning()` picks in `PlayScreen.tsx` (the chosen one if it may turn, else the last to move that may), which draws its front cone's outline (`FacingCone` in `scene/Figures.tsx`); otherwise R still turns a big figure being placed. Tokens show facing with a pointer on the cap. Eye view keeps to the front cone (`coneLimits` in `scene/BoardScene.tsx`). `figureFaced` is left out of the log.
 - **Draft map:** the draft opens on the battlefield (`screens/DraftMap.tsx`) until the first pick has been made; **Go to the draft** and **View map** switch views.
 
 ### Music

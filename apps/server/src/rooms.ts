@@ -349,6 +349,8 @@ export class RoomManager {
       // At most one activation token on each unit.
       tokenRule: "onePerUnit",
       glyphs: s.glyphs ?? 0,
+      // Figures face a way.
+      facing: true,
     };
     const { state, events } = createGame(setup, room.ctx);
     room.setup = setup;

@@ -118,6 +118,9 @@ export function describeEvent(e: GameEvent, names: Names): string | null {
     }
     case "figureSlid":
       return `${names.figure(e.figureId)} slides.`;
+    case "figureFaced":
+      // Turning is shown on the board; each press of R would fill the log.
+      return null;
     case "attackRolled": {
       const extras = e.notes && e.notes.length > 0 ? ` (${e.notes.join(", ")})` : "";
       const result = `${plural(e.hits, "hit")}, ${plural(e.blocks, "block")}, ${plural(e.wounds, "wound")}${extras}`;

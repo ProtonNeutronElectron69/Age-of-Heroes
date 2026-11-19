@@ -105,6 +105,10 @@ function randomCommand(state: GameState, rng: Rng, c: RulesContext): Command {
             return { type: "move", player: active.player, figureId: f.id, path: choice.path };
           }
         }
+        // Sometimes turn a figure that has just moved (games with facing).
+        if (active.turnable?.includes(f.id) && rng.float() < 0.3) {
+          return { type: "face", player: active.player, figureId: f.id, facing: Math.floor(rng.float() * 8) * 45 };
+        }
         if (!active.attacked.includes(f.id)) {
           // Sometimes use a special action (area attack or mind control) instead.
           const specials = specialActions(c.cards.get(unit.cardId)!);
@@ -169,6 +173,8 @@ function playRandomGame(seed: number, players: number, budget: number, online = 
     tokenRule: "onePerUnit",
     // Glyphs on the board: picked up, sprung and used along the way.
     glyphs: 8,
+    // Figures face a way: ranged attacks need the target in front, and melee from behind rolls more.
+    facing: true,
   };
   const rng = new Rng(seed * 7919 + 1);
   let state = createGame(setup, ctx).state;

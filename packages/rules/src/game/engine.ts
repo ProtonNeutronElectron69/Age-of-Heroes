@@ -14,6 +14,7 @@ import {
   zoneCapacity,
 } from "./draft";
 import { fail, RulesError } from "./errors";
+import { faceFigure } from "./facing";
 import { curseTurnEnded, useGlyph } from "./glyphs";
 import { moveFigure } from "./movement";
 import { findUnit, isUnitAlive, tokensToPlace } from "./queries";
@@ -72,6 +73,7 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
       initiative: setup.initiative ?? "auto",
       tokenRule: setup.tokenRule ?? "stack",
       ...(setup.glyphs ? { glyphs: Math.max(0, Math.min(GLYPH_KINDS.length, Math.floor(setup.glyphs))) } : {}),
+      ...(setup.facing ? { facing: true } : {}),
     },
     rng: setup.seed >>> 0,
     round: 0,
@@ -150,6 +152,9 @@ export function applyCommand(state: GameState, command: Command, ctx: RulesConte
         break;
       case "endTurn":
         endTurn(next, command.player, events, ctx);
+        break;
+      case "face":
+        faceFigure(next, command.player, command.figureId, command.facing, events, ctx);
         break;
       case "useGlyph":
         useGlyph(next, command.player, command.glyphId, command.unitId, command.placements, events, ctx);

@@ -25,6 +25,7 @@ import {
   type ReachSpec,
 } from "./abilities";
 import { engagedEnemies, spotsEngaged } from "./engagement";
+import { facingOf, seesAny } from "./facing";
 import { glyphBonus } from "./glyphs";
 import { fail } from "./errors";
 import { forcedMove, freeSpotFor } from "./movement";
@@ -88,6 +89,8 @@ function actionProblem(state: GameState, attackerId: string, targetId: string, c
   const withTarget = spotsEngaged(aSpots, aHeight, tSpots, tHeight);
   if (engaged.length > 0 && !withTarget) return "An engaged figure can only attack enemies it is engaged with";
   if (reach.range === 1 && !withTarget) return "Too far above or below to reach";
+  const facing = facingOf(state, a.figure);
+  if (facing !== null && distance > 1 && !seesAny(facing, aSpots, tSpots)) return "Out of view: a ranged attack needs the target in front";
   if (reach.ignoresSight) return null;
 
   const blockers: Token[] = [];
@@ -206,6 +209,8 @@ export function blastProblem(state: GameState, attackerId: string, at: Step, ctx
   if (engagedEnemies(state, a.unit.owner, attacker.spots, attacker.card.height, ctx).length > 0) {
     return "An engaged figure can only attack enemies it is engaged with";
   }
+  const facing = facingOf(state, a.figure);
+  if (facing !== null && distance > 1 && !seesAny(facing, attacker.spots, [at])) return "Out of view: a ranged attack needs the target in front";
   if (area.ignoresSight) return null;
   const blockers: Token[] = [];
   for (const unit of state.units) {
@@ -338,6 +343,8 @@ function canReach(state: GameState, ctx: RulesContext, from: Combatant, to: Comb
   const range = statsOf(from.card).range + glyphBonus(state, from.unit.id, "range", ctx);
   if (spotDistance(from.spots, to.spots) > range) return false;
   if (range === 1 && !spotsEngaged(from.spots, from.card.height, to.spots, to.card.height)) return false;
+  const facing = facingOf(state, from.figure);
+  if (facing !== null && spotDistance(from.spots, to.spots) > 1 && !seesAny(facing, from.spots, to.spots)) return false;
   const blockers: Token[] = [];
   for (const unit of state.units) {
     const card = ctx.cards.get(unit.cardId);
@@ -433,7 +440,9 @@ function diceFor(state: GameState, ctx: RulesContext, attacker: Combatant, defen
   const glyphDefense = glyphBonus(state, defender.unit.id, "defense", ctx);
   if (glyphAttack) notes.push(`Glyph +${glyphAttack} attack`);
   if (glyphDefense) notes.push(`Glyph +${glyphDefense} defense`);
-  const attackBonus = height.attackBonus + mods.attack + glyphAttack;
+  const behind = behindBonus(state, ctx, attacker, defender);
+  if (behind) notes.push(`From behind +${behind} attack`);
+  const attackBonus = height.attackBonus + mods.attack + glyphAttack + behind;
   const defenseBonus = height.defenseBonus + mods.defense + (cover?.dice ?? 0) + glyphDefense;
   notes.push(...mods.notes);
   if (cover) notes.push(`Behind a ${cover.name.toLowerCase()} +${cover.dice} defense`);
@@ -444,6 +453,17 @@ function diceFor(state: GameState, ctx: RulesContext, attacker: Combatant, defen
     defenseBonus,
     notes,
   };
+}
+
+/**
+ * Strike from behind (games with facing): a melee attack by a figure wholly outside the
+ * defender's front cone rolls extra attack dice. It adds to the higher-ground bonus.
+ */
+function behindBonus(state: GameState, ctx: RulesContext, attacker: Combatant, defender: Combatant): number {
+  const facing = facingOf(state, defender.figure);
+  if (facing === null || spotDistance(attacker.spots, defender.spots) > 1) return 0;
+  if (seesAny(facing, defender.spots, attacker.spots)) return 0;
+  return tuningOf(ctx).behindBonus ?? 0;
 }
 
 /** Roll one attack against one defender and apply the result. */
@@ -576,6 +596,7 @@ export function attack(
   const active = state.active!;
   active.attacked.push(figureId);
   active.attackLog.push({ attackerId: figureId, targetId });
+  stopTurning(state, figureId);
   // Smoke Step: a short move after attacking.
   if (!attacker.figure.destroyed && hasAbility(attacker.card, "smoke-step")) {
     active.bonusMoves[figureId] = param(abilityOf(attacker.card, "smoke-step"), "move", 2);
@@ -585,6 +606,12 @@ export function attack(
     active.bonusMoves[figureId] = param(abilityOf(attacker.card, "corpse-feast"), "move", 2);
   }
   checkGameOver(state, events, ctx);
+}
+
+/** A figure that attacks can no longer be turned this turn. */
+function stopTurning(state: GameState, figureId: string): void {
+  const active = state.active;
+  if (active?.turnable) active.turnable = active.turnable.filter((id) => id !== figureId);
 }
 
 /** A blast aimed at an empty hex (`blast` command): every figure next to the hex takes the splash dice, once. */
@@ -611,6 +638,7 @@ export function blastHex(
   state.rng = rng.state;
   const active = state.active!;
   active.attacked.push(figureId);
+  stopTurning(state, figureId);
   if (!attacker.figure.destroyed && hasAbility(attacker.card, "smoke-step")) {
     active.bonusMoves[figureId] = param(abilityOf(attacker.card, "smoke-step"), "move", 2);
   }
