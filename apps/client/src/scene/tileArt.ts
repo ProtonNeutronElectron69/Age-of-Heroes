@@ -5,8 +5,8 @@
  * board with it is drawn in the detailed look, and kept.
  */
 
-type Noise = (x: number, y: number) => number;
-type RGB = [number, number, number];
+export type Noise = (x: number, y: number) => number;
+export type RGB = [number, number, number];
 
 /** A painted surface: its colour, height (relief) and glow canvases. */
 export interface Surface {
@@ -34,7 +34,7 @@ interface SideOptions {
 }
 
 // ---------- Small helpers: seeded random, value noise, colours ----------
-function rng(seed: number): () => number {
+export function rng(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -44,7 +44,7 @@ function rng(seed: number): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-function noise2(seed: number): Noise {
+export function noise2(seed: number): Noise {
   const r = rng(seed), N = 256, g = new Float32Array(N * N);
   for (let i = 0; i < g.length; i++) g[i] = r();
   const at = (x: number, y: number) => g[((y & 255) << 8) | (x & 255)]!;
@@ -55,23 +55,23 @@ function noise2(seed: number): Noise {
     return a + (b - a) * xf + (c - a) * yf + (a - b - c + d) * xf * yf;
   };
 }
-function fbm(n: Noise, x: number, y: number, oct = 4): number {
+export function fbm(n: Noise, x: number, y: number, oct = 4): number {
   let v = 0, amp = 0.5, f = 1, norm = 0;
   for (let i = 0; i < oct; i++) { v += n(x * f, y * f) * amp; norm += amp; amp *= 0.5; f *= 2.03; }
   return v / norm;
 }
-const hex = (h: string): RGB => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
-const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
-const clamp = (v: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
-const shade = (c: RGB, k: number): RGB => [c[0] * k, c[1] * k, c[2] * k];
+export const hex = (h: string): RGB => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+export const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+export const clamp = (v: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
+export const shade = (c: RGB, k: number): RGB => [c[0] * k, c[1] * k, c[2] * k];
 
-function surface(w: number, h: number): Surface {
+export function surface(w: number, h: number): Surface {
   const mk = () => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
   const color = mk(), height = mk(), glow = mk();
   return { w, h, color, height, glow, cx: color.getContext("2d")!, hx: height.getContext("2d")!, gx: glow.getContext("2d")!, glowing: false };
 }
 /** Fill every pixel: fn returns [r,g,b, height 0..1, glow rgb or null]. */
-function pixels(s: Surface, fn: (x: number, y: number) => readonly [number, number, number, number, (RGB | null)?]): void {
+export function pixels(s: Surface, fn: (x: number, y: number) => readonly [number, number, number, number, (RGB | null)?]): void {
   const c = s.cx.createImageData(s.w, s.h), h = s.hx.createImageData(s.w, s.h), g = s.gx.createImageData(s.w, s.h);
   for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
     const [r, gg, b, ht, glow] = fn(x, y), i = (y * s.w + x) * 4;
@@ -83,7 +83,7 @@ function pixels(s: Surface, fn: (x: number, y: number) => readonly [number, numb
   s.cx.putImageData(c, 0, 0); s.hx.putImageData(h, 0, 0); s.gx.putImageData(g, 0, 0);
 }
 /** Voronoi cells: nearest and second-nearest distances and the nearest cell's index. */
-function cells(seed: number, count: number, size: number): (x: number, y: number) => { d1: number; d2: number; edge: number; v: number } {
+export function cells(seed: number, count: number, size: number): (x: number, y: number) => { d1: number; d2: number; edge: number; v: number } {
   const r = rng(seed), pts: [number, number, number][] = [];
   for (let i = 0; i < count; i++) pts.push([r() * size, r() * size, r()]);
   return (x, y) => {
@@ -96,13 +96,14 @@ function cells(seed: number, count: number, size: number): (x: number, y: number
   };
 }
 /** Draw the same stroke on the colour canvas and, raised, on the height canvas. */
-function both(s: Surface, draw: (g: CanvasRenderingContext2D) => void, color: string, lift: string): void {
+export function both(s: Surface, draw: (g: CanvasRenderingContext2D) => void, color: string, lift: string): void {
   s.cx.save(); s.cx.fillStyle = s.cx.strokeStyle = color; draw(s.cx); s.cx.restore();
   s.hx.save(); s.hx.fillStyle = s.hx.strokeStyle = lift; draw(s.hx); s.hx.restore();
 }
 
 // ---------- The tops: one painter per terrain (512 px square, the hex cap uses the middle) ----------
-const T = 512;
+/** The size of a painted texture, in pixels. */
+export const T = 512;
 const TOPS: Record<string, (s: Surface) => void> = {
   grass(s) {
     const n = noise2(11), m = noise2(12);
