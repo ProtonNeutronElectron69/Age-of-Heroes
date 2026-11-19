@@ -10,7 +10,8 @@ export type Paint =
   | "coat" | "facing" | "skin" | "hair" | "powder" | "hat" | "gold" | "steel" | "wood"
   | "leather" | "boot" | "white" | "black" | "sash" | "glove" | "blanket" | "eye"
   | "lacquer" | "lace" | "hakama" | "tabi" | "kimono" | "obi"
-  | "fur" | "stripe" | "mane" | "belly" | "horn" | "glow" | "glowGreen" | "leaf" | "wing" | "wingbone";
+  | "fur" | "stripe" | "mane" | "belly" | "horn" | "glow" | "glowGreen" | "leaf" | "wing" | "wingbone"
+  | "bone" | "ironDark" | "mail" | "pelt" | "beard" | "hairLight" | "machine" | "glowCyan" | "coatDark" | "tunic";
 
 export interface PaintLook {
   readonly color: string;
@@ -69,5 +70,17 @@ export function paintLook(p: Paint, { scheme, main, faction }: PaintContext): Pa
     case "leaf": return look("#5d9a3c");
     case "wing": return look("#c0612a", 0.6);
     case "wingbone": return look(blend(main, "#000000", 0.35));
+    case "bone": return look("#d8ceb0", 0.6);
+    case "ironDark": return look("#4a4d52", 0.45, 0.2);
+    case "mail": return look("#8d939b", 0.4, 0.25);
+    case "pelt": return look("#8a6a4a");
+    case "beard": return look("#9a5a2a");
+    case "hairLight": return look("#d9c27a");
+    case "machine": return look("#3c4149", 0.45, 0.15);
+    case "glowCyan": return look("#5ff0ff", 0.7, 0, true);
+    // A darker shade of the main colour: a cloak or a lining.
+    case "coatDark": return look(blend(main, "#000000", 0.4));
+    // A tunic under a cloak: the main colour turned towards a woodland brown.
+    case "tunic": return look(blend(main, "#5a4a30", 0.5));
   }
 }
