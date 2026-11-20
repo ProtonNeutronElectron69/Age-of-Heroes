@@ -9,6 +9,7 @@ import {
 } from "@aoh/rules";
 import { useState } from "react";
 import type { Names } from "../describe";
+import { glyphArtUrl } from "./glyphArt";
 
 interface Props {
   state: GameState;
@@ -27,9 +28,11 @@ interface Props {
 
 function Chip({ kind }: { kind: GlyphKind }) {
   const g = GLYPHS[kind];
+  // The glyph's art where the page can draw it, else its letter.
+  const art = glyphArtUrl(kind);
   return (
-    <span className="glyph-chip" style={{ background: g.color }} aria-hidden>
-      {g.mark}
+    <span className="glyph-chip" style={{ background: art ? `${g.color} url(${art}) center / cover` : g.color }} aria-hidden>
+      {art ? null : g.mark}
     </span>
   );
 }

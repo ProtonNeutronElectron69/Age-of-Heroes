@@ -1,14 +1,12 @@
 import { Rng } from "../rng";
 import { initiativeBonus, spendInitiativeGlyphs } from "./glyphs";
-import { activePlayers, findUnit, isUnitAlive, livingUnitsOf, scoreOf } from "./queries";
+import { activePlayers, findUnit, isUnitAlive, livingUnitsOf, mostNumberedTokens, scoreOf } from "./queries";
 import {
-  NUMBERED_TOKENS,
   type DamageSource,
   type FigureState,
   type GameEvent,
   type GameResult,
   type GameState,
-  type NumberedToken,
   type PlayerId,
   type RollOff,
   type RulesContext,
@@ -45,6 +43,10 @@ export function rollOff(state: GameState, rng: Rng, ctx?: RulesContext): { order
 
 /** Begin a new round: everyone places activation tokens in secret. */
 export function startRound(state: GameState, events: GameEvent[]): void {
+  // Under "half", each player's tokens are fixed as the first round begins: half their army, rounded up.
+  if (state.round === 0 && state.config.tokenAllowance === "half") {
+    state.tokenCounts = Object.fromEntries(state.players.map((p) => [p.id, Math.ceil(state.units.filter((u) => u.owner === p.id).length / 2)]));
+  }
   state.round += 1;
   state.phase = "placeTokens";
   state.tokens = Object.fromEntries(state.players.map((p) => [p.id, null]));
@@ -94,9 +96,8 @@ export function stepPointer(state: GameState): void {
     state.pointer = { token: p.token, orderIndex: nextIndex };
     return;
   }
-  const t = NUMBERED_TOKENS.indexOf(p.token);
-  const nextToken = NUMBERED_TOKENS[t + 1];
-  state.pointer = nextToken ? { token: nextToken, orderIndex: 0 } : null;
+  const next = Number(p.token) + 1;
+  state.pointer = next <= mostNumberedTokens(state) ? { token: String(next), orderIndex: 0 } : null;
 }
 
 /** Resolve token reveals until a turn can start or the round ends. */
@@ -127,7 +128,7 @@ export function advance(state: GameState, events: GameEvent[], ctx: RulesContext
     state.active = {
       player,
       unitId,
-      token: token as NumberedToken,
+      token,
       moved: [],
       attacked: [],
       attackLog: [],

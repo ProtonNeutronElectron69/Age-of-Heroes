@@ -183,6 +183,8 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
         glyphs,
         // Figures face a way.
         facing: true,
+        // Activation tokens for half the army, rounded up, plus the bluff.
+        tokenAllowance: "half",
         players: Array.from({ length: players }, (_, i) => ({
           id: `p${i + 1}`,
           name: names[i]!.trim() || `Player ${i + 1}`,

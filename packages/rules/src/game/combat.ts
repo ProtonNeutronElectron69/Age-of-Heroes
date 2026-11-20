@@ -25,7 +25,7 @@ import {
   type ReachSpec,
 } from "./abilities";
 import { engagedEnemies, spotsEngaged } from "./engagement";
-import { facingOf, seesAny } from "./facing";
+import { faceEachOther, facingOf, seesAny } from "./facing";
 import { glyphBonus } from "./glyphs";
 import { fail } from "./errors";
 import { forcedMove, freeSpotFor } from "./movement";
@@ -545,6 +545,7 @@ export function attack(
     const centre = aim ? defender.spots.filter((s) => hexEquals(s.hex, aim)) : defender.spots;
     const splashed = splashedBy(state, ctx, centre, [targetId, figureId]);
     resolve(state, ctx, rng, attacker, defender, area.dice, area.id, events);
+    if (spotDistance(attacker.spots, defender.spots) <= 1) faceEachOther(state, attacker, defender, events);
     for (const c of splashed) {
       if (!c.figure.destroyed) resolve(state, ctx, rng, attacker, c, area.splashDice, area.id, events);
     }
@@ -577,6 +578,8 @@ export function attack(
     });
   } else {
     resolve(state, ctx, rng, attacker, defender, statsOf(attacker.card).attack, undefined, events);
+    // A melee attack: once the dice are rolled, the two figures turn to face each other.
+    if (spotDistance(attacker.spots, defender.spots) <= 1) faceEachOther(state, attacker, defender, events);
     // Shoulder Barge: a melee hit shoves the target one hex back.
     const shove = hasAbility(attacker.card, "shove") ? abilityOf(attacker.card, "shove") : undefined;
     if (shove && !attacker.figure.destroyed && !defender.figure.destroyed && defender.card.size !== "huge" && spotDistance(attacker.spots, defender.spots) <= 1) {

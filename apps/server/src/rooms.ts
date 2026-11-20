@@ -351,6 +351,8 @@ export class RoomManager {
       glyphs: s.glyphs ?? 0,
       // Figures face a way.
       facing: true,
+      // Activation tokens for half the army, rounded up, plus the bluff.
+      tokenAllowance: "half",
     };
     const { state, events } = createGame(setup, room.ctx);
     room.setup = setup;

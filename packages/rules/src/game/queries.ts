@@ -2,7 +2,7 @@ import { hexKey } from "../hex";
 import type { UnitCard } from "../schema";
 import { fail } from "./errors";
 import { figureSpots } from "./placement";
-import { TOKEN_IDS, type FigureState, type GameState, type PlayerId, type RulesContext, type Step, type UnitState } from "./types";
+import { BLUFF_TOKEN, NUMBERED_TOKENS, type FigureState, type TokenId, type GameState, type PlayerId, type RulesContext, type Step, type UnitState } from "./types";
 
 /** A card's stats, with its Height alongside. */
 export interface EffectiveStats {
@@ -45,9 +45,25 @@ export function livingUnitsOf(state: GameState, player: PlayerId): UnitState[] {
  * "onePerUnit" rule each token needs a unit of its own, so a player with fewer living units
  * places one on each.
  */
+/** How many numbered tokens a player has: three, or under `tokenAllowance: "half"` half their starting army. */
+export function numberedTokenCount(state: Pick<GameState, "config" | "tokenCounts">, player: PlayerId): number {
+  return state.config.tokenAllowance === "half" ? (state.tokenCounts?.[player] ?? NUMBERED_TOKENS.length) : NUMBERED_TOKENS.length;
+}
+
+/** A player's tokens: "1" up to their count, then the bluff. */
+export function tokenIdsFor(state: Pick<GameState, "config" | "tokenCounts">, player: PlayerId): TokenId[] {
+  return [...Array.from({ length: numberedTokenCount(state, player) }, (_, i) => String(i + 1)), BLUFF_TOKEN];
+}
+
+/** The highest numbered token any player has: the round's turns run from "1" to it. */
+export function mostNumberedTokens(state: GameState): number {
+  return Math.max(0, ...state.players.map((p) => numberedTokenCount(state, p.id)));
+}
+
 export function tokensToPlace(state: GameState, player: PlayerId): number {
-  if (state.config.tokenRule !== "onePerUnit") return TOKEN_IDS.length;
-  return Math.min(TOKEN_IDS.length, livingUnitsOf(state, player).length);
+  const all = tokenIdsFor(state, player).length;
+  if (state.config.tokenRule !== "onePerUnit") return all;
+  return Math.min(all, livingUnitsOf(state, player).length);
 }
 
 export function activePlayers(state: GameState): PlayerId[] {

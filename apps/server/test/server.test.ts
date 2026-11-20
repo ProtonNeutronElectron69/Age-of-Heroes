@@ -12,7 +12,7 @@ import {
   deploymentPlacements,
   draftableCards,
   livingUnitsOf,
-  TOKEN_IDS,
+  tokenIdsFor,
   tokensToPlace,
   replayGame,
   type Command,
@@ -140,7 +140,7 @@ async function rejected(clients: Map<string, Client>, command: Command): Promise
 /** A token on each of the player's units in turn, as many as the rules ask for. */
 function oneEach(state: GameState, player: string): Record<string, string> {
   const units = livingUnitsOf(state, player);
-  return Object.fromEntries(TOKEN_IDS.slice(0, tokensToPlace(state, player)).map((t, i) => [t, units[i % units.length]!.id]));
+  return Object.fromEntries(tokenIdsFor(state, player).slice(0, tokensToPlace(state, player)).map((t, i) => [t, units[i % units.length]!.id]));
 }
 
 /**
@@ -323,7 +323,8 @@ describe("a full online game", () => {
     const p1Tokens = oneEach(current(), "p1");
     // Online games keep one token on each unit.
     const p1Unit = livingUnitsOf(current(), "p1")[0]!.id;
-    const stacked = await rejected(clients, { type: "placeTokens", player: "p1", tokens: { "1": p1Unit, "2": p1Unit } });
+    const [first, second] = tokenIdsFor(current(), "p1");
+    const stacked = await rejected(clients, { type: "placeTokens", player: "p1", tokens: { [first!]: p1Unit, [second!]: p1Unit } });
     expect(stacked).toMatch(/one token|Place \d token|All four/);
     await act(clients, { type: "placeTokens", player: "p1", tokens: p1Tokens });
     expect(host.client.lastView()!.tokens.p1).toEqual(p1Tokens);

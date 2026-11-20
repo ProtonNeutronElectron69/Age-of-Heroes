@@ -7,13 +7,19 @@ import type { Tuning } from "../tuning";
 
 export type PlayerId = string;
 
-/** The four activation tokens: three numbered turns and a bluff. */
-export type TokenId = "1" | "2" | "3" | "X";
-export type NumberedToken = "1" | "2" | "3";
+/**
+ * Activation tokens (order markers): numbered turns "1", "2", ... and the "X" bluff. Older games
+ * have three numbered tokens; under `tokenAllowance: "half"` each player has half their army's
+ * cards, rounded up (`tokenIdsFor` in `queries.ts`).
+ */
+export type TokenId = string;
+export type NumberedToken = string;
+/** The tokens of games without `tokenAllowance`: three numbered turns and a bluff. */
 export const TOKEN_IDS: readonly TokenId[] = ["1", "2", "3", "X"];
 export const NUMBERED_TOKENS: readonly NumberedToken[] = ["1", "2", "3"];
+/** The bluff token: placed like the others, but it gives no turn. */
+export const BLUFF_TOKEN = "X";
 
-/** Which unit card each token is placed on. One unit may hold several tokens. */
 /** Which unit holds each token. A token left out was not placed (only under the "onePerUnit" rule). */
 export type TokenAssignment = Partial<Record<TokenId, string>>;
 
@@ -92,6 +98,9 @@ export type InitiativeMode = "auto" | "players";
  * units places one token on each and leaves the rest off.
  */
 export type TokenRule = "stack" | "onePerUnit";
+
+/** How many numbered tokens a player has: "half" their starting army's cards, rounded up. */
+export type TokenAllowance = "half";
 
 /**
  * Glyphs: small tiles scattered face down on the battlefield. A figure that ends a move on one
@@ -197,6 +206,11 @@ export interface GameConfig {
   /** How many glyphs are scattered when deployment ends; left out (or 0) for none. */
   readonly glyphs?: number;
   /**
+   * "half": each player has numbered tokens for half the cards their army starts with, rounded
+   * up, plus the bluff. Left out by older games, which have three.
+   */
+  readonly tokenAllowance?: TokenAllowance;
+  /**
    * Figures face a way: ranged attacks need the target in front, and a melee attack from behind
    * rolls extra dice. Left out by games saved before the rule existed, which have no facing.
    */
@@ -217,6 +231,13 @@ export interface GameState {
   deploy: DeployState | null;
   /** This round's secret token placements; null until the player places them. */
   tokens: Record<PlayerId, TokenAssignment | null>;
+  /** How many numbered tokens each player has (`tokenAllowance: "half"`), set as round 1 begins. */
+  tokenCounts?: Record<PlayerId, number>;
+  /**
+   * Only in a state rebuilt from a player's view (online): the units holding each other player's
+   * unrevealed tokens, without their numbers. The engine never sets it.
+   */
+  hiddenTokens?: Record<PlayerId, string[]>;
   /** Tokens that have been flipped face up this round. */
   revealed: Record<PlayerId, TokenId[]>;
   /** Turn order for this round, set by the initiative roll. */
@@ -269,6 +290,8 @@ export interface GameSetup {
   readonly tokenRule?: TokenRule;
   /** How many glyphs to scatter on the battlefield when deployment ends (0 to 11). */
   readonly glyphs?: number;
+  /** New games give each player tokens for half their army; older ones leave it out and have three. */
+  readonly tokenAllowance?: TokenAllowance;
   /** New games turn facing on; older ones leave it out and have none. */
   readonly facing?: boolean;
 }

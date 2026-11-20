@@ -441,19 +441,21 @@ try {
       await page.locator(".pass-card button").click();
       const rows = page.locator(".token-table tbody tr");
       const n = await rows.count();
-      // One token on each unit (the rule now), as many as there are units, up to four.
-      const tokens = ["1", "2", "3", "X"].slice(0, Math.min(4, n));
+      // One token on each unit (the rule now), as many as there are units, up to the player's tokens.
+      const ids = (await page.locator(".token-table thead th").allInnerTexts()).slice(1);
+      const tokens = ids.slice(0, Math.min(ids.length, n));
       for (const [row, token] of tokens.entries()) {
         await rows.nth(row).getByRole("button", { name: new RegExp(`^Token ${token} on`) }).click();
       }
       // A second token on a unit takes the first one's place.
-      if (!tokensChecked && n >= 2) {
+      if (!tokensChecked && n >= 2 && tokens.length >= 2) {
         tokensChecked = true;
-        await rows.nth(0).getByRole("button", { name: /^Token 2 on/ }).click();
-        if ((await rows.nth(0).getByRole("button", { name: /^Token 1 on/ }).getAttribute("aria-pressed")) !== "false") fail("A unit kept two tokens");
+        const [first, second] = tokens;
+        await rows.nth(0).getByRole("button", { name: new RegExp(`^Token ${second} on`) }).click();
+        if ((await rows.nth(0).getByRole("button", { name: new RegExp(`^Token ${first} on`) }).getAttribute("aria-pressed")) !== "false") fail("A unit kept two tokens");
         if (await page.getByRole("button", { name: "Lock in tokens" }).count()) fail("Tokens could be locked in with one left off");
-        await rows.nth(0).getByRole("button", { name: /^Token 1 on/ }).click();
-        await rows.nth(1).getByRole("button", { name: /^Token 2 on/ }).click();
+        await rows.nth(0).getByRole("button", { name: new RegExp(`^Token ${first} on`) }).click();
+        await rows.nth(1).getByRole("button", { name: new RegExp(`^Token ${second} on`) }).click();
       }
       if (step === 0 || attacks === 0) await shot("4-tokens");
       await page.getByRole("button", { name: "Lock in tokens" }).click();

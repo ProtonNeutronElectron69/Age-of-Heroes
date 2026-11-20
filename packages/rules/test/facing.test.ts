@@ -113,3 +113,24 @@ describe("facing", () => {
     expect(d.notes).toEqual(expect.arrayContaining(["Higher ground +1 attack", "From behind +2 attack"]));
   });
 });
+
+describe("a melee attack", () => {
+  it("turns both figures to face each other after the roll, so a strike from behind still counts", () => {
+    const s = game("p1:0", { "p1:0#1": at(4), "p2:0#1": at(5) }, { "p1:0#1": 270, "p2:0#1": 90 });
+    const r = apply(s, { type: "attack", player: "p1", figureId: "p1:0#1", targetId: "p2:0#1" });
+    const roll = r.events.find((e) => e.type === "attackRolled");
+    expect(roll).toMatchObject({ attackBonus: 2 });
+    // The attacker is west of the defender: it now faces east, and the defender (if standing) west.
+    expect(facingOf(r.state, "p1:0#1")).toBe(90);
+    const defender = r.state.units.flatMap((u) => u.figures).find((f) => f.id === "p2:0#1")!;
+    if (!defender.destroyed) expect(defender.facing).toBe(270);
+    expect(r.events.filter((e) => e.type === "figureFaced").map((e) => e.figureId)).toContain("p1:0#1");
+  });
+
+  it("does not turn figures in a ranged attack", () => {
+    const s = game("p1:1", { "p1:1#1": at(2), "p2:0#1": at(5) }, { "p1:1#1": 45, "p2:0#1": 90 });
+    const r = apply(s, { type: "attack", player: "p1", figureId: "p1:1#1", targetId: "p2:0#1" });
+    expect(facingOf(r.state, "p1:1#1")).toBe(45);
+    expect(r.events.some((e) => e.type === "figureFaced")).toBe(false);
+  });
+});

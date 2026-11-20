@@ -10,6 +10,7 @@ import {
   type Phase,
   type PlayerView,
   type TokenAssignment,
+  tokenIdsFor,
 } from "@aoh/rules";
 import { z } from "zod";
 
@@ -46,8 +47,8 @@ export const commandSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("placeTokens"),
     player: id,
-    // Every token in older games; under the "onePerUnit" rule, one for each of the player's units, up to four.
-    tokens: z.object({ "1": id.optional(), "2": id.optional(), "3": id.optional(), X: id.optional() }).strict(),
+    // Token "1" up to the player's count, and "X": every one in older games; under the "onePerUnit" rule, one for each of the player's units.
+    tokens: z.record(z.string().regex(/^([1-9][0-9]?|X)$/), id).refine((t) => Object.keys(t).length <= 100),
   }),
   z.object({ type: z.literal("move"), player: id, figureId: id, path: z.array(stepSchema).min(1).max(64) }),
   z.object({ type: z.literal("attack"), player: id, figureId: id, targetId: id, ability: id.optional(), aim: hexSchema.optional() }),
@@ -107,6 +108,8 @@ const setupSchema = z
     glyphs: z.number().int().min(0).max(11).optional(),
     /** New games: figures face a way. Older files leave it out (no facing). */
     facing: z.boolean().optional(),
+    /** New games: tokens for half each army, rounded up. Older files leave it out (three). */
+    tokenAllowance: z.enum(["half"]).optional(),
   })
   .superRefine((s, ctx) => {
     if (s.mode === "basic") ctx.addIssue({ code: "custom", path: ["mode"], message: BASIC_RULES_GONE });
@@ -286,7 +289,7 @@ export function parseReplay(data: unknown): Replay {
  * strings, and the RNG is zero: neither is needed to show the game.
  */
 export function stateFromView(view: PlayerView): GameState {
-  const { viewer: _viewer, tokensPlaced, tokens, ...rest } = view;
+  const { viewer: _viewer, tokensPlaced, tokens, hiddenTokens, ...rest } = view;
   const full: Record<string, TokenAssignment | null> = {};
   for (const p of view.players) {
     if (!tokensPlaced[p.id]) {
@@ -295,7 +298,8 @@ export function stateFromView(view: PlayerView): GameState {
     }
     const known = tokens[p.id] ?? {};
     // The viewer's own tokens are all known, placed or not; another player's hidden ones are blank.
-    full[p.id] = p.id === view.viewer ? { ...known } : { "1": known["1"] ?? "", "2": known["2"] ?? "", "3": known["3"] ?? "", X: known.X ?? "" };
+    full[p.id] = p.id === view.viewer ? { ...known } : Object.fromEntries(tokenIdsFor(view, p.id).map((t) => [t, known[t] ?? ""]));
   }
-  return { ...rest, rng: 0, tokens: full };
+  // Where the other players' hidden tokens lie (the units, not which token is which), for the table.
+  return { ...rest, rng: 0, tokens: full, ...(hiddenTokens ? { hiddenTokens } : {}) };
 }
