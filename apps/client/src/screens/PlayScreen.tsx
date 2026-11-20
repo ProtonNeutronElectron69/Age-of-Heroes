@@ -417,6 +417,8 @@ export function PlayScreen({ session }: { session: Session }) {
   const [show, setShow] = useState<{ stamp: number; kind: "initiative"; events: readonly GameEvent[] } | null>(null);
   /** Online: the show this device has told the others it is done with, so it tells them once. */
   const reported = useRef(-1);
+  /** How many attack intros a click has skipped, for the browser tests (`__aohUi.introsSkipped`). */
+  const introsSkipped = useRef(0);
   const reportWatched = (stamp: number) => {
     if (me === null || reported.current === stamp) return;
     reported.current = stamp;
@@ -462,6 +464,7 @@ export function PlayScreen({ session }: { session: Session }) {
   const skipBeat = () => {
     const b = beatRef.current;
     if (!b) return;
+    if (b.part === "intro") introsSkipped.current++;
     if (!isOnline) {
       if (b.part === "intro" && display.dice !== "none") toDice(b);
       else endBeat();
@@ -702,6 +705,7 @@ export function PlayScreen({ session }: { session: Session }) {
       aiming: aiming ? { id: aiming, spots: aimSpots } : null,
       blastHexes,
       turning: turner ? { id: turner, facing: findFigure(state, turner)?.figure.facing ?? 0 } : null,
+      introsSkipped: () => introsSkipped.current,
     };
   }, [state, ctx, selected, options, targets, active, drag, hoverOption, aiming, aimSpots, blastHexes, turner]);
 
