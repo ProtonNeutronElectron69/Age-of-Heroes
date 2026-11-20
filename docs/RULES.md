@@ -12,7 +12,7 @@ In short:
 - Higher ground gives combat bonuses, long drops cause falling damage, and a figure cannot climb a single step taller than its Height.
 - Line of sight is a strict 3D check, and other figures block it.
 - Figures next to enemies are engaged and draw passing strikes when they leave.
-- Figures face a way: a ranged attack needs its target in front, and a melee attack from behind rolls 2 more attack dice.
+- Figures face a way: an attack needs its target in front of the attacker, and a melee attack from behind rolls 2 more attack dice.
 - Every unit has special abilities, and terrain has its own effects.
 
 ## 2. Unit cards
@@ -216,7 +216,6 @@ New games give every figure a **facing**: the way it looks. Games saved before t
 - **Front cone**: a figure sees the half of the battlefield in front of it, 180 degrees, the side line included. Behind it is the other half.
 - **After a move**: a single-hex figure faces along its last step, to the nearest eighth of a turn. Until it attacks, its player may turn it to any of the eight directions (the R key, 45 degrees a press; Shift+R the other way). A figure that has not moved this turn keeps its facing, and once it attacks it can no longer turn (a move after attacking, such as Smoke Step's, lets it turn again).
 - **Multi-hex figures** face along their base, from its middle to its front hex, so they turn by turning their base as they move.
-- **Melee turns both figures**: once the dice of a melee attack (an adjacent target) have been rolled, the attacker and the defender turn to face each other, to the nearest eighth. A strike from behind still counts, since the turn comes after the roll. Multi-hex figures keep facing along their base, and a destroyed figure does not turn.
 - Figures pushed, pulled or swapped by abilities keep their facing. A figure brought back faces the middle of the battlefield.
 - **Eye view** shows only what is in front of the figure: the view turns no further than the edge of its front cone.
 
@@ -232,7 +231,7 @@ New games give every figure a **facing**: the way it looks. Games saved before t
 - Range is counted in hexes from the attacker to the target. For multi-hex figures, count between the nearest hexes of each.
 - Range 1 means the target must be adjacent.
 - An attack at range 1 needs the two figures to be engaged (see 9).
-- **Ranged attacks** (a target 2 or more hexes away, blasts and other ranged powers included) need some part of the target in the attacker's front cone (see Facing). A melee attack (an adjacent target) can strike any side.
+- **Facing**: every attack, melee or ranged (blasts and other powers aimed at a figure or a hex included), needs some part of the target in the attacker's front cone (see Facing).
 
 ### Line of sight
 Line of sight treats every figure as a token as tall as its Height, whether the board shows it as a figure model or as that token (the Display setting). Each token has an **eye point** (the centre of its top) and a **hit band** (a coloured band around its upper part).

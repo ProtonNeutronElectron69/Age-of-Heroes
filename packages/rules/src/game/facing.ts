@@ -5,13 +5,6 @@ import { fail } from "./errors";
 import { cardOf, findFigure } from "./queries";
 import type { FigurePosition, FigureState, GameEvent, GameState, PlayerId, RulesContext, Step } from "./types";
 
-/** A figure with its card's footprint and the spots it stands on (as `combatant` gives it). */
-interface Placed {
-  readonly figure: FigureState;
-  readonly card: { readonly footprint: Footprint };
-  readonly spots: readonly Step[];
-}
-
 /**
  * Facing (games with `config.facing`): which way a figure looks, in whole degrees turned from the
  * board's +z axis towards +x, the same turn the client draws a model with (`atan2(x, z)`). A
@@ -117,19 +110,3 @@ export function faceFigure(state: GameState, player: PlayerId, figureId: string,
   events.push({ type: "figureFaced", figureId, facing });
 }
 
-/**
- * After a melee attack's dice are rolled, the two figures turn to face each other (games with
- * facing), each to the nearest eighth. A figure on several hexes keeps facing along its base,
- * and a destroyed one does not turn.
- */
-export function faceEachOther(state: GameState, a: Placed, b: Placed, events: GameEvent[]): void {
-  if (!state.config.facing) return;
-  for (const [self, other] of [[a, b], [b, a]] as const) {
-    const f = self.figure;
-    if (self.card.footprint !== "1" || f.destroyed || !f.position || other.spots.length === 0) continue;
-    const facing = snapFacing(bearing(centreOf(self.spots.map((s) => s.hex)), centreOf(other.spots.map((s) => s.hex))));
-    if (f.facing === facing) continue;
-    f.facing = facing;
-    events.push({ type: "figureFaced", figureId: f.id, facing });
-  }
-}
