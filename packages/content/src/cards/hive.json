@@ -1,0 +1,276 @@
+[
+  {
+    "id": "hive-spawn",
+    "name": "Hive Spawn",
+    "tokenLabel": "HS",
+    "faction": "Sunken Hive",
+    "unitType": "commonSquad",
+    "figureCount": 4,
+    "species": "Alien",
+    "unitClass": "Drone",
+    "personality": "Relentless",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "life": 1,
+    "move": 5,
+    "range": 5,
+    "attack": 2,
+    "defense": 2,
+    "points": 90,
+    "abilities": [
+      {
+        "id": "spawn-pool",
+        "name": "Spawning Pool",
+        "text": "If no Hive Spawn attacks this turn, at the end of the turn roll the 20-sided die for each Hive Spawn still standing, one at a time. On 16 or more, a destroyed Hive Spawn returns, unwounded, next to the one that rolled. A Hive Spawn on water or swamp needs only 12.",
+        "params": {
+          "needed": 16,
+          "wetNeeded": 12
+        }
+      }
+    ]
+  },
+  {
+    "id": "vothrek",
+    "name": "Vothrek the Overmind",
+    "tokenLabel": "VO",
+    "faction": "Sunken Hive",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Alien",
+    "unitClass": "Overmind",
+    "personality": "Tricky",
+    "size": "medium",
+    "height": 6,
+    "footprint": "1",
+    "life": 5,
+    "move": 5,
+    "range": 1,
+    "attack": 3,
+    "defense": 4,
+    "points": 165,
+    "abilities": [
+      {
+        "id": "lantern-gaze",
+        "name": "Mind Tether",
+        "text": "Instead of attacking, Vothrek may seize the mind of an enemy Small or Medium figure next to it that is not unique. Roll the 20-sided die: on 15 or more that figure leaves its unit and fights for you.",
+        "params": {
+          "range": 1,
+          "needed": 15
+        }
+      },
+      {
+        "id": "hive-command",
+        "name": "Hive Command",
+        "text": "Other friendly Aliens within 3 hexes of Vothrek roll 1 extra attack die.",
+        "params": {
+          "range": 3,
+          "bonus": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "ixaru",
+    "name": "Ixaru Mirestrider",
+    "tokenLabel": "IX",
+    "faction": "Sunken Hive",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Alien",
+    "unitClass": "Rider",
+    "personality": "Wild",
+    "size": "large",
+    "height": 7,
+    "footprint": "1",
+    "life": 4,
+    "move": 7,
+    "range": 5,
+    "attack": 3,
+    "defense": 2,
+    "points": 85,
+    "abilities": [
+      {
+        "id": "numbing-glare",
+        "name": "Numbing Glare",
+        "text": "When Ixaru attacks a Small or Medium figure, roll the 20-sided die first. On 14 or more the target rolls no defense dice against that attack.",
+        "params": {
+          "needed": 14
+        }
+      },
+      {
+        "id": "amphibious",
+        "name": "Long Strides",
+        "text": "Ixaru's strider wades through water and swamp: entering them costs no extra Move and does not end its move, and swamp never wounds it."
+      }
+    ]
+  },
+  {
+    "id": "gulpmaw",
+    "name": "Gulpmaw",
+    "tokenLabel": "GU",
+    "faction": "Sunken Hive",
+    "unitType": "commonHero",
+    "figureCount": 1,
+    "species": "Alien",
+    "unitClass": "Beast",
+    "personality": "Wild",
+    "size": "large",
+    "height": 6,
+    "footprint": "1",
+    "life": 7,
+    "move": 4,
+    "range": 1,
+    "attack": 4,
+    "defense": 3,
+    "points": 115,
+    "abilities": [
+      {
+        "id": "grapple-line",
+        "name": "Tongue Lash",
+        "text": "Instead of attacking, Gulpmaw may lash its tongue at a Small or Medium single-hex enemy 2 or 3 hexes away and in sight, and pull it into the free hex next to Gulpmaw nearest to where it stood.",
+        "params": {
+          "range": 3
+        }
+      },
+      {
+        "id": "thick-hide",
+        "name": "Rubbery Hide",
+        "text": "Attacks on Gulpmaw from 3 or more hexes away deal 1 less wound.",
+        "params": {
+          "minDistance": 3,
+          "reduce": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "murk-stalkers",
+    "name": "Murk Stalkers",
+    "tokenLabel": "MS",
+    "faction": "Sunken Hive",
+    "unitType": "commonSquad",
+    "figureCount": 3,
+    "species": "Alien",
+    "unitClass": "Stalker",
+    "personality": "Patient",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "life": 1,
+    "move": 5,
+    "range": 1,
+    "attack": 3,
+    "defense": 2,
+    "points": 75,
+    "abilities": [
+      {
+        "id": "bog-skin",
+        "name": "Mire Skin",
+        "text": "A Murk Stalker standing on water or swamp rolls 2 extra defense dice, and swamp never wounds it.",
+        "params": {
+          "bonus": 2
+        }
+      }
+    ]
+  },
+  {
+    "id": "spore-lobbers",
+    "name": "Spore Lobbers",
+    "tokenLabel": "SL",
+    "faction": "Sunken Hive",
+    "unitType": "commonSquad",
+    "figureCount": 3,
+    "species": "Alien",
+    "unitClass": "Gunner",
+    "personality": "Precise",
+    "size": "medium",
+    "height": 4,
+    "footprint": "1",
+    "life": 1,
+    "move": 4,
+    "range": 4,
+    "attack": 2,
+    "defense": 2,
+    "points": 60,
+    "abilities": [
+      {
+        "id": "mortar-barrage",
+        "name": "Spore Pod",
+        "text": "Instead of attacking, a Spore Lobber may lob a spore pod at a figure 2 to 6 hexes away; it needs no line of sight. The target takes 2 attack dice and every other figure next to it takes 1.",
+        "params": {
+          "range": 6,
+          "minRange": 2,
+          "dice": 2,
+          "splashDice": 1,
+          "ignoresSight": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "ulshae",
+    "name": "Ulshae, Brood Tender",
+    "tokenLabel": "UL",
+    "faction": "Sunken Hive",
+    "unitType": "uniqueHero",
+    "figureCount": 1,
+    "species": "Alien",
+    "unitClass": "Tender",
+    "personality": "Wise",
+    "size": "medium",
+    "height": 5,
+    "footprint": "1",
+    "life": 4,
+    "move": 5,
+    "range": 4,
+    "attack": 2,
+    "defense": 3,
+    "points": 65,
+    "abilities": [
+      {
+        "id": "field-dressing",
+        "name": "Mending Ooze",
+        "text": "At the end of Ulshae's turn, remove 1 wound from the most wounded friendly hero next to Ulshae, or from Ulshae.",
+        "params": {
+          "heal": 1
+        }
+      },
+      {
+        "id": "pin",
+        "name": "Sticky Bile",
+        "text": "A figure Ulshae wounds but does not destroy cannot move on its unit's next turn. It can still attack."
+      }
+    ]
+  },
+  {
+    "id": "fen-leapers",
+    "name": "Fen Leapers",
+    "tokenLabel": "FL",
+    "faction": "Sunken Hive",
+    "unitType": "commonSquad",
+    "figureCount": 4,
+    "species": "Alien",
+    "unitClass": "Leaper",
+    "personality": "Daring",
+    "size": "small",
+    "height": 3,
+    "footprint": "1",
+    "life": 1,
+    "move": 6,
+    "range": 1,
+    "attack": 2,
+    "defense": 2,
+    "points": 75,
+    "abilities": [
+      {
+        "id": "pack-hunt",
+        "name": "Swarm Bite",
+        "text": "A Fen Leaper rolls 1 extra attack die when another Fen Leaper is next to the target.",
+        "params": {
+          "bonus": 1
+        }
+      }
+    ]
+  }
+]

@@ -15,20 +15,36 @@ import type { FigureState, GameEvent, GameState, RulesContext, Step, UnitState }
  * steps it changes.
  *
  * Ability ids:
- * - Movement: flying, trample, smoke-step, war-drums (aura), corpse-feast (a move after a kill)
- * - Attack bonuses: massed-volley, grove-song (aura), command-the-dead (aura), charge, pack-hunt, duelist,
- *   steady-aim, longshot, bloodrage, fury, smite-the-unholy, piercing (one fewer defense die)
- * - Defense bonuses: rally-the-line (aura), deflector-field (aura), hidden-in-the-leaves, moss-armor, brace, shield-wall
+ * - Movement: flying, trample, smoke-step, war-drums (aura), corpse-feast (a move after a kill),
+ *   amphibious (wades through water and swamp, and swamp never wounds it)
+ * - Attack bonuses: massed-volley, grove-song (aura), command-the-dead (aura), hive-command (aura), charge,
+ *   pack-hunt, duelist, steady-aim, longshot, bloodrage, fury, smite-the-unholy, piercing (one fewer defense die),
+ *   numbing-glare (a d20 before the attack; on a success the target rolls no defense dice)
+ * - Defense bonuses: rally-the-line (aura), deflector-field (aura), hidden-in-the-leaves, moss-armor, brace, shield-wall,
+ *   bog-skin (on water or swamp, and swamp never wounds it)
  * - Who can be attacked: will-o-wisp (not from afar), challenge (neighbours must attack this figure)
  * - Reactions: answering-blade, thick-hide, salvage-protocol, soul-reap, reboot, pin (no move next turn),
  *   shove (push back 1 hex), last-stand (strike back when destroyed), volatile-core (bursts when destroyed)
- * - End of turn: field-dressing, reassemble, regrowth, mending-hymn
+ * - End of turn: field-dressing, reassemble, regrowth, mending-hymn, spawn-pool (if the squad did not attack)
  * - Special actions (used instead of a normal attack): ember-spit, mortar-barrage, arc-lightning (area attacks),
  *   lantern-gaze (mind control), grapple-line (pull an enemy close), fae-step (swap places with a friend)
  */
 
 /** Species that Smite the Unholy is aimed at. */
 export const UNHOLY_SPECIES: readonly string[] = ["Undead", "Oni"];
+
+/** Terrain that Mire Skin and the Spawning Pool count as wet. */
+export const WET_TERRAIN: readonly string[] = ["water", "swamp"];
+
+/** Does any of these spots stand on water or swamp? */
+export function onWetTerrain(spots: readonly Step[], ctx: RulesContext): boolean {
+  return spots.some((s) => WET_TERRAIN.includes(ctx.board.surfaceAt(s.hex, s.elevation)?.terrain ?? ""));
+}
+
+/** Swamp never wounds a figure with Long Strides (amphibious) or Mire Skin (bog-skin). */
+export function ignoresSwamp(card: UnitCard): boolean {
+  return hasAbility(card, "amphibious") || hasAbility(card, "bog-skin");
+}
 
 export function abilityOf(card: UnitCard, id: string): Ability | undefined {
   return card.abilities.find((a) => a.id === id);
@@ -136,6 +152,17 @@ export function abilityModifiers(
     }
   }
 
+  // Hive Command: other friendly Aliens near the overmind attack harder.
+  if (attacker.card.species === "Alien") {
+    const master = friendsWith(state, attacker.unit.owner, "hive-command", ctx, attacker.figure.id).find(
+      (s) => spotDistance(s.spots, attacker.spots) <= param(abilityOf(s.card, "hive-command"), "range", 3),
+    );
+    if (master) {
+      const a = abilityOf(master.card, "hive-command")!;
+      add("attack", param(a, "bonus", 1), a.name);
+    }
+  }
+
   const moved = state.active?.moved.includes(attacker.figure.id) ?? false;
 
   // Charge: a melee attack straight after moving.
@@ -223,6 +250,10 @@ export function abilityModifiers(
   // Moss Armor: thick hide against distant attacks.
   const moss = abilityOf(defender.card, "moss-armor");
   if (moss && distance >= param(moss, "minDistance", 4)) add("defense", param(moss, "bonus", 1), moss.name);
+
+  // Mire Skin: hard to hit while half sunk in water or swamp.
+  const bog = abilityOf(defender.card, "bog-skin");
+  if (bog && onWetTerrain(defender.spots, ctx)) add("defense", param(bog, "bonus", 2), bog.name);
 
   // Brace: set against an enemy that charged in this turn.
   const brace = abilityOf(defender.card, "brace");
@@ -470,6 +501,7 @@ export function endOfTurnAbilities(state: GameState, unitId: string, ctx: RulesC
     if (state.pinned.length === 0) delete state.pinned;
   }
   reassemble(state, unit, card, ctx, events);
+  spawnPool(state, unit, card, ctx, events);
   regrowth(unit, card, ctx, events);
   mendingHymn(state, unit, card, ctx, events);
   const dressing = abilityOf(card, "field-dressing");
@@ -578,6 +610,36 @@ function reassemble(state: GameState, unit: UnitState, card: UnitCard, ctx: Rule
   fallen.position = { hex: spot.hex, elevation: spot.elevation, rotation: 0 };
   faceTowardsMiddle(state, fallen, card.footprint, ctx);
   events.push({ type: "figureRevived", figureId: fallen.id, at: spot });
+}
+
+/**
+ * Spawning Pool: if no figure of the squad attacked this turn, each standing figure rolls a d20 in
+ * turn while any are destroyed; a success brings one back next to the figure that rolled. A figure
+ * on water or swamp needs less.
+ */
+function spawnPool(state: GameState, unit: UnitState, card: UnitCard, ctx: RulesContext, events: GameEvent[]): void {
+  const ability = abilityOf(card, "spawn-pool");
+  if (!ability) return;
+  const mine = new Set(unit.figures.map((f) => f.id));
+  if (state.active?.attacked.some((id) => mine.has(id))) return;
+  const rollers = unit.figures.filter((f) => !f.destroyed && f.position);
+  const rng = new Rng(state.rng);
+  for (const roller of rollers) {
+    const fallen = unit.figures.find((f) => f.destroyed);
+    if (!fallen) break;
+    const spots = figureSpots(roller, card.footprint, card.height, ctx);
+    const needed = onWetTerrain(spots, ctx) ? param(ability, "wetNeeded", 12) : param(ability, "needed", 16);
+    const roll = rng.d20();
+    const spot = roll >= needed ? freeSpotNear(state, ctx, spots, card) : null;
+    events.push({ type: "abilityRoll", ability: ability.id, figureId: roller.id, targetId: fallen.id, roll, needed, success: roll >= needed });
+    if (!spot) continue;
+    fallen.destroyed = false;
+    fallen.wounds = 0;
+    fallen.position = { hex: spot.hex, elevation: spot.elevation, rotation: 0 };
+    faceTowardsMiddle(state, fallen, card.footprint, ctx);
+    events.push({ type: "figureRevived", figureId: fallen.id, at: spot });
+  }
+  state.rng = rng.state;
 }
 
 // ---------------------------------------------------------------------------
