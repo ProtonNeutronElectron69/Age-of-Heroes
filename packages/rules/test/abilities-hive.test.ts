@@ -131,6 +131,13 @@ describe("amphibious", () => {
     expect(stuck.has(placementKey(step(2)))).toBe(false);
   });
 
+  it("may move on in pieces after wading in", () => {
+    const g = game(cols, { p1: ["wader"], p2: ["hero"] }, { "p1:0#1": at(0), "p2:0#1": at(7) });
+    const wet = apply(g.state, { type: "move", player: "p1", figureId: "p1:0#1", path: [step(1)] }, g.ctx).state;
+    expect(wet.active!.moves!["p1:0#1"]).toMatchObject({ spent: 1, ended: false });
+    expect(moveOptions(wet, "p1:0#1", g.ctx).get(placementKey(step(4)))).toMatchObject({ cost: 3 });
+  });
+
   it("is never wounded by swamp", () => {
     const g = game(cols, { p1: ["wader"], p2: ["hero"] }, { "p1:0#1": at(2), "p2:0#1": at(7) });
     expect(ofType(apply(g.state, endTurn, g.ctx).events, "attackRolled")).toEqual([]);

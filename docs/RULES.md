@@ -282,7 +282,7 @@ General rulings:
 - Numbers in abilities (ranges, dice, bonuses, rolls needed) are on the card data and *tunable*.
 - **Auras do not stack.** A figure gets each named bonus at most once, however many sources are nearby.
 - Bonus dice from abilities add to height bonuses. Every roll lists why its dice changed.
-- **Special actions** (Ember Spit, Mortar Barrage, Arc Lightning, Lantern Gaze, Grapple Line, Fae Step) are used **instead of** the figure's normal attack, and follow the normal attack rules (engagement, line of sight) unless they say otherwise.
+- **Special actions** (Ember Spit, Mortar Barrage, Arc Lightning, Lantern Gaze, Grapple Line, Fae Step, and their renamed copies such as Mind Tether, Spore Pod and Tongue Lash) are used **instead of** the figure's normal attack, and follow the normal attack rules (engagement, line of sight) unless they say otherwise.
 - **Blasts** (Ember Spit, Mortar Barrage, Arc Lightning, and the units' own blasts such as grenades) hit the target and every other figure next to the hex the blast lands on. A target on one hex is hit on that hex. Against a target on several hexes, the player picks which of its hexes to aim at (click the target, then one of its red hexes); that hex must be within the blast's range, and only figures next to it are caught. No figure is hit twice by one blast: the target takes the full dice once, however many of its hexes touch the aimed hex, and every other figure caught takes the splash dice once. A blast whose card says it may be aimed at a hex (`hexTarget`) can instead land on an empty hex in range and, unless it ignores sight, in sight; it then hits only the figures next to that hex, with the splash dice. Games saved before aiming existed have no aimed hex: they replay as they were played, splashing round every hex of a big target.
 - **Forced moves** (Shove, Grapple Line) move a figure without walking: there are no passing strikes and no ice slips, but the figure takes falling damage if it drops far enough and rolls for lava where it lands. **Assumption.**
 
@@ -332,6 +332,11 @@ General rulings:
 | **Challenge** | An enemy figure next to this figure may only target this figure with its attacks and special actions. |
 | **Piercing** | The target rolls 1 fewer defense die (never fewer than none). |
 | **Mending Hymn** | At the end of the squad's turn, the most wounded friendly hero within 3 hexes of any figure of the squad removes 1 wound. |
+| **Hive Command** | Other friendly Alien figures within 3 hexes of the overmind get +1 attack die (an aura). |
+| **Mire Skin** (bog-skin) | On water or swamp, +2 defense dice. Swamp never wounds the squad. |
+| **Long Strides** (amphibious) | Water and swamp cost no extra Move to enter and do not end the figure's move, so it wades through them as through open ground. Swamp never wounds it. |
+| **Numbing Glare** | Before a normal attack on a Small or Medium figure, roll a d20. On 14 or more the target rolls no defense dice against that attack (cover and other bonuses included). Large and Huge targets are not rolled for. |
+| **Spawning Pool** (spawn-pool) | At the end of the squad's turn, if none of its figures attacked (special actions count as attacks), roll a d20 for each standing figure of the squad in turn, while any are destroyed. On 16 or more (12 or more for a figure on water or swamp) one destroyed figure returns, with no wounds, on a free spot next to the figure that rolled (if there is none, that roll is lost). |
 
 Every squad has 1 special ability and every hero has 2; Flying comes on top and does not count. Many cards give one of these rules a name of their own, and the card text spells it out. For example:
 - Flying: Jet Packs (Skyhook Raiders).
@@ -361,6 +366,13 @@ Every squad has 1 special ability and every hero has 2; Flying comes on top and 
 - Smoke Step: Phase Shift (Proxima).
 - Smite the Unholy: Righteous Fury (Dame Rowena).
 - Piercing: Piercing Bolts (Covenant Crossbowmen).
+- Lantern Gaze: Mind Tether (Vothrek the Overmind), with range 1 and 15 or more.
+- Mortar Barrage: Spore Pod (Spore Lobbers), with range 2 to 6 and 2 dice.
+- Grapple Line: Tongue Lash (Gulpmaw).
+- Thick Hide: Rubbery Hide (Gulpmaw).
+- Field Dressing: Mending Ooze (Ulshae, Brood Tender).
+- Pin: Sticky Bile (Ulshae, Brood Tender).
+- Pack Hunt: Swarm Bite (Fen Leapers).
 
 A figure taken by mind control scores its share of its card's points for its new owner.
 

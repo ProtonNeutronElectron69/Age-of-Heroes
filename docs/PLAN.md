@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 681 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 56-unit roster in 7 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 681 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 Nothing is in progress. Open, when the owner asks:
@@ -14,7 +14,7 @@ Nothing is in progress. Open, when the owner asks:
 
 On hold (Phase 6): a computer opponent, and a tutorial.
 
-Done lately, newest first: the map gallery, draft filters, test game and moves in pieces (#70); every attack needing its target in front (#69); tokens and glyphs on the table and the token allowance (#68); facing (#67); detailed figure models for every unit (#63 to #66, finishing Phase 7); the detailed look for scenery and board tiles; the Riverbend map; glyphs; more scenery; fixes after v1.0. Phases 8 (the tabletop feel) and 9 (playtest updates) came before; the game as it stood after Phase 9 is version 1.0. Each has its section below.
+Done lately, newest first: the Sunken Hive, a seventh faction of swamp aliens; the map gallery, draft filters, test game and moves in pieces (#70); every attack needing its target in front (#69); tokens and glyphs on the table and the token allowance (#68); facing (#67); detailed figure models for every unit (#63 to #66, finishing Phase 7); the detailed look for scenery and board tiles; the Riverbend map; glyphs; more scenery; fixes after v1.0. Phases 8 (the tabletop feel) and 9 (playtest updates) came before; the game as it stood after Phase 9 is version 1.0. Each has its section below.
 
 Worth knowing before the next change: games saved with facing before #69 may not replay exactly (the facing rules changed twice after #67), and new rule options must stay optional fields of the setup (see [CLAUDE.md](../CLAUDE.md)).
 
@@ -298,3 +298,9 @@ Small changes asked for after playing, online games especially.
 - [x] The draft's cards filter and sort as the unit gallery's do (search, faction, type, attack, sort), with **Only units I can draft**
 - [x] **Test game** in the menu: two players with 500-point armies already drafted and deployed on Twin Fords, all 11 glyphs, new-game rules; play starts at token placement
 - [x] A figure's move may be made in pieces, until it attacks: a figure keeps the selection while it has movement left
+
+### The Sunken Hive
+- [x] A seventh faction of eight swamp aliens, for 56 units: Vothrek the Overmind, Ixaru Mirestrider, Gulpmaw and Ulshae, Brood Tender (heroes), and the Hive Spawn, Murk Stalkers, Spore Lobbers and Fen Leapers (squads). Four ranged and four melee; points from the balance model
+- [x] 5 new rules: Spawning Pool (a squad that rolls to bring back its fallen when it does not attack, more easily in water), Hive Command (an attack aura for Aliens), Numbing Glare (a d20 that leaves the target without defense dice), Long Strides (wading through water and swamp) and Mire Skin (defense in water and swamp). Swamp never wounds the last two
+- [x] A murky olive card theme with an acid green trim and an eye emblem, card art for all eight, and a classic and a detailed model for each, built from one set of poses (`models/units/hive.ts`)
+- [x] The roster is now 25 heroes and 31 squads, 28 ranged and 28 melee

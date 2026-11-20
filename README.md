@@ -13,7 +13,7 @@ A turn-based 3D tactics game for 2 to 6 players in the browser. Heroes and squad
   - strict line of sight;
   - special abilities on every unit;
   - glyphs: face-down tiles scattered on the battlefield, picked up by ending a move on them and used in your turn (stat boosts, healing, resurrection, wounds, cancelling, and two traps).
-- **48 original units** in 6 factions of 8: 21 heroes and 27 squads, 24 ranged and 24 melee. Some figures cover 2 to 4 hexes.
+- **56 original units** in 7 factions of 8: 25 heroes and 31 squads, 28 ranged and 28 melee. Some figures cover 2 to 4 hexes.
 - **Turns driven by secret tokens:** each player hides numbered activation tokens (one for every two cards in their army, rounded up) and a bluff on their units, rolls for initiative, then takes a turn for each token. The tokens stand on the cards round the table: yours show their numbers, the others' only once revealed.
 - **Facing:** every figure looks one way. An attack needs its target in front of the attacker, a melee attack from behind rolls 2 more dice, and after a move R turns the figure. A figure's move can be made in pieces, until it attacks.
 - **3D battlefields** with ten terrain types, bridges, overhangs and scenery, a figure's-eye camera, and seven premade maps. Tiles, scenery and figures come in a detailed look, textured and painted like plastic pieces, with bold outlines to count stack heights, or the classic flat colours (Display, or the B key).
@@ -23,7 +23,7 @@ A turn-based 3D tactics game for 2 to 6 players in the browser. Heroes and squad
 - **Saved games and replays:** named saves, save files, and online games the host can save and resume later. Finished games can be watched move by move.
 - **A gaming table** under the board, in three styles, with every unit's card laid out round it and destroyed figures stood on their cards. Figures hop from hex to hex, can be dragged to where they should go, and the chosen figure jumps when you press H, so you can find it.
 - **3D dice:** an attack zooms in on the fight, with both units' cards and models over a dimmed board, and rolls tumbling attack and defense dice; each player clicks a d20 for initiative. Choose the full scene, dice only or none under Display.
-- **3D figure models** for all 48 units on the board, in three colour schemes, or plain tokens that show the hit band (Display, or the T key). Every unit also has a detailed, painted model for the detailed look.
+- **3D figure models** for all 56 units on the board, in three colour schemes, or plain tokens that show the hit band (Display, or the T key). Every unit also has a detailed, painted model for the detailed look.
 - **A play screen that follows the action:** the camera glides to the acting unit once it has finished moving (panning, turning and zooming can each be switched off under Display), resting the pointer on another unit shows its card beside the acting unit's, and a middle click on a hex shows its terrain, elevation and rules.
 - **Music and sound effects:** menu, play, battle and victory music that blends from mood to mood, and sounds for hops, splashes, attacks, dice, wounds and more, each with its own on/off box and volume (open licences; see [docs/CREDITS.md](docs/CREDITS.md)).
 - **Main menu in four styles** (War Table, Atlas, Banner Hall and Hex Command), each fitting a landscape window without scrolling, a **unit gallery** of every card, filterable and sortable, with each unit's 3D model to turn and zoom, a **map gallery** to look round every battlefield before choosing it, and a **Test game** that starts at once with two armies already on Twin Fords. The draft filters and sorts its cards like the unit gallery.
@@ -74,7 +74,7 @@ Before pushing, run `pnpm check:affected`. CI runs the checks a pull request's c
 | Path | What it is |
 |---|---|
 | `packages/rules` | The rules engine: hex math, the stacked map model, dice, line of sight, draft, movement, combat and abilities. Pure, deterministic TypeScript, so it runs the same in the browser and on the server. |
-| `packages/content` | Game data: the 48 units, seven premade maps, terrain, scenery, tunable rule numbers, and the balance model for point costs. |
+| `packages/content` | Game data: the 56 units, seven premade maps, terrain, scenery, tunable rule numbers, and the balance model for point costs. |
 | `packages/protocol` | The online message format (checked with schemas) and the game record format used for saves and replays. |
 | `apps/client` | The browser game: main menu, unit gallery, draft, battle, map editor, online lobby, saved games and replay viewer, built with React and Three.js. Figure models are built in code in `src/models`. Browser tests live in `apps/client/e2e`. |
 | `apps/server` | The online game server: rooms, room codes, seats and reconnecting, spectators, and saving and resuming games. It runs the rules engine and sends each player only their own view. |
