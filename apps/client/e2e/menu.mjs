@@ -155,6 +155,9 @@ try {
   if (!(await phone.locator(".main-menu.compact").count())) fail("A narrow window should get the one-column menu");
   if ((await phone.evaluate(() => document.querySelector(".main-menu").scrollWidth > innerWidth + 1))) fail("The phone menu scrolls sideways");
   await phone.getByRole("button", { name: "Unit gallery" }).waitFor();
+  // Each page draws the War Table's board in software: close the ones done with, so the next is not starved.
+  await phone.context().close();
+  await page.context().close();
 
   // The test game starts at once: two armies already on Twin Fords, every glyph down, tokens to place.
   const test = await open({ width: 1280, height: 720 });
