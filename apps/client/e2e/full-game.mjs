@@ -764,20 +764,28 @@ try {
         await eye.click();
         await page.getByRole("button", { name: "Exit eye view" }).waitFor();
         if (await endTurn.isEnabled()) fail("End turn is allowed while in eye view");
-        // Eye view turns all the way around: a drag and the arrow keys both move where a hex is drawn.
+        // Eye view turns only within the figure's front cone, so a view already at one edge cannot turn
+        // further that way: a drag, then the arrow keys, each try one way and then the other.
         const probe = () => page.evaluate(() => JSON.stringify(window.__aoh?.project(0, 0, 0)));
         const turned = (before) =>
-          page.waitForFunction((b) => JSON.stringify(window.__aoh?.project(0, 0, 0)) !== b, before, { timeout: 5000 });
-        let before = await probe();
-        await page.mouse.move(800, 500);
-        await page.mouse.down();
-        await page.mouse.move(1000, 520, { steps: 8 });
-        await page.mouse.up();
-        await turned(before).catch(() => fail("Dragging in eye view did not turn the camera"));
-        before = await probe();
-        await page.keyboard.down("ArrowLeft");
-        await turned(before).catch(() => fail("The arrow keys did not turn the eye view camera"));
-        await page.keyboard.up("ArrowLeft");
+          page.waitForFunction((b) => JSON.stringify(window.__aoh?.project(0, 0, 0)) !== b, before, { timeout: 3000 }).then(() => true, () => false);
+        const drag = async (dx) => {
+          const before = await probe();
+          await page.mouse.move(800, 500);
+          await page.mouse.down();
+          await page.mouse.move(800 + dx, 520, { steps: 8 });
+          await page.mouse.up();
+          return turned(before);
+        };
+        if (!(await drag(120)) && !(await drag(-240))) fail("Dragging in eye view did not turn the camera either way");
+        const key = async (name) => {
+          const before = await probe();
+          await page.keyboard.down(name);
+          const moved = await turned(before);
+          await page.keyboard.up(name);
+          return moved;
+        };
+        if (!(await key("ArrowRight")) && !(await key("ArrowLeft"))) fail("The arrow keys did not turn the eye view camera either way");
         await page.getByRole("button", { name: "Exit eye view" }).click();
         await page.getByRole("button", { name: "Eye view" }).waitFor();
       }
