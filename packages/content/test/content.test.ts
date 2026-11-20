@@ -121,8 +121,8 @@ describe("cards", () => {
     expect(cardCatalog(CARDS).size).toBe(CARDS.length);
   });
 
-  it("has a roster of 48 units, 8 in each of 6 factions, three of them multi-hex", () => {
-    expect(CARDS).toHaveLength(48);
+  it("has a roster of 56 units, 8 in each of 7 factions, three of them multi-hex", () => {
+    expect(CARDS).toHaveLength(56);
     expect(FACTIONS).toEqual([
       "Iron Concord",
       "House Kagero",
@@ -130,6 +130,7 @@ describe("cards", () => {
       "Nexus Collective",
       "Ashen Host",
       "Dawnhold Covenant",
+      "Sunken Hive",
     ]);
     for (const f of FACTIONS) expect(CARDS.filter((c) => c.faction === f), f).toHaveLength(8);
     expect(CARDS.filter((c) => c.footprint !== "1").map((c) => [c.id, c.footprint])).toEqual([
@@ -166,6 +167,7 @@ describe("cards", () => {
       "command-the-dead", "shield-wall", "soul-reap", "reboot", "reassemble", "arc-lightning", "fury",
       "pin", "shove", "grapple-line", "last-stand", "fae-step", "will-o-wisp", "regrowth", "volatile-core",
       "war-drums", "corpse-feast", "challenge", "piercing", "mending-hymn",
+      "spawn-pool", "hive-command", "numbing-glare", "amphibious", "bog-skin",
     ]);
     for (const c of CARDS) for (const a of c.abilities) expect(implemented.has(a.id), `${c.id} ${a.id}`).toBe(true);
   });

@@ -68,6 +68,12 @@ export const ABILITY_VALUE: Readonly<Record<string, number>> = {
   challenge: 1.15,
   piercing: 1.15,
   "mending-hymn": 1.3,
+  // Added with the Sunken Hive.
+  "spawn-pool": 1.2,
+  "hive-command": 1.3,
+  "numbing-glare": 1.3,
+  amphibious: 1.08,
+  "bog-skin": 1.1,
 };
 
 function binomial(n: number, k: number): number {

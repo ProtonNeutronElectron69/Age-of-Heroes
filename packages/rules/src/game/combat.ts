@@ -12,6 +12,7 @@ import {
   areaAttackOf,
   combatant,
   hasAbility,
+  ignoresSwamp,
   isPinned,
   mindControlOf,
   param,
@@ -476,11 +477,14 @@ function resolve(
   baseAttack: number,
   ability: string | undefined,
   events: GameEvent[],
+  numbedBy?: string,
 ): void {
   const dice = diceFor(state, ctx, attacker, defender, baseAttack);
-  const roll = rollCombat(rng, dice.attack, dice.defense);
+  // Numbing Glare: the target rolls no defense dice at all.
+  const defense = numbedBy ? 0 : dice.defense;
+  const roll = rollCombat(rng, dice.attack, defense);
   const distance = spotDistance(attacker.spots, defender.spots);
-  const notes = [...dice.notes];
+  const notes = [...dice.notes, ...(numbedBy ? [`${numbedBy}: no defense dice`] : [])];
   const wounds = reduceWounds(defender, distance, roll.wounds, notes);
   events.push({
     type: "attackRolled",
@@ -576,7 +580,16 @@ export function attack(
       detail: `${swap.name}: swaps places with ${defender.card.name}`,
     });
   } else {
-    resolve(state, ctx, rng, attacker, defender, statsOf(attacker.card).attack, undefined, events);
+    // Numbing Glare: a d20 before the attack; on a success a Small or Medium target rolls no defense dice.
+    const glare = abilityOf(attacker.card, "numbing-glare");
+    let numbed: string | undefined;
+    if (glare && (defender.card.size === "small" || defender.card.size === "medium")) {
+      const roll = rng.d20();
+      const needed = param(glare, "needed", 14);
+      events.push({ type: "abilityRoll", ability: glare.id, figureId, targetId, roll, needed, success: roll >= needed });
+      if (roll >= needed) numbed = glare.name;
+    }
+    resolve(state, ctx, rng, attacker, defender, statsOf(attacker.card).attack, undefined, events, numbed);
     // Shoulder Barge: a melee hit shoves the target one hex back.
     const shove = hasAbility(attacker.card, "shove") ? abilityOf(attacker.card, "shove") : undefined;
     if (shove && !attacker.figure.destroyed && !defender.figure.destroyed && defender.card.size !== "huge" && spotDistance(attacker.spots, defender.spots) <= 1) {
@@ -663,6 +676,8 @@ export function endOfTurnTerrain(state: GameState, unitId: string, events: GameE
   const card = cardOf(unit, ctx);
   const stats = statsOf(card);
   const rng = new Rng(state.rng);
+  // Long Strides and Mire Skin: swamp never wounds these figures.
+  if (ignoresSwamp(card)) return;
   for (const figure of unit.figures) {
     const spots = figureSpots(figure, card.footprint, stats.height, ctx);
     // A figure rolls once, however many of its hexes are on swamp.

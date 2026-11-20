@@ -1,5 +1,5 @@
 /** Which emblem a faction's cards carry. The glyphs live in `hexCardArt.tsx`. */
-export type EmblemId = "gear" | "haze" | "leaf" | "nodes" | "skull" | "sun" | "star";
+export type EmblemId = "gear" | "haze" | "leaf" | "nodes" | "skull" | "sun" | "eye" | "star";
 
 /** The colours a faction's unit cards are painted in. */
 export interface FactionTheme {
@@ -115,6 +115,21 @@ const THEMES: Record<string, FactionTheme> = {
     onPrimary: "#3a2b0d",
     art: ["#f6e2a4", "#c58b2a"],
     emblem: "sun",
+  },
+  "Sunken Hive": {
+    primary: "#5c6624",
+    primaryLight: "#8f9a45",
+    primaryDark: "#333a12",
+    deep: "#191d0a",
+    accent: "#b8ef4c",
+    accentLight: "#e3ffa6",
+    paper: "#e7e6cf",
+    paperShade: "#c8c7a2",
+    ink: "#1f220e",
+    heading: "#4a5419",
+    onPrimary: "#f1f4da",
+    art: ["#8c9c4c", "#20270d"],
+    emblem: "eye",
   },
 };
 

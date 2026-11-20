@@ -22,7 +22,7 @@
 - Squads have at most 4 figures.
 - Point costs come from the balance model (`BALANCE_REPORT=1 pnpm test balance`).
 - The roster keeps heroes and squads, and ranged and melee, within about 60/40 of each other (a guideline, not a hard rule), and every faction has each kind.
-- Tests in `packages/content/test` enforce all of this; update their expected counts when the roster grows.
+- Tests in `packages/content/test` enforce all of this; update their expected counts when the roster grows, and the card counts in `apps/client/e2e/models.mjs` and `gallery.mjs`.
 
 ## Client notes
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) describes the client; these are the rules to keep when changing it.

@@ -45,6 +45,8 @@ interface Mover {
   readonly flying: boolean;
   /** Trample: may move through Small and Medium enemies. */
   readonly trample: boolean;
+  /** Long Strides (amphibious): water and swamp cost no extra Move and do not end the move. */
+  readonly wades: boolean;
 }
 
 /** An enemy figure, with the spots it covers, for engagement checks. */
@@ -110,6 +112,7 @@ function moverFor(state: GameState, figureId: string, ctx: RulesContext): Mover 
     noStrikes: bonus !== undefined,
     flying: card.footprint === "1" && hasAbility(card, "flying"),
     trample: hasAbility(card, "trample"),
+    wades: hasAbility(card, "amphibious"),
   };
 }
 
@@ -210,11 +213,13 @@ function evaluateStep(
   }
 
   const entered = spots.filter((s) => !fromSpots.some((f) => hexEquals(f.hex, s.hex)));
-  const extra = Math.max(0, ...entered.map((s) => moveCostOf(terrainOf(s, ctx)) - 1));
+  // Long Strides: a wading figure treats water and swamp as open ground.
+  const wet = (s: Step) => mover.wades && terrainOf(s, ctx)?.stopGroup === "wet";
+  const extra = Math.max(0, ...entered.filter((s) => !wet(s)).map((s) => moveCostOf(terrainOf(s, ctx)) - 1));
   const climb = Math.max(0, ...spots.map((s, i) => s.elevation - fromSpots[i]!.elevation));
   // Climbing onto a low wall costs extra.
   const overWall = Math.max(0, ...entered.map((s) => ctx.board.sceneryAt(s.hex, s.elevation)?.rules.climb ?? 0));
-  const stops = spots.some((s, i) => entered.includes(s) && stopsMovement(fromSpots[i]!, s, ctx));
+  const stops = spots.some((s, i) => entered.includes(s) && !wet(s) && stopsMovement(fromSpots[i]!, s, ctx));
   const before = engagedIds(enemies, fromSpots, height);
   const after = engagedIds(enemies, spots, height);
   return {

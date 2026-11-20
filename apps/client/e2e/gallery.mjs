@@ -46,7 +46,7 @@ try {
   await page.getByRole("heading", { name: "Unit gallery" }).waitFor();
   await cards.first().waitFor();
   const total = await cards.count();
-  if (total !== 48) fail(`Expected 48 cards, found ${total}`);
+  if (total !== 56) fail(`Expected 56 cards, found ${total}`);
 
   // Sizes: 5, 3 and 1 across.
   for (const [name, want] of [["Small", 5], ["Medium", 3], ["Large", 1]]) {

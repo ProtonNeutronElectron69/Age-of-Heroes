@@ -1,4 +1,5 @@
 import { unitCardSchema, type UnitCard } from "@aoh/rules";
+import hive from "./cards/hive.json";
 import legends from "./cards/legends.json";
 import reinforcements from "./cards/reinforcements.json";
 import starter from "./cards/starter.json";
@@ -26,12 +27,14 @@ export function cardCatalog(cards: readonly UnitCard[]): ReadonlyMap<string, Uni
  * The roster: the 16 starter units in four factions; the "legends" drop that
  * adds two factions (the Ashen Host and the Dawnhold Covenant) and a unit for
  * each starter faction, for 30; and the "reinforcements" drop of a hero and two
- * squads for every faction, for 48. Every unit is original.
+ * squads for every faction, for 48; and the Sunken Hive, a seventh faction of eight
+ * swamp aliens, for 56. Every unit is original.
  */
 export const CARDS: readonly UnitCard[] = [
   ...(starter as unknown[]),
   ...(legends as unknown[]),
   ...(reinforcements as unknown[]),
+  ...(hive as unknown[]),
 ].map(loadCard);
 
 export const CARD_CATALOG = cardCatalog(CARDS);
