@@ -25,7 +25,7 @@ import {
   type ReachSpec,
 } from "./abilities";
 import { engagedEnemies, spotsEngaged } from "./engagement";
-import { faceEachOther, facingOf, seesAny } from "./facing";
+import { facingOf, seesAny } from "./facing";
 import { glyphBonus } from "./glyphs";
 import { fail } from "./errors";
 import { forcedMove, freeSpotFor } from "./movement";
@@ -90,7 +90,7 @@ function actionProblem(state: GameState, attackerId: string, targetId: string, c
   if (engaged.length > 0 && !withTarget) return "An engaged figure can only attack enemies it is engaged with";
   if (reach.range === 1 && !withTarget) return "Too far above or below to reach";
   const facing = facingOf(state, a.figure);
-  if (facing !== null && distance > 1 && !seesAny(facing, aSpots, tSpots)) return "Out of view: a ranged attack needs the target in front";
+  if (facing !== null && !seesAny(facing, aSpots, tSpots)) return "Out of view: the target must be in front of the attacker";
   if (reach.ignoresSight) return null;
 
   const blockers: Token[] = [];
@@ -210,7 +210,7 @@ export function blastProblem(state: GameState, attackerId: string, at: Step, ctx
     return "An engaged figure can only attack enemies it is engaged with";
   }
   const facing = facingOf(state, a.figure);
-  if (facing !== null && distance > 1 && !seesAny(facing, attacker.spots, [at])) return "Out of view: a ranged attack needs the target in front";
+  if (facing !== null && !seesAny(facing, attacker.spots, [at])) return "Out of view: the target must be in front of the attacker";
   if (area.ignoresSight) return null;
   const blockers: Token[] = [];
   for (const unit of state.units) {
@@ -344,7 +344,7 @@ function canReach(state: GameState, ctx: RulesContext, from: Combatant, to: Comb
   if (spotDistance(from.spots, to.spots) > range) return false;
   if (range === 1 && !spotsEngaged(from.spots, from.card.height, to.spots, to.card.height)) return false;
   const facing = facingOf(state, from.figure);
-  if (facing !== null && spotDistance(from.spots, to.spots) > 1 && !seesAny(facing, from.spots, to.spots)) return false;
+  if (facing !== null && !seesAny(facing, from.spots, to.spots)) return false;
   const blockers: Token[] = [];
   for (const unit of state.units) {
     const card = ctx.cards.get(unit.cardId);
@@ -545,7 +545,6 @@ export function attack(
     const centre = aim ? defender.spots.filter((s) => hexEquals(s.hex, aim)) : defender.spots;
     const splashed = splashedBy(state, ctx, centre, [targetId, figureId]);
     resolve(state, ctx, rng, attacker, defender, area.dice, area.id, events);
-    if (spotDistance(attacker.spots, defender.spots) <= 1) faceEachOther(state, attacker, defender, events);
     for (const c of splashed) {
       if (!c.figure.destroyed) resolve(state, ctx, rng, attacker, c, area.splashDice, area.id, events);
     }
@@ -578,8 +577,6 @@ export function attack(
     });
   } else {
     resolve(state, ctx, rng, attacker, defender, statsOf(attacker.card).attack, undefined, events);
-    // A melee attack: once the dice are rolled, the two figures turn to face each other.
-    if (spotDistance(attacker.spots, defender.spots) <= 1) faceEachOther(state, attacker, defender, events);
     // Shoulder Barge: a melee hit shoves the target one hex back.
     const shove = hasAbility(attacker.card, "shove") ? abilityOf(attacker.card, "shove") : undefined;
     if (shove && !attacker.figure.destroyed && !defender.figure.destroyed && defender.card.size !== "huge" && spotDistance(attacker.spots, defender.spots) <= 1) {

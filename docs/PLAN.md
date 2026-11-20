@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 681 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 48-unit roster in 6 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 679 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 Nothing is in progress. Open, when the owner asks:
@@ -286,7 +286,7 @@ Small changes asked for after playing, online games especially.
 - [x] Eye view turns only as far as the figure's front cone, so nothing behind it is ever on screen
 
 ### Tokens and glyphs on the table
-- [x] Melee attacks turn both figures to face each other once the dice are rolled, so a strike from behind still counts
+- [x] Every attack, melee as well as ranged, needs its target in the attacker's front cone (melee figures no longer turn to face each other after an attack)
 - [x] Stat glyphs in play lie face up on their unit's card on the table, with simple art drawn in code and their name; the Glyphs panel shows the same art
 - [x] Activation tokens stand on the cards on the table: a player sees their own numbers, the others only the backs until a token is revealed
 - [x] New games give each player numbered tokens for half the cards their army starts with, rounded up, plus X (`tokenAllowance: "half"`); older saves keep three
