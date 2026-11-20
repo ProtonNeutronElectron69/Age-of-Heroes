@@ -14,7 +14,9 @@ Nothing is in progress. Open, when the owner asks:
 
 On hold (Phase 6): a computer opponent, and a tutorial.
 
-Done lately, newest first: the detailed look for scenery and for the board tiles, the Riverbend map, glyphs, more scenery, fixes after v1.0. Phases 8 (the tabletop feel) and 9 (playtest updates) came before; the game as it stood after Phase 9 is version 1.0. Each has its section below.
+Done lately, newest first: the map gallery, draft filters, test game and moves in pieces (#70); every attack needing its target in front (#69); tokens and glyphs on the table and the token allowance (#68); facing (#67); detailed figure models for every unit (#63 to #66, finishing Phase 7); the detailed look for scenery and board tiles; the Riverbend map; glyphs; more scenery; fixes after v1.0. Phases 8 (the tabletop feel) and 9 (playtest updates) came before; the game as it stood after Phase 9 is version 1.0. Each has its section below.
+
+Worth knowing before the next change: games saved with facing before #69 may not replay exactly (the facing rules changed twice after #67), and new rule options must stay optional fields of the setup (see [CLAUDE.md](../CLAUDE.md)).
 
 ### How work is delivered
 Each phase or drop is one pull request from a working branch, with CI green before it is merged. The owner asks for each merge. Keep [RULES.md](RULES.md), this file and the other docs up to date in the same pull request as the change.
@@ -269,29 +271,29 @@ Small changes asked for after playing, online games especially.
 - [x] Four new pieces, after the owner's reference art, each filling its hexes on a base: a **large tree** (12 levels, 4 hexes), a **large wall** (a ruined castle wall, 7 levels, 3 hexes in a line), a **small ruined wall** (5 levels, 2 hexes) and a **low wall** (3 levels, 3 hexes). A figure next to a low wall rolls 1 extra defense die against attacks from range across it, and walking figures can climb across a low wall for 1 extra move but not stop on it. The one-hex tree has a base too
 - [x] The editor turns bigger scenery with R and previews where it goes; random scenery fill scatters every kind, bigger pieces turned at random, and random terrain fill leaves the hexes under bigger scenery alone
 
-### Glyphs
+### Glyphs (#56 to #58)
 - [x] Glyphs: small hex tiles scattered face down on the battlefield once every unit is placed, from none to all 11 (a menu setting, 4 at first; one of each kind). A figure that ends a move on one picks it up; only its player learns what it is, and holds it beside the board to use at any time in their own turn
 - [x] Five stat glyphs (+1 attack, +1 defense, +8 initiative, +3 range, +2 move), one per unit, lasting until the unit is destroyed; healing a unit fully; resurrecting a destroyed unit beside the player's other figures; wounding an enemy unit; cancelling an enemy's stat glyph; and two traps that spring when picked up (a wound, and a curse that destroys the figure two of its player's turns later)
 - [x] The Glyphs panel lists held glyphs, the stat glyphs in play and the curses counting down; the hex tooltip says where one lies; the online lobby shows how many; the initiative show adds the bonus to the roll
 - [x] Glyph changes: the Herald counts for the next initiative roll only, then is spent; the Hawk gives +3 range and goes only on a unit with a Range above 1; Return is renamed Resurrection
 - [x] Resurrected units are placed by hand: the player clicks highlighted hexes for each figure, as at deployment, with Auto place, Clear, Cancel and Confirm
 
-### Riverbend
+### Riverbend (#60)
 - [x] A new 2-player map, built from the textured tile mockup: a river bends across open fields below a rocky hill with a snowy top, with a cobbled road and ford, a grassy knoll, a wood, a swamp, a frozen pond and a lava vent on the hill's flank. Scenery: four trees in the wood, a large tree, two boulders, a ruined wall, a small ruined wall on the knoll, a large wall by the pond and a low wall at the ford. Start zones run along the west and east edges and grow to fit the armies
 
-### Facing
+### Facing (#67, changed in #68 and #69)
 - [x] Figures face a way in new games (`facing`; older saves have none and play as before). A single-hex figure faces one of eight directions; a multi-hex figure faces along its base. Figures start facing the middle of the battlefield
 - [x] After a move a figure faces along its last step; until it attacks, R turns it an eighth (Shift+R the other way), with an outline of its front cone on the ground. Tokens show their facing with a pointer on the cap
-- [x] A ranged attack needs its target in the attacker's front cone (180 degrees); a melee attack from wholly behind the defender's cone rolls 2 more attack dice (`TUNING.behindBonus`), adding to the higher-ground bonus
+- [x] An attack needs its target in the attacker's front cone (180 degrees; at first only ranged attacks, every attack since #69); a melee attack from wholly behind the defender's cone rolls 2 more attack dice (`TUNING.behindBonus`), adding to the higher-ground bonus
 - [x] Eye view turns only as far as the figure's front cone, so nothing behind it is ever on screen
 
-### Tokens and glyphs on the table
-- [x] Every attack, melee as well as ranged, needs its target in the attacker's front cone (melee figures no longer turn to face each other after an attack)
+### Tokens and glyphs on the table (#68, #69)
+- [x] Every attack, melee as well as ranged, needs its target in the attacker's front cone (#69, which also took back #68's turning of melee fighters to face each other)
 - [x] Stat glyphs in play lie face up on their unit's card on the table, with simple art drawn in code and their name; the Glyphs panel shows the same art
 - [x] Activation tokens stand on the cards on the table: a player sees their own numbers, the others only the backs until a token is revealed
 - [x] New games give each player numbered tokens for half the cards their army starts with, rounded up, plus X (`tokenAllowance: "half"`); older saves keep three
 
-### Map gallery, draft filters, test game, moves in pieces
+### Map gallery, draft filters, test game, moves in pieces (#70)
 - [x] A map gallery, from **Preview maps** in the menu's Battlefield choice: every map in 3D with its start zones for each player count, its size, scenery and ground, and **Play on this map**
 - [x] The draft's cards filter and sort as the unit gallery's do (search, faction, type, attack, sort), with **Only units I can draft**
 - [x] **Test game** in the menu: two players with 500-point armies already drafted and deployed on Twin Fords, all 11 glyphs, new-game rules; play starts at token placement

@@ -20,7 +20,7 @@ Checks run only for the parts of the game a change can affect. The browser tests
 | `editor` | Building a map (with a large tree, refused first where it would overlap, and a low wall), exporting and importing it, and playing on it |
 | `models` | Every figure model on the model page |
 | `gallery` | The unit gallery: filters, sorts, sizes and the model viewer; then the map gallery: another map previewed and chosen for play |
-| `menu` | The main menu in all four styles at three window sizes, with nothing scrolling, the version and last update in the corner, the music and sound controls and credits on every style, the menu music playing and being turned off, and menu hover and click sounds (silent with Sounds off) |; the Test game choice starting a game with every glyph down
+| `menu` | The main menu in all four styles at three window sizes, with nothing scrolling, the version and last update in the corner, the music and sound controls and credits on every style, the menu music playing and being turned off, and menu hover and click sounds (silent with Sounds off); the Test game choice starting a game with every glyph down |
 
 ## What a change runs
 
