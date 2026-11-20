@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 56-unit roster in 7 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 681 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 56-unit roster in 7 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 741 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 Nothing is in progress. Open, when the owner asks:
