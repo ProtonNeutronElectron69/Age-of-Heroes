@@ -241,14 +241,15 @@ async function handleAttackIntro() {
     if (!/attacks|strikes|:/.test(await intro.locator(".fight-title").innerText())) fail("The intro does not say who attacks whom");
     await shot("6a-attack-intro");
   } else if (diceOnlyChecked && !introSkipped) {
-    // A click skips it. Judged by the play screen's count of skips, not by the clock: drawn in
-    // software, a slow frame can hold the click until the two-second intro has nearly ended.
+    // A click skips it, judged by the play screen's count of skips, not by the clock. The click is
+    // forced: Playwright would first wait for two steady animation frames, and drawn in software
+    // while the camera glides to the fight, that can take longer than the two-second intro.
     const before = await page.evaluate(() => window.__aohUi.introsSkipped());
-    const clicked = await intro.click({ timeout: 2000 }).then(() => true, () => false);
+    const clicked = await intro.click({ timeout: 2000, force: true }).then(() => true, () => false);
     const skipped = clicked && (await page.waitForFunction((n) => window.__aohUi.introsSkipped() > n, before, { timeout: 5000 }).then(() => true, () => false));
     if (skipped) introSkipped = true;
-    // The intro ended by itself before the click landed: try again with the next attack.
-    else if (await intro.count()) fail("A click did not skip the attack intro");
+    else if (clicked) fail("A click did not skip the attack intro");
+    // Otherwise the intro had already ended by itself: try again with the next attack.
   }
   await intro.waitFor({ state: "detached", timeout: 15000 });
 }
