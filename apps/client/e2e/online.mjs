@@ -210,8 +210,8 @@ async function tryAct(p) {
   if (await lock.count()) {
     const rows = page.locator(".token-table tbody tr");
     const n = await rows.count();
-    // One token on each unit, as many as there are units, up to four.
-    for (const [row, token] of ["1", "2", "3", "X"].slice(0, Math.min(4, n)).entries()) {
+    // One token on each unit, as many as there are units, up to the player's tokens.
+    for (const [row, token] of (await page.locator(".token-table thead th").allInnerTexts()).slice(1).slice(0, n).entries()) {
       await rows.nth(row).getByRole("button", { name: new RegExp(`^Token ${token} on`) }).click(QUICK);
     }
     await page.getByRole("button", { name: "Lock in tokens" }).click(QUICK);

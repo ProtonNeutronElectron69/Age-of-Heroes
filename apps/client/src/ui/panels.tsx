@@ -1,7 +1,7 @@
 import {
-  NUMBERED_TOKENS,
-  TOKEN_IDS,
+  BLUFF_TOKEN,
   livingUnitsOf,
+  tokenIdsFor,
   tokensToPlace,
   viewFor,
   type DieFace,
@@ -50,12 +50,14 @@ export function TokenPanel({
 }) {
   const units = livingUnitsOf(state, player);
   const [assigned, setAssigned] = useState<TokenAssignment>({});
-  /** Newer games: one token per unit, and as many tokens as there are units, up to four. */
+  /** Newer games: one token per unit, and as many tokens as there are units, up to the player's tokens. */
   const spread = state.config.tokenRule === "onePerUnit";
+  const ids = tokenIdsFor(state, player);
+  const numbered = ids.length - 1;
   const needed = tokensToPlace(state, player);
-  const count = TOKEN_IDS.filter((t) => assigned[t]).length;
-  const complete = spread ? count === needed : TOKEN_IDS.every((t) => assigned[t]);
-  const choose = (t: (typeof TOKEN_IDS)[number], unitId: string) => {
+  const count = ids.filter((t) => assigned[t]).length;
+  const complete = spread ? count === needed : ids.every((t) => assigned[t]);
+  const choose = (t: TokenId, unitId: string) => {
     // A second click takes the token off again.
     if (assigned[t] === unitId) {
       const { [t]: _off, ...rest } = assigned;
@@ -63,7 +65,7 @@ export function TokenPanel({
     }
     const next: TokenAssignment = { ...assigned, [t]: unitId };
     // A unit holds one token: the one it had goes back.
-    if (spread) for (const other of TOKEN_IDS) if (other !== t && next[other] === unitId) delete next[other];
+    if (spread) for (const other of ids) if (other !== t && next[other] === unitId) delete next[other];
     setAssigned(next);
   };
 
@@ -71,10 +73,13 @@ export function TokenPanel({
     <section className="panel token-panel" aria-label="Place activation tokens">
       <h2>{names.player(player)}: place your tokens</h2>
       <p className="muted small">
-        Tokens 1, 2 and 3 decide which unit acts on each of your three turns this round. X is a bluff.{" "}
+        {numbered === 1
+          ? "Token 1 decides which unit acts on your turn this round."
+          : `Tokens 1 to ${numbered} decide which unit acts on each of your ${numbered} turns this round.`}{" "}
+        X is a bluff.{" "}
         {!spread
           ? "One unit can hold several tokens."
-          : needed < TOKEN_IDS.length
+          : needed < ids.length
             ? `Each unit holds one token. With ${needed} unit${needed === 1 ? "" : "s"} left, place ${needed} token${needed === 1 ? "" : "s"}; the rest stay off, and a turn whose token is off is skipped.`
             : "Each unit holds one token."}
       </p>
@@ -82,7 +87,7 @@ export function TokenPanel({
         <thead>
           <tr>
             <th scope="col">Unit</th>
-            {TOKEN_IDS.map((t) => (
+            {ids.map((t) => (
               <th key={t} scope="col">
                 {t}
               </th>
@@ -96,11 +101,11 @@ export function TokenPanel({
                 {names.unit(u.id)}
                 <span className="muted small"> ({u.figures.filter((f) => !f.destroyed).length} left)</span>
               </th>
-              {TOKEN_IDS.map((t) => (
+              {ids.map((t) => (
                 <td key={t}>
                   <button
                     type="button"
-                    className={`token-chip ${assigned[t] === u.id ? "on" : ""} ${t === "X" ? "bluff" : ""}`}
+                    className={`token-chip ${assigned[t] === u.id ? "on" : ""} ${t === BLUFF_TOKEN ? "bluff" : ""}`}
                     aria-pressed={assigned[t] === u.id}
                     aria-label={`Token ${t} on ${names.unit(u.id)}`}
                     onClick={() => choose(t, u.id)}
@@ -123,7 +128,7 @@ export function TokenPanel({
           ? "Lock in tokens"
           : spread
             ? `Place ${needed - count} more token${needed - count === 1 ? "" : "s"}`
-            : `Place ${TOKEN_IDS.filter((t) => !assigned[t]).join(", ")}`}
+            : `Place ${ids.filter((t) => !assigned[t]).join(", ")}`}
       </button>
     </section>
   );
@@ -152,7 +157,7 @@ export function RoundBar({ state, names }: { state: GameState; names: Names }) {
               <span className="swatch" style={{ background: p.color }} />
               <span>{names.player(id)}</span>
               <span className="revealed">
-                {NUMBERED_TOKENS.map((t) => (
+                {tokenIdsFor(state, id).filter((t) => t !== BLUFF_TOKEN).map((t) => (
                   <span key={t} className={`mini-token ${shown[t] ? "shown" : ""}`} title={shown[t] ? names.unit(shown[t]!) : "Hidden"}>
                     {t}
                   </span>

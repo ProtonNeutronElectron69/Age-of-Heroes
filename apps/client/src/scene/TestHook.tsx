@@ -42,6 +42,8 @@ declare global {
       blastHexes: UiStep[];
       /** The figure R turns (games with facing), and its facing in degrees. */
       turning: { id: string; facing: number } | null;
+      /** How many attack intros a click has skipped so far. */
+      introsSkipped: () => number;
 
     };
   }

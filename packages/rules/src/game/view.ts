@@ -1,5 +1,5 @@
 import { deepClone } from "../clone";
-import type { GameEvent, GameState, PlayerId, TokenAssignment, TokenId } from "./types";
+import type { GameEvent, GameState, PlayerId, TokenAssignment } from "./types";
 
 /**
  * What one player is allowed to see. Other players' unrevealed tokens are
@@ -7,17 +7,23 @@ import type { GameEvent, GameState, PlayerId, TokenAssignment, TokenId } from ".
  * seed and the moves so far, anyone could work out every future roll.
  * A server sends only views; hot-seat play uses them behind the pass screen.
  */
-export interface PlayerView extends Omit<GameState, "tokens" | "rng"> {
+export interface PlayerView extends Omit<GameState, "tokens" | "rng" | "hiddenTokens"> {
   readonly viewer: PlayerId | null;
   /** Visible token placements: all of the viewer's own, only revealed ones for others. */
   readonly tokens: Record<PlayerId, Partial<TokenAssignment>>;
   readonly tokensPlaced: Record<PlayerId, boolean>;
+  /**
+   * The units holding each other player's unrevealed tokens, sorted, without the numbers: the
+   * tokens lie face down on their cards, so where they are is no secret, only which is which.
+   */
+  readonly hiddenTokens: Record<PlayerId, string[]>;
 }
 
 export function viewFor(state: GameState, viewer: PlayerId | null): PlayerView {
   const { tokens, rng: _rng, ...rest } = deepClone(state);
   const visible: Record<PlayerId, Partial<TokenAssignment>> = {};
   const placed: Record<PlayerId, boolean> = {};
+  const hidden: Record<PlayerId, string[]> = {};
   for (const p of state.players) {
     const assignment = tokens[p.id];
     placed[p.id] = assignment !== null && assignment !== undefined;
@@ -27,8 +33,13 @@ export function viewFor(state: GameState, viewer: PlayerId | null): PlayerView {
       visible[p.id] = { ...assignment };
     } else {
       const shown: Partial<TokenAssignment> = {};
-      for (const t of state.revealed[p.id] ?? []) shown[t as TokenId] = assignment[t as TokenId];
+      const revealed = state.revealed[p.id] ?? [];
+      for (const t of revealed) shown[t] = assignment[t];
       visible[p.id] = shown;
+      hidden[p.id] = Object.entries(assignment)
+        .filter(([t, unitId]) => unitId && !revealed.includes(t))
+        .map(([, unitId]) => unitId!)
+        .sort();
     }
   }
   // Glyphs lie face down: nobody sees what one on the board is, and only its holder sees a held one.
@@ -38,7 +49,8 @@ export function viewFor(state: GameState, viewer: PlayerId | null): PlayerView {
       if (id !== viewer) rest.glyphs.held[id] = rest.glyphs.held[id]!.map((g) => ({ ...g, kind: null }));
     }
   }
-  return { ...rest, config: { ...rest.config, seed: 0 }, viewer, tokens: visible, tokensPlaced: placed };
+  delete rest.hiddenTokens;
+  return { ...rest, config: { ...rest.config, seed: 0 }, viewer, tokens: visible, tokensPlaced: placed, hiddenTokens: hidden };
 }
 
 /** Events carry no secret information yet; this is where per-player filtering will go. */

@@ -104,7 +104,7 @@ Glyphs are small hex tiles scattered face down on the battlefield after every un
 
 **Picking up**: a figure that ends a move on a glyph's hex picks it up (a flying figure too). Its player learns what it is; the other players are only told that a glyph was picked up, until it is used. A held glyph sits off to the side of the board with its player.
 
-**Using**: a player can use any glyph they hold at any time during their own turn, before or after moving and attacking, even with a unit other than the one taking the turn. A used glyph is gone. The number in brackets is tunable (`TUNING.glyphs`).
+**Using**: a player can use any glyph they hold at any time during their own turn, before or after moving and attacking, even with a unit other than the one taking the turn. A used glyph is gone. The number in brackets is tunable (`TUNING.glyphs`). A stat glyph lies face up on the card of the unit it was played on, for everyone to see, until it ends.
 
 | Glyph | Effect |
 | --- | --- |
@@ -163,9 +163,13 @@ Online, the host picks the options above and shares a room code. Seats and color
 Each round has three parts.
 
 ### 5.1 Place activation tokens
-Every player has four tokens: **1, 2, 3** and a bluff token **X**. In secret, each player places them on their own living units' cards, **one token per card**. A player with four or more living units places all four. A player with fewer places one token on each unit and chooses which tokens to leave off. The X token does nothing; it hides which units will act.
+Each player has numbered tokens for **half the unit cards their army starts the game with, rounded up**, plus a bluff token **X**: an army of 9 cards has tokens **1 to 5** and X. The number is fixed when the first round begins, so it stays the same when units are destroyed. **Assumption** for armies that gain a unit later (mind control): the count does not change.
 
-Games saved before this rule keep the older one: all four tokens placed, and one card may hold several.
+In secret, each player places their tokens on their own living units' cards, **one token per card**. A player with at least as many living units as tokens places them all. A player with fewer places one token on each unit and chooses which tokens to leave off. The X token does nothing; it hides which units will act.
+
+The tokens stand on the cards on the table, so everyone can see which cards hold one. A player sees the numbers on their own; the others see only the backs until a token is revealed, and a revealed token stays face up on its card until the round ends.
+
+Older saves keep their rules: three numbered tokens and X, and in the oldest, all four placed with stacking allowed.
 
 ### 5.2 Roll initiative
 Every player rolls a d20; a player whose unit holds the Glyph of the Herald (played in an earlier round) adds its bonus to each roll of this roll-off, rerolls too, and the glyph is then spent. If several players tie for the highest roll, only they roll again, until one is highest. That player goes first, and play passes to the left (increasing seat order, wrapping around) for the rest of the round. Online, the round waits until every player has rolled before any roll is made or shown (see Playing online).
@@ -173,7 +177,7 @@ Every player rolls a d20; a player whose unit holds the Glyph of the Herald (pla
 ### 5.3 Take turns
 1. In initiative order, each player reveals their **1** token and takes a turn with the unit holding it.
 2. Then each player, in the same order, reveals their **2** token and takes a turn.
-3. Then the same for the **3** token.
+3. And so on, up to the highest numbered token any player has. A player with fewer tokens is passed over once theirs run out.
 4. Finally all X tokens are revealed, and a new round begins with token placement.
 
 If the unit holding a token has been destroyed by the time the token is revealed, **that turn is lost.** A token that was left off gives that player no turn at that step.
@@ -212,6 +216,7 @@ New games give every figure a **facing**: the way it looks. Games saved before t
 - **Front cone**: a figure sees the half of the battlefield in front of it, 180 degrees, the side line included. Behind it is the other half.
 - **After a move**: a single-hex figure faces along its last step, to the nearest eighth of a turn. Until it attacks, its player may turn it to any of the eight directions (the R key, 45 degrees a press; Shift+R the other way). A figure that has not moved this turn keeps its facing, and once it attacks it can no longer turn (a move after attacking, such as Smoke Step's, lets it turn again).
 - **Multi-hex figures** face along their base, from its middle to its front hex, so they turn by turning their base as they move.
+- **Melee turns both figures**: once the dice of a melee attack (an adjacent target) have been rolled, the attacker and the defender turn to face each other, to the nearest eighth. A strike from behind still counts, since the turn comes after the roll. Multi-hex figures keep facing along their base, and a destroyed figure does not turn.
 - Figures pushed, pulled or swapped by abilities keep their facing. A figure brought back faces the middle of the battlefield.
 - **Eye view** shows only what is in front of the figure: the view turns no further than the edge of its front cone.
 

@@ -13,7 +13,7 @@ import {
   livingUnitsOf,
   glyphProblem,
   tokensToPlace,
-  TOKEN_IDS,
+  tokenIdsFor,
   moveOptions,
   specialActions,
   replayGame,
@@ -72,7 +72,7 @@ function randomCommand(state: GameState, rng: Rng, c: RulesContext): Command {
         return { type: "placeTokens", player, tokens: { "1": pick(rng, units), "2": pick(rng, units), "3": pick(rng, units), X: pick(rng, units) } };
       }
       // One token on each of some units: random tokens on random units, as many as the rules ask for.
-      const tokens = shuffle(rng, [...TOKEN_IDS]).slice(0, tokensToPlace(state, player));
+      const tokens = shuffle(rng, tokenIdsFor(state, player)).slice(0, tokensToPlace(state, player));
       const holders = shuffle(rng, units);
       return { type: "placeTokens", player, tokens: Object.fromEntries(tokens.map((t, i) => [t, holders[i]!])) };
     }
@@ -175,6 +175,8 @@ function playRandomGame(seed: number, players: number, budget: number, online = 
     glyphs: 8,
     // Figures face a way: ranged attacks need the target in front, and melee from behind rolls more.
     facing: true,
+    // Tokens for half of each army, rounded up, plus the bluff.
+    tokenAllowance: "half",
   };
   const rng = new Rng(seed * 7919 + 1);
   let state = createGame(setup, ctx).state;

@@ -80,9 +80,9 @@ try {
     if (await page.locator(".pass-card").count()) {
       await page.locator(".pass-card button").click();
       const rows = page.locator(".token-table tbody tr");
-      // One token on each unit, as many as there are units, up to four.
+      // One token on each unit, as many as there are units, up to the player's tokens.
       const n = await rows.count();
-      for (const [row, token] of ["1", "2", "3", "X"].slice(0, Math.min(4, n)).entries()) {
+      for (const [row, token] of (await page.locator(".token-table thead th").allInnerTexts()).slice(1).slice(0, n).entries()) {
         await rows.nth(row).getByRole("button", { name: new RegExp(`^Token ${token} on`) }).click();
       }
       await page.getByRole("button", { name: "Lock in tokens" }).click();

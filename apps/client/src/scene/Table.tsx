@@ -1,10 +1,13 @@
 import type { ThreeEvent } from "@react-three/fiber";
-import type { Footprint, UnitCard } from "@aoh/rules";
-import { useEffect, useMemo, useState } from "react";
-import { CanvasTexture, CircleGeometry, Color, Float32BufferAttribute, RepeatWrapping, SRGBColorSpace, Shape, ShapeGeometry, type Texture } from "three";
+import { HEX_SIZE, type Footprint, type GlyphKind, type UnitCard } from "@aoh/rules";
+import { GLYPHS } from "@aoh/content";
+import { useFrame } from "@react-three/fiber";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CanvasTexture, CircleGeometry, Color, ExtrudeGeometry, Float32BufferAttribute, RepeatWrapping, SRGBColorSpace, Shape, ShapeGeometry, Vector3, type Group, type Texture } from "three";
 import type { TableStyle } from "../settings";
 import { TEST_MODE } from "../testMode";
 import { factionTheme } from "../ui/factionThemes";
+import { drawGlyphArt, glyphShortName } from "../ui/glyphArt";
 import { CARD_BOX, cardTexture } from "./cardTexture";
 import { CardFigure } from "./Figures";
 import { TABLE_CARD, cardSlot, type Bounds, type CardSpot, type TableLayout } from "./tableLayout";
@@ -330,6 +333,16 @@ export interface TableUnit {
   readonly waiting: readonly number[];
   /** Figures destroyed and stood back on the card. */
   readonly destroyed: readonly number[];
+  /** Activation tokens standing on the card this round. */
+  readonly markers: readonly TableMarker[];
+  /** Stat glyphs played on the unit, lying face up on the card. */
+  readonly glyphs: readonly GlyphKind[];
+}
+
+/** An activation token on a card: its owner, and its number, or null while it is face down to this viewer. */
+export interface TableMarker {
+  readonly player: string;
+  readonly label: string | null;
 }
 
 /** The card's outline, as `HexCard` draws it, in card units. */
@@ -436,6 +449,164 @@ function TableCard({
           </group>
         );
       })}
+      {unit.markers.map((m, i) => (
+        <TableToken key={`token:${i}`} label={m.label} color={unit.color} x={(i - (unit.markers.length - 1) / 2) * TOKEN_SPACING} z={TOKEN_ROW} cardYaw={spot.yaw} />
+      ))}
+      {unit.glyphs.map((kind, i) => {
+        const at = GLYPH_SPOTS[i % GLYPH_SPOTS.length]!;
+        return <TableGlyph key={`glyph:${kind}:${i}`} kind={kind} x={at.x} z={at.z} />;
+      })}
+    </group>
+  );
+}
+
+// ---- Tokens and glyphs on the cards ---------------------------------------------
+
+/** Tokens stand in a row across the top of the card, between the hexes a squad's first figures take. */
+const TOKEN_ROW = -1.4 * HEX_SIZE;
+const TOKEN_SPACING = 0.8;
+/** Glyphs lie on the card's two lower hexes. */
+const GLYPH_SPOTS = [
+  { x: -(Math.sqrt(3) / 2) * HEX_SIZE, z: 1.5 * HEX_SIZE },
+  { x: (Math.sqrt(3) / 2) * HEX_SIZE, z: 1.5 * HEX_SIZE },
+];
+
+/** An activation token: a small shield standing on a round foot, like the printed order markers. */
+const TOKEN_SHIELD = (() => {
+  const s = new Shape();
+  s.moveTo(-0.34, 0.95);
+  s.lineTo(0.34, 0.95);
+  s.lineTo(0.34, 0.42);
+  s.quadraticCurveTo(0.31, 0.12, 0, 0);
+  s.quadraticCurveTo(-0.31, 0.12, -0.34, 0.42);
+  s.closePath();
+  const g = new ExtrudeGeometry(s, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 1, curveSegments: 6 });
+  g.translate(0, 0, -0.04);
+  return g;
+})();
+
+const faces = new Map<string, CanvasTexture>();
+
+/**
+ * What is painted on each side of a token: its number, light with a dark edge, or for one
+ * face down to this viewer a plain ring, so nobody can tell which number it is.
+ */
+function tokenFace(label: string | null): CanvasTexture {
+  const key = label ?? "";
+  const done = faces.get(key);
+  if (done) return done;
+  const t = painted(128, (g, size) => {
+    g.clearRect(0, 0, size, size);
+    if (label === null) {
+      g.strokeStyle = "rgba(255, 248, 230, 0.85)";
+      g.lineWidth = 10;
+      g.beginPath();
+      g.arc(size / 2, size / 2, size * 0.28, 0, Math.PI * 2);
+      g.stroke();
+      return;
+    }
+    g.font = `bold ${label.length > 1 ? 72 : 92}px Georgia, serif`;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.lineWidth = 12;
+    g.strokeStyle = "#1b1b1f";
+    g.strokeText(label, size / 2, size / 2 + 4);
+    g.fillStyle = "#fff8e6";
+    g.fillText(label, size / 2, size / 2 + 4);
+  });
+  faces.set(key, t);
+  return t;
+}
+
+/**
+ * An activation token standing on a card (it takes no clicks). It turns to face the camera each
+ * frame that is drawn, so its face, and its number where this viewer may see it, reads from any seat.
+ */
+function TableToken({ label, color, x, z, cardYaw }: { label: string | null; color: string; x: number; z: number; cardYaw: number }) {
+  const face = tokenFace(label);
+  const turn = useRef<Group>(null);
+  const at = useMemo(() => new Vector3(), []);
+  useFrame(({ camera }) => {
+    const g = turn.current;
+    if (!g) return;
+    g.getWorldPosition(at);
+    g.rotation.y = Math.atan2(camera.position.x - at.x, camera.position.z - at.z) - cardYaw;
+  });
+  return (
+    <group position={[x, 0, z]}>
+      <mesh position={[0, 0.03, 0]} raycast={() => null}>
+        <cylinderGeometry args={[0.3, 0.33, 0.06, 16]} />
+        <meshStandardMaterial color="#2a2a30" roughness={0.6} />
+      </mesh>
+      <group ref={turn}>
+        <mesh geometry={TOKEN_SHIELD} position={[0, 0.06, 0]} raycast={() => null}>
+          <meshStandardMaterial color={color} roughness={0.45} metalness={0.1} />
+        </mesh>
+        <mesh position={[0, 0.66, 0.061]} raycast={() => null}>
+          <planeGeometry args={[0.52, 0.52]} />
+          <meshBasicMaterial map={face} transparent depthWrite={false} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+const glyphFaces = new Map<GlyphKind, CanvasTexture>();
+
+/** A glyph tile's face: its art on its colour, with its name below, in a hex with the point at the top. */
+function glyphFace(kind: GlyphKind): CanvasTexture {
+  const done = glyphFaces.get(kind);
+  if (done) return done;
+  const info = GLYPHS[kind];
+  const t = painted(256, (g, size) => {
+    g.clearRect(0, 0, size, size);
+    const r = size / 2;
+    g.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = -Math.PI / 2 + (Math.PI / 3) * i;
+      const x = r + Math.cos(a) * (r - 4);
+      const y = r + Math.sin(a) * (r - 4);
+      if (i === 0) g.moveTo(x, y);
+      else g.lineTo(x, y);
+    }
+    g.closePath();
+    g.fillStyle = info.color;
+    g.fill();
+    g.lineWidth = 7;
+    g.strokeStyle = "#e8c374";
+    g.stroke();
+    drawGlyphArt(g, kind, r, size * 0.38, size * 0.36);
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillStyle = "#fbf4e2";
+    g.font = "bold 20px Georgia, serif";
+    g.fillText("GLYPH OF", r, size * 0.64);
+    const name = glyphShortName(kind).toUpperCase();
+    let px = 34;
+    g.font = `bold ${px}px Georgia, serif`;
+    while (g.measureText(name).width > size * 0.74 && px > 14) {
+      px -= 2;
+      g.font = `bold ${px}px Georgia, serif`;
+    }
+    g.fillText(name, r, size * 0.76);
+  });
+  glyphFaces.set(kind, t);
+  return t;
+}
+
+/** A stat glyph played on the unit: a hex tile lying face up on its card, art and name showing. */
+function TableGlyph({ kind, x, z }: { kind: GlyphKind; x: number; z: number }) {
+  const R = 0.72 * HEX_SIZE;
+  return (
+    <group position={[x, 0, z]}>
+      <mesh position={[0, 0.03, 0]} raycast={() => null}>
+        <cylinderGeometry args={[R * 0.92, R * 0.95, 0.05, 6]} />
+        <meshStandardMaterial color="#3a2618" roughness={0.7} />
+      </mesh>
+      <mesh position={[0, 0.058, 0]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
+        <planeGeometry args={[2 * R, 2 * R]} />
+        <meshStandardMaterial map={glyphFace(kind)} transparent alphaTest={0.5} roughness={0.6} />
+      </mesh>
     </group>
   );
 }

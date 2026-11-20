@@ -1,6 +1,7 @@
 import { MAPS, contextFor } from "@aoh/content";
 import { describe, expect, it } from "vitest";
-import { boardBounds } from "../src/scene/tableData";
+import type { GameState } from "@aoh/rules";
+import { boardBounds, tokensOnCards } from "../src/scene/tableData";
 import { TABLE_CARD, cardSlot, layoutTable, type Bounds, type CardSpot, type TablePlayer } from "../src/scene/tableLayout";
 
 const BOARD: Bounds = { minX: -15, maxX: 15, minZ: -12, maxZ: 12 };
@@ -120,5 +121,29 @@ describe("the gaming table", () => {
       expect(Math.abs(a.z)).toBeLessThan(TABLE_CARD.depth / 2);
       for (const b of slots.slice(i + 1)) expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThan(1.7);
     }
+  });
+});
+
+describe("tokens on the cards", () => {
+  const state = {
+    players: [{ id: "p1" }, { id: "p2" }],
+    tokens: { p1: { "1": "p1:0", "2": "p1:1", X: "p1:2" }, p2: { "1": "p2:0", X: "p2:1" } },
+    revealed: { p1: [], p2: ["1"] },
+  } as unknown as GameState;
+
+  it("shows the viewer's own numbers and revealed ones; the rest lie face down", () => {
+    const seen = tokensOnCards(state, "p1");
+    expect(seen.get("p1:0")).toEqual([{ player: "p1", label: "1" }]);
+    expect(seen.get("p1:2")).toEqual([{ player: "p1", label: "X" }]);
+    expect(seen.get("p2:0")).toEqual([{ player: "p2", label: "1" }]);
+    expect(seen.get("p2:1")).toEqual([{ player: "p2", label: null }]);
+    expect(tokensOnCards(state, null).get("p1:0")).toEqual([{ player: "p1", label: null }]);
+    expect(tokensOnCards(state, "all").get("p2:1")).toEqual([{ player: "p2", label: "X" }]);
+  });
+
+  it("places another player's tokens from an online view, where only their units are known", () => {
+    const online = { ...state, tokens: { ...state.tokens, p2: { "1": "p2:0", X: "" } }, hiddenTokens: { p2: ["p2:1"] } } as unknown as GameState;
+    expect(tokensOnCards(online, "p1").get("p2:1")).toEqual([{ player: "p2", label: null }]);
+    expect(tokensOnCards(online, "p1").get("p2:0")).toEqual([{ player: "p2", label: "1" }]);
   });
 });

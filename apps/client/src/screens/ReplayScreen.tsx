@@ -216,7 +216,7 @@ export function ReplayScreen({ replay, onClose }: { replay: Replay; onClose: () 
           <GamingTable layout={table} style={display.table} />
           <TableCards
             layout={table}
-            units={tableUnits(state, ctx, (p) => names.playerColor(p), new Set(settled !== index ? fallen.keys() : []))}
+            units={tableUnits(state, ctx, (p) => names.playerColor(p), new Set(settled !== index ? fallen.keys() : []), "all")}
             onHover={(unitId) => setHovered(firstFigure(unitId))}
             onClick={(unitId) => {
               const id = firstFigure(unitId);

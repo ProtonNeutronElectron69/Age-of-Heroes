@@ -17,11 +17,10 @@ import { fail, RulesError } from "./errors";
 import { faceFigure } from "./facing";
 import { curseTurnEnded, useGlyph } from "./glyphs";
 import { moveFigure } from "./movement";
-import { findUnit, isUnitAlive, tokensToPlace } from "./queries";
+import { findUnit, isUnitAlive, tokenIdsFor, tokensToPlace } from "./queries";
 import { advance, checkGameOver, eliminate, maybeStartTurns, stepPointer } from "./rounds";
 import {
   GLYPH_KINDS,
-  TOKEN_IDS,
   type Command,
   type CommandResult,
   type GameEvent,
@@ -74,6 +73,7 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
       tokenRule: setup.tokenRule ?? "stack",
       ...(setup.glyphs ? { glyphs: Math.max(0, Math.min(GLYPH_KINDS.length, Math.floor(setup.glyphs))) } : {}),
       ...(setup.facing ? { facing: true } : {}),
+      ...(setup.tokenAllowance ? { tokenAllowance: setup.tokenAllowance } : {}),
     },
     rng: setup.seed >>> 0,
     round: 0,
@@ -217,24 +217,26 @@ export function waitingOn(state: GameState): PlayerId[] {
 function placeTokens(
   state: GameState,
   player: PlayerId,
-  tokens: Record<string, string>,
+  tokens: Record<string, string | undefined>,
   events: GameEvent[],
   ctx: RulesContext,
 ): void {
   if (state.phase !== "placeTokens") fail("Tokens can only be placed before the round's turns begin");
   if (state.tokens[player]) fail("Tokens have already been placed this round");
+  const ids = tokenIdsFor(state, player);
+  const named = ids.join(", ").replace(/, X$/, " and X");
   const keys = Object.keys(tokens);
-  if (keys.some((k) => !(TOKEN_IDS as readonly string[]).includes(k)) || keys.some((k) => typeof tokens[k] !== "string")) {
-    fail("Tokens are 1, 2, 3 and X, each placed on a unit");
+  if (keys.some((k) => !ids.includes(k)) || keys.some((k) => typeof tokens[k] !== "string")) {
+    fail(`Your tokens are ${named}, each placed on a unit`);
   }
   const spread = state.config.tokenRule === "onePerUnit";
   const needed = tokensToPlace(state, player);
-  if (!spread && keys.length !== TOKEN_IDS.length) fail("All four tokens (1, 2, 3 and X) must be placed");
+  if (!spread && keys.length !== ids.length) fail(`All your tokens (${named}) must be placed`);
   if (spread && keys.length !== needed) {
-    fail(needed === TOKEN_IDS.length ? "All four tokens (1, 2, 3 and X) must be placed" : `Place ${needed} token${needed === 1 ? "" : "s"}, one on each of your units`);
+    fail(needed === ids.length ? `All your tokens (${named}) must be placed` : `Place ${needed} token${needed === 1 ? "" : "s"}, one on each of your units`);
   }
   const placed: TokenAssignment = {};
-  for (const t of TOKEN_IDS) {
+  for (const t of ids) {
     const unitId = tokens[t];
     if (unitId === undefined) continue;
     const unit = findUnit(state, unitId);
