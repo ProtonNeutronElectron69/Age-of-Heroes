@@ -9,7 +9,7 @@ import { preview } from "vite";
 const shots = process.env.E2E_SCREENSHOTS;
 const failureShots = process.env.E2E_FAILURE_SCREENSHOTS ?? shots;
 const STYLES = ["War Table", "Atlas", "Banner Hall", "Hex Command"];
-const CHOICES = ["Play on this device", "Play online", "Continue", "Saved games", "Watch a replay", "Map editor", "Unit gallery"];
+const CHOICES = ["Play on this device", "Play online", "Continue", "Saved games", "Watch a replay", "Map editor", "Unit gallery", "Test game"];
 
 function fail(message) {
   throw new Error(message);
@@ -155,6 +155,17 @@ try {
   if (!(await phone.locator(".main-menu.compact").count())) fail("A narrow window should get the one-column menu");
   if ((await phone.evaluate(() => document.querySelector(".main-menu").scrollWidth > innerWidth + 1))) fail("The phone menu scrolls sideways");
   await phone.getByRole("button", { name: "Unit gallery" }).waitFor();
+
+  // The test game starts at once: two armies already on Twin Fords, every glyph down, tokens to place.
+  const test = await open({ width: 1280, height: 720 });
+  await test.getByRole("button", { name: "Test game" }).click();
+  await test.locator(".pass-card").waitFor();
+  const glyphs = await test.getByRole("region", { name: "Glyphs" }).innerText();
+  if (!/11 face down/.test(glyphs)) fail(`The test game should have all 11 glyphs on the board: ${glyphs}`);
+  const armies = await test.evaluate(() => JSON.parse(localStorage.getItem("age-of-heroes:save:v2") ?? "null"));
+  if (armies && armies.setup && (armies.setup.mapId !== "twin-fords" || Object.keys(armies.setup.armies ?? {}).length !== 2)) {
+    fail(`The test game should be two armies on Twin Fords: ${JSON.stringify(armies.setup)}`);
+  }
 
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(`Menu test passed: all ${STYLES.length} styles fit at three window sizes, the chosen style is kept, the music plays and can be turned off, and the menu answers with sounds.`);

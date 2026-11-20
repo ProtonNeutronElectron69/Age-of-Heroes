@@ -290,3 +290,9 @@ Small changes asked for after playing, online games especially.
 - [x] Stat glyphs in play lie face up on their unit's card on the table, with simple art drawn in code and their name; the Glyphs panel shows the same art
 - [x] Activation tokens stand on the cards on the table: a player sees their own numbers, the others only the backs until a token is revealed
 - [x] New games give each player numbered tokens for half the cards their army starts with, rounded up, plus X (`tokenAllowance: "half"`); older saves keep three
+
+### Map gallery, draft filters, test game, moves in pieces
+- [x] A map gallery, from **Preview maps** in the menu's Battlefield choice: every map in 3D with its start zones for each player count, its size, scenery and ground, and **Play on this map**
+- [x] The draft's cards filter and sort as the unit gallery's do (search, faction, type, attack, sort), with **Only units I can draft**
+- [x] **Test game** in the menu: two players with 500-point armies already drafted and deployed on Twin Fords, all 11 glyphs, new-game rules; play starts at token placement
+- [x] A figure's move may be made in pieces, until it attacks: a figure keeps the selection while it has movement left

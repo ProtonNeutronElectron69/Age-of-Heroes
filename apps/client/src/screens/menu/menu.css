@@ -597,16 +597,16 @@
 
 .ms-war-table .menu-cmds {
   left: 56px;
-  top: 216px;
+  top: 200px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 4px;
 }
 
 .ms-war-table .mc {
   width: 340px;
   overflow: hidden;
-  padding: 7px 16px 7px 12px;
+  padding: 4px 16px 4px 12px;
   color: #f3ead9;
   background: linear-gradient(90deg, rgba(48, 36, 20, 0.92), rgba(26, 20, 13, 0.88));
   border: 1px solid rgba(217, 177, 92, 0.38);
@@ -1487,7 +1487,7 @@
 }
 
 .ms-hex-command .menu-cmds {
-  left: 66px;
+  left: 54px;
   top: 172px;
   width: 462px;
   height: 443px;
@@ -1534,6 +1534,11 @@
 
 .ms-hex-command .mc-gallery {
   left: 78px;
+  top: 0;
+}
+
+.ms-hex-command .mc-test {
+  left: 390px;
   top: 0;
 }
 

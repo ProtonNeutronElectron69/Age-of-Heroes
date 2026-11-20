@@ -81,6 +81,8 @@ export const RULES = [
   { area: "display board", match: /^apps\/client\/src\/scene\/standing\.tsx$/, check: true, unit: [], e2e: ["models", "gallery"] },
   { area: "model page", match: /^apps\/client\/src\/screens\/(ModelGalleryScreen\.tsx|model-gallery\.css)$/, check: true, unit: [], e2e: ["models"] },
   { area: "unit gallery", match: /^apps\/client\/src\/screens\/(UnitGalleryScreen\.tsx|unit-gallery\.css)$/, check: true, unit: [], e2e: ["gallery"] },
+  { area: "map gallery", match: /^apps\/client\/src\/screens\/(MapGalleryScreen\.tsx|map-gallery\.css)$/, check: true, unit: [], e2e: ["gallery"] },
+  { area: "test game", match: /^apps\/client\/src\/testGame\.ts$/, check: true, unit: [], e2e: ["menu"] },
 
   // Client files that only one part of the game uses.
   { area: "map editor", match: /^apps\/client\/src\/screens\/EditorScreen\.tsx$/, check: true, unit: [], e2e: ["editor"] },

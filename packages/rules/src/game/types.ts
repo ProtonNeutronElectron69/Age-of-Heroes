@@ -149,6 +149,12 @@ export interface ActiveTurn {
   bonusMoves: Record<string, number>;
   /** Figures that may still be turned (games with facing): those that moved and have not attacked since. */
   turnable?: string[];
+  /**
+   * A figure's move may be made in pieces: what each figure has used so far this turn. `spent`
+   * is the movement points used; `ended` is set when terrain ended its movement (water, swamp,
+   * a slip on ice); `offBonus` when it left terrain that gives a bonus for staying on it.
+   */
+  moves?: Record<string, { spent: number; ended: boolean; offBonus: boolean }>;
 }
 
 export interface TurnPointer {

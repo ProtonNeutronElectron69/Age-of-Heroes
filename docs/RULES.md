@@ -189,6 +189,7 @@ If a player loses their last figure during their own turn (to lava, a fall or a 
 The revealed unit **activates**. Each of its figures may make one move and one attack.
 - A hero moves and then attacks.
 - A squad's figures act in any order: figure A can move, figure B can move and attack, then figure A attacks, and so on. Each figure's move must come before its own attack. **Assumption.**
+- **A move may be made in pieces**: a figure can move some of its Move, then move again with what is left (for example 3 hexes, then 2 more), as long as it has not attacked. Each piece is checked and resolved as a move of its own (passing strikes, falls, terrain, glyphs). Entering water or swamp, or slipping on ice, ends the figure's movement for the turn. A terrain bonus for staying on one kind of terrain counts only if every piece stayed on it. **Assumption.**
 - Moving and attacking are both optional.
 
 ## 7. Movement

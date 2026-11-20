@@ -117,12 +117,25 @@ describe("move command", () => {
     expect(fails([step(1), step(2), step(3), step(4), step(5), step(6)]).ok).toBe(false);
   });
 
-  it("does not let a figure move twice or after attacking", () => {
-    const { ctx, state } = rowGame(flat(6), at(0));
-    const moved = apply(state, move([step(1)]), ctx).state;
-    expect(applyCommand(moved, move([step(2)]), ctx).error).toMatch(/already moved/);
+  it("lets a figure move in pieces, up to its Move in all, but not after attacking", () => {
+    // The test hero has Move 5: 3 hexes, then 2 more, then no more.
+    const { ctx, state } = rowGame(flat(9), at(0));
+    const first = apply(state, move([step(1), step(2), step(3)]), ctx).state;
+    expect([...moveOptions(first, "p1:0#1", ctx).values()].map((o) => o.to.hex.q).sort((a, b) => a - b)).toEqual([1, 2, 4, 5]);
+    const second = apply(first, move([step(4), step(5)]), ctx).state;
+    expect(second.units[0]!.figures[0]!.position!.hex.q).toBe(5);
+    expect(second.active!.moves!["p1:0#1"]!.spent).toBe(5);
+    expect(applyCommand(second, move([step(6)]), ctx).error).toMatch(/only has 0/);
+    expect(moveOptions(second, "p1:0#1", ctx).size).toBe(0);
     const attacked = { ...state, active: { ...state.active!, attacked: ["p1:0#1"] } };
     expect(applyCommand(attacked, move([step(1)]), ctx).error).toMatch(/after attacking/);
+  });
+
+  it("ends the whole move when water stops it", () => {
+    const { ctx, state } = rowGame([["grass", 1], ["water", 1], ["grass", 1], ["grass", 1]], at(0));
+    const wet = apply(state, move([step(1)]), ctx).state;
+    expect(applyCommand(wet, move([step(2)]), ctx).error).toMatch(/movement has ended/);
+    expect(moveOptions(wet, "p1:0#1", ctx).size).toBe(0);
   });
 
   it("only moves figures of the activated unit", () => {

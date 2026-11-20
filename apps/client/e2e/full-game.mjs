@@ -104,6 +104,37 @@ async function tagOf(id) {
  * Waits until the camera has stopped moving: `frames` frames in a row project the same point.
  * The camera glides to the acting figure after a turn starts or a squad figure acts, so clicks wait for it.
  */
+/**
+ * After a squad figure moves: it keeps the selection while it has movement left (a move may be made
+ * in pieces), and otherwise hands it to the squad's next figure.
+ */
+function squadHandOff(before, after) {
+  if (!after.selected) return;
+  if (after.selected !== before.selected) cycled++;
+  else if (after.moves.length === 0 && after.targets.length === 0) fail(`${after.selected} kept the selection with nothing left to do`);
+  else if (after.moves.length > 0) cycled++;
+}
+
+/** Move the chosen figure again, with what its first piece left, and check that it went. */
+async function secondPiece(ui) {
+  // A passing strike's show would take the click; try again with a later move.
+  if (await page.locator(".fight-intro, [role=dialog][aria-label='Attack']").count()) return;
+  await steadyCamera();
+  for (const m of ui.moves.slice(0, 8)) {
+    const p = await screenPoint(m.hex.q, m.hex.r, m.elevation);
+    if (!p) continue;
+    await page.mouse.click(p.x, p.y);
+    const went = await page
+      .waitForFunction(({ id, was }) => JSON.stringify(window.__aohUi?.selectedAt) !== was || window.__aohUi?.selected !== id, { id: ui.selected, was: JSON.stringify(ui.selectedAt) }, { timeout: 5000 })
+      .then(() => true, () => false);
+    if (went) {
+      splitChecked = true;
+      moves++;
+      return;
+    }
+  }
+}
+
 /** Once: after a move, R turns the figure that moved an eighth (new games have facing). */
 let turnChecked = false;
 async function checkTurning() {
@@ -295,6 +326,8 @@ let attacks = 0;
 let eyeChecked = false;
 let squadMoves = 0;
 let cycled = 0;
+/** A figure was moved in two pieces: a short move, then on with what it had left. */
+let splitChecked = false;
 let dragged = false;
 let jumpChecked = false;
 let tipChecked = false;
@@ -337,6 +370,18 @@ try {
   const draftTip = await hexTipAt(field.x + field.width / 2, field.y + field.height / 2);
   if (!/Elevation \d/.test(draftTip)) fail(`The hex tooltip in the draft shows no elevation: ${draftTip}`);
   await page.getByRole("button", { name: "Go to the draft" }).click();
+
+  // The draft's cards sort and filter as the unit gallery's do.
+  await page.locator(".draft-card").first().waitFor();
+  const allCards = await page.locator(".draft-card").count();
+  await page.getByRole("combobox", { name: "Type" }).selectOption("hero");
+  const heroes = await page.locator(".draft-card").count();
+  if (!(heroes > 0 && heroes < allCards)) fail(`Filtering the draft to heroes showed ${heroes} of ${allCards} cards`);
+  await page.getByRole("combobox", { name: "Sort by" }).selectOption("points");
+  const points = await page.locator(".draft-card").evaluateAll((list) => list.map((c) => Number(c.dataset.points)));
+  if (points.some((p, i) => i > 0 && p > points[i - 1])) fail(`Sorting the draft by points, highest first, gave ${points.join(", ")}`);
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  if ((await page.locator(".draft-card").count()) !== allCards) fail("Clearing the draft's filters did not bring every card back");
 
   // Then take the first card that is still available each pick.
   // Every unit shows its hex card, with the name and rules text fitted inside it.
@@ -663,7 +708,7 @@ try {
               dragged = true;
               moves++;
               if (squad) squadMoves++;
-              if (squad && after.selected && after.selected !== ui.selected) cycled++;
+              if (squad) squadHandOff(ui, after);
               await checkTurning();
               continue;
             }
@@ -672,7 +717,10 @@ try {
           }
         }
       }
-      for (const m of ranked.slice(0, 8)) {
+      // Until it has worked once, make a short move first, so the figure has movement left for a second piece.
+      const near = (m) => (ui.selectedAt ? hexDistance(m.hex, ui.selectedAt.hex) : 0);
+      const order = splitChecked ? ranked : [...ui.moves].sort((a, b) => near(a) - near(b));
+      for (const m of order.slice(0, 8)) {
         const p = await screenPoint(m.hex.q, m.hex.r, m.elevation);
         if (!p) continue;
         await page.mouse.click(p.x, p.y);
@@ -681,10 +729,11 @@ try {
         if (after.moves.length === 0 || JSON.stringify(after.moves) !== JSON.stringify(ui.moves)) {
           moves++;
           if (moves === 1) await shot("5-moved");
-          // Squads hand the selection to the next figure after a move.
           if (squad) squadMoves++;
-          if (squad && after.selected && after.selected !== ui.selected) cycled++;
+          if (squad) squadHandOff(ui, after);
           await checkTurning();
+          // The same figure, still chosen with movement left, moves on: the second piece of its move.
+          if (!splitChecked && after.selected === ui.selected && after.moves.length > 0) await secondPiece(after);
           break;
         }
       }
@@ -762,6 +811,7 @@ try {
   if (!sceneChecked || !diceOnlyChecked) fail("The attack scene and dice only were not both seen");
   if (!introChecked || !woundsChecked) fail("No attack intro or wound number was seen");
   if (squadMoves > 0 && cycled === 0) fail("Squads never moved on to their next figure after a move");
+  if (!splitChecked) fail("No figure moved in two pieces");
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(`Full game played: ${moves} moves, ${attacks} attacks. Result: ${heading}`);
 } catch (err) {

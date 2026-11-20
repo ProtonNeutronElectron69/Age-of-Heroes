@@ -1,5 +1,5 @@
 /** Line icons for the main menu, drawn in the text colour. */
-export type IconName = "swords" | "globe" | "hourglass" | "scroll" | "eye" | "map" | "cards";
+export type IconName = "swords" | "globe" | "hourglass" | "scroll" | "eye" | "map" | "cards" | "flask";
 
 const PATHS: Record<IconName, React.ReactNode> = {
   swords: (
@@ -45,6 +45,12 @@ const PATHS: Record<IconName, React.ReactNode> = {
     <g strokeLinejoin="round">
       <rect x="3" y="6" width="11" height="15" rx="1.5" />
       <path d="M8 3h11.5A1.5 1.5 0 0 1 21 4.5V18" />
+    </g>
+  ),
+  flask: (
+    <g strokeLinejoin="round" strokeLinecap="round">
+      <path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2h12.4a1.5 1.5 0 0 0 1.3-2L14 9V3" />
+      <path d="M7 15h10" />
     </g>
   ),
 };

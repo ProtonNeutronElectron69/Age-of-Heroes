@@ -51,6 +51,8 @@
 - **Hex tooltip:** a middle click on the play, replay or draft board (`ui/HexTip.tsx`, through `BoardScene`'s `onInspect`); a middle drag still zooms.
 - **Glyphs:** face-down tiles on the board (`scene/Glyphs.tsx`) and the Glyphs panel (`ui/GlyphPanel.tsx`) in the left column. Held glyphs show face up only to their player (online the view hides the rest; hot-seat shows only the active player's). A glyph's Use lists the units `glyphProblem` allows; the Glyph of Resurrection then opens the Resurrection panel, where the player clicks the hexes `summonOptions` offers for each figure. New games (hot-seat and online) set `glyphs` (default 4); older saves leave it out and have none.
 - **Facing:** new games (hot-seat and online) set `facing`; older saves leave it out, have no facing and keep their models turned to the nearest enemy. A figure's `facing` is in degrees (`packages/rules/src/game/facing.ts`, the same turn the client draws a model with). R sends `face` for the figure `turning()` picks in `PlayScreen.tsx` (the chosen one if it may turn, else the last to move that may), which draws its front cone's outline (`FacingCone` in `scene/Figures.tsx`); otherwise R still turns a big figure being placed. Tokens show facing with a pointer on the cap. Eye view keeps to the front cone (`coneLimits` in `scene/BoardScene.tsx`). `figureFaced` is left out of the log.
+- **Moves in pieces:** a figure that has moved may move again with what is left of its Move until it attacks (`ActiveTurn.moves` in the engine); the play screen keeps such a figure chosen after a move (`canMoveOn`) instead of handing the selection to the squad's next figure.
+- **Draft filters:** the draft's cards use the unit gallery's controls (`ui/UnitFilters.tsx`: search, faction, type, attack and sort), plus **Only units I can draft**.
 - **Draft map:** the draft opens on the battlefield (`screens/DraftMap.tsx`) until the first pick has been made; **Go to the draft** and **View map** switch views.
 
 ### Music
@@ -66,6 +68,7 @@
 
 ### Main menu
 - Four styles (War Table, Atlas, Banner Hall, Hex Command) share one set of choices and panels; `SetupScreen.tsx` builds them and `screens/menu/MenuFrame.tsx` and `menu.css` dress them. A new menu choice or setting goes in every style, and must fit the 1280 by 720 stage without scrolling (`e2e/menu.mjs` checks).
+- **Map gallery and test game:** **Preview maps** in the Battlefield choice opens `screens/MapGalleryScreen.tsx` (every map in 3D, its start zones for each player count, **Play on this map** returns its id to the menu). The **Test game** choice (`testGame.ts`) loads a hot-seat game with two random 500-point armies already drafted and deployed on Twin Fords, all 11 glyphs and new-game rules, through `loadGame`.
 - **Version:** the menu's corner shows "v1.0 · Last updated MM/DD/YYYY" (`version.ts`). The version is `version` in `apps/client/package.json` (1.0.0 shows as v1.0); change it only when the owner asks. The date is the latest commit's, read at build time, so it needs no editing.
 
 ### Browser tests

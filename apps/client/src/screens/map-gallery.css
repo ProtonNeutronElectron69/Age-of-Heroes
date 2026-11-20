@@ -1,0 +1,134 @@
+/* The map gallery (screens/MapGalleryScreen.tsx), opened from the menu's Battlefield choice. */
+.map-gallery {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 300px;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "head head head"
+    "list view info";
+  gap: 12px;
+  height: 100vh;
+  padding: 16px 20px;
+  box-sizing: border-box;
+}
+
+.mg-head {
+  grid-area: head;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+}
+
+.mg-head h1,
+.mg-head p {
+  margin: 0;
+}
+
+.mg-head button {
+  margin-left: auto;
+}
+
+.mg-list {
+  grid-area: list;
+  overflow-y: auto;
+}
+
+.mg-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.mg-list button {
+  display: grid;
+  width: 100%;
+  text-align: left;
+  gap: 2px;
+}
+
+.mg-list button.on {
+  outline: 2px solid var(--accent, #e8b730);
+}
+
+.mg-list small {
+  opacity: 0.7;
+}
+
+.mg-view {
+  grid-area: view;
+  position: relative;
+  min-height: 0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.mg-view .canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.mg-info {
+  grid-area: info;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.mg-info h2,
+.mg-info h3,
+.mg-info p {
+  margin: 0;
+}
+
+.mg-info dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  margin: 0;
+}
+
+.mg-info dt {
+  opacity: 0.7;
+}
+
+.mg-info dd {
+  margin: 0;
+}
+
+.mg-zones [role="radiogroup"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.mg-zones button.on {
+  outline: 2px solid var(--accent, #e8b730);
+}
+
+.mg-seats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.mg-info .primary {
+  margin-top: auto;
+}
+
+@media (max-width: 900px) {
+  .map-gallery {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto minmax(320px, 1fr) auto;
+    grid-template-areas: "head" "list" "view" "info";
+    height: auto;
+    min-height: 100vh;
+  }
+}
