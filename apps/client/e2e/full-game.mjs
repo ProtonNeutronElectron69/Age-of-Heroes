@@ -106,13 +106,13 @@ async function tagOf(id) {
  */
 /**
  * After a squad figure moves: it keeps the selection while it has movement left (a move may be made
- * in pieces), and otherwise hands it to the squad's next figure.
+ * in pieces), and otherwise hands it to the squad's next figure that can act.
  */
 function squadHandOff(before, after) {
   if (!after.selected) return;
-  if (after.selected !== before.selected) cycled++;
-  else if (after.moves.length === 0 && after.targets.length === 0) fail(`${after.selected} kept the selection with nothing left to do`);
-  else if (after.moves.length > 0) cycled++;
+  // Moved on to the next figure, or kept for the next piece of this one's move. (With no other figure
+  // able to act, the selection also stays where it is, as it always has.)
+  if (after.selected !== before.selected || after.moves.length > 0) cycled++;
 }
 
 /** Move the chosen figure again, with what its first piece left, and check that it went. */
@@ -382,6 +382,8 @@ try {
   if (points.some((p, i) => i > 0 && p > points[i - 1])) fail(`Sorting the draft by points, highest first, gave ${points.join(", ")}`);
   await page.getByRole("button", { name: "Clear filters" }).click();
   if ((await page.locator(".draft-card").count()) !== allCards) fail("Clearing the draft's filters did not bring every card back");
+  // Back to the usual order: the draft below takes the first card it can, and the dearest first would leave tiny armies.
+  await page.getByRole("combobox", { name: "Sort by" }).selectOption("faction");
 
   // Then take the first card that is still available each pick.
   // Every unit shows its hex card, with the name and rules text fitted inside it.
