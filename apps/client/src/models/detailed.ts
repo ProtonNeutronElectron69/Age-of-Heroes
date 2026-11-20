@@ -5,6 +5,7 @@ import { GALLOP, TROT, horse, type HorseLeg, type HorsePose } from "./horse";
 import type { Paint } from "./paint";
 import { AIM_TURN, DRAWN, aiming, loosing } from "./poses";
 import type { FigureModel, Part, UnitModel, V3 } from "./types";
+import { HIVE_DETAILED } from "./units/hive";
 
 /**
  * Detailed figure models: stage 2, painted part by part (`paint.ts`) with more detail, drawn in
@@ -1632,4 +1633,6 @@ export const DETAILED_MODELS: Readonly<Record<string, UnitModel>> = {
   "old-rootback": { figures: [rootbackDetailed] },
   "queen-ilyth": { figures: [ilythDetailed] },
   "briar-sprites": { figures: squad([spriteThrowingP, spriteHoveringP], 3) },
+  // The Sunken Hive builds both looks from one set of poses (`units/hive.ts`).
+  ...HIVE_DETAILED,
 };

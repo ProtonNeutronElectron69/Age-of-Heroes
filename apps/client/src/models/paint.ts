@@ -13,7 +13,8 @@ export type Paint =
   | "fur" | "stripe" | "mane" | "belly" | "horn" | "glow" | "glowGreen" | "leaf" | "wing" | "wingbone"
   | "bone" | "ironDark" | "mail" | "pelt" | "beard" | "hairLight" | "machine" | "glowCyan" | "coatDark" | "tunic"
   | "bark" | "moss" | "straw" | "horse" | "stand"
-  | "ghoul" | "orc" | "faeWing";
+  | "ghoul" | "orc" | "faeWing"
+  | "alien" | "brain" | "tongue";
 
 export interface PaintLook {
   readonly color: string;
@@ -95,5 +96,9 @@ export function paintLook(p: Paint, { scheme, main, faction }: PaintContext): Pa
     case "orc": return look("#6c8a3e", 0.65);
     // A fae's wing: pale and glossy, a hint of the main colour in it.
     case "faeWing": return look(blend(main, "#e4f4f0", 0.75), 0.25);
+    // The Sunken Hive: slick grey-green hide, a swollen lilac brain, a pink tongue.
+    case "alien": return look("#8fa99a", 0.35);
+    case "brain": return look("#b6a8c9", 0.45);
+    case "tongue": return look("#d4708e", 0.3);
   }
 }

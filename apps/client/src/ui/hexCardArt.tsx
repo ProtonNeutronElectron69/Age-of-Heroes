@@ -81,6 +81,16 @@ export function Emblem({ id, ink, ground }: { id: EmblemId; ink: string; ground:
           <path d="M-13,8.6 H13 M-8,12.8 H8" />
         </g>
       );
+    case "eye":
+      // A slit-pupilled eye over three dripping tendrils.
+      return (
+        <g>
+          <path d="M-13,-3 Q0,-15 13,-3 Q0,9 -13,-3 Z" fill={ink} />
+          <ellipse cy={-3} rx={4.6} ry={5.2} fill={ground} />
+          <ellipse cy={-3} rx={1.4} ry={4.2} fill={ink} />
+          <path d="M-6,4.4 Q-8.5,9 -6,13 M0,6 V14 M6,4.4 Q8.5,9 6,13" fill="none" stroke={ink} strokeWidth={2.2} strokeLinecap="round" />
+        </g>
+      );
     case "star":
       return <path d="M0,-13 L3.4,-4.4 L12.4,-4 L5.4,1.8 L7.6,10.6 L0,5.8 L-7.6,10.6 L-5.4,1.8 L-12.4,-4 L-3.4,-4.4 Z" fill={ink} />;
   }

@@ -7,6 +7,7 @@ import type { FigureModel, Part, UnitModel } from "./types";
 import { ASHEN } from "./units/ashen";
 import { CONCORD } from "./units/concord";
 import { DAWNHOLD } from "./units/dawnhold";
+import { HIVE } from "./units/hive";
 import { KAGERO } from "./units/kagero";
 import { NEXUS } from "./units/nexus";
 import { VERDANT } from "./units/verdant";
@@ -23,7 +24,7 @@ export { paintLook, type Paint, type PaintContext, type PaintLook } from "./pain
  * Figure models by card id: every unit card has one. Stage 1 gives each unit
  * its size and shape in a single colour.
  */
-export const UNIT_MODELS: Readonly<Record<string, UnitModel>> = { ...CONCORD, ...KAGERO, ...VERDANT, ...NEXUS, ...ASHEN, ...DAWNHOLD };
+export const UNIT_MODELS: Readonly<Record<string, UnitModel>> = { ...CONCORD, ...KAGERO, ...VERDANT, ...NEXUS, ...ASHEN, ...DAWNHOLD, ...HIVE };
 
 /**
  * A unit's model for a look: its detailed model in the detailed look where it has one, and

@@ -1,6 +1,7 @@
 import { ASHEN } from "./drawings/ashen";
 import { CONCORD } from "./drawings/concord";
 import { DAWNHOLD } from "./drawings/dawnhold";
+import { HIVE } from "./drawings/hive";
 import { KAGERO } from "./drawings/kagero";
 import { NEXUS } from "./drawings/nexus";
 import { VERDANT } from "./drawings/verdant";
@@ -14,6 +15,7 @@ export const DRAWINGS: Readonly<Record<string, Drawing>> = {
   ...NEXUS,
   ...ASHEN,
   ...DAWNHOLD,
+  ...HIVE,
 };
 
 /** The box around every figure of an arrangement, for fitting it into a window. */
