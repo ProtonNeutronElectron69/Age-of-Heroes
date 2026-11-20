@@ -1,4 +1,5 @@
 // Opens the unit gallery from the main menu: filters, sorts and resizes the cards, then views a figure model.
+// Then the map gallery: another map previewed, and chosen for play.
 // Usage: node e2e/gallery.mjs   (serves the build in apps/client/dist)
 import { chromium } from "playwright";
 import { preview } from "vite";
@@ -126,8 +127,23 @@ try {
   await page.getByRole("button", { name: "Back", exact: true }).click();
   await page.getByRole("button", { name: "Unit gallery", exact: true }).waitFor();
 
+  // The map gallery: open it from the Battlefield choice, look at another map, and play on it.
+  await page.getByRole("button", { name: "Preview maps" }).click();
+  await page.getByRole("heading", { name: "Maps", exact: true }).waitFor();
+  await drawn(1000);
+  const listed = await page.getByRole("navigation", { name: "Maps" }).getByRole("button").count();
+  if (listed < 7) fail(`The map gallery lists ${listed} maps, not every premade one`);
+  await page.locator('[data-map="riverbend"]').click();
+  await page.getByRole("heading", { name: "Riverbend", level: 2 }).waitFor();
+  await drawn(1000);
+  if (!/2 players?|2 to/.test(await page.getByRole("complementary", { name: "About this map" }).innerText())) fail("The map gallery does not say how many players Riverbend hosts");
+  if (shots) await page.screenshot({ path: `${shots}/gallery-maps.png`, timeout: 120000 });
+  await page.getByRole("button", { name: "Play on this map" }).click();
+  await page.getByRole("radiogroup", { name: "Map" }).waitFor();
+  if ((await page.getByRole("radio", { name: "Riverbend" }).getAttribute("aria-checked")) !== "true") fail("Play on this map did not choose Riverbend in the menu");
+
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
-  console.log(`Gallery test passed: ${total} cards filtered, sorted and resized, and figure models viewed.`);
+  console.log(`Gallery test passed: ${total} cards filtered, sorted and resized, figure models viewed, and the map gallery looked round.`);
 } catch (err) {
   if (failureShots) await page.screenshot({ path: `${failureShots}/gallery-failure.png` }).catch(() => {});
   throw err;

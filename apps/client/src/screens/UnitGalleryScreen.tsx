@@ -1,13 +1,14 @@
-import { CARDS, FACTIONS, SEAT_COLORS, SEAT_COLOR_NAMES } from "@aoh/content";
+import { CARDS, SEAT_COLORS, SEAT_COLOR_NAMES } from "@aoh/content";
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { isSquad, type UnitCard } from "@aoh/rules";
+import type { UnitCard } from "@aoh/rules";
 import { useEffect, useMemo, useState } from "react";
 import { COLOR_SCHEMES, figureColors, type ColorScheme } from "../models";
 import { Camera, StandingUnit, Tiles, closeView, lineUp } from "../scene/standing";
 import { TestHook } from "../scene/TestHook";
 import { HexCard } from "../ui/HexCard";
 import { factionTheme } from "../ui/factionThemes";
+import { ALL_FILTERS, SORTS, UnitFilterControls, filterCards, isFiltered, type Filters, type SortKey } from "../ui/UnitFilters";
 import "./unit-gallery.css";
 
 /** Cards across a row: small 5, medium 3, large 1. */
@@ -18,52 +19,8 @@ const SIZES: readonly { id: CardSize; name: string }[] = [
   { id: "large", name: "Large" },
 ];
 
-type Kind = "all" | "hero" | "squad";
-type Attack = "all" | "ranged" | "melee";
-export type SortKey = "faction" | "name" | "points" | "life" | "height" | "move" | "range" | "attack" | "defense";
-const SORTS: readonly { id: SortKey; name: string }[] = [
-  { id: "faction", name: "Faction" },
-  { id: "name", name: "Name" },
-  { id: "points", name: "Points" },
-  { id: "life", name: "Life" },
-  { id: "height", name: "Height" },
-  { id: "move", name: "Move" },
-  { id: "range", name: "Range" },
-  { id: "attack", name: "Attack" },
-  { id: "defense", name: "Defense" },
-];
-
-export interface Filters {
-  readonly text: string;
-  readonly faction: string;
-  readonly kind: Kind;
-  readonly attack: Attack;
-}
-
-/** The number a card sorts by. */
-function sortValue(card: UnitCard, key: Exclude<SortKey, "faction" | "name">): number {
-  return card[key];
-}
-
-/** The cards that pass the filters, in the chosen order. Ties go by name. */
-export function galleryCards(filters: Filters, sort: SortKey, descending: boolean): UnitCard[] {
-  const text = filters.text.trim().toLowerCase();
-  const shown = CARDS.filter(
-    (c) =>
-      (filters.faction === "all" || c.faction === filters.faction) &&
-      (filters.kind === "all" || (filters.kind === "squad") === isSquad(c)) &&
-      (filters.attack === "all" || (filters.attack === "ranged") === c.range > 1) &&
-      (!text ||
-        [c.name, c.faction, c.species, c.unitClass, c.personality, ...c.abilities.map((a) => a.name)].some((s) => s.toLowerCase().includes(text))),
-  );
-  const byName = (a: UnitCard, b: UnitCard) => a.name.localeCompare(b.name);
-  const compare = (a: UnitCard, b: UnitCard): number => {
-    if (sort === "name") return byName(a, b);
-    if (sort === "faction") return FACTIONS.indexOf(a.faction) - FACTIONS.indexOf(b.faction);
-    return sortValue(a, sort) - sortValue(b, sort);
-  };
-  return shown.sort((a, b) => (descending ? -compare(a, b) : compare(a, b)) || byName(a, b));
-}
+/** The cards that pass the filters, in the chosen order. */
+export const galleryCards = (filters: Filters, sort: SortKey, descending: boolean): UnitCard[] => filterCards(CARDS, filters, sort, descending);
 
 /** Remembered choices: a convenience only, so a blocked or empty store just gives the defaults. */
 function remembered<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
@@ -83,7 +40,6 @@ function remember(key: string, value: string) {
   }
 }
 
-const ALL_FILTERS: Filters = { text: "", faction: "all", kind: "all", attack: "all" };
 
 /**
  * Every unit card in a scrolling grid that can be filtered and sorted, in
@@ -97,8 +53,7 @@ export function UnitGalleryScreen({ onClose }: { onClose: () => void }) {
   const [chosen, setChosen] = useState<string | null>(null);
 
   const cards = useMemo(() => galleryCards(filters, sort, descending), [filters, sort, descending]);
-  const filtered = filters.text !== "" || filters.faction !== "all" || filters.kind !== "all" || filters.attack !== "all";
-  const update = (change: Partial<Filters>) => setFilters((f) => ({ ...f, ...change }));
+  const filtered = isFiltered(filters);
   const chosenCard = cards.find((c) => c.id === chosen) ?? CARDS.find((c) => c.id === chosen) ?? null;
 
   return (
@@ -114,73 +69,17 @@ export function UnitGalleryScreen({ onClose }: { onClose: () => void }) {
       </header>
 
       <div className="unit-gallery-controls">
-        <label className="field">
-          <span>Search</span>
-          <input
-            type="search"
-            aria-label="Search units"
-            placeholder="Name, species, ability"
-            value={filters.text}
-            onChange={(e) => update({ text: e.target.value })}
-          />
-        </label>
-        <label className="field">
-          <span>Faction</span>
-          <select aria-label="Faction" value={filters.faction} onChange={(e) => update({ faction: e.target.value })}>
-            <option value="all">All factions</option>
-            {FACTIONS.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>Type</span>
-          <select aria-label="Type" value={filters.kind} onChange={(e) => update({ kind: e.target.value as Kind })}>
-            <option value="all">Heroes and squads</option>
-            <option value="hero">Heroes</option>
-            <option value="squad">Squads</option>
-          </select>
-        </label>
-        <label className="field">
-          <span>Attack</span>
-          <select aria-label="Attack" value={filters.attack} onChange={(e) => update({ attack: e.target.value as Attack })}>
-            <option value="all">Ranged and melee</option>
-            <option value="ranged">Ranged</option>
-            <option value="melee">Melee</option>
-          </select>
-        </label>
-        <label className="field">
-          <span>Sort by</span>
-          <span className="unit-gallery-sort">
-            <select
-              aria-label="Sort by"
-              value={sort}
-              onChange={(e) => {
-                const key = e.target.value as SortKey;
-                setSort(key);
-                remember("sort", key);
-                // Bigger numbers first is the usual wish for stats; names and factions read from the top.
-                setDescending(key !== "name" && key !== "faction");
-              }}
-            >
-              {SORTS.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              aria-label={descending ? "Highest first" : "Lowest first"}
-              title={descending ? "Highest first; click for lowest first" : "Lowest first; click for highest first"}
-              onClick={() => setDescending((d) => !d)}
-            >
-              {descending ? "↓" : "↑"}
-            </button>
-          </span>
-        </label>
+        <UnitFilterControls
+          filters={filters}
+          onFilters={setFilters}
+          sort={sort}
+          descending={descending}
+          onSort={(key, down) => {
+            if (key !== sort) remember("sort", key);
+            setSort(key);
+            setDescending(down);
+          }}
+        />
         <div className="field">
           <span>Size</span>
           <div className="segmented" role="radiogroup" aria-label="Card size">

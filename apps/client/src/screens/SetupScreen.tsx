@@ -19,6 +19,7 @@ import { SEAT_COLORS, SEAT_COLOR_NAMES } from "../scene/scale";
 import { deleteSave, describeSummary, downloadGameFile, formatSavedAt, listSaves, type SaveSlot } from "../saves";
 import { loadGame, resumeSavedGame, savedGame, startGame } from "../session";
 import { MenuFrame, type MenuCommand } from "./menu/MenuFrame";
+import { startTestGame } from "../testGame";
 
 const ROUND_LIMITS = [null, 5, 8, 12] as const;
 const BUDGETS = [500, 750, 1000, 1500] as const;
@@ -43,11 +44,13 @@ interface Props {
   onOpenReplay: (replay: Replay) => void;
   /** Browse every unit card and its figure model. */
   onOpenUnits: () => void;
+  /** Open the map gallery, at the map chosen now. */
+  onOpenMaps: (mapId: string) => void;
 }
 
 type Where = "local" | "online";
 
-export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUnits }: Props) {
+export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUnits, onOpenMaps }: Props) {
   const online = useOnline();
   const [where, setWhere] = useState<Where>(() => (online.error || savedSeat() ? "online" : "local"));
   const [view, setView] = useState<"play" | "saves">("play");
@@ -330,6 +333,9 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
             ))}
           </select>
         )}
+        <button type="button" className="mp-btn" onClick={() => onOpenMaps(map.id)}>
+          Preview maps
+        </button>
         <button type="button" className="mp-btn" onClick={() => onOpenEditor(map)}>
           {isCustom ? "Edit" : "Copy and edit"}
         </button>
@@ -637,6 +643,16 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
     { id: "replay", label: "Watch a replay", sub: "Every move of a finished game", icon: "eye", onClick: () => replayInput.current?.click() },
     { id: "editor", label: "Map editor", sub: "Build and share battlefields", icon: "map", onClick: () => onOpenEditor(null) },
     { id: "gallery", label: "Unit gallery", sub: `All ${CARDS.length} units and their figures`, icon: "cards", onClick: onOpenUnits },
+    {
+      id: "test",
+      label: "Test game",
+      sub: "2 players, 500 points, ready on Twin Fords",
+      icon: "flask",
+      onClick: () => {
+        const problem = startTestGame();
+        if (problem) setReplayError(`The test game could not start: ${problem}`);
+      },
+    },
   ];
 
   const heading = view === "saves" ? "Saved games" : where === "local" ? "Play on this device" : "Play online";

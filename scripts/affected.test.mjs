@@ -85,6 +85,13 @@ describe("affected checks", () => {
     }
   });
 
+  it("runs only the gallery test for the map gallery, and only the menu test for the test game", () => {
+    for (const f of ["apps/client/src/screens/MapGalleryScreen.tsx", "apps/client/src/screens/map-gallery.css"]) {
+      expect(pick([f]).e2e).toEqual(["gallery"]);
+    }
+    expect(pick(["apps/client/src/testGame.ts"]).e2e).toEqual(["menu"]);
+  });
+
   it("runs only the client tests for a change to them", () => {
     expect(pick(["apps/client/test/models.test.ts"])).toEqual({ check: true, unit: ["apps/client"], e2e: [] });
   });

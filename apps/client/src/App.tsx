@@ -11,6 +11,7 @@ import { PlayScreen } from "./screens/PlayScreen";
 import { ReplayScreen } from "./screens/ReplayScreen";
 import { SetupScreen } from "./screens/SetupScreen";
 import { UnitGalleryScreen } from "./screens/UnitGalleryScreen";
+import { MapGalleryScreen } from "./screens/MapGalleryScreen";
 import { useMusicScene } from "./music";
 import { useSession } from "./session";
 import { useEventSounds } from "./sfx";
@@ -19,7 +20,8 @@ type View =
   | { name: "setup"; mapId?: string }
   | { name: "editor"; map: MapDefinition | null }
   | { name: "replay"; replay: Replay }
-  | { name: "units" };
+  | { name: "units" }
+  | { name: "maps"; mapId?: string };
 
 export function App() {
   const session = useSession();
@@ -46,12 +48,16 @@ export function App() {
     return <ReplayScreen replay={view.replay} onClose={() => setView({ name: "setup" })} />;
   }
   if (view.name === "units") return <UnitGalleryScreen onClose={() => setView({ name: "setup" })} />;
+  if (view.name === "maps") {
+    return <MapGalleryScreen initialMapId={view.mapId} onChoose={(mapId) => setView({ name: "setup", mapId })} onClose={() => setView({ name: "setup", mapId: view.mapId })} />;
+  }
   return (
     <SetupScreen
       initialMapId={view.mapId}
       onOpenEditor={(map) => setView({ name: "editor", map })}
       onOpenReplay={(replay) => setView({ name: "replay", replay })}
       onOpenUnits={() => setView({ name: "units" })}
+      onOpenMaps={(mapId) => setView({ name: "maps", mapId })}
     />
   );
 }

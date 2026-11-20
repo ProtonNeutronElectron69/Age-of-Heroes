@@ -236,6 +236,30 @@ legend {
   align-items: start;
 }
 
+/* The draft's sort and filter row, over its cards. */
+.draft-cards {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.draft-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px 16px;
+}
+
+.draft-filters .field {
+  margin: 0;
+}
+
+.draft-filters .check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));

@@ -6,6 +6,7 @@ import { Names } from "../describe";
 import { GameMenu } from "../ui/GameMenu";
 import { OnlineBar } from "../ui/OnlineBar";
 import { UnitCardView } from "../ui/UnitCardView";
+import { ALL_FILTERS, UnitFilterControls, filterCards, isFiltered, type Filters, type SortKey } from "../ui/UnitFilters";
 import { DraftMap } from "./DraftMap";
 
 /** How long the map button says who pinged, while this player is on the cards. */
@@ -28,6 +29,10 @@ export function DraftScreen({ session }: { session: Session }) {
   const open = isOpenDraft(state);
   const stillDrafting = drafters(state);
   const [chosen, setChosen] = useState<string | null>(null);
+  // Sorting and filtering the cards, as in the unit gallery, and hiding the ones that cannot be drafted.
+  const [filters, setFilters] = useState<Filters>(ALL_FILTERS);
+  const [sort, setSort] = useState<{ key: SortKey; descending: boolean }>({ key: "faction", descending: false });
+  const [draftableOnly, setDraftableOnly] = useState(false);
   const drafter = !open
     ? currentDrafter(state)
     : session.kind === "online"
@@ -133,14 +138,33 @@ export function DraftScreen({ session }: { session: Session }) {
         {onMap ? (
           <DraftMap state={state} ctx={ctx} me={session.kind === "online" ? session.me : null} />
         ) : (
+          <div className="draft-cards">
+          <div className="unit-gallery-controls draft-filters" aria-label="Sort and filter units">
+            <UnitFilterControls filters={filters} onFilters={setFilters} sort={sort.key} descending={sort.descending} onSort={(key, descending) => setSort({ key, descending })} />
+            <label className="check">
+              <input type="checkbox" checked={draftableOnly} onChange={(e) => setDraftableOnly(e.target.checked)} /> Only units I can draft
+            </label>
+            {(isFiltered(filters) || draftableOnly) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFilters(ALL_FILTERS);
+                  setDraftableOnly(false);
+                }}
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
           <section className="card-grid" aria-label="Available units">
-            {[...ctx.cards.values()].map((card) => {
+            {filterCards([...ctx.cards.values()], filters, sort.key, sort.descending).map((card) => {
               const reason = drafter
                 ? pickProblem(state, ctx, card.id, drafter)
                 : open
                   ? (pickProblem(state, ctx, card.id) ?? "Not drafting")
                   : "The draft is over";
               const ok = reason === null;
+              if (draftableOnly && !ok) return null;
               // Who took a card nobody else may now draft.
               const takenBy = reason && /already been drafted/.test(reason) ? state.units.find((u) => u.cardId === card.id)?.owner : undefined;
               return (
@@ -158,6 +182,7 @@ export function DraftScreen({ session }: { session: Session }) {
               );
             })}
           </section>
+          </div>
         )}
 
         <aside className="panel armies" aria-label="Armies">

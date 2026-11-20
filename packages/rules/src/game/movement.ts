@@ -35,8 +35,10 @@ interface Mover {
   readonly footprint: Footprint;
   readonly start: Placement;
   readonly startSpots: Step[];
-  /** Movement points available: Move, or a bonus move after attacking (Smoke Step). */
+  /** Movement points left: Move less what earlier pieces of this turn's move used, or a bonus move after attacking (Smoke Step). */
   readonly budget: number;
+  /** Earlier pieces of this turn's move all stayed on terrain that gives a bonus for staying on it. */
+  readonly bonusTerrainKept: boolean;
   /** A bonus move draws no passing strikes. */
   readonly noStrikes: boolean;
   /** Flying figures move straight to any spot within range, ignoring what is between. */
@@ -93,6 +95,8 @@ function moverFor(state: GameState, figureId: string, ctx: RulesContext): Mover 
   const active = state.active;
   const bonus = active && active.attacked.includes(figureId) ? active.bonusMoves[figureId] : undefined;
   const drums = bonus === undefined ? moveBonus(state, ctx, combatant(unit, figure, ctx)).bonus : 0;
+  // A move made in pieces: later pieces have what the earlier ones left.
+  const used = bonus === undefined ? active?.moves?.[figureId] : undefined;
   return {
     unit,
     figure,
@@ -101,7 +105,8 @@ function moverFor(state: GameState, figureId: string, ctx: RulesContext): Mover 
     footprint: card.footprint,
     start,
     startSpots: figureSpots(figure, card.footprint, stats.height, ctx),
-    budget: bonus ?? stats.move + drums + glyphBonus(state, unit.id, "move", ctx),
+    budget: bonus ?? stats.move + drums + glyphBonus(state, unit.id, "move", ctx) - (used?.spent ?? 0),
+    bonusTerrainKept: !used?.offBonus,
     noStrikes: bonus !== undefined,
     flying: card.footprint === "1" && hasAbility(card, "flying"),
     trample: hasAbility(card, "trample"),
@@ -275,7 +280,7 @@ function search(
   const occ = occupancy(state, ctx);
   const enemies = enemiesOf(state, mover, ctx);
   const labels = new Map<string, Label>();
-  const buckets: Label[][] = Array.from({ length: budget + 1 }, () => []);
+  const buckets: Label[][] = Array.from({ length: Math.max(0, budget) + 1 }, () => []);
   buckets[0]!.push({ placement: mover.start, spots: mover.startSpots, cost: 0, hazards: 0, stopped: false, prev: null });
 
   for (let c = 0; c <= budget; c++) {
@@ -371,8 +376,9 @@ export function moveOptions(state: GameState, figureId: string, ctx: RulesContex
   if (isPinned(state, figureId)) return new Map();
   const mover = moverFor(state, figureId, ctx);
   if (mover.flying) return flightOptions(state, mover, ctx);
+  if (state.active?.moves?.[figureId]?.ended) return new Map();
   const options = search(state, mover, mover.budget, null, ctx);
-  const bonus = mover.noStrikes ? null : stayOnBonus(mover.startSpots, ctx);
+  const bonus = mover.noStrikes || !mover.bonusTerrainKept ? null : stayOnBonus(mover.startSpots, ctx);
   if (bonus) {
     for (const [key, opt] of search(state, mover, mover.budget + bonus.bonus, bonus.terrain, ctx)) {
       const current = options.get(key);
@@ -395,8 +401,8 @@ function activeMover(state: GameState, player: PlayerId, figureId: string, ctx: 
   if (active.attacked.includes(figureId)) {
     // Smoke Step allows one short move after attacking, even after moving before.
     if (!active.bonusMoves[figureId]) fail("A figure cannot move after attacking");
-  } else if (active.moved.includes(figureId)) {
-    fail("That figure has already moved this turn");
+  } else if (active.moved.includes(figureId) && active.moves?.[figureId]?.ended) {
+    fail("That figure's movement has ended this turn");
   }
   return { active, mover };
 }
@@ -405,8 +411,8 @@ function toPlacement(step: PathStep, current: Placement, footprint: Footprint): 
   return { hex: step.hex, elevation: step.elevation, rotation: footprint === "1" ? 0 : (step.rotation ?? current.rotation) };
 }
 
-/** Check a requested path step by step. */
-function validatePath(state: GameState, mover: Mover, path: readonly PathStep[], ctx: RulesContext): void {
+/** Check a requested path step by step: its cost, and whether it kept to bonus terrain throughout. */
+function validatePath(state: GameState, mover: Mover, path: readonly PathStep[], ctx: RulesContext): { cost: number; keptBonus: boolean } {
   if (path.length === 0) fail("The path is empty");
   if (mover.flying) {
     if (path.length !== 1) fail("A flying figure moves straight to where it lands");
@@ -414,10 +420,10 @@ function validatePath(state: GameState, mover: Mover, path: readonly PathStep[],
     const option = flightOptions(state, mover, ctx).get(placementKey(dest));
     if (!option) {
       const cost = hexDistance(mover.start.hex, dest.hex);
-      if (cost > mover.budget) fail(`That move costs ${cost} but the figure only has ${mover.budget}`);
+      if (cost > mover.budget) fail(`That move costs ${cost} but the figure only has ${Math.max(0, mover.budget)}`);
       fail("The figure cannot land there");
     }
-    return;
+    return { cost: hexDistance(mover.start.hex, dest.hex), keptBonus: false };
   }
   const occ = occupancy(state, ctx);
   const enemies = enemiesOf(state, mover, ctx);
@@ -425,7 +431,7 @@ function validatePath(state: GameState, mover: Mover, path: readonly PathStep[],
   let fromSpots = mover.startSpots;
   let cost = 0;
   let allBonusTerrain = true;
-  const bonus = stayOnBonus(mover.startSpots, ctx);
+  const bonus = mover.bonusTerrainKept ? stayOnBonus(mover.startSpots, ctx) : null;
   path.forEach((raw, i) => {
     const to = toPlacement(raw, from, mover.footprint);
     const info = evaluateStep(mover, from, fromSpots, to, occ, enemies, ctx);
@@ -443,7 +449,8 @@ function validatePath(state: GameState, mover: Mover, path: readonly PathStep[],
   if (endsOnScenery(fromSpots, ctx)) fail("A figure cannot end its move on a wall");
   if (placementKey(from) === placementKey(mover.start)) fail("The figure must end somewhere new");
   const budget = mover.budget + (bonus && allBonusTerrain && !mover.noStrikes ? bonus.bonus : 0);
-  if (cost > budget) fail(`That move costs ${cost} but the figure only has ${budget}`);
+  if (cost > budget) fail(`That move costs ${cost} but the figure only has ${Math.max(0, budget)}`);
+  return { cost, keptBonus: bonus !== null && allBonusTerrain };
 }
 
 /** Roll attack dice against a figure with no defense roll (falls and passing strikes). */
@@ -483,8 +490,14 @@ export function moveFigure(
   ctx: RulesContext,
 ): void {
   const { active, mover } = activeMover(state, player, figureId, ctx);
-  validatePath(state, mover, path, ctx);
+  const piece = validatePath(state, mover, path, ctx);
   if (!active.moved.includes(figureId)) active.moved.push(figureId);
+  // What this piece of the move used; a later piece has the rest (not for a bonus move after attacking).
+  const record = mover.noStrikes ? null : ((active.moves ??= {})[figureId] ??= { spent: 0, ended: false, offBonus: false });
+  if (record) {
+    record.spent += piece.cost;
+    if (!piece.keptBonus) record.offBonus = true;
+  }
   if (mover.noStrikes) delete active.bonusMoves[figureId];
 
   const rng = new Rng(state.rng);
@@ -555,6 +568,9 @@ export function moveFigure(
     // 4. Lava.
     if (lavaRolls(info.entered)) break;
 
+    // Water or swamp ends the figure's movement for the turn, not just this piece of it.
+    if (info.stops && record) record.ended = true;
+
     // 5. Ice (single-hex figures only).
     if (info.ice > 0) {
       const t = terrainOf(info.spots[0]!, ctx)!;
@@ -562,6 +578,7 @@ export function moveFigure(
       const slipped = roll <= t.slip!.onOrBelow;
       after.push({ type: "terrainRoll", figureId, terrain: t.id, roll, outcome: slipped ? "slipped" : "safe" });
       if (slipped) {
+        if (record) record.ended = true;
         const slide = slideTarget(mover, fromSpots[0]!, info.spots[0]!, occ, ctx);
         if (slide) {
           after.push({ type: "figureSlid", figureId, to: slide });

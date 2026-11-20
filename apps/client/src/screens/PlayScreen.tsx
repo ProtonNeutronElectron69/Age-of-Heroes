@@ -282,6 +282,15 @@ export function PlayScreen({ session }: { session: Session }) {
     (!active.attacked.includes(id) || (active.bonusMoves[id] ?? 0) > 0);
   /** Can this device pick the figure to act with? */
   const canAct = (id: string) => myTurn && mayAct(id);
+  /** A figure of the acting unit that has moved, not attacked, and has movement left for another piece. */
+  const canMoveOn = (id: string): boolean => {
+    if (!active || !active.moved.includes(id) || active.attacked.includes(id)) return false;
+    try {
+      return moveOptions(state, id, ctx).size > 0;
+    } catch {
+      return false;
+    }
+  };
 
   // Pick the first figure that can still act when a turn starts or a figure finishes.
   const turnKey = active ? `${state.round}:${active.token}:${active.player}` : "";
@@ -358,6 +367,8 @@ export function PlayScreen({ session }: { session: Session }) {
     if (!actor) return;
     // A figure that may still move after attacking (Smoke Step) keeps the selection for that move.
     if (actor.attacked && (active.bonusMoves[actor.id] ?? 0) > 0 && mayAct(actor.id)) return setSelected(actor.id);
+    // A move may be made in pieces: a figure with movement left keeps the selection for the next piece.
+    if (!actor.attacked && mayAct(actor.id) && canMoveOn(actor.id)) return setSelected(actor.id);
     const living = activeUnit.figures.filter((f) => !f.destroyed && f.position).map((f) => f.id);
     const start = living.indexOf(actor.id);
     const after = [...living.slice(start + 1), ...living.slice(0, Math.max(start, 0))];
@@ -574,7 +585,8 @@ export function PlayScreen({ session }: { session: Session }) {
   const options = useMemo<Map<string, MoveOption>>(() => {
     if (!active || !selected || resurrecting) return new Map();
     const bonus = active.attacked.includes(selected) && (active.bonusMoves[selected] ?? 0) > 0;
-    if (!bonus && (active.moved.includes(selected) || active.attacked.includes(selected))) return new Map();
+    // A figure that has moved may move on with what it has left, until it attacks.
+    if (!bonus && active.attacked.includes(selected)) return new Map();
     try {
       return moveOptions(state, selected, ctx);
     } catch {
@@ -696,6 +708,7 @@ export function PlayScreen({ session }: { session: Session }) {
     );
     window.__aohUi = {
       selected,
+      selectedAt: selected ? (findFigure(state, selected)?.figure.position ?? null) : null,
       dragging: drag && !drag.dropped ? { id: drag.id, over: hoverOption?.to ?? null } : null,
       moves: [...options.values()].map((o) => o.to),
       targets: positioned
@@ -1293,7 +1306,9 @@ export function PlayScreen({ session }: { session: Session }) {
                               ? " may still move"
                               : " done"
                             : active.moved.includes(f.id)
-                              ? " moved"
+                              ? canMoveOn(f.id)
+                                ? " moved, can move on"
+                                : " moved"
                               : ""}
                         </span>
                         {engaged > 0 && <span className="tag">engaged</span>}

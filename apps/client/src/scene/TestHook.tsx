@@ -31,6 +31,8 @@ declare global {
     /** Read-only summary of the current turn, for browser tests. */
     __aohUi?: {
       selected: string | null;
+      /** Where the chosen figure stands. */
+      selectedAt: UiStep | null;
       /** The figure the pointer is dragging, and the move it would make if let go. */
       dragging: { id: string; over: UiStep | null } | null;
       moves: UiStep[];
