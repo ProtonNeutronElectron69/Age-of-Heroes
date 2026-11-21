@@ -2,7 +2,6 @@ import { useFrame, useThree } from "@react-three/fiber";
 import type { DieFace } from "@aoh/rules";
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import {
-  BoxGeometry,
   CanvasTexture,
   Float32BufferAttribute,
   IcosahedronGeometry,
@@ -12,13 +11,18 @@ import {
   Vector3,
   type Group,
 } from "three";
+import { CUBE_FACES, CUBE_NORMALS, type DieKind } from "./diceRoll";
 import { useWake } from "./wake";
+
+export type { DieKind };
 
 /**
  * 3D dice that tumble and land on a result the rules have already rolled.
- * The engine rolls everything in one step; these only show it. A die is told
- * its face (or number) and where to land, and settles there; with reduced
- * motion it is drawn already landed.
+ * The engine rolls everything in one step; these only show it. The attack and
+ * defense dice are thrown into a tray (`DiceTray`), played back from a throw
+ * worked out in advance (`diceRoll.ts`); the initiative d20 is told its number
+ * and where to land, and settles there. With reduced motion every die is drawn
+ * already landed.
  */
 
 // ---- Faces ----------------------------------------------------------------------
@@ -28,34 +32,14 @@ const SKULL =
   "M12 3c-4.4 0-8 3.2-8 7.4 0 2.5 1.3 4.6 3.3 5.9V19c0 .6.4 1 1 1h1.2v-2h1.5v2h2v-2h1.5v2h1.2c.6 0 1-.4 1-1v-2.7c2-1.3 3.3-3.4 3.3-5.9C20 6.2 16.4 3 12 3Zm-3.2 9.6a1.8 1.8 0 1 1 0-3.6 1.8 1.8 0 0 1 0 3.6Zm6.4 0a1.8 1.8 0 1 1 0-3.6 1.8 1.8 0 0 1 0 3.6Z";
 const SHIELD = "M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z";
 
-export type DieKind = "attack" | "defense";
-
 /** Colours as in the dice panel: ivory with red skulls, pale blue with blue shields. */
 const LOOK: Record<DieKind, { body: string; edge: string; mark: string }> = {
   attack: { body: "#f4f1ea", edge: "#cfc6b4", mark: "#e0503c" },
-  defense: { body: "#dfe8f5", edge: "#b3c2d8", mark: "#4c8fe0" },
+  defense: { body: "#cfe0f6", edge: "#9fb6d6", mark: "#2f7ad8" },
 };
-
-/**
- * Which face each side of the cube shows, in Three.js box order (+x, -x, +y,
- * -y, +z, -z). Each mark is opposite a blank, so 3 marks and 3 blanks, as on the
- * rules' dice.
- */
-const CUBE_FACES: Record<DieKind, readonly DieFace[]> = {
-  attack: ["skull", "blank", "skull", "blank", "skull", "blank"],
-  defense: ["shield", "blank", "shield", "blank", "shield", "blank"],
-};
-const CUBE_NORMALS = [
-  new Vector3(1, 0, 0),
-  new Vector3(-1, 0, 0),
-  new Vector3(0, 1, 0),
-  new Vector3(0, -1, 0),
-  new Vector3(0, 0, 1),
-  new Vector3(0, 0, -1),
-];
 
 function faceTexture(kind: DieKind, face: DieFace): CanvasTexture {
-  const size = 128;
+  const size = 256;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -65,7 +49,7 @@ function faceTexture(kind: DieKind, face: DieFace): CanvasTexture {
   g.fillRect(0, 0, size, size);
   g.fillStyle = look.body;
   g.beginPath();
-  g.roundRect(5, 5, size - 10, size - 10, 18);
+  g.roundRect(size * 0.04, size * 0.04, size * 0.92, size * 0.92, size * 0.14);
   g.fill();
   if (face !== "blank") {
     g.save();
@@ -82,15 +66,14 @@ function faceTexture(kind: DieKind, face: DieFace): CanvasTexture {
 
 let cubeMaterials: Record<DieKind, MeshStandardMaterial[]> | null = null;
 /** The six face materials of each kind of cube die, made once and shared. */
-function cubeMaterialsFor(kind: DieKind): MeshStandardMaterial[] {
+export function cubeMaterialsFor(kind: DieKind): MeshStandardMaterial[] {
   cubeMaterials ??= {
-    attack: CUBE_FACES.attack.map((f) => new MeshStandardMaterial({ map: faceTexture("attack", f), roughness: 0.45 })),
-    defense: CUBE_FACES.defense.map((f) => new MeshStandardMaterial({ map: faceTexture("defense", f), roughness: 0.45 })),
+    attack: CUBE_FACES.attack.map((f) => new MeshStandardMaterial({ map: faceTexture("attack", f), roughness: 0.32 })),
+    defense: CUBE_FACES.defense.map((f) => new MeshStandardMaterial({ map: faceTexture("defense", f), roughness: 0.32 })),
   };
   return cubeMaterials[kind];
 }
 
-let cubeGeometry: BoxGeometry | null = null;
 
 // ---- The d20 ---------------------------------------------------------------------
 
@@ -285,19 +268,6 @@ export function cubeTopFace(kind: DieKind, q: Quaternion): DieFace {
 export function d20Landing(faces: readonly D20Face[], value: number, toward: Vector3): Quaternion {
   const face = faces[Math.min(19, Math.max(0, value - 1))]!;
   return landing(face.normal, face.up, toward.clone().normalize(), WORLD_UP, 0);
-}
-
-/** A six-sided attack or defense die that lands showing `face`. Lands face up, for a camera above. */
-export function CubeDie({ kind, face, ...t }: { kind: DieKind; face: DieFace } & Throw) {
-  const group = useRef<Group>(null);
-  const final = useMemo(() => cubeLanding(kind, face, t.seed), [kind, face, t.seed]);
-  useTumble(group, final, t);
-  cubeGeometry ??= new BoxGeometry(0.9, 0.9, 0.9);
-  return (
-    <group ref={group} position={[t.at[0], t.at[1] + 3.5, t.at[2]]} visible={t.still === true || !t.delay}>
-      <mesh geometry={cubeGeometry} material={cubeMaterialsFor(kind)} />
-    </group>
-  );
 }
 
 /** A d20 that lands showing `value` (1 to 20) to a camera in direction `toward` from it. */

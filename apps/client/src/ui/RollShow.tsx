@@ -1,19 +1,22 @@
 import { Canvas } from "@react-three/fiber";
-import { findFigure, type GameEvent, type GameState, type PlayerId, type RulesContext } from "@aoh/rules";
+import { LEVEL_HEIGHT, findFigure, type GameEvent, type GameState, type PlayerId, type RulesContext } from "@aoh/rules";
 import { useEffect, useMemo, useState } from "react";
 import type { Names } from "../describe";
 import type { AttackRoll } from "../fight";
 import { useReducedMotion } from "../motion";
 import { playSound } from "../sfx";
 import { CardFigure } from "../scene/Figures";
-import { CubeDie, D20Die, TrayLights } from "../scene/dice3d";
+import { CastShadows, FELT_HEIGHT, FrameView, ThrownDice, TraySet, WALL_THICK } from "../scene/DiceTray";
+import { D20Die, TrayLights } from "../scene/dice3d";
+import { throwDice, type DieKind } from "../scene/diceRoll";
 import type { DiceShow } from "../settings";
 import { HexCard } from "./HexCard";
 
 /**
- * The dice show: an attack zooms in on the fight with both units' cards and
- * models over a dimmed board and rolls 3D dice ("scene"), or just rolls the
- * dice ("dice"); initiative rolls a d20 for each player. The rules have already
+ * The dice show: an attack zooms in on the fight with both units' cards, and
+ * their models standing at the two ends of a dice tray into which the 3D dice
+ * are thrown ("scene"), or just throws the dice into the tray ("dice");
+ * initiative rolls a d20 for each player. The rules have already
  * rolled everything; this only shows it, and a click skips it (online, an attack's
  * skip waits for every player: the play screen decides). An attack's dice follow
  * its intro on the board (`scene/FightFx.tsx`). Afterwards the dice panel keeps
@@ -28,20 +31,11 @@ export function initiativeIn(events: readonly GameEvent[]): InitiativeRoll | nul
 
 /** How long a finished attack stays on screen before the show moves on or closes (a click closes it sooner). */
 const LINGER_MS = 3900;
-/**
- * The attack roll builds up: the attack dice tumble and bounce first, and only once
- * they have landed (and a short pause) do the defense dice roll. Each die starts a
- * little after the one before it. Seconds.
- */
-const ATTACK_TUMBLE = 1.9;
-const DEFENSE_TUMBLE = 1.7;
-const DEFENSE_PAUSE = 0.4;
-const DICE_STAGGER = 0.12;
-const TUMBLE_BOUNCES = 4;
-const DIE_GAP = 1.3;
 
-function diceRow(count: number, z: number): [number, number, number][] {
-  return Array.from({ length: count }, (_, i) => [(i - (count - 1) / 2) * DIE_GAP, 0.45, z]);
+/** How much of the board's size a figure is drawn at by the tray: tall enough to see, whatever its Height. */
+function figureScale(height: number, footprint: string): number {
+  const size = Math.min(3.2, Math.max(1.9, 4.6 / (height * LEVEL_HEIGHT)));
+  return size * (footprint === "1" ? 1 : footprint === "2x1" ? 0.75 : 0.6);
 }
 
 /** "Archer attacks Knight": the heading of an attack's intro and dice. */
@@ -56,24 +50,35 @@ function resultText(roll: AttackRoll): string {
   return `${plural(roll.hits, "hit")}, ${plural(roll.blocks, "block")}: ${roll.wounds > 0 ? plural(roll.wounds, "wound") : "no damage"}`;
 }
 
-/** A unit's model for the scene, shrunk if its base covers several hexes. */
+/** A unit's model for the scene, standing on the table at one end of the tray, turned to face the other end. */
 function SceneModel({ figureId, state, ctx, names, x, yaw }: { figureId: string; state: GameState; ctx: RulesContext; names: Names; x: number; yaw: number }) {
   const hit = findFigure(state, figureId);
   if (!hit) return null;
   const card = ctx.cards.get(hit.unit.cardId)!;
-  const scale = card.footprint === "1" ? 1 : card.footprint === "2x1" ? 0.75 : 0.6;
   return (
-    <group position={[x, 0, -0.8]} rotation={[0, yaw, 0]} scale={scale}>
-      <CardFigure
-        cardId={card.id}
-        footprint={card.footprint}
-        pose={hit.unit.figures.indexOf(hit.figure)}
-        faction={card.faction}
-        color={names.playerColor(hit.unit.owner)}
-        height={card.height}
-      />
+    <group position={[x, -FELT_HEIGHT, -0.4]} rotation={[0, yaw, 0]} scale={figureScale(card.height, card.footprint)}>
+      <CastShadows>
+        <CardFigure
+          cardId={card.id}
+          footprint={card.footprint}
+          pose={hit.unit.figures.indexOf(hit.figure)}
+          faction={card.faction}
+          color={names.playerColor(hit.unit.owner)}
+          height={card.height}
+        />
+      </CastShadows>
     </group>
   );
+}
+
+/** How far a unit's figure reaches from its middle at the tray's scale, and how tall it stands. */
+function figureReach(figureId: string, state: GameState, ctx: RulesContext): { reach: number; height: number } {
+  const hit = findFigure(state, figureId);
+  const card = hit ? ctx.cards.get(hit.unit.cardId) : undefined;
+  if (!card) return { reach: 1, height: 2 };
+  const scale = figureScale(card.height, card.footprint);
+  const hexes = card.footprint === "1" ? 1 : card.footprint === "2x2" ? 2 : card.footprint === "3x1" ? 3 : 2;
+  return { reach: 0.85 * scale * hexes, height: card.height * LEVEL_HEIGHT * scale };
 }
 
 function SceneCard({ figureId, state, ctx, names, side }: { figureId: string; state: GameState; ctx: RulesContext; names: Names; side: string }) {
@@ -117,8 +122,8 @@ export function AttackShow({
   const attackDown = landed.attack >= roll.attack.length;
   const defenseDown = landed.defense >= roll.defense.length;
   const done = attackDown && defenseDown;
-  // The defense dice wait until the last attack die has landed.
-  const defenseDelay = roll.attack.length > 0 ? (roll.attack.length - 1) * DICE_STAGGER + ATTACK_TUMBLE + DEFENSE_PAUSE : 0;
+  // The throw is worked out once per roll; the same roll always tumbles the same way.
+  const thrown = useMemo(() => throwDice(roll.attack, roll.defense, rollSeed(roll, index)), [roll, index]);
   useEffect(() => {
     if (!done) return;
     const t = window.setTimeout(() => {
@@ -129,19 +134,21 @@ export function AttackShow({
     }, LINGER_MS);
     return () => window.clearTimeout(t);
   }, [done, index]);
-  // The attack dice are heard as they are thrown, and the defense dice when they follow.
+  // The attack dice are heard as they are thrown, and the defense dice when they follow (`onDefenseThrown`).
   useEffect(() => {
-    if (roll.attack.length > 0) playSound("dice");
-    if (roll.defense.length === 0) return;
-    const t = window.setTimeout(() => playSound("dice"), defenseDelay * 1000);
-    return () => window.clearTimeout(t);
+    if (roll.attack.length > 0 || (roll.defense.length > 0 && reduced)) playSound("dice");
   }, [index]);
-  const landAttack = () => setLanded((n) => ({ ...n, attack: n.attack + 1 }));
-  const landDefense = () => setLanded((n) => ({ ...n, defense: n.defense + 1 }));
+  const land = (kind: DieKind) => setLanded((n) => ({ ...n, [kind]: n[kind] + 1 }));
   const full = mode === "scene";
   const title = attackTitle(roll, names);
-  const attackAt = useMemo(() => diceRow(roll.attack.length, full ? 0 : -0.7), [roll, full]);
-  const defenseAt = useMemo(() => diceRow(roll.defense.length, full ? 1.6 : 0.7), [roll, full]);
+  const { halfX, halfZ } = thrown.tray;
+  const attacker = full ? figureReach(roll.attackerId, state, ctx) : null;
+  const defender = full ? figureReach(roll.targetId, state, ctx) : null;
+  // The figures stand on the table just outside the tray's ends.
+  const attackerX = -(halfX + WALL_THICK + 0.25 + (attacker?.reach ?? 0));
+  const defenderX = halfX + WALL_THICK + 0.25 + (defender?.reach ?? 0);
+  const halfWidth = full ? Math.max(-attackerX + (attacker?.reach ?? 0), defenderX + (defender?.reach ?? 0)) : halfX + WALL_THICK;
+  const tallest = Math.max(attacker?.height ?? 0, defender?.height ?? 0, 1);
   return (
     <div
       className={`roll-show attack-show ${full ? "full" : "dice-only"}`}
@@ -153,51 +160,12 @@ export function AttackShow({
       {full && <SceneCard figureId={roll.attackerId} state={state} ctx={ctx} names={names} side="attacker" />}
       <div className="scene-stage">
         <div className="scene-title">{title}</div>
-        <Canvas
-          key={index}
-          className="scene-canvas"
-          frameloop="demand"
-          camera={full ? { position: [0, 6.2, 9.4], fov: 38 } : { position: [0, 5.4, 2.7], fov: 40 }}
-          onCreated={({ camera }) => camera.lookAt(0, full ? 0.4 : 0, full ? 0.5 : 0)}
-          dpr={[1, 2]}
-        >
-          <TrayLights />
-          {/* A felt tray that fills the whole view. */}
-          <color attach="background" args={["#24402f"]} />
-          <mesh rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
-            <planeGeometry args={[40, 40]} />
-            <meshStandardMaterial color="#2c4a36" roughness={0.95} />
-          </mesh>
-          {full && <SceneModel figureId={roll.attackerId} state={state} ctx={ctx} names={names} x={-3.9} yaw={Math.PI / 2 - 0.45} />}
-          {full && <SceneModel figureId={roll.targetId} state={state} ctx={ctx} names={names} x={3.9} yaw={-Math.PI / 2 + 0.45} />}
-          {roll.attack.map((face, i) => (
-            <CubeDie
-              key={`a${i}`}
-              kind="attack"
-              face={face}
-              at={attackAt[i]!}
-              seed={index * 31 + i}
-              delay={i * DICE_STAGGER}
-              duration={ATTACK_TUMBLE}
-              bounces={TUMBLE_BOUNCES}
-              still={reduced}
-              onLanded={landAttack}
-            />
-          ))}
-          {roll.defense.map((face, i) => (
-            <CubeDie
-              key={`d${i}`}
-              kind="defense"
-              face={face}
-              at={defenseAt[i]!}
-              seed={index * 31 + 17 + i}
-              delay={defenseDelay + i * DICE_STAGGER}
-              duration={DEFENSE_TUMBLE}
-              bounces={TUMBLE_BOUNCES}
-              still={reduced}
-              onLanded={landDefense}
-            />
-          ))}
+        <Canvas key={index} className="scene-canvas" frameloop="demand" shadows camera={{ position: [0, 9, 10], fov: full ? 30 : 34 }} dpr={[1, 2]}>
+          <TraySet halfX={halfX} halfZ={halfZ} />
+          <FrameView halfWidth={halfWidth} halfDepth={halfZ + WALL_THICK} height={full ? tallest : 0.5} pitch={full ? 0.6 : 1.0} aim={[0, full ? tallest * 0.3 : 0, full ? 0.1 : 0]} />
+          {full && <SceneModel figureId={roll.attackerId} state={state} ctx={ctx} names={names} x={attackerX} yaw={Math.PI / 2 - 0.5} />}
+          {full && <SceneModel figureId={roll.targetId} state={state} ctx={ctx} names={names} x={defenderX} yaw={-Math.PI / 2 + 0.5} />}
+          <ThrownDice roll={thrown} still={reduced} onLanded={land} onDefenseThrown={() => playSound("dice")} />
         </Canvas>
         <div className="scene-faces">
           {/* Each side's faces show once its dice have landed, so the text does not give the roll away. */}
@@ -212,6 +180,13 @@ export function AttackShow({
       {full && <SceneCard figureId={roll.targetId} state={state} ctx={ctx} names={names} side="defender" />}
     </div>
   );
+}
+
+/** A seed for a roll's throw, from the roll itself, so every player sees the same tumble. */
+function rollSeed(roll: AttackRoll, index: number): number {
+  let h = 2166136261 + index;
+  for (const ch of `${roll.attackerId}|${roll.targetId}|${roll.attack.join("")}|${roll.defense.join("")}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return h >>> 0;
 }
 
 const D20_GAP = 2.6;
