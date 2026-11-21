@@ -51,7 +51,7 @@ export function testArmies(budget = TEST_BUDGET, random: () => number = Math.ran
 }
 
 /** The deploy commands that place every unit, one after another, on the first free spots of each zone. */
-function deployAll(state: GameState, ctx: ReturnType<typeof contextFor>["ctx"]): Command[] {
+export function deployAll(state: GameState, ctx: ReturnType<typeof contextFor>["ctx"]): Command[] {
   const commands: Command[] = [];
   let s = state;
   while (s.phase === "deploy") {

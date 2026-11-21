@@ -2,6 +2,7 @@ import type { Replay } from "@aoh/protocol";
 import type { MapDefinition } from "@aoh/rules";
 import { useState } from "react";
 import { useOnline } from "./online";
+import { DiceShowScreen } from "./screens/DiceShowScreen";
 import { CardGalleryScreen } from "./screens/CardGalleryScreen";
 import { DraftScreen } from "./screens/DraftScreen";
 import { EditorScreen } from "./screens/EditorScreen";
@@ -32,10 +33,11 @@ export function App() {
   useMusicScene(session?.state.phase === "gameOver" ? "victory" : inGame ? "play" : "menu");
   useEventSounds(session?.lastEvents ?? null, session?.events.length ?? null);
 
-  // The card and model galleries are design pages, opened with ?cards or ?models in the address.
+  // The card and model galleries and the dice show are design pages, opened with ?cards, ?models or ?dice in the address.
   const query = new URLSearchParams(window.location.search);
   if (query.has("cards")) return <CardGalleryScreen />;
   if (query.has("models")) return <ModelGalleryScreen filter={query.get("models") ?? ""} />;
+  if (query.has("dice")) return <DiceShowScreen />;
   if (session) {
     if (session.state.phase === "draft") return <DraftScreen session={session} />;
     return <PlayScreen session={session} />;

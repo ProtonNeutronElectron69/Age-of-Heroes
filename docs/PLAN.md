@@ -14,7 +14,7 @@ Nothing is in progress. Open, when the owner asks:
 
 On hold (Phase 6): a computer opponent, and a tutorial.
 
-Done lately, newest first: the Sunken Hive, a seventh faction of swamp aliens; the map gallery, draft filters, test game and moves in pieces (#70); every attack needing its target in front (#69); tokens and glyphs on the table and the token allowance (#68); facing (#67); detailed figure models for every unit (#63 to #66, finishing Phase 7); the detailed look for scenery and board tiles; the Riverbend map; glyphs; more scenery; fixes after v1.0. Phases 8 (the tabletop feel) and 9 (playtest updates) came before; the game as it stood after Phase 9 is version 1.0. Each has its section below.
+Done lately, newest first: a dice tray for the attack show, with dice that tumble by physics; the Sunken Hive, a seventh faction of swamp aliens; the map gallery, draft filters, test game and moves in pieces (#70); every attack needing its target in front (#69); tokens and glyphs on the table and the token allowance (#68); facing (#67); detailed figure models for every unit (#63 to #66, finishing Phase 7); the detailed look for scenery and board tiles; the Riverbend map; glyphs; more scenery; fixes after v1.0. Phases 8 (the tabletop feel) and 9 (playtest updates) came before; the game as it stood after Phase 9 is version 1.0. Each has its section below.
 
 Worth knowing before the next change: games saved with facing before #69 may not replay exactly (the facing rules changed twice after #67), and new rule options must stay optional fields of the setup (see [CLAUDE.md](../CLAUDE.md)).
 
@@ -304,3 +304,9 @@ Small changes asked for after playing, online games especially.
 - [x] 5 new rules: Spawning Pool (a squad that rolls to bring back its fallen when it does not attack, more easily in water), Hive Command (an attack aura for Aliens), Numbing Glare (a d20 that leaves the target without defense dice), Long Strides (wading through water and swamp) and Mire Skin (defense in water and swamp). Swamp never wounds the last two
 - [x] A murky olive card theme with an acid green trim and an eye emblem, card art for all eight, and a classic and a detailed model for each, built from one set of poses (`models/units/hive.ts`)
 - [x] The roster is now 25 heroes and 31 squads, 28 ranged and 28 melee
+
+### The dice tray
+- [x] An attack's dice are thrown into a felt-lined wooden tray on a wooden table under a lamp, with soft shadows, instead of onto a flat green plane
+- [x] The dice tumble by physics, worked out before they are shown: they bounce off the felt, the walls and each other, and come to rest flat, apart and inside the tray, on the faces the rules rolled. The attack dice come from the attacker's end and settle before the defense dice are thrown from the defender's
+- [x] The two figures stand on the table at the tray's ends, outside its walls, drawn about twice as large as before; the camera frames the tray and both figures, and the tray grows with the number of dice
+- [x] `?dice` in the address opens the show on its own, to roll any two units with any number of dice
