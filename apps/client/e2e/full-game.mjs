@@ -135,11 +135,30 @@ async function secondPiece(ui) {
   }
 }
 
-/** Once: after a move, R turns the figure that moved an eighth (new games have facing). */
+/**
+ * Once: after a move, R turns an eighth the figure the play screen says it will (new games have
+ * facing): the chosen one, which may have handed the selection on, or the one that moved.
+ */
 let turnChecked = false;
 async function checkTurning() {
   if (turnChecked) return;
-  const ui = await page.evaluate(() => window.__aohUi);
+  // A move renders first, and a squad hands the selection on in the next render: read the figure
+  // R will turn only once that has settled, or R may turn the newly chosen one instead.
+  const ui = await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        let last = JSON.stringify(window.__aohUi?.turning);
+        let same = 0;
+        const tick = () => {
+          const now = JSON.stringify(window.__aohUi?.turning);
+          same = now === last ? same + 1 : 0;
+          last = now;
+          if (same >= 3) resolve(window.__aohUi);
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }),
+  );
   if (!ui?.turning) return;
   const { id, facing } = ui.turning;
   await page.keyboard.press("r");
@@ -604,10 +623,8 @@ try {
       const t = ui.targets[0];
       const p = await screenPoint(t.hex.q, t.hex.r, t.elevation + t.height / 2);
       if (p) {
+        const shownBefore = await page.evaluate(() => window.__aoh.woundsShown());
         await page.mouse.click(p.x, p.y);
-        await page.waitForTimeout(150);
-        const after = await page.evaluate(() => window.__aohUi);
-        if (after.selected !== ui.selected || after.targets.length === 0) attacks++;
         // Every attack opens with its intro on the board, whatever Dice rolls says.
         await handleAttackIntro();
         // The attack show comes up next, until dice rolls are switched off.
@@ -619,7 +636,15 @@ try {
           await page.waitForFunction((n) => window.__aoh.woundsShown() > n, woundsBefore, { timeout: 15000 });
           woundsChecked = true;
         }
-        if (attacks === 1) {
+        // The click made an attack if, once its shows are over, its wound numbers floated up (a 0 for
+        // a miss); an attack click cannot start any other. Judged by that, not by a render soon after
+        // the click: the first attack's dice scene can hold the page up for seconds in software.
+        const attacked = await page
+          .waitForFunction((n) => window.__aoh.woundsShown() > n, shownBefore, { timeout: 15000 })
+          .then(() => true, () => false);
+        if (attacked) attacks++;
+        // Only straight after the first attack: a later click that made no attack leaves the count at 1.
+        if (attacked && attacks === 1) {
           await shot("6-attack");
           // The roll stays on screen: it no longer clears itself after a few seconds.
           await page.waitForTimeout(5500);
