@@ -24,6 +24,8 @@ interface Props {
   onResurrect: (glyphId: string, unitId: string) => void;
   /** The Glyph of Resurrection whose unit is being placed, if any. */
   resurrecting: string | null;
+  /** Glyphs just picked up, which glow a moment in the list. */
+  fresh?: readonly string[];
 }
 
 function Chip({ kind }: { kind: GlyphKind }) {
@@ -41,7 +43,7 @@ function Chip({ kind }: { kind: GlyphKind }) {
  * The glyphs off to the side of the board: each player's held glyphs (face up only to their owner),
  * the stat glyphs in play, the curses counting down, and how many still lie on the battlefield.
  */
-export function GlyphPanel({ state, ctx, names, shown, user, onUse, onResurrect, resurrecting }: Props) {
+export function GlyphPanel({ state, ctx, names, shown, user, onUse, onResurrect, resurrecting, fresh = [] }: Props) {
   const [choosing, setChoosing] = useState<string | null>(null);
   const glyphs = state.glyphs;
   if (!glyphs) return null;
@@ -81,7 +83,7 @@ export function GlyphPanel({ state, ctx, names, shown, user, onUse, onResurrect,
                   const mine = user === p.id;
                   const options = mine ? targets(h.id, kind) : [];
                   return (
-                    <li key={h.id} data-glyph={kind}>
+                    <li key={h.id} data-glyph={kind} className={fresh.includes(h.id) ? "glyph-fresh" : undefined}>
                       <div className="glyph-line">
                         <Chip kind={kind} />
                         <strong>{GLYPHS[kind].name}</strong>

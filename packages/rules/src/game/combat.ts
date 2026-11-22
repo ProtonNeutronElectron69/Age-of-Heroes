@@ -681,6 +681,17 @@ export function endOfTurnTerrain(state: GameState, unitId: string, events: GameE
   for (const figure of unit.figures) {
     const spots = figureSpots(figure, card.footprint, stats.height, ctx);
     // A figure rolls once, however many of its hexes are on swamp.
+    const terrains = spots.map((s) => ctx.board.surfaceAt(s.hex, s.elevation)?.terrain);
+    if (state.config.swampRoll === "d20") {
+      const t = terrains.map((id) => (id ? ctx.terrain.get(id) : undefined)).find((r) => r?.endTurnRoll !== undefined);
+      if (!t) continue;
+      const { woundOnOrBelow, wounds } = t.endTurnRoll!;
+      const roll = rng.d20();
+      const hurt = roll <= woundOnOrBelow;
+      events.push({ type: "terrainRoll", figureId: figure.id, terrain: t.id, roll, outcome: hurt ? "wounded" : "safe" });
+      if (hurt) woundFigure(state, unit, figure, wounds, stats.life, "swamp", events);
+      continue;
+    }
     const effect = spots
       .map((s) => ctx.board.surfaceAt(s.hex, s.elevation)?.terrain)
       .map((id) => (id ? ctx.terrain.get(id)?.endTurnSelfAttack : undefined))

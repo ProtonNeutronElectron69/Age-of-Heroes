@@ -110,6 +110,10 @@ const setupSchema = z
     facing: z.boolean().optional(),
     /** New games: tokens for half each army, rounded up. Older files leave it out (three). */
     tokenAllowance: z.enum(["half"]).optional(),
+    /** New games: swamp rolls a d20. Older files leave it out (an attack die). */
+    swampRoll: z.enum(["d20"]).optional(),
+    /** New games: zone of control. Older files leave it out. */
+    zoneOfControl: z.boolean().optional(),
   })
   .superRefine((s, ctx) => {
     if (s.mode === "basic") ctx.addIssue({ code: "custom", path: ["mode"], message: BASIC_RULES_GONE });

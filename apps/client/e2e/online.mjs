@@ -1,12 +1,11 @@
 // The client side of online play, through the real game server: the lobby, a
 // spectator, coming back to your seat after a reload, a few turns on the board,
-// host-only saving, leaving (which concedes), the replay, and resuming a saved
+// host-only saving, leaving (which concedes), and resuming a saved
 // game in a new room. Each player has their own browser, as on three devices.
 // Whole games are played over the protocol by the server's unit tests
 // (apps/server/test), so this test stops after a few turns.
 // Usage: node e2e/online.mjs   (needs apps/client/dist and apps/server/dist built)
 import { spawn } from "node:child_process";
-import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -466,29 +465,12 @@ try {
   const heading = await over.getByRole("heading").innerText();
   if (!/Alice wins/.test(heading)) fail(`Unexpected result after Bob left: ${heading}`);
 
-  // ---- Replay -------------------------------------------------------------
-  phase("replay");
-  const downloadButton = alice.page.getByRole("button", { name: "Download replay" });
-  await downloadButton.waitFor();
-  const [download] = await Promise.all([alice.page.waitForEvent("download"), downloadButton.click()]);
-  const file = await download.path();
-  const replay = JSON.parse(await readFile(file, "utf8"));
-  if (replay.formatVersion !== 1) fail("The replay file looks wrong");
-  if (replay.commands.at(-1)?.type !== "concede") fail("The replay does not end with Bob leaving");
-  if (!replay.setup.seed) fail("The replay is missing the game's seed");
-
-  await clickSceneChange(alice.page.getByRole("button", { name: "New game" }));
-  await alice.page.getByRole("button", { name: "Watch a replay" }).waitFor();
-  await alice.page.getByLabel("Replay file").setInputFiles(file);
-  await alice.page.getByRole("region", { name: "Replay controls" }).waitFor();
-  await alice.page.getByRole("button", { name: "Last move" }).click();
-  const status = await alice.page.getByRole("region", { name: "Replay controls" }).innerText();
-  if (!/wins|share the win|nobody wins/.test(status)) fail(`The replay did not reach the end: ${status}`);
-  await shot(alice, "5-replay");
+  // Replays are gone: the game over screen offers none.
+  if ((await over.getByRole("button", { name: /replay/i }).count()) > 0) fail("The game over screen still offers a replay");
 
   // ---- Resume the saved game in a new room --------------------------------
   phase("resuming");
-  await clickSceneChange(alice.page.getByRole("button", { name: "Close replay" }));
+  await clickSceneChange(alice.page.getByRole("button", { name: "New game" }));
   await alice.page.getByRole("radio", { name: "Online" }).click();
   await alice.page.getByLabel("Resume file").setInputFiles(saveFile);
   await alice.page.getByRole("group", { name: "Resume a saved game" }).getByRole("button", { name: /Alice/ }).click();
@@ -519,7 +501,7 @@ try {
 
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(
-    `Online game in room ${code}: ${moves} moves, ${attacks} attacks, ${replay.commands.length} commands. Result: ${heading} Saved at ${savedAt.round} and resumed in room ${newCode}.`,
+    `Online game in room ${code}: ${moves} moves, ${attacks} attacks. Result: ${heading} Saved at ${savedAt.round} and resumed in room ${newCode}.`,
   );
 } catch (err) {
   if (failureShots) {

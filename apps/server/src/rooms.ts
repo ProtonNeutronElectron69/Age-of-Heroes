@@ -353,6 +353,9 @@ export class RoomManager {
       facing: true,
       // Activation tokens for half the army, rounded up, plus the bluff.
       tokenAllowance: "half",
+      // Swamp rolls a d20, and figures beside an enemy get one free step.
+      swampRoll: "d20",
+      zoneOfControl: true,
     };
     const { state, events } = createGame(setup, room.ctx);
     room.setup = setup;

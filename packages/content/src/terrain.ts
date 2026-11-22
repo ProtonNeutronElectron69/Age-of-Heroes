@@ -29,6 +29,7 @@ export const TERRAIN: readonly TerrainRules[] = [
     stopGroup: "wet",
     moveCost: 2,
     endTurnSelfAttack: { attackDice: 1, defenseDice: 0 },
+    endTurnRoll: { woundOnOrBelow: 5, wounds: 1 },
   },
   {
     id: "lava",

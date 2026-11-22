@@ -47,6 +47,25 @@ interface Mover {
   readonly trample: boolean;
   /** Long Strides (amphibious): water and swamp cost no extra Move and do not end the move. */
   readonly wades: boolean;
+  /** Zone of control (games with `zoneOfControl`). */
+  readonly zone: boolean;
+  /** Zone of control: where earlier pieces of this turn's move left it. */
+  readonly walk: Walk;
+}
+
+/**
+ * Zone of control, carried from step to step: whether the free step beside an enemy has been
+ * used this turn, and the enemies ridden through (Trample), which make no passing strikes.
+ */
+interface Walk {
+  readonly besideUsed: boolean;
+  readonly ridden: ReadonlySet<string>;
+}
+
+const FRESH_WALK: Walk = { besideUsed: false, ridden: new Set() };
+
+function walkKey(walk: Walk): string {
+  return `${walk.besideUsed ? 1 : 0}:${[...walk.ridden].sort().join(",")}`;
 }
 
 /** An enemy figure, with the spots it covers, for engagement checks. */
@@ -113,6 +132,8 @@ function moverFor(state: GameState, figureId: string, ctx: RulesContext): Mover 
     flying: card.footprint === "1" && hasAbility(card, "flying"),
     trample: hasAbility(card, "trample"),
     wades: hasAbility(card, "amphibious"),
+    zone: !!state.config.zoneOfControl,
+    walk: used ? { besideUsed: !!used.besideUsed, ridden: new Set(used.ridden ?? []) } : FRESH_WALK,
   };
 }
 
@@ -155,6 +176,8 @@ interface StepInfo {
   readonly drop: number;
   /** Enemies the figure walks away from (passing strikes). */
   readonly strikes: Enemy[];
+  /** Zone of control: the walk after this step. */
+  readonly walk: Walk;
   /** Enemies the figure moves through with Trample. */
   readonly trampled: Occupant[];
 }
@@ -182,6 +205,7 @@ function evaluateStep(
   occ: Map<string, Occupant>,
   enemies: readonly Enemy[],
   ctx: RulesContext,
+  walk: Walk = FRESH_WALK,
 ): StepInfo | string {
   const single = mover.footprint === "1";
   const turning = hexEquals(from.hex, to.hex) && from.elevation === to.elevation;
@@ -222,6 +246,19 @@ function evaluateStep(
   const stops = spots.some((s, i) => entered.includes(s) && !wet(s) && stopsMovement(fromSpots[i]!, s, ctx));
   const before = engagedIds(enemies, fromSpots, height);
   const after = engagedIds(enemies, spots, height);
+  let strikes: Enemy[];
+  let nextWalk = walk;
+  if (mover.noStrikes) strikes = [];
+  else if (!mover.zone) strikes = enemies.filter((e) => before.has(e.figure.id) && !after.has(e.figure.id));
+  else {
+    // Zone of control: a figure being ridden down strikes at nobody; leaving an enemy draws a
+    // strike, and so does every step beside an enemy after the first free one.
+    const ridden = trampled.length > 0 ? new Set([...walk.ridden, ...trampled.map((t) => t.figure.id)]) : walk.ridden;
+    const striking = enemies.filter((e) => before.has(e.figure.id) && !ridden.has(e.figure.id));
+    const beside = !turning && striking.some((e) => after.has(e.figure.id));
+    strikes = striking.filter((e) => !after.has(e.figure.id) || (beside && walk.besideUsed));
+    if (beside || ridden !== walk.ridden) nextWalk = { besideUsed: walk.besideUsed || beside, ridden };
+  }
   return {
     to,
     spots,
@@ -231,7 +268,8 @@ function evaluateStep(
     lava: entered.filter((s) => terrainOf(s, ctx)?.entryDestroyOnOrBelow !== undefined).length,
     ice: single ? entered.filter((s) => terrainOf(s, ctx)?.slip !== undefined).length : 0,
     drop: standingElevation(fromSpots) - standingElevation(spots),
-    strikes: mover.noStrikes ? [] : enemies.filter((e) => before.has(e.figure.id) && !after.has(e.figure.id)),
+    strikes,
+    walk: nextWalk,
     trampled,
   };
 }
@@ -267,6 +305,7 @@ interface Label {
   readonly cost: number;
   readonly hazards: number;
   readonly stopped: boolean;
+  readonly walk: Walk;
   readonly prev: Label | null;
 }
 
@@ -286,14 +325,14 @@ function search(
   const enemies = enemiesOf(state, mover, ctx);
   const labels = new Map<string, Label>();
   const buckets: Label[][] = Array.from({ length: Math.max(0, budget) + 1 }, () => []);
-  buckets[0]!.push({ placement: mover.start, spots: mover.startSpots, cost: 0, hazards: 0, stopped: false, prev: null });
+  buckets[0]!.push({ placement: mover.start, spots: mover.startSpots, cost: 0, hazards: 0, stopped: false, walk: mover.walk, prev: null });
 
   for (let c = 0; c <= budget; c++) {
     // Turning costs nothing, so labels can be appended to the bucket being read.
     for (const label of buckets[c]!) {
       if (label.stopped) continue;
       for (const to of nextPlacements(label.placement, mover.footprint, ctx)) {
-        const info = evaluateStep(mover, label.placement, label.spots, to, occ, enemies, ctx);
+        const info = evaluateStep(mover, label.placement, label.spots, to, occ, enemies, ctx, label.walk);
         if (typeof info === "string") continue;
         if (onlyTerrain && !info.spots.every((s) => terrainOf(s, ctx)?.id === onlyTerrain)) continue;
         const cost = c + info.cost;
@@ -304,9 +343,11 @@ function search(
           cost,
           hazards: label.hazards + hazardsOf(info, mover, ctx),
           stopped: info.stops,
+          walk: info.walk,
           prev: label,
         };
-        const key = `${placementKey(to)}|${cost}|${next.stopped}`;
+        // Under zone of control, paths that leave the figure in a different state are kept apart.
+        const key = `${placementKey(to)}|${cost}|${next.stopped}${mover.zone ? `|${walkKey(info.walk)}` : ""}`;
         const existing = labels.get(key);
         if (existing && existing.hazards <= next.hazards) continue;
         labels.set(key, next);
@@ -437,10 +478,12 @@ function validatePath(state: GameState, mover: Mover, path: readonly PathStep[],
   let cost = 0;
   let allBonusTerrain = true;
   const bonus = mover.bonusTerrainKept ? stayOnBonus(mover.startSpots, ctx) : null;
+  let walk = mover.walk;
   path.forEach((raw, i) => {
     const to = toPlacement(raw, from, mover.footprint);
-    const info = evaluateStep(mover, from, fromSpots, to, occ, enemies, ctx);
+    const info = evaluateStep(mover, from, fromSpots, to, occ, enemies, ctx, walk);
     if (typeof info === "string") fail(info);
+    walk = info.walk;
     if (info.stops && i < path.length - 1) fail("Entering water or swamp ends movement");
     if (bonus && !info.spots.every((s) => terrainOf(s, ctx)?.id === bonus.terrain)) allBonusTerrain = false;
     cost += info.cost;
@@ -542,10 +585,12 @@ export function moveFigure(
 
   const trampledSoFar = new Set<string>();
   const self = { unit, figure, card: mover.card, spots: fromSpots };
+  let walk = mover.walk;
   for (const raw of path) {
     const to = toPlacement(raw, from, mover.footprint);
-    const info = evaluateStep(mover, from, fromSpots, to, occ, enemies, ctx);
+    const info = evaluateStep(mover, from, fromSpots, to, occ, enemies, ctx, walk);
     if (typeof info === "string") break; // validated above; cannot happen
+    walk = info.walk;
 
     // 1. Enemies left behind strike as the figure walks away.
     for (const e of info.strikes) {
@@ -611,6 +656,11 @@ export function moveFigure(
     }
   }
 
+  // Zone of control: later pieces of the move carry on from here.
+  if (record && mover.zone) {
+    if (walk.besideUsed) record.besideUsed = true;
+    if (walk.ridden.size > 0) record.ridden = [...walk.ridden];
+  }
   faceMoved(state, mover, traversed);
   // Ending the move on a glyph picks it up.
   pickUpGlyphs(state, unit, figure, after, ctx);

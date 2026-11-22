@@ -15,8 +15,8 @@ Checks run only for the parts of the game a change can affect. The browser tests
 | Test | What it plays through |
 |---|---|
 | `full-game` | A hot-seat game: the draft's battlefield view (opening first, the hex tooltip, coming back mid-draft), draft (filtering and sorting its cards), deployment (models and tokens, the detailed and classic tiles with the B key, the three tables, the board coming to rest), the initiative d20s, dragging a figure, a move made in two pieces, R turning a figure that has moved, H, the hover card, eye view, the camera following (and its three Display boxes), the hex tooltip on a middle click, the glyphs (the menu's stepper, and four face down once every unit is placed), squads, the attack intro (its melee or ranged icon and title; once Dice rolls is off, a click skips it), the music (play, battle with the first attack, victory at the end), the sound effects (drafting and placing, hops, an attack, dice, rounds), the attack scene in the dice tray and dice only (then **Dice rolls** set to None), a wound number floating up, the dice panel; then each turn is ended at once until the 5-round limit and the game-over screen |
-| `online` | Through the real game server, one browser per player: the lobby and a spectator; the open draft (both players picking at the same moment, a taken unit greyed out on the other screen, a reload mid-draft); pings on the draft map and in play (`window.__aohPingsHeard`); initiative waiting for both players' rolls before showing any result; a few turns, host-only saving, leaving (which concedes), the replay, and resuming in a new room. Whole online games are played by the server's unit tests |
-| `saves` | Saving a hot-seat game and bringing it back from the saved games list, after a reload, and from a file; the file in the replay viewer |
+| `online` | Through the real game server, one browser per player: the lobby and a spectator; the open draft (both players picking at the same moment, a taken unit greyed out on the other screen, a reload mid-draft); pings on the draft map and in play (`window.__aohPingsHeard`); initiative waiting for both players' rolls before showing any result; a few turns, host-only saving, leaving (which concedes; the game over screen offers no replay), and resuming in a new room. Whole online games are played by the server's unit tests |
+| `saves` | Saving a hot-seat game and bringing it back from the saved games list, after a reload, and from a file |
 | `editor` | Building a map (with a large tree, refused first where it would overlap, and a low wall), exporting and importing it, and playing on it |
 | `models` | Every figure model on the model page |
 | `gallery` | The unit gallery: filters, sorts, sizes and the model viewer; then the map gallery: another map previewed and chosen for play |
@@ -38,7 +38,7 @@ The first matching row decides for each file; a change runs everything its files
 | A package's own tests only | yes | that package | none |
 | Map editor screen | yes | none | editor |
 | Online lobby and connection (`online.ts`, `LobbyScreen`, `OnlineBar`) | yes | none | online |
-| Saves and replays (`saves.ts`, `SaveDialog`, `ReplayScreen`) | yes | none | saves, online |
+| Saves (`saves.ts`, `SaveDialog`) | yes | none | saves, online |
 | The display board shared by the model page and the gallery (`scene/standing.tsx`) | yes | none | models, gallery |
 | The model page (`ModelGalleryScreen`, `model-gallery.css`) | yes | none | models |
 | The unit gallery (`UnitGalleryScreen`, `unit-gallery.css`) | yes | none | gallery |

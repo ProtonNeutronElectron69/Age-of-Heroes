@@ -113,7 +113,13 @@ export function describeEvent(e: GameEvent, names: Names): string | null {
     }
     case "terrainRoll": {
       const what =
-        e.outcome === "destroyed" ? "and is destroyed" : e.outcome === "slipped" ? "and slips" : "and is safe";
+        e.outcome === "destroyed"
+          ? "and is destroyed"
+          : e.outcome === "slipped"
+            ? "and slips"
+            : e.outcome === "wounded"
+              ? "and is wounded"
+              : "and is safe";
       return `${names.figure(e.figureId)} rolls ${e.roll} on ${names.terrain(e.terrain)} ${what}.`;
     }
     case "figureSlid":
@@ -192,7 +198,11 @@ export function terrainEffect(t: TerrainRules): string | null {
   const parts: string[] = [];
   if (t.stopGroup) parts.push("Stepping in from dry ground ends the figure's move.");
   if (t.moveCost && t.moveCost > 1) parts.push(`Each hex costs ${t.moveCost} move.`);
-  if (t.endTurnSelfAttack) {
+  if (t.endTurnRoll) {
+    parts.push(
+      `A figure that ends its turn here rolls a d20: on 1 to ${t.endTurnRoll.woundOnOrBelow} it takes ${t.endTurnRoll.wounds} ${t.endTurnRoll.wounds === 1 ? "wound" : "wounds"}.`,
+    );
+  } else if (t.endTurnSelfAttack) {
     const { attackDice, defenseDice } = t.endTurnSelfAttack;
     parts.push(
       `A figure that ends its turn here rolls ${attackDice} attack ${attackDice === 1 ? "die" : "dice"} against itself, with ${defenseDice} defense.`,

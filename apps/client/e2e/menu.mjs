@@ -9,7 +9,7 @@ import { preview } from "vite";
 const shots = process.env.E2E_SCREENSHOTS;
 const failureShots = process.env.E2E_FAILURE_SCREENSHOTS ?? shots;
 const STYLES = ["War Table", "Atlas", "Banner Hall", "Hex Command"];
-const CHOICES = ["Play on this device", "Play online", "Continue", "Saved games", "Watch a replay", "Map editor", "Unit gallery", "Test game"];
+const CHOICES = ["Play on this device", "Play online", "Continue", "Saved games", "Map editor", "Unit gallery", "Test game"];
 
 function fail(message) {
   throw new Error(message);
@@ -135,7 +135,7 @@ try {
   if (!((after.click ?? 0) > (before.click ?? 0))) fail("Clicking a menu button made no sound");
   await page.getByRole("checkbox", { name: "Sounds" }).uncheck();
   const quiet = await sfx();
-  await page.getByRole("button", { name: "Watch a replay" }).hover();
+  await page.getByRole("button", { name: "Unit gallery" }).hover();
   await page.getByRole("button", { name: "Map editor" }).hover();
   if (((await sfx()).hover ?? 0) !== (quiet.hover ?? 0)) fail("Sounds off still played the hover sound");
   await page.getByRole("checkbox", { name: "Sounds" }).check();

@@ -1522,11 +1522,6 @@
   top: 270px;
 }
 
-.ms-hex-command .mc-replay {
-  left: 78px;
-  top: 270px;
-}
-
 .ms-hex-command .mc-editor {
   left: 0;
   top: 135px;
@@ -1538,8 +1533,8 @@
 }
 
 .ms-hex-command .mc-test {
-  left: 390px;
-  top: 0;
+  left: 78px;
+  top: 270px;
 }
 
 .ms-hex-command .mc .mc-bg {

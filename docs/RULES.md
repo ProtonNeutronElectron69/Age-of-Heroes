@@ -11,7 +11,7 @@ In short:
 - Armies are drafted within a points budget: a snake draft on one device, an open draft online.
 - Higher ground gives combat bonuses, long drops cause falling damage, and a figure cannot climb a single step taller than its Height.
 - Line of sight is a strict 3D check, and other figures block it.
-- Figures next to enemies are engaged and draw passing strikes when they leave.
+- Figures next to enemies are engaged and draw passing strikes when they leave, or when they keep moving beside them after one free step (zone of control).
 - Figures face a way: an attack needs its target in front of the attacker, and a melee attack from behind rolls 2 more attack dice.
 - Every unit has special abilities, and terrain has its own effects.
 
@@ -63,7 +63,7 @@ Special terrain:
 | Terrain | Effect |
 |---|---|
 | **Water** | Entering water from a hex that is not water or swamp ends the figure's movement. Each water hex costs 2 move. |
-| **Swamp** | Entering swamp from a hex that is not water or swamp ends the figure's movement. Each swamp hex costs 2 move. A figure that ends its turn on swamp rolls 1 attack die against itself with 0 defense dice, taking 1 wound per skull. |
+| **Swamp** | Entering swamp from a hex that is not water or swamp ends the figure's movement. Each swamp hex costs 2 move. A figure that ends its turn on swamp rolls a d20: on 1 to 5 it takes 1 wound *(tunable)*, on 6 or more nothing happens. (Games saved before this rule roll 1 attack die against the figure instead, with 0 defense dice, 1 wound per skull.) |
 | **Lava** | Each time a figure enters a lava hex, roll a d20: on 1 to 12 the figure is destroyed *(tunable)*. |
 | **Ice** | Each time a figure enters an ice hex, roll a d20: on 1 to 5 it slips, slides 1 more hex in the direction it was moving, and its movement ends *(tunable)*. It slides onto the highest surface in that hex that is not above it. If that hex is blocked, taken or off the battlefield it stays where it is. A slide never causes a second slip, but sliding into lava means a lava roll. If a slip leaves the figure on a hex it was only passing over (another figure is there), it goes back to the last free hex on its path. |
 | **Road** | A figure that starts its turn on road, moves only through road hexes and ends its turn on road gets +3 move that turn *(tunable)*. |
@@ -114,7 +114,7 @@ Glyphs are small hex tiles scattered face down on the battlefield after every un
 | Glyph of the Hawk | Stat glyph: +3 range for normal attacks (3), only on a unit whose card has a Range above 1; special attacks keep their own range |
 | Glyph of the Stag | Stat glyph: +2 move (2) |
 | Glyph of Mending | Heals every wound on one of the player's living units |
-| Glyph of Resurrection | Resurrects one of the player's destroyed units, whole and unwounded. The player places every figure, one hex at a time as at deployment, each on a free spot within 3 hexes (3) of another of the player's figures on the battlefield (**Auto place** fills the nearest spots). The unit can be chosen only if all its figures fit. Its old stat glyph does not come back |
+| Glyph of Resurrection | Brings back the figures one of the player's units has lost: a destroyed unit returns whole and unwounded, and a squad that still has figures standing gets back every figure it lost, unwounded (its survivors keep their wounds). The player places each returning figure, one hex at a time as at deployment, on a free spot within 3 hexes (3) of another of the player's figures on the battlefield, the squad's own survivors included (**Auto place** fills the nearest spots). The unit can be chosen only if all its returning figures fit. A destroyed unit's old stat glyph does not come back; a squad that never left the battlefield keeps its glyph |
 | Glyph of Blight | One enemy unit: a squad takes 1 wound on every figure; a hero loses half the Life it has left, rounded down, but at least 1 |
 | Glyph of Undoing | Cancels the stat glyph on one enemy unit |
 | Glyph of the Pit | A trap: the figure that picks it up takes 1 wound (1) at once |
@@ -155,7 +155,6 @@ Online, the host picks the options above and shares a room code. Seats and color
 - **Watching attacks**: every attack opens with a short intro on each screen, then the dice (as each player's **Dice rolls** setting says). Clicking skips the rest of it only once every player has clicked (a player whose show has already ended counts as having clicked), so nobody's view of an attack is cut short; until then the screen says whose click it is waiting for. The player whose turn it is cannot act until everyone has finished watching or skipped, or 20 seconds after their own show has ended, whichever is first. A player who switches away from the game counts as finished. Spectators skip for themselves only.
 - **Leaving**: leaving a game in progress concedes (section 12). A dropped connection or a page reload does not: the player returns to the same seat.
 - **Spectators** can watch with a room code. They see what a player outside the game would see: no secret tokens.
-- **Replays**: when the game ends, everyone can download its full record and watch it again move by move, with every token shown.
 - **Saving**: the host can save the game at any time and download it. To carry on later, the host resumes the save in a new room, each player picks their army again, and play continues from the same moment with the same dice. The save holds the whole game, hidden tokens included, so only the host gets it.
 
 ## 5. Rounds
@@ -215,7 +214,8 @@ Some figures cover 2 or more hexes (2x1, 3x1 or 2x2 footprints). **Assumption** 
 
 New games give every figure a **facing**: the way it looks. Games saved before this rule have none. **Assumption** for all of this section.
 - **Front cone**: a figure sees the half of the battlefield in front of it, 180 degrees, the side line included. Behind it is the other half.
-- **After a move**: a single-hex figure faces along its last step, to the nearest eighth of a turn. Until it attacks, its player may turn it to any of the eight directions (the R key, 45 degrees a press; Shift+R the other way). A figure that has not moved this turn keeps its facing, and once it attacks it can no longer turn (a move after attacking, such as Smoke Step's, lets it turn again).
+- **Turning**: until it attacks, a single-hex figure of the unit taking its turn may be turned to any of the eight directions, before it moves or after (the R key, 45 degrees a press; Shift+R the other way). Turning is free: it uses no Move, and the figure may still move and attack afterwards. Once it attacks it can no longer turn (a move after attacking, such as Smoke Step's, lets it turn again).
+- **After a move**: a single-hex figure faces along its last step, to the nearest eighth of a turn.
 - **Multi-hex figures** face along their base, from its middle to its front hex, so they turn by turning their base as they move.
 - Figures pushed, pulled or swapped by abilities keep their facing. A figure brought back faces the middle of the battlefield.
 - **Eye view** shows only what is in front of the figure: the view turns no further than the edge of its front cone.
@@ -263,7 +263,9 @@ A **melee** attack (an adjacent target) from wholly outside the defender's front
 
 - Two enemy figures are **engaged** if a hex of one is next to a hex of the other and the difference in those hexes' elevations is less than the Height of the lower figure. **Assumption** (this is the "too high to fight across" rule).
 - An engaged figure may only attack figures it is engaged with. It cannot shoot at distant targets.
-- **Passing strike**: when a step takes a figure out of engagement with one or more enemies, each of those enemies rolls 1 attack die *(tunable)* against it before it leaves. The moving figure does not roll defense. Each skull is 1 wound. A figure destroyed this way falls where it stood. Moving while staying engaged with the same enemy draws no strike.
+- **Passing strike**: when a step takes a figure out of engagement with one or more enemies, each of those enemies rolls 1 attack die *(tunable)* against it before it leaves. The moving figure does not roll defense. Each skull is 1 wound. A figure destroyed this way falls where it stood.
+- **Zone of control**: a figure may take one step a turn that keeps it engaged with an enemy it was already engaged with for free. Every later such step that turn draws a passing strike from each enemy it stays engaged with, as leaving would. A move made in pieces counts as one: the free step is used once a turn, not once a piece. Turning a multi-hex figure in place is not a step. **Assumption.** (Games saved before this rule have no zone of control: moving while staying engaged with the same enemy draws no strike.)
+- **Riding through**: an enemy that a figure moves through with Trample (Ride Them Down and the like) makes no passing strikes on that figure for the rest of its turn, as it is being ridden down. The suggested path for a trampler therefore goes straight through such enemies rather than round them. Games saved before zone of control keep the strikes.
 - The game marks risky moves (ones that draw passing strikes, fall, or cross lava or ice) in orange, and suggests the safest path to each hex.
 
 ## 10. Falling

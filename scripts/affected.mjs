@@ -60,7 +60,7 @@ export const RULES = [
   { area: "rules tests", match: /^packages\/rules\/test\//, check: true, unit: [UNIT.rules], e2e: [] },
   { area: "rules", match: /^packages\/rules\//, check: true, unit: ALL, e2e: ALL },
 
-  // The protocol is only used online and for save and replay files.
+  // The protocol is only used online and for save files.
   { area: "protocol tests", match: /^packages\/protocol\/test\//, check: true, unit: [UNIT.protocol], e2e: [] },
   { area: "protocol", match: /^packages\/protocol\//, check: true, unit: WITH_DEPENDENTS.protocol, e2e: ["saves", "online"] },
 
@@ -87,7 +87,7 @@ export const RULES = [
   // Client files that only one part of the game uses.
   { area: "map editor", match: /^apps\/client\/src\/screens\/EditorScreen\.tsx$/, check: true, unit: [], e2e: ["editor"] },
   { area: "online play", match: /^apps\/client\/src\/(online\.ts|screens\/LobbyScreen\.tsx|ui\/OnlineBar\.tsx)$/, check: true, unit: [], e2e: ["online"] },
-  { area: "saves and replays", match: /^apps\/client\/src\/(saves\.ts|ui\/SaveDialog\.tsx|screens\/ReplayScreen\.tsx)$/, check: true, unit: [], e2e: ["saves", "online"] },
+  { area: "saves", match: /^apps\/client\/src\/(saves\.ts|ui\/SaveDialog\.tsx)$/, check: true, unit: [], e2e: ["saves", "online"] },
   // Styles and the rest of the client: every browser test goes through them.
   { area: "client", match: /^apps\/client\//, check: true, unit: [UNIT.client], e2e: ALL },
 

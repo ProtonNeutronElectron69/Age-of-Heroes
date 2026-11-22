@@ -147,14 +147,27 @@ export interface ActiveTurn {
   attackLog: { attackerId: string; targetId: string }[];
   /** Extra moves granted after attacking (Smoke Step), by figure id: movement points allowed. */
   bonusMoves: Record<string, number>;
-  /** Figures that may still be turned (games with facing): those that moved and have not attacked since. */
+  /**
+   * Figures that have moved and not attacked since (games with facing). Any figure that has not
+   * attacked may turn too; this list lets one turn again after a move after attacking (Smoke Step).
+   */
   turnable?: string[];
   /**
    * A figure's move may be made in pieces: what each figure has used so far this turn. `spent`
    * is the movement points used; `ended` is set when terrain ended its movement (water, swamp,
    * a slip on ice); `offBonus` when it left terrain that gives a bonus for staying on it.
    */
-  moves?: Record<string, { spent: number; ended: boolean; offBonus: boolean }>;
+  moves?: Record<string, MoveRecord>;
+}
+
+export interface MoveRecord {
+  spent: number;
+  ended: boolean;
+  offBonus: boolean;
+  /** Zone of control: the figure has used its free step beside an enemy this turn. */
+  besideUsed?: boolean;
+  /** Zone of control: enemies it rode through this turn (Trample), which make no passing strikes on it. */
+  ridden?: string[];
 }
 
 export interface TurnPointer {
@@ -221,7 +234,21 @@ export interface GameConfig {
    * rolls extra dice. Left out by games saved before the rule existed, which have no facing.
    */
   readonly facing?: boolean;
+  /**
+   * "d20": a figure ending its turn on swamp rolls a d20 and is wounded on a low roll (the
+   * terrain's `endTurnRoll`). Left out by older games, which roll an attack die.
+   */
+  readonly swampRoll?: SwampRoll;
+  /**
+   * Zone of control: a figure gets one free step a turn that keeps it beside an enemy it was
+   * already beside; each later such step draws a passing strike from every enemy it stays beside.
+   * A figure ridden through (Trample) makes no passing strikes on the rider that turn. Left out
+   * by older games, where only leaving an enemy draws a strike.
+   */
+  readonly zoneOfControl?: boolean;
 }
+
+export type SwampRoll = "d20";
 
 export interface GameState {
   readonly formatVersion: 1;
@@ -300,6 +327,10 @@ export interface GameSetup {
   readonly tokenAllowance?: TokenAllowance;
   /** New games turn facing on; older ones leave it out and have none. */
   readonly facing?: boolean;
+  /** New games roll a d20 for swamp; older ones leave it out and roll an attack die. */
+  readonly swampRoll?: SwampRoll;
+  /** New games have zone of control; older ones leave it out. */
+  readonly zoneOfControl?: boolean;
 }
 
 export interface RulesContext {
@@ -409,7 +440,7 @@ export type GameEvent =
       readonly figureId: string;
       readonly terrain: string;
       readonly roll: number;
-      readonly outcome: "safe" | "destroyed" | "slipped";
+      readonly outcome: "safe" | "destroyed" | "slipped" | "wounded";
     }
   | { readonly type: "figureSlid"; readonly figureId: string; readonly to: Step }
   | { readonly type: "figureFaced"; readonly figureId: string; readonly facing: number }

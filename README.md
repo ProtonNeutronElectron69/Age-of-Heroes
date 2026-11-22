@@ -20,7 +20,7 @@ A turn-based 3D tactics game for 2 to 6 players in the browser. Heroes and squad
 - **Map editor:** build, save, export and import your own maps, and play on them. It finds and removes problem pieces, erases with a dragged box, joins pieces side by side into bridges (Shift+click) and can scatter terrain and scenery at random.
 - **Hot-seat play** on one device, with a pass-the-device screen for the secret tokens.
 - **Online play:** room codes, each device sees only what its player may see, reconnecting, spectators, and an authoritative server. Online games have an open draft (everyone picks at once, each unit once), initiative that waits for every player's roll, and pings: press P to point at a spot for everyone.
-- **Saved games and replays:** named saves, save files, and online games the host can save and resume later. Finished games can be watched move by move.
+- **Saved games:** named saves, save files, and online games the host can save and resume later.
 - **A gaming table** under the board, in three styles, with every unit's card laid out round it and destroyed figures stood on their cards. Figures hop from hex to hex, can be dragged to where they should go, and the chosen figure jumps when you press H, so you can find it.
 - **3D dice:** an attack zooms in on the fight, with both units' cards, and their models standing at the ends of a felt dice tray into which the attack and defense dice are thrown, bouncing off the walls and each other; each player clicks a d20 for initiative. Choose the full scene, dice only or none under Display.
 - **3D figure models** for all 56 units on the board, in three colour schemes, or plain tokens that show the hit band (Display, or the T key). Every unit also has a detailed, painted model for the detailed look.
@@ -75,8 +75,8 @@ Before pushing, run `pnpm check:affected`. CI runs the checks a pull request's c
 |---|---|
 | `packages/rules` | The rules engine: hex math, the stacked map model, dice, line of sight, draft, movement, combat and abilities. Pure, deterministic TypeScript, so it runs the same in the browser and on the server. |
 | `packages/content` | Game data: the 56 units, seven premade maps, terrain, scenery, tunable rule numbers, and the balance model for point costs. |
-| `packages/protocol` | The online message format (checked with schemas) and the game record format used for saves and replays. |
-| `apps/client` | The browser game: main menu, unit gallery, draft, battle, map editor, online lobby, saved games and replay viewer, built with React and Three.js. Figure models are built in code in `src/models`. Browser tests live in `apps/client/e2e`. |
+| `packages/protocol` | The online message format (checked with schemas) and the game record format used for saves. |
+| `apps/client` | The browser game: main menu, unit gallery, draft, battle, map editor, online lobby and saved games, built with React and Three.js. Figure models are built in code in `src/models`. Browser tests live in `apps/client/e2e`. |
 | `apps/server` | The online game server: rooms, room codes, seats and reconnecting, spectators, and saving and resuming games. It runs the rules engine and sends each player only their own view. |
 | `docs` | Rules, roadmap, architecture, content guide, testing guide and hosting guide. |
 
