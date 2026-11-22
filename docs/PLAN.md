@@ -4,19 +4,20 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 56-unit roster in 7 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 742 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 56-unit roster in 7 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 750 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 Nothing is in progress. Open, when the owner asks:
 - **More premade maps.** Riverbend shows a quick way: lay the map out in code, check it with `buildBoard`, and save the JSON (see [CONTENT.md](CONTENT.md), Maps).
 - **A balance pass** from real playtests (costs come from the balance model so far), glyph numbers included (`TUNING.glyphs`).
 - **Further content drops:** units, factions and abilities.
+- **The dice show, further:** the initiative d20 still follows a scripted tumble; it could be thrown into the tray too. Very large attack rolls (17 or more dice) now and then leave a die that will not settle in time, which is then set on the nearest free spot, a small jump (`placeFlat` in `scene/diceRoll.ts`).
 
 On hold (Phase 6): a computer opponent, and a tutorial.
 
-Done lately, newest first: a dice tray for the attack show, with dice that tumble by physics; the Sunken Hive, a seventh faction of swamp aliens; the map gallery, draft filters, test game and moves in pieces (#70); every attack needing its target in front (#69); tokens and glyphs on the table and the token allowance (#68); facing (#67); detailed figure models for every unit (#63 to #66, finishing Phase 7); the detailed look for scenery and board tiles; the Riverbend map; glyphs; more scenery; fixes after v1.0. Phases 8 (the tabletop feel) and 9 (playtest updates) came before; the game as it stood after Phase 9 is version 1.0. Each has its section below.
+Done lately, newest first: a dice tray for the attack show, with dice that tumble by physics (#73); the Sunken Hive, a seventh faction of swamp aliens (#72); the map gallery, draft filters, test game and moves in pieces (#70); every attack needing its target in front (#69); tokens and glyphs on the table and the token allowance (#68); facing (#67); detailed figure models for every unit (#63 to #66, finishing Phase 7); the detailed look for scenery and board tiles; the Riverbend map; glyphs; more scenery; fixes after v1.0. Phases 8 (the tabletop feel) and 9 (playtest updates) came before; the game as it stood after Phase 9 is version 1.0. Each has its section below.
 
-Worth knowing before the next change: games saved with facing before #69 may not replay exactly (the facing rules changed twice after #67), and new rule options must stay optional fields of the setup (see [CLAUDE.md](../CLAUDE.md)).
+Worth knowing before the next change: games saved with facing before #69 may not replay exactly (the facing rules changed twice after #67), and new rule options must stay optional fields of the setup (see [CLAUDE.md](../CLAUDE.md)). The dice show only shows rolls the rules have made; its throws are seeded from the roll, so changing the simulation never changes a game. The design pages (`?cards`, `?models`, `?dice`) are the quickest way to look at cards, models and the dice show.
 
 ### How work is delivered
 Each phase or drop is one pull request from a working branch, with CI green before it is merged. The owner asks for each merge. Keep [RULES.md](RULES.md), this file and the other docs up to date in the same pull request as the change.
@@ -299,13 +300,13 @@ Small changes asked for after playing, online games especially.
 - [x] **Test game** in the menu: two players with 500-point armies already drafted and deployed on Twin Fords, all 11 glyphs, new-game rules; play starts at token placement
 - [x] A figure's move may be made in pieces, until it attacks: a figure keeps the selection while it has movement left
 
-### The Sunken Hive
+### The Sunken Hive (#72)
 - [x] A seventh faction of eight swamp aliens, for 56 units: Vothrek the Overmind, Ixaru Mirestrider, Gulpmaw and Ulshae, Brood Tender (heroes), and the Hive Spawn, Murk Stalkers, Spore Lobbers and Fen Leapers (squads). Four ranged and four melee; points from the balance model
 - [x] 5 new rules: Spawning Pool (a squad that rolls to bring back its fallen when it does not attack, more easily in water), Hive Command (an attack aura for Aliens), Numbing Glare (a d20 that leaves the target without defense dice), Long Strides (wading through water and swamp) and Mire Skin (defense in water and swamp). Swamp never wounds the last two
 - [x] A murky olive card theme with an acid green trim and an eye emblem, card art for all eight, and a classic and a detailed model for each, built from one set of poses (`models/units/hive.ts`)
 - [x] The roster is now 25 heroes and 31 squads, 28 ranged and 28 melee
 
-### The dice tray
+### The dice tray (#73)
 - [x] An attack's dice are thrown into a felt-lined wooden tray on a wooden table under a lamp, with soft shadows, instead of onto a flat green plane
 - [x] The dice tumble by physics, worked out before they are shown: they bounce off the felt, the walls and each other, and come to rest flat, apart and inside the tray, on the faces the rules rolled. The attack dice come from the attacker's end and settle before the defense dice are thrown from the defender's
 - [x] The two figures stand on the table at the tray's ends, outside its walls, drawn about twice as large as before; the camera frames the tray and both figures, and the tray grows with the number of dice
