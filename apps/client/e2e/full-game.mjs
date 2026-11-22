@@ -273,10 +273,11 @@ async function handleAttackIntro() {
     await shot("6a-attack-intro");
   } else if (diceOnlyChecked && !introSkipped) {
     // A click skips it, judged by the play screen's count of skips, not by the clock. The click is
-    // forced: Playwright would first wait for two steady animation frames, and drawn in software
-    // while the camera glides to the fight, that can take longer than the two-second intro.
+    // sent to the intro itself: Playwright would first wait for two steady animation frames, and drawn
+    // in software while the camera glides to the fight, that can take longer than the two-second
+    // intro; and a mouse click that arrives once the intro has gone would land on the board.
     const before = await page.evaluate(() => window.__aohUi.introsSkipped());
-    const clicked = await intro.click({ timeout: 2000, force: true }).then(() => true, () => false);
+    const clicked = await intro.dispatchEvent("click", undefined, { timeout: 2000 }).then(() => true, () => false);
     const skipped = clicked && (await page.waitForFunction((n) => window.__aohUi.introsSkipped() > n, before, { timeout: 5000 }).then(() => true, () => false));
     if (skipped) introSkipped = true;
     else if (clicked) fail("A click did not skip the attack intro");
@@ -293,8 +294,10 @@ async function handleAttackIntro() {
 async function handleAttackShow() {
   const dialog = page.getByRole("dialog", { name: "Attack" });
   if (!(await dialog.count())) return false;
+  // The click is sent to the show itself, not to a point on the screen: the show also closes by itself,
+  // and a mouse click that arrives just after it has gone lands on the board and moves the chosen figure.
   const close = async () => {
-    await dialog.click({ timeout: 2000 }).catch(() => {});
+    await dialog.dispatchEvent("click", undefined, { timeout: 2000 }).catch(() => {});
     await dialog.waitFor({ state: "detached" });
   };
   if (!sceneChecked) {
