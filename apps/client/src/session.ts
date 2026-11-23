@@ -25,8 +25,6 @@ export interface Session {
   readonly kind: "local" | "online";
   /** Online: the player on this device (null for a spectator). Local: null, everyone plays here. */
   readonly me: string | null;
-  /** Online: set once the game is over and the server sends the full record. */
-  readonly replay: Replay | null;
   readonly setup: GameSetup;
   /** The map is stored with the game, so custom maps can be resumed even if edited later. */
   readonly map: MapDefinition;
@@ -76,7 +74,6 @@ export function startGame(setup: GameSetup, map: MapDefinition): void {
   session = {
     kind: "local",
     me: null,
-    replay: null,
     setup,
     map,
     ctx,
@@ -124,7 +121,6 @@ export function applyServerGame(
     session = {
       kind: "online",
       me,
-      replay: null,
       setup,
       map,
       ctx,
@@ -150,12 +146,6 @@ export function applyServerGame(
   emit();
 }
 
-export function setOnlineReplay(replay: Replay): void {
-  if (session?.kind !== "online") return;
-  session = { ...session, replay, setup: replay.setup, commands: replay.commands };
-  emit();
-}
-
 export function setSessionError(message: string): void {
   if (!session) return;
   session = { ...session, error: message, pending: false };
@@ -168,9 +158,8 @@ export function canControl(s: Session, player: string | null | undefined): boole
   return s.kind === "local" || s.me === player;
 }
 
-/** The full record of a game, for download. Online games have it once the server sends it at the end. */
-export function replayOf(s: Session): Replay | null {
-  if (s.kind === "online") return s.replay;
+/** The full record of a game on this device, for a save. (Online, the host asks the server for it: `requestSave`.) */
+export function recordOf(s: Session): Replay {
   return { formatVersion: 1, setup: s.setup, map: s.map, commands: [...s.commands] };
 }
 
@@ -279,7 +268,6 @@ export function loadGame(given: { setup: GameSetup; map: MapDefinition; commands
     session = {
       kind: "local",
       me: null,
-      replay: null,
       setup: record.setup,
       map: record.map,
       ctx,

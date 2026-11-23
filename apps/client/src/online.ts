@@ -1,7 +1,7 @@
 import type { ClientMessage, Replay, RoomInfo, RoomSettings, ServerMessage } from "@aoh/protocol";
 import type { MapDefinition } from "@aoh/rules";
 import { useSyncExternalStore } from "react";
-import { applyServerGame, connectRemote, endOnlineSession, setOnlineReplay, setSessionError } from "./session";
+import { applyServerGame, connectRemote, endOnlineSession, setSessionError } from "./session";
 
 /**
  * The connection to the game server: lobby state before the game, and the
@@ -246,9 +246,6 @@ function receive(msg: ServerMessage): void {
     case "game":
       if (state.map) applyServerGame(state.map, state.me, msg.view, msg.events, msg.snapshot);
       set({ status: "playing" });
-      return;
-    case "replay":
-      setOnlineReplay(msg.replay);
       return;
     case "saved":
       saveWaiter?.resolve(msg.record);

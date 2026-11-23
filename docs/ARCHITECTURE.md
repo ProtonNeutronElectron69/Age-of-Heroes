@@ -59,9 +59,9 @@ Abilities hook in at fixed points: `abilityModifiers` (extra or fewer dice), `ta
 ## Protocol (`packages/protocol/src/index.ts`)
 
 - `clientMessageSchema`: create, join, rejoin, spectate, start, command, leave, resume, claim, save, ping. The server validates every message with it.
-- `ServerMessage`: welcome (seat and secret token), room, game (view and events; `snapshot` marks a catch-up with the full log), replay, saved, ping, error.
+- `ServerMessage`: welcome (seat and secret token), room, game (view and events; `snapshot` marks a catch-up with the full log), saved (the host's save), ping, watching, error.
 - A ping is not a game command: the server passes it to everyone else in the room, at most once a second per player (`PING_INTERVAL_MS`), and never logs, saves or replays it.
-- `Replay` / `replaySchema` / `parseReplay`: the **game record** (setup, map, commands, optional name and save time). The same format is a save file and the input for resuming an online game. (The server still sends the record to everyone when a game ends, as `replay`; the client no longer offers it for download.)
+- `Replay` / `replaySchema` / `parseReplay`: the **game record** (setup, map, commands, optional name and save time). The same format is a save file and the input for resuming an online game. (The names come from the replay viewer, since removed.)
 
 ## Server (`apps/server/src`)
 

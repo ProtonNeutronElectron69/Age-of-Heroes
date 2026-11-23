@@ -69,7 +69,7 @@ To carry on later, on this server or any other:
 2. The others join with the code and press **This is me** next to their army.
 3. Once every army still in the game has its player, the host presses **Continue game**, and play picks up exactly where the save was made.
 
-A save file is the full game record, so whoever has it can see every player's hidden tokens and could predict the dice. That suits games among friends; only the host can download it. The same file also opens as a hot-seat game or in the replay viewer.
+A save file is the full game record, so whoever has it can see every player's hidden tokens and could predict the dice. That suits games among friends; only the host can download it. The same file also opens as a hot-seat game.
 
 ## Limits built in
 

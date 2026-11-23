@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 56-unit roster in 7 factions, a map editor with seven premade maps, hot-seat and online play, and saved games. 757 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 56-unit roster in 7 factions, a map editor with seven premade maps, hot-seat and online play, and saved games. 763 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 Nothing is in progress. Open, when the owner asks:
@@ -15,9 +15,9 @@ Nothing is in progress. Open, when the owner asks:
 
 On hold (Phase 6): a computer opponent, and a tutorial.
 
-Done lately, newest first: more playtest tweaks (glyphs picked up as a turn ends, the strike from behind for melee units only, special actions while engaged, coloured and bouncier dice, glowing move markers); playtest tweaks (zone of control, a d20 for swamp, Resurrection for squads that lost figures, turning before a move, a glyph pickup animation, and no more replay viewer); a dice tray for the attack show, with dice that tumble by physics (#73); the Sunken Hive, a seventh faction of swamp aliens (#72); the map gallery, draft filters, test game and moves in pieces (#70); every attack needing its target in front (#69); tokens and glyphs on the table and the token allowance (#68); facing (#67); detailed figure models for every unit (#63 to #66, finishing Phase 7); the detailed look for scenery and board tiles; the Riverbend map; glyphs; more scenery; fixes after v1.0. Phases 8 (the tabletop feel) and 9 (playtest updates) came before; the game as it stood after Phase 9 is version 1.0. Each has its section below.
+Done lately, newest first: more playtest tweaks (glyphs picked up as a turn ends, the strike from behind for melee units only, special actions while engaged, coloured and bouncier dice, glowing move markers, #76); playtest tweaks (zone of control, a d20 for swamp, Resurrection for squads that lost figures, turning before a move, a glyph pickup animation, and no more replay viewer, #75); a dice tray for the attack show, with dice that tumble by physics (#73); the Sunken Hive, a seventh faction of swamp aliens (#72); the map gallery, draft filters, test game and moves in pieces (#70); every attack needing its target in front (#69); tokens and glyphs on the table and the token allowance (#68); facing (#67); detailed figure models for every unit (#63 to #66, finishing Phase 7); the detailed look for scenery and board tiles; the Riverbend map; glyphs; more scenery; fixes after v1.0. Phases 8 (the tabletop feel) and 9 (playtest updates) came before; the game as it stood after Phase 9 is version 1.0. Each has its section below.
 
-Worth knowing before the next change: games saved with facing before #69 may not replay exactly (the facing rules changed twice after #67), and new rule options must stay optional fields of the setup (see [CLAUDE.md](../CLAUDE.md)). The dice show only shows rolls the rules have made; its throws are seeded from the roll, so changing the simulation never changes a game. The design pages (`?cards`, `?models`, `?dice`) are the quickest way to look at cards, models and the dice show.
+Worth knowing before the next change: games saved with facing before #69 may not replay exactly (the facing rules changed twice after #67), and new rule options must stay optional fields of the setup (see [CLAUDE.md](../CLAUDE.md)): every new game takes the shared `NEW_GAME_RULES` (eight options), plus `glyphs`, and online `draft` and `initiative`. The dice show only shows rolls the rules have made; its throws are seeded from the roll, so changing the simulation never changes a game. The design pages (`?cards`, `?models`, `?dice`) are the quickest way to look at cards, models and the dice show.
 
 ### How work is delivered
 Each phase or drop is one pull request from a working branch, with CI green before it is merged. The owner asks for each merge. Keep [RULES.md](RULES.md), this file and the other docs up to date in the same pull request as the change.
@@ -312,7 +312,7 @@ Small changes asked for after playing, online games especially.
 - [x] The two figures stand on the table at the tray's ends, outside its walls, drawn about twice as large as before; the camera frames the tray and both figures, and the tray grows with the number of dice
 - [x] `?dice` in the address opens the show on its own, to roll any two units with any number of dice
 
-### Playtest tweaks
+### Playtest tweaks (#75)
 - [x] **Zone of control** (`zoneOfControl`; older saves leave it out and play as before): a figure gets one free step a turn that keeps it beside an enemy it was already beside; each later such step draws a passing strike from every enemy it stays beside. A move in pieces counts as one
 - [x] **Ride Them Down fixed**: the Brass Hussars' path went round the enemy they meant to ride through, because riding through drew that enemy's passing strike and the path finder avoids strikes. Under zone of control an enemy being ridden down makes no passing strikes on the rider that turn, so the safe path goes straight through
 - [x] **Swamp** rolls a d20 at the end of a turn (`swampRoll: "d20"`): 1 to 5 is 1 wound, 6 or more nothing (`endTurnRoll` in the terrain data). Older saves keep the attack die
@@ -322,7 +322,7 @@ Small changes asked for after playing, online games especially.
 - [x] **Glyph pickup animation**: once the figure lands, the tile lifts off its hex, spinning, and shows its face over the figure (a question mark for another player's glyph), then fades; the new glyph glows in the Glyphs panel
 - [x] **Replays removed**: the menu's "Watch a replay", the replay viewer and the game over screen's "Download replay" are gone. Saves and resuming are unchanged
 
-### More playtest tweaks
+### More playtest tweaks (#76)
 - [x] **Glyphs are picked up as a turn ends** (`glyphPickup: "turnEnd"`; older saves pick up as a move ends): a figure must end its unit's turn on the glyph, so stopping on one and moving on leaves it. The pickup animation lasts a second longer (2.4 s) and rises higher; on one device it shows the glyph's face to the player whose turn just ended
 - [x] **Strike from behind for melee units only** (`strikeFromBehind: "meleeOnly"`): a unit whose card has a Range above 1 never gets the +2, even from right next to its target
 - [x] **Special actions while engaged** (`engagedSpecials`): engagement only limits an engaged figure's normal attack; its blasts, mind control and pulls may still reach any target in their range
