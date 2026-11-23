@@ -272,7 +272,7 @@ describe("rooms", () => {
 });
 
 describe("a full online game", () => {
-  it("keeps tokens secret, enforces who may act, reconnects, spectates and ends with a replay", async () => {
+  it("keeps tokens secret, enforces who may act, reconnects, spectates and ends for everyone", async () => {
     const { code, host, others } = await room(2);
     const guest = others[0]!;
     const clients = new Map<string, Client>([
@@ -364,14 +364,10 @@ describe("a full online game", () => {
     watcher.send({ t: "command", command: { type: "concede", player: "p1" } });
     expect((await se).message).toMatch(/Spectators/);
 
-    // p2 concedes: the game ends and everyone gets the replay.
-    const replays = [host.client.next("replay"), back.next("replay"), watcher.next("replay")];
-    await act(new Map([["p2", back]]), { type: "concede", player: "p2" });
-    const [replay] = await Promise.all(replays);
-    expect(host.client.lastView()!.phase).toBe("gameOver");
-    expect(replay!.replay.setup.seed).not.toBe(0);
-    const replayed = replayGame(replay!.replay.setup, replay!.replay.commands, ctx).state;
-    expect(replayed.result).toEqual(host.client.lastView()!.result);
+    // p2 concedes: the game ends for everyone, the spectator too.
+    const ended = [host.client, back, watcher].map((c) => c.next("game", (m) => m.view.phase === "gameOver"));
+    back.send({ t: "command", command: { type: "concede", player: "p2" } });
+    await Promise.all(ended);
 
     for (const c of [host.client, back, watcher]) await c.close();
   });

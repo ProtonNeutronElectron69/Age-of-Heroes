@@ -41,6 +41,27 @@ import {
 /** The largest points budget a game can set. */
 export const MAX_BUDGET = 9999;
 
+/**
+ * The rule options every new game sets, hot-seat, online and the test game alike. A save made
+ * before an option existed leaves it out and keeps the older rule, so it replays exactly; a new
+ * option goes here (and in `GameSetup`, `GameConfig` and the protocol's `setupSchema`).
+ * Online games add their own `draft` and `initiative`; `glyphs` is chosen per game.
+ */
+export const NEW_GAME_RULES = {
+  // At most one activation token on each unit, and tokens for half the army, rounded up, plus the bluff.
+  tokenRule: "onePerUnit",
+  tokenAllowance: "half",
+  // Figures face a way.
+  facing: true,
+  // Swamp rolls a d20, and figures beside an enemy get one free step.
+  swampRoll: "d20",
+  zoneOfControl: true,
+  // Glyphs are picked up as a turn ends, only melee units strike from behind, and engaged figures may use special actions.
+  glyphPickup: "turnEnd",
+  strikeFromBehind: "meleeOnly",
+  engagedSpecials: true,
+} as const satisfies Partial<GameSetup>;
+
 export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameState; events: GameEvent[] } {
   const n = setup.players.length;
   if (n < MIN_PLAYERS || n > MAX_PLAYERS) {

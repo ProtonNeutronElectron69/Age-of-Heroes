@@ -1,5 +1,5 @@
 import { CARD_CATALOG, MAPS, contextFor } from "@aoh/content";
-import { applyCommand, createGame, deepClone, replayGame, viewFor, type GameSetup } from "@aoh/rules";
+import { NEW_GAME_RULES, applyCommand, createGame, deepClone, replayGame, viewFor, type GameSetup } from "@aoh/rules";
 import { describe, expect, it } from "vitest";
 import { BASIC_RULES_GONE, CARD_DRAFT_GONE, clientMessageSchema, commandSchema, parseReplay, stateFromView } from "../src";
 
@@ -97,6 +97,11 @@ describe("views and replays", () => {
     expect(replayGame(replay.setup, replay.commands, ctx).state.phase).toBe("gameOver");
     expect(() => parseReplay({ formatVersion: 2, setup, map, commands: [] })).toThrow(/not a valid game file/);
     expect(() => parseReplay({ formatVersion: 1, setup: { ...setup, players: [] }, map, commands: [] })).toThrow();
+  });
+
+  it("keeps every new-game rule option when reading a game file", () => {
+    const read = parseReplay({ formatVersion: 1, setup: { ...setup, ...NEW_GAME_RULES }, map, commands: [] });
+    for (const [key, value] of Object.entries(NEW_GAME_RULES)) expect(read.setup).toHaveProperty(key, value);
   });
 
   it("refuses older games under rules that are no longer in the game, and reads the rest", () => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  NEW_GAME_RULES,
   Rng,
   applyCommand,
   createGame,
@@ -44,6 +45,11 @@ function ready(players = 2, overrides = {}) {
 }
 
 describe("createGame", () => {
+  it("keeps every new-game rule option in the game's config", () => {
+    const { config } = createGame(setup(2, NEW_GAME_RULES), ctx).state;
+    for (const [key, value] of Object.entries(NEW_GAME_RULES)) expect(config).toHaveProperty(key, value);
+  });
+
   it("creates units and figures for each preset army and starts deployment", () => {
     const { state } = createGame(setup(3), ctx);
     expect(state.players.map((p) => p.seat)).toEqual([0, 1, 2]);

@@ -1,6 +1,6 @@
 import { CARDS, MAPS, buildBoard, contextFor } from "@aoh/content";
 import { MAX_NAME_LENGTH, parseReplay, type Replay, type RoomSettings } from "@aoh/protocol";
-import { GLYPH_KINDS, MAX_BUDGET, MAX_PLAYERS, MIN_PLAYERS, replayGame, seedFromString, type MapDefinition } from "@aoh/rules";
+import { GLYPH_KINDS, MAX_BUDGET, MAX_PLAYERS, MIN_PLAYERS, NEW_GAME_RULES, replayGame, seedFromString, type MapDefinition } from "@aoh/rules";
 import { useMemo, useRef, useState } from "react";
 import { customMaps, deleteCustomMap, findMap } from "../maps";
 import {
@@ -170,20 +170,8 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenUnits, onOpenMap
         roundLimit,
         budget: noLimit ? null : budget,
         factionPure,
-        // At most one activation token on each unit.
-        tokenRule: "onePerUnit",
+        ...NEW_GAME_RULES,
         glyphs,
-        // Figures face a way.
-        facing: true,
-        // Activation tokens for half the army, rounded up, plus the bluff.
-        tokenAllowance: "half",
-        // Swamp rolls a d20, and figures beside an enemy get one free step.
-        swampRoll: "d20",
-        zoneOfControl: true,
-        // Glyphs are picked up as a turn ends, only melee units strike from behind, and engaged figures may use special actions.
-        glyphPickup: "turnEnd",
-        strikeFromBehind: "meleeOnly",
-        engagedSpecials: true,
         players: Array.from({ length: players }, (_, i) => ({
           id: `p${i + 1}`,
           name: names[i]!.trim() || `Player ${i + 1}`,

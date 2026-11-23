@@ -1,6 +1,7 @@
 import { CARDS, MAPS, SEAT_COLORS, SEAT_COLOR_NAMES, contextFor } from "@aoh/content";
 import {
   GLYPH_KINDS,
+  NEW_GAME_RULES,
   applyCommand,
   cardOf,
   createGame,
@@ -91,14 +92,7 @@ export function startTestGame(): string | null {
     roundLimit: null,
     players: [0, 1].map((i) => ({ id: `p${i + 1}`, name: `${SEAT_COLOR_NAMES[i]} Player`, color: SEAT_COLORS[i]! })),
     armies: { p1: first, p2: second },
-    tokenRule: "onePerUnit",
-    tokenAllowance: "half",
-    facing: true,
-    swampRoll: "d20",
-    zoneOfControl: true,
-    glyphPickup: "turnEnd",
-    strikeFromBehind: "meleeOnly",
-    engagedSpecials: true,
+    ...NEW_GAME_RULES,
     glyphs: GLYPH_KINDS.length,
   };
   try {

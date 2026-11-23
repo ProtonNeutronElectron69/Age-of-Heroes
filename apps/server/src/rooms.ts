@@ -10,6 +10,7 @@ import {
   type ServerMessage,
 } from "@aoh/protocol";
 import {
+  NEW_GAME_RULES,
   applyCommand,
   createGame,
   eventsFor,
@@ -277,7 +278,7 @@ export class RoomManager {
     const { room, playerId } = this.seatOf(conn);
     if (playerId !== room.hostId) throw new Error("Only the host can save the game");
     if (!room.state) throw new Error("The game has not started yet");
-    conn.send({ t: "saved", record: { ...this.replay(room), savedAt: new Date(this.now()).toISOString() } });
+    conn.send({ t: "saved", record: { ...this.record(room), savedAt: new Date(this.now()).toISOString() } });
   }
 
   private join(conn: Connection, code: string, name: string): void {
@@ -343,23 +344,11 @@ export class RoomManager {
       players: room.members.map((m, i) => ({ id: m.playerId, name: m.name, color: SEAT_COLORS[i]! })),
       budget: s.budget ?? null,
       factionPure: s.factionPure ?? false,
+      ...NEW_GAME_RULES,
       // Online, everyone drafts at once, and nobody's initiative roll is made until every player has rolled.
       draft: "open",
       initiative: "players",
-      // At most one activation token on each unit.
-      tokenRule: "onePerUnit",
       glyphs: s.glyphs ?? 0,
-      // Figures face a way.
-      facing: true,
-      // Activation tokens for half the army, rounded up, plus the bluff.
-      tokenAllowance: "half",
-      // Swamp rolls a d20, and figures beside an enemy get one free step.
-      swampRoll: "d20",
-      zoneOfControl: true,
-      // Glyphs are picked up as a turn ends, only melee units strike from behind, and engaged figures may use special actions.
-      glyphPickup: "turnEnd",
-      strikeFromBehind: "meleeOnly",
-      engagedSpecials: true,
     };
     const { state, events } = createGame(setup, room.ctx);
     room.setup = setup;
@@ -400,7 +389,6 @@ export class RoomManager {
     room.lastActive = this.now();
     this.broadcastGame(room, result.events, false);
     this.openShow(room, result.events);
-    if (result.state.phase === "gameOver") this.broadcastReplay(room);
   }
 
   /**
@@ -481,7 +469,6 @@ export class RoomManager {
             room.commands.push({ type: "concede", player: playerId });
             room.events.push(...result.events);
             this.broadcastGame(room, result.events, false);
-            if (result.state.phase === "gameOver") this.broadcastReplay(room);
           }
         }
       }
@@ -596,7 +583,6 @@ export class RoomManager {
       // A catch-up: the game as this person may see it, and the log so far.
       const viewer = member?.playerId ?? null;
       conn.send({ t: "game", view: viewFor(room.state, viewer), events: eventsFor(room.events, viewer), snapshot: true });
-      if (room.state.phase === "gameOver") conn.send({ t: "replay", replay: this.replay(room) });
     }
   }
 
@@ -619,13 +605,9 @@ export class RoomManager {
     }
   }
 
-  private replay(room: Room): Replay {
+  /** The full record of the game, for the host's save. */
+  private record(room: Room): Replay {
     return { formatVersion: 1, setup: room.setup!, map: room.settings.map, commands: room.commands };
-  }
-
-  private broadcastReplay(room: Room): void {
-    const replay = this.replay(room);
-    for (const { conn } of this.recipients(room)) conn.send({ t: "replay", replay });
   }
 
   private error(conn: Connection, message: string): void {

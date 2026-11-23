@@ -227,8 +227,9 @@ export interface ResumeInfo {
 
 /**
  * The full record of a game: its setup, map and every command. Replaying the
- * commands rebuilds the game exactly, so the same file serves as a replay of a
- * finished game and as a save of one in progress.
+ * commands rebuilds the game exactly, so the record serves as a save file and as
+ * the input for resuming an online game. (The name comes from the replay viewer,
+ * since removed.)
  */
 export interface Replay {
   readonly formatVersion: 1;
@@ -264,7 +265,6 @@ export type ServerMessage =
        */
       readonly snapshot: boolean;
     }
-  | { readonly t: "replay"; readonly replay: Replay }
   /** The host's save of the game (sent only to the host, who asked for it). */
   | { readonly t: "saved"; readonly record: Replay }
   /** Another player pointed at this spot on the board (board coordinates). */
@@ -277,7 +277,7 @@ export type ServerMessage =
   | { readonly t: "watching"; readonly show: number; readonly waiting: string[] }
   | { readonly t: "error"; readonly message: string };
 
-/** Read a replay file. Throws with a readable message if it is malformed. */
+/** Read a game file (a save). Throws with a readable message if it is malformed. */
 export function parseReplay(data: unknown): Replay {
   const parsed = replaySchema.safeParse(data);
   if (!parsed.success) {

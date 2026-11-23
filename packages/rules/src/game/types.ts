@@ -14,8 +14,7 @@ export type PlayerId = string;
  */
 export type TokenId = string;
 export type NumberedToken = string;
-/** The tokens of games without `tokenAllowance`: three numbered turns and a bluff. */
-export const TOKEN_IDS: readonly TokenId[] = ["1", "2", "3", "X"];
+/** The numbered tokens of games without `tokenAllowance`: three turns (and the bluff besides). */
 export const NUMBERED_TOKENS: readonly NumberedToken[] = ["1", "2", "3"];
 /** The bluff token: placed like the others, but it gives no turn. */
 export const BLUFF_TOKEN = "X";
@@ -121,8 +120,6 @@ export type GlyphKind =
 export const GLYPH_KINDS: readonly GlyphKind[] = ["attack", "defense", "initiative", "range", "move", "heal", "summon", "wound", "negate", "pit", "curse"];
 /** Glyphs that boost one card's stats while it lives. */
 export const STAT_GLYPHS: readonly GlyphKind[] = ["attack", "defense", "initiative", "range", "move"];
-/** Glyphs that act on the figure that picks them up. */
-export const TRAP_GLYPHS: readonly GlyphKind[] = ["pit", "curse"];
 
 export interface GlyphState {
   /** Glyphs still on the battlefield. `kind` is null where the viewer may not know it. */
