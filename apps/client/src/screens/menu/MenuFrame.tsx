@@ -14,7 +14,7 @@ import "./menu.css";
 /** One choice on the main menu. */
 export interface MenuCommand {
   /** Also picks its place and colours in each style. */
-  readonly id: "local" | "online" | "continue" | "saves" | "replay" | "editor" | "gallery" | "test";
+  readonly id: "local" | "online" | "continue" | "saves" | "editor" | "gallery" | "test";
   readonly label: string;
   /** A short second line; it describes the button to screen readers too. */
   readonly sub?: string;
@@ -50,7 +50,6 @@ const COLOURS: Record<MenuCommand["id"], readonly [string, string]> = {
   online: ["#8f1f2b", "#5a1018"],
   continue: ["#2f5d34", "#1b3a1f"],
   saves: ["#7a5a1e", "#4a360f"],
-  replay: ["#1f6470", "#123d45"],
   editor: ["#4a3a5e", "#2c2238"],
   gallery: ["#6b5a3a", "#3a2e18"],
   test: ["#5b6470", "#33393f"],

@@ -139,11 +139,7 @@ try {
   await page.getByLabel("Save file").setInputFiles(file);
   await expectSameGame(before, "Loading the save file");
 
-  // The same file also opens in the replay viewer.
   await page.getByRole("button", { name: "Quit game" }).click();
-  await page.getByLabel("Replay file").setInputFiles(file);
-  await page.getByRole("region", { name: "Replay controls" }).waitFor();
-  await page.getByRole("button", { name: "Close replay" }).click();
 
   // ---- Delete --------------------------------------------------------------
   await page.getByRole("button", { name: "Saved games" }).click();

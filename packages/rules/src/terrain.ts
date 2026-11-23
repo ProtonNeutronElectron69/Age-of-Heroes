@@ -22,6 +22,11 @@ export interface TerrainRules {
   readonly stopGroup?: string;
   /** Ending a turn here makes the figure roll this attack against itself. */
   readonly endTurnSelfAttack?: { readonly attackDice: number; readonly defenseDice: number };
+  /**
+   * Games with `swampRoll: "d20"`: ending a turn here rolls a d20 instead; at or below
+   * `woundOnOrBelow` the figure takes `wounds` wounds.
+   */
+  readonly endTurnRoll?: { readonly woundOnOrBelow: number; readonly wounds: number };
   /** Entering this hex triggers a d20 roll; at or below the value, destroyed. */
   readonly entryDestroyOnOrBelow?: number;
   /** Entering this hex triggers a d20 roll; at or below the value, the figure slips. */

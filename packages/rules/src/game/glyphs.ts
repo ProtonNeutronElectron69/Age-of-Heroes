@@ -182,7 +182,7 @@ export function glyphProblem(state: GameState, player: PlayerId, glyphId: string
       return null;
     case "summon":
       if (!own) return "Resurrection brings back one of your own units";
-      if (alive) return "Only a unit that has been destroyed can be resurrected";
+      if (lostFigures(unit).length === 0) return "Only a unit that has lost figures can be resurrected";
       return null;
     case "wound":
     case "negate":
@@ -195,10 +195,15 @@ export function glyphProblem(state: GameState, player: PlayerId, glyphId: string
   }
 }
 
-/** Every spot the player's figures stand on, apart from the unit being resurrected. */
-function friendSpots(state: GameState, player: PlayerId, unitId: string, ctx: RulesContext) {
+/** The figures of a unit that have been destroyed: the ones a Glyph of Resurrection brings back. */
+export function lostFigures(unit: UnitState): FigureState[] {
+  return unit.figures.filter((f) => f.destroyed);
+}
+
+/** Every spot the player's figures stand on, the unit's own survivors included. */
+function friendSpots(state: GameState, player: PlayerId, ctx: RulesContext) {
   return state.units
-    .filter((u) => u.owner === player && u.id !== unitId)
+    .filter((u) => u.owner === player)
     .flatMap((u) => u.figures.flatMap((f) => figureSpots(f, cardOf(u, ctx).footprint, cardOf(u, ctx).height, ctx)));
 }
 
@@ -206,11 +211,12 @@ function friendSpots(state: GameState, player: PlayerId, unitId: string, ctx: Ru
 export function summonProblem(state: GameState, player: PlayerId, unitId: string, placements: readonly FigurePlacement[], ctx: RulesContext): string | null {
   const unit = findUnit(state, unitId)!;
   const card = cardOf(unit, ctx);
-  if (placements.length !== unit.figures.length || !unit.figures.every((f) => placements.some((p) => p.figureId === f.id))) {
-    return "Place every figure of the unit";
+  const lost = lostFigures(unit);
+  if (placements.length !== lost.length || !lost.every((f) => placements.some((p) => p.figureId === f.id))) {
+    return "Place every figure the unit has lost";
   }
   const reach = glyphTuning(ctx).summonRange;
-  const friends = friendSpots(state, player, unitId, ctx);
+  const friends = friendSpots(state, player, ctx);
   if (friends.length === 0) return "No figure of yours is on the battlefield to resurrect it beside";
   const occ = occupancy(state, ctx);
   const taken = new Set<string>();
@@ -244,7 +250,7 @@ export function summonOptions(
   if (!unit) return [];
   const card = cardOf(unit, ctx);
   const reach = glyphTuning(ctx).summonRange;
-  const friends = friendSpots(state, player, unitId, ctx);
+  const friends = friendSpots(state, player, ctx);
   if (friends.length === 0) return [];
   const near = (h: { q: number; r: number }) => Math.min(...friends.map((f) => hexDistance(f.hex, h)));
   const taken = new Set([...occupancy(state, ctx).keys(), ...extraTaken.map(stepKey)]);
@@ -277,7 +283,7 @@ export function summonPlacements(state: GameState, player: PlayerId, unitId: str
   const big = cardOf(unit, ctx).footprint !== "1";
   const taken: Step[] = [];
   const out: FigurePlacement[] = [];
-  for (const f of unit.figures) {
+  for (const f of lostFigures(unit)) {
     const next = summonOptions(state, player, unitId, ctx, taken)[0];
     if (!next) return null;
     taken.push(...next.spots);
@@ -326,9 +332,10 @@ export function useGlyph(
       }
       return;
     case "summon":
-      // A unit comes back whole; any glyph it had ended with it.
-      g.boosts = g.boosts.filter((b) => b.unitId !== unitId);
-      for (const f of unit.figures) {
+      // A destroyed unit comes back whole, and any glyph it had ended with it; a squad that
+      // still stands gets back the figures it lost, and keeps its glyph.
+      if (!isUnitAlive(unit)) g.boosts = g.boosts.filter((b) => b.unitId !== unitId);
+      for (const f of lostFigures(unit)) {
         const p = placements!.find((x) => x.figureId === f.id)!;
         f.destroyed = false;
         f.wounds = 0;

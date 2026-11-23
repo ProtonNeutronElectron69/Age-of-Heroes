@@ -246,7 +246,8 @@ export function DiceOverlay({ events, names, stamp }: { events: readonly GameEve
           );
         }
         if (e.type === "terrainRoll") {
-          const result = e.outcome === "destroyed" ? "destroyed" : e.outcome === "slipped" ? "slips" : "safe";
+          const result =
+            e.outcome === "destroyed" ? "destroyed" : e.outcome === "slipped" ? "slips" : e.outcome === "wounded" ? "wounded" : "safe";
           return (
             <div key={i} className="roll">
               <span className="d20">{e.roll}</span>
@@ -392,14 +393,11 @@ export function GameOver({
   names,
   onNewGame,
   onClose,
-  onDownload,
 }: {
   state: GameState;
   names: Names;
   onNewGame: () => void;
   onClose: () => void;
-  /** Offered once the full record of the game is available. */
-  onDownload?: () => void;
 }) {
   const result = state.result!;
   const winners = result.winners.map((w) => names.player(w));
@@ -436,11 +434,6 @@ export function GameOver({
           <button type="button" onClick={onClose}>
             View battlefield
           </button>
-          {onDownload && (
-            <button type="button" onClick={onDownload}>
-              Download replay
-            </button>
-          )}
         </div>
       </div>
     </div>

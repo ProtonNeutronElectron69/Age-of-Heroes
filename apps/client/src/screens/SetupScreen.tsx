@@ -40,8 +40,6 @@ interface Props {
   onOpenEditor: (map: MapDefinition | null) => void;
   /** Map to select when the screen opens (e.g. one just made in the editor). */
   initialMapId?: string;
-  /** Watch a finished game from a replay file. */
-  onOpenReplay: (replay: Replay) => void;
   /** Browse every unit card and its figure model. */
   onOpenUnits: () => void;
   /** Open the map gallery, at the map chosen now. */
@@ -50,15 +48,14 @@ interface Props {
 
 type Where = "local" | "online";
 
-export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUnits, onOpenMaps }: Props) {
+export function SetupScreen({ onOpenEditor, initialMapId, onOpenUnits, onOpenMaps }: Props) {
   const online = useOnline();
   const [where, setWhere] = useState<Where>(() => (online.error || savedSeat() ? "online" : "local"));
   const [view, setView] = useState<"play" | "saves">("play");
   const [serverUrl, setServerUrl] = useState(defaultServerUrl);
   const [myName, setMyName] = useState(() => savedName());
   const [code, setCode] = useState("");
-  const [replayError, setReplayError] = useState<string | null>(null);
-  const replayInput = useRef<HTMLInputElement>(null);
+  const [menuError, setMenuError] = useState<string | null>(null);
   const saveInput = useRef<HTMLInputElement>(null);
   const [saves, setSaves] = useState(() => listSaves());
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -110,14 +107,6 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
     }
   };
 
-  const openReplay = async (file: File) => {
-    try {
-      onOpenReplay(await readGameFile(file));
-    } catch (e) {
-      setReplayError((e as Error).message);
-    }
-  };
-
   /** Loading replaces the unfinished game kept from last time, so check first. */
   const mayReplaceCurrent = () =>
     !saved ||
@@ -143,7 +132,7 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
     setResumeChoice(null);
     try {
       const { state } = replayGame(record.setup, record.commands, contextFor(record.map).ctx);
-      if (state.phase === "gameOver") throw new Error("That game is already over; watch it as a replay instead.");
+      if (state.phase === "gameOver") throw new Error("That game is already over.");
       setResumeChoice({
         record,
         label,
@@ -188,6 +177,9 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
         facing: true,
         // Activation tokens for half the army, rounded up, plus the bluff.
         tokenAllowance: "half",
+        // Swamp rolls a d20, and figures beside an enemy get one free step.
+        swampRoll: "d20",
+        zoneOfControl: true,
         players: Array.from({ length: players }, (_, i) => ({
           id: `p${i + 1}`,
           name: names[i]!.trim() || `Player ${i + 1}`,
@@ -640,7 +632,6 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
       on: view === "saves",
       onClick: () => setView(view === "saves" ? "play" : "saves"),
     },
-    { id: "replay", label: "Watch a replay", sub: "Every move of a finished game", icon: "eye", onClick: () => replayInput.current?.click() },
     { id: "editor", label: "Map editor", sub: "Build and share battlefields", icon: "map", onClick: () => onOpenEditor(null) },
     { id: "gallery", label: "Unit gallery", sub: `All ${CARDS.length} units and their figures`, icon: "cards", onClick: onOpenUnits },
     {
@@ -650,7 +641,7 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
       icon: "flask",
       onClick: () => {
         const problem = startTestGame();
-        if (problem) setReplayError(`The test game could not start: ${problem}`);
+        if (problem) setMenuError(`The test game could not start: ${problem}`);
       },
     },
   ];
@@ -672,19 +663,6 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
       sub={sub}
       extras={
         <>
-          <input
-            ref={replayInput}
-            type="file"
-            accept=".json,application/json"
-            hidden
-            aria-label="Replay file"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = "";
-              setReplayError(null);
-              if (file) void openReplay(file);
-            }}
-          />
           <input
             ref={saveInput}
             type="file"
@@ -709,9 +687,9 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenReplay, onOpenUn
               if (file) void openResumeFile(file);
             }}
           />
-          {replayError && (
-            <p className="menu-toast" role="alert" onClick={() => setReplayError(null)}>
-              {replayError}
+          {menuError && (
+            <p className="menu-toast" role="alert" onClick={() => setMenuError(null)}>
+              {menuError}
             </p>
           )}
         </>

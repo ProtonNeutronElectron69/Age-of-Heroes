@@ -53,13 +53,16 @@ describe("facing", () => {
     expect(facingOf(turned, "p1:0#1")).toBe(45);
   });
 
-  it("can be turned after a move, in eighths, until the figure attacks", () => {
+  it("can be turned before or after a move, in eighths, until the figure attacks", () => {
     const s = game("p1:0", { "p1:0#1": at(2), "p2:0#1": at(5) });
     const refuse = (state: GameState, facing: number, figureId = "p1:0#1") => {
       const r = applyCommand(state, { type: "face", player: "p1", figureId, facing }, ctx);
       return r.ok ? null : r.error;
     };
-    expect(refuse(s, 180)).toMatch(/only after it moves/);
+    // Turning before moving is free, and the figure may still move after.
+    const first = apply(s, { type: "face", player: "p1", figureId: "p1:0#1", facing: 180 }).state;
+    expect(facingOf(first, "p1:0#1")).toBe(180);
+    expect(applyCommand(first, { type: "move", player: "p1", figureId: "p1:0#1", path: [step(3)] }, ctx).ok).toBe(true);
 
     const moved = apply(s, { type: "move", player: "p1", figureId: "p1:0#1", path: [step(3), step(4)] }).state;
     expect(refuse(moved, 30)).toMatch(/eight directions/);
@@ -69,7 +72,7 @@ describe("facing", () => {
     // Turning again is fine; attacking ends it.
     const again = apply(r.state, { type: "face", player: "p1", figureId: "p1:0#1", facing: 90 }).state;
     const struck = apply(again, { type: "attack", player: "p1", figureId: "p1:0#1", targetId: "p2:0#1" }).state;
-    expect(refuse(struck, 180)).toMatch(/not once it has attacked/);
+    expect(refuse(struck, 180)).toMatch(/once it has attacked/);
     // Only the active player's figures turn.
     const theirs = applyCommand(moved, { type: "face", player: "p2", figureId: "p2:0#1", facing: 0 }, ctx);
     expect(theirs.ok ? null : theirs.error).toBe("It is not your turn");

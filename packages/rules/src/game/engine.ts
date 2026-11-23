@@ -74,6 +74,8 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
       ...(setup.glyphs ? { glyphs: Math.max(0, Math.min(GLYPH_KINDS.length, Math.floor(setup.glyphs))) } : {}),
       ...(setup.facing ? { facing: true } : {}),
       ...(setup.tokenAllowance ? { tokenAllowance: setup.tokenAllowance } : {}),
+      ...(setup.swampRoll ? { swampRoll: setup.swampRoll } : {}),
+      ...(setup.zoneOfControl ? { zoneOfControl: true } : {}),
     },
     rng: setup.seed >>> 0,
     round: 0,

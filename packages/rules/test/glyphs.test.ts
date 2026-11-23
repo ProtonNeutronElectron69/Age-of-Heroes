@@ -193,6 +193,30 @@ describe("using glyphs", () => {
     expect(r.ok && r.state.units[1]!.figures.every((f) => !f.destroyed && f.position)).toBe(true);
   });
 
+  it("brings back the figures a squad has lost, leaving the rest as they are", () => {
+    const s = game({ ...holding("summon"), boosts: [{ glyphId: "g9", kind: "attack", unitId: "p1:1" }] });
+    // Nothing lost yet: nothing to bring back.
+    expect(use(s, "p1:1", "p1", { placements: [] }).ok).toBe(false);
+    const [one, two, three] = s.units[1]!.figures;
+    one!.destroyed = true;
+    one!.position = null;
+    three!.destroyed = true;
+    three!.position = null;
+    two!.wounds = 1;
+    const spots = summonPlacements(s, "p1", "p1:1", ctx)!;
+    expect(spots.map((p) => p.figureId)).toEqual(["p1:1#1", "p1:1#3"]);
+    // Every figure of the squad is not needed, only those it lost.
+    const all = [...spots, { figureId: "p1:1#2", hex: hex(5, 1), elevation: 1 }];
+    expect(use(s, "p1:1", "p1", { placements: all }).ok).toBe(false);
+    const r = use(s, "p1:1", "p1", { placements: spots });
+    if (!r.ok) throw new Error(r.error);
+    expect(r.state.units[1]!.figures.every((f) => !f.destroyed && f.position)).toBe(true);
+    expect(r.state.units[1]!.figures[1]).toMatchObject({ wounds: 1, position: { hex: hex(3, 1) } });
+    expect(r.events.filter((e) => e.type === "figureRevived").map((e) => e.figureId)).toEqual(["p1:1#1", "p1:1#3"]);
+    // The squad never left the battlefield, so its glyph stays.
+    expect(r.state.glyphs!.boosts).toEqual([{ glyphId: "g9", kind: "attack", unitId: "p1:1" }]);
+  });
+
   it("finds spots for a summoned unit next to the player's figures", () => {
     const s = game(holding("summon"));
     for (const f of s.units[1]!.figures) {

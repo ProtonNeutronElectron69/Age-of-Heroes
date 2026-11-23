@@ -94,6 +94,8 @@ export function startTestGame(): string | null {
     tokenRule: "onePerUnit",
     tokenAllowance: "half",
     facing: true,
+    swampRoll: "d20",
+    zoneOfControl: true,
     glyphs: GLYPH_KINDS.length,
   };
   try {

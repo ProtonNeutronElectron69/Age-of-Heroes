@@ -554,7 +554,7 @@ function TableToken({ label, color, x, z, cardYaw }: { label: string | null; col
 const glyphFaces = new Map<GlyphKind, CanvasTexture>();
 
 /** A glyph tile's face: its art on its colour, with its name below, in a hex with the point at the top. */
-function glyphFace(kind: GlyphKind): CanvasTexture {
+export function glyphFace(kind: GlyphKind): CanvasTexture {
   const done = glyphFaces.get(kind);
   if (done) return done;
   const info = GLYPHS[kind];

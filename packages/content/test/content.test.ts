@@ -40,6 +40,7 @@ describe("terrain", () => {
     expect(water.moveCost).toBe(2);
     expect(swamp.moveCost).toBe(2);
     expect(swamp.endTurnSelfAttack).toEqual({ attackDice: 1, defenseDice: 0 });
+    expect(swamp.endTurnRoll).toEqual({ woundOnOrBelow: 5, wounds: 1 });
   });
 
   it("uses valid hex colours", () => {

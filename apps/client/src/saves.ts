@@ -5,7 +5,7 @@ import type { GameState, MapDefinition } from "@aoh/rules";
  * Named saves of hot-seat games, kept in this browser. A save is the game's
  * record (setup, map and commands); loading it replays the commands, so the
  * game continues exactly where it was. The same record can be downloaded as a
- * file and opened on another device, or watched as a replay.
+ * file and opened on another device.
  */
 
 /** What the saved games list shows without replaying the game. */
@@ -107,7 +107,7 @@ export function deleteSave(id: string): void {
   writeSaves(listSaves().filter((s) => s.id !== id));
 }
 
-/** Download a game record as a file: a save to continue later, or a replay to watch. */
+/** Download a game record as a file: a save to continue later. */
 export function downloadGameFile(record: Replay, label: string): void {
   const slug =
     label

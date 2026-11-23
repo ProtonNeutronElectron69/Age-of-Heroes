@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 56-unit roster in 7 factions, a map editor with seven premade maps, hot-seat and online play, saved games and replays. 750 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 56-unit roster in 7 factions, a map editor with seven premade maps, hot-seat and online play, and saved games. 757 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 Nothing is in progress. Open, when the owner asks:
@@ -15,7 +15,7 @@ Nothing is in progress. Open, when the owner asks:
 
 On hold (Phase 6): a computer opponent, and a tutorial.
 
-Done lately, newest first: a dice tray for the attack show, with dice that tumble by physics (#73); the Sunken Hive, a seventh faction of swamp aliens (#72); the map gallery, draft filters, test game and moves in pieces (#70); every attack needing its target in front (#69); tokens and glyphs on the table and the token allowance (#68); facing (#67); detailed figure models for every unit (#63 to #66, finishing Phase 7); the detailed look for scenery and board tiles; the Riverbend map; glyphs; more scenery; fixes after v1.0. Phases 8 (the tabletop feel) and 9 (playtest updates) came before; the game as it stood after Phase 9 is version 1.0. Each has its section below.
+Done lately, newest first: playtest tweaks (zone of control, a d20 for swamp, Resurrection for squads that lost figures, turning before a move, a glyph pickup animation, and no more replay viewer); a dice tray for the attack show, with dice that tumble by physics (#73); the Sunken Hive, a seventh faction of swamp aliens (#72); the map gallery, draft filters, test game and moves in pieces (#70); every attack needing its target in front (#69); tokens and glyphs on the table and the token allowance (#68); facing (#67); detailed figure models for every unit (#63 to #66, finishing Phase 7); the detailed look for scenery and board tiles; the Riverbend map; glyphs; more scenery; fixes after v1.0. Phases 8 (the tabletop feel) and 9 (playtest updates) came before; the game as it stood after Phase 9 is version 1.0. Each has its section below.
 
 Worth knowing before the next change: games saved with facing before #69 may not replay exactly (the facing rules changed twice after #67), and new rule options must stay optional fields of the setup (see [CLAUDE.md](../CLAUDE.md)). The dice show only shows rolls the rules have made; its throws are seeded from the roll, so changing the simulation never changes a game. The design pages (`?cards`, `?models`, `?dice`) are the quickest way to look at cards, models and the dice show.
 
@@ -125,7 +125,7 @@ Each phase or drop is one pull request from a working branch, with CI green befo
 - [x] Reconnecting: a seat token kept in the browser puts a player back in their seat after a dropped connection or a reload
 - [x] Spectating by room code, with the same hidden information as an outsider
 - [x] Leaving mid-game concedes; the game goes on for the rest
-- [x] Game replays: download the record at game over and step through it in the replay viewer (online and hot-seat games)
+- [x] Game replays: download the record at game over and step through it in the replay viewer (online and hot-seat games). Removed later at the owner's request (playtest tweaks)
 - [x] Client: Online panel on the setup screen, lobby, turn gating per device, connection status, no pass-the-device screen online
 - [x] Docker image for the server, a Render blueprint, and hosting steps in [HOSTING.md](HOSTING.md)
 - [x] Tests: protocol and server tests (secrecy, authority, rejoin, spectators, replays) and a browser test with two players and a spectator on separate devices
@@ -135,7 +135,7 @@ Each phase or drop is one pull request from a working branch, with CI green befo
 Saved games are done (#7); the computer opponent and the tutorial are on hold.
 - [x] Saved games
   - [x] Named saves of hot-seat games in the browser: save from the draft or the battle, then load, download or delete them from the setup screen
-  - [x] Save files: download a game and load it on any device; the same file opens in the replay viewer
+  - [x] Save files: download a game and load it on any device
   - [x] The unfinished game is still kept automatically, and the setup screen says which game "Continue" resumes
   - [x] Online save files: the host can save at any moment and download the game; later the host resumes it in a new room from the Online panel, each player claims their army, and the host continues from the exact same position. The server keeps nothing on disk
   - [x] Coming back to an online game (reload, dropped connection) brings back the whole game log, not just the board
@@ -311,3 +311,13 @@ Small changes asked for after playing, online games especially.
 - [x] The dice tumble by physics, worked out before they are shown: they bounce off the felt, the walls and each other, and come to rest flat, apart and inside the tray, on the faces the rules rolled. The attack dice come from the attacker's end and settle before the defense dice are thrown from the defender's
 - [x] The two figures stand on the table at the tray's ends, outside its walls, drawn about twice as large as before; the camera frames the tray and both figures, and the tray grows with the number of dice
 - [x] `?dice` in the address opens the show on its own, to roll any two units with any number of dice
+
+### Playtest tweaks
+- [x] **Zone of control** (`zoneOfControl`; older saves leave it out and play as before): a figure gets one free step a turn that keeps it beside an enemy it was already beside; each later such step draws a passing strike from every enemy it stays beside. A move in pieces counts as one
+- [x] **Ride Them Down fixed**: the Brass Hussars' path went round the enemy they meant to ride through, because riding through drew that enemy's passing strike and the path finder avoids strikes. Under zone of control an enemy being ridden down makes no passing strikes on the rider that turn, so the safe path goes straight through
+- [x] **Swamp** rolls a d20 at the end of a turn (`swampRoll: "d20"`): 1 to 5 is 1 wound, 6 or more nothing (`endTurnRoll` in the terrain data). Older saves keep the attack die
+- [x] **Glyph of Resurrection** also works on a squad that has lost some figures: every lost figure returns unwounded; the survivors keep their wounds and the squad keeps its stat glyph
+- [x] **Turning before a move**: a figure that has not attacked may turn (R) before it moves, at no cost, and still move and attack after
+- [x] **No auto cycle away from an attack**: after a squad figure moves, it keeps the selection while it has something to attack (turning first if it must), as it does while it has movement left
+- [x] **Glyph pickup animation**: once the figure lands, the tile lifts off its hex, spinning, and shows its face over the figure (a question mark for another player's glyph), then fades; the new glyph glows in the Glyphs panel
+- [x] **Replays removed**: the menu's "Watch a replay", the replay viewer and the game over screen's "Download replay" are gone. Saves and resuming are unchanged

@@ -97,12 +97,13 @@ export function faceProblem(state: GameState, player: PlayerId, figureId: string
   if (!found || found.figure.destroyed || !found.figure.position) return "That figure is not on the battlefield";
   if (found.unit.id !== active.unitId) return "Only the activated unit's figures can turn";
   if (cardOf(found.unit, ctx).footprint !== "1") return "A figure on several hexes faces along its base";
-  if (!(active.turnable ?? []).includes(figureId)) return "A figure turns only after it moves, and not once it has attacked";
+  // Before it moves or after, until it attacks (a move after attacking, such as Smoke Step's, allows it again).
+  if (!(active.turnable ?? []).includes(figureId) && active.attacked.includes(figureId)) return "A figure cannot turn once it has attacked";
   if (!Number.isInteger(facing) || facing < 0 || facing >= 360 || facing % FACING_STEP !== 0) return "Facing is one of eight directions (0 to 315 degrees, in steps of 45)";
   return null;
 }
 
-/** Turn a figure that has just moved. */
+/** Turn a figure of the acting unit that has not attacked (or has moved since). */
 export function faceFigure(state: GameState, player: PlayerId, figureId: string, facing: number, events: GameEvent[], ctx: RulesContext): void {
   const problem = faceProblem(state, player, figureId, facing, ctx);
   if (problem) fail(problem);
