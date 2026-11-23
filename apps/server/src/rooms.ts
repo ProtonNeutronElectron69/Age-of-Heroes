@@ -356,6 +356,10 @@ export class RoomManager {
       // Swamp rolls a d20, and figures beside an enemy get one free step.
       swampRoll: "d20",
       zoneOfControl: true,
+      // Glyphs are picked up as a turn ends, only melee units strike from behind, and engaged figures may use special actions.
+      glyphPickup: "turnEnd",
+      strikeFromBehind: "meleeOnly",
+      engagedSpecials: true,
     };
     const { state, events } = createGame(setup, room.ctx);
     room.setup = setup;

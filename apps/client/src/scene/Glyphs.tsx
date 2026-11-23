@@ -64,9 +64,12 @@ export interface GlyphPickup {
 }
 
 /** How long a pickup shows, in seconds. */
-export const PICKUP_SECONDS = 1.4;
-/** The share of it spent lifting the tile off the board and turning it over. */
-const LIFT_SHARE = 0.3;
+export const PICKUP_SECONDS = 2.4;
+/** Seconds spent lifting the tile off the board and turning it over. */
+const LIFT_SECONDS = 0.45;
+/** Seconds the face takes to grow out of the tile, and to fade at the end. */
+const GROW_SECONDS = 0.2;
+const FADE_SECONDS = 0.5;
 /** The longest a pickup waits for the figure to land on the glyph. */
 const HOP_WAIT_SECONDS = 3;
 const FACE_SIZE = 2.2 * HEX_SIZE;
@@ -147,31 +150,36 @@ function Pickup({ pickup, onDone }: { pickup: GlyphPickup; onDone: (key: string)
       }
       c.started = performance.now();
     }
-    const u = Math.min(1, (performance.now() - c.started) / 1000 / PICKUP_SECONDS);
+    const t = Math.min(PICKUP_SECONDS, (performance.now() - c.started) / 1000);
     const material = s.material as SpriteMaterial;
     const top = y + pickup.lift;
+    // Fully shown until the last half second, then fading out.
+    const fade = Math.min(1, (PICKUP_SECONDS - t) / FADE_SECONDS);
     if (reduced) {
       t3.visible = false;
       s.visible = true;
       s.position.set(x, top, z);
       s.scale.set(FACE_SIZE, FACE_SIZE, 1);
-      material.opacity = u < 0.7 ? 1 : 1 - (u - 0.7) / 0.3;
+      material.opacity = fade;
     } else {
-      // The tile lifts and spins, shrinking as its face grows out of it.
-      const lift = Math.min(1, u / LIFT_SHARE);
+      // The tile lifts and spins, shrinking as its face grows out of it, which then hangs a moment,
+      // drifting a little higher, and fades.
+      const lift = Math.min(1, t / LIFT_SECONDS);
       const eased = 1 - (1 - lift) * (1 - lift);
       t3.visible = lift < 1;
       t3.position.set(x, y + eased * pickup.lift, z);
       t3.rotation.set(eased * Math.PI, eased * Math.PI * 2, 0);
       t3.scale.setScalar(1 - 0.7 * eased);
-      const grow = Math.min(1, Math.max(0, (u - LIFT_SHARE * 0.6) / 0.15));
+      const from = LIFT_SECONDS * 0.6;
+      const grow = Math.min(1, Math.max(0, (t - from) / GROW_SECONDS));
       s.visible = grow > 0;
-      const size = FACE_SIZE * (grow < 1 ? grow * 1.1 : 1.1 - 0.1 * Math.min(1, (u - LIFT_SHARE * 0.6 - 0.15) / 0.1));
-      s.position.set(x, top + 0.25 * HEX_SIZE * Math.max(0, u - 0.5), z);
+      const settle = Math.min(1, Math.max(0, (t - from - GROW_SECONDS) / 0.15));
+      const size = FACE_SIZE * (grow < 1 ? grow * 1.1 : 1.1 - 0.1 * settle);
+      s.position.set(x, top + 0.4 * HEX_SIZE * Math.max(0, (t - LIFT_SECONDS) / (PICKUP_SECONDS - LIFT_SECONDS)), z);
       s.scale.set(size, size, 1);
-      material.opacity = u < 0.75 ? 1 : 1 - (u - 0.75) / 0.25;
+      material.opacity = fade;
     }
-    if (u >= 1) {
+    if (t >= PICKUP_SECONDS) {
       c.done = true;
       t3.visible = false;
       s.visible = false;

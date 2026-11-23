@@ -60,6 +60,8 @@ interface Reach {
   readonly range: number;
   readonly minRange: number;
   readonly ignoresSight: boolean;
+  /** A special action rather than the normal attack (games with `engagedSpecials` let an engaged figure use it). */
+  readonly special?: boolean;
 }
 
 /** Why an attack-like action from one figure at another is not allowed, or null if it is. */
@@ -88,7 +90,9 @@ function actionProblem(state: GameState, attackerId: string, targetId: string, c
 
   const engaged = engagedEnemies(state, a.unit.owner, aSpots, aHeight, ctx);
   const withTarget = spotsEngaged(aSpots, aHeight, tSpots, tHeight);
-  if (engaged.length > 0 && !withTarget) return "An engaged figure can only attack enemies it is engaged with";
+  // Engagement limits the normal attack; with `engagedSpecials`, not the special actions.
+  const freeOfEngagement = reach.special === true && !!state.config.engagedSpecials;
+  if (engaged.length > 0 && !withTarget && !freeOfEngagement) return "An engaged figure can only attack enemies it is engaged with";
   if (reach.range === 1 && !withTarget) return "Too far above or below to reach";
   const facing = facingOf(state, a.figure);
   if (facing !== null && !seesAny(facing, aSpots, tSpots)) return "Out of view: the target must be in front of the attacker";
@@ -127,7 +131,7 @@ export function attackProblem(
   if (aim) {
     const area = ability ? areaAttackOf(card, ability) : undefined;
     if (!area) return "Only a blast is aimed at a hex";
-    const problem = actionProblem(state, attackerId, targetId, ctx, area);
+    const problem = actionProblem(state, attackerId, targetId, ctx, { ...area, special: true });
     return problem ?? aimProblem(state, attackerId, targetId, aim, ctx, area);
   }
   if (!ability) {
@@ -139,7 +143,7 @@ export function attackProblem(
   }
   if (!abilityOf(card, ability)) return "That figure has no such power";
   const area = areaAttackOf(card, ability);
-  if (area) return actionProblem(state, attackerId, targetId, ctx, area);
+  if (area) return actionProblem(state, attackerId, targetId, ctx, { ...area, special: true });
   const mind = mindControlOf(card, ability);
   if (mind) {
     const t = findFigure(state, targetId);
@@ -148,7 +152,7 @@ export function attackProblem(
       if (isUnique(tCard)) return "Unique figures cannot be controlled";
       if (tCard.size !== "small" && tCard.size !== "medium") return "Only Small or Medium figures can be controlled";
     }
-    return actionProblem(state, attackerId, targetId, ctx, { range: mind.range, minRange: 1, ignoresSight: false });
+    return actionProblem(state, attackerId, targetId, ctx, { range: mind.range, minRange: 1, ignoresSight: false, special: true });
   }
   const pull = pullOf(card, ability);
   if (pull) {
@@ -159,7 +163,7 @@ export function attackProblem(
         return "Only Small or Medium single-hex figures can be pulled";
       }
     }
-    const problem = actionProblem(state, attackerId, targetId, ctx, { range: pull.range, minRange: 2, ignoresSight: false });
+    const problem = actionProblem(state, attackerId, targetId, ctx, { range: pull.range, minRange: 2, ignoresSight: false, special: true });
     if (problem) return problem;
     if (!pullSpot(state, ctx, combatant(a.unit, a.figure, ctx), combatant(t!.unit, t!.figure, ctx))) {
       return `There is no free hex next to ${card.name}`;
@@ -187,7 +191,8 @@ function aimProblem(state: GameState, attackerId: string, targetId: string, aim:
 /**
  * Why a blast cannot be aimed at this empty hex, or null if it can. Only a blast that may be aimed at
  * a hex (`hexTarget`) can; the hex must be an empty surface within range, and in sight unless the
- * blast needs none. An engaged figure may only attack the enemies it is engaged with, so it cannot.
+ * blast needs none. An engaged figure may only attack the enemies it is engaged with, so it cannot,
+ * unless the game lets engaged figures use special actions (`engagedSpecials`).
  */
 export function blastProblem(state: GameState, attackerId: string, at: Step, ctx: RulesContext, ability: string): string | null {
   const active = state.active;
@@ -207,7 +212,7 @@ export function blastProblem(state: GameState, attackerId: string, at: Step, ctx
   const distance = spotDistance(attacker.spots, [at]);
   if (distance > area.range) return `Out of range (${distance} hexes, range ${area.range})`;
   if (distance < area.minRange) return `Too close (needs at least ${area.minRange} hexes)`;
-  if (engagedEnemies(state, a.unit.owner, attacker.spots, attacker.card.height, ctx).length > 0) {
+  if (!state.config.engagedSpecials && engagedEnemies(state, a.unit.owner, attacker.spots, attacker.card.height, ctx).length > 0) {
     return "An engaged figure can only attack enemies it is engaged with";
   }
   const facing = facingOf(state, a.figure);
@@ -458,9 +463,11 @@ function diceFor(state: GameState, ctx: RulesContext, attacker: Combatant, defen
 
 /**
  * Strike from behind (games with facing): a melee attack by a figure wholly outside the
- * defender's front cone rolls extra attack dice. It adds to the higher-ground bonus.
+ * defender's front cone rolls extra attack dice. It adds to the higher-ground bonus. With
+ * `strikeFromBehind: "meleeOnly"`, a unit whose Range is above 1 never gets it, even next to its target.
  */
 function behindBonus(state: GameState, ctx: RulesContext, attacker: Combatant, defender: Combatant): number {
+  if (state.config.strikeFromBehind === "meleeOnly" && statsOf(attacker.card).range > 1) return 0;
   const facing = facingOf(state, defender.figure);
   if (facing === null || spotDistance(attacker.spots, defender.spots) > 1) return 0;
   if (seesAny(facing, defender.spots, attacker.spots)) return 0;

@@ -15,7 +15,7 @@ import {
 } from "./draft";
 import { fail, RulesError } from "./errors";
 import { faceFigure } from "./facing";
-import { curseTurnEnded, useGlyph } from "./glyphs";
+import { curseTurnEnded, pickUpGlyphs, useGlyph } from "./glyphs";
 import { moveFigure } from "./movement";
 import { findUnit, isUnitAlive, tokenIdsFor, tokensToPlace } from "./queries";
 import { advance, checkGameOver, eliminate, maybeStartTurns, stepPointer } from "./rounds";
@@ -76,6 +76,9 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
       ...(setup.tokenAllowance ? { tokenAllowance: setup.tokenAllowance } : {}),
       ...(setup.swampRoll ? { swampRoll: setup.swampRoll } : {}),
       ...(setup.zoneOfControl ? { zoneOfControl: true } : {}),
+      ...(setup.glyphPickup ? { glyphPickup: setup.glyphPickup } : {}),
+      ...(setup.strikeFromBehind ? { strikeFromBehind: setup.strikeFromBehind } : {}),
+      ...(setup.engagedSpecials ? { engagedSpecials: true } : {}),
     },
     rng: setup.seed >>> 0,
     round: 0,
@@ -266,6 +269,11 @@ function endTurn(state: GameState, player: PlayerId, events: GameEvent[], ctx: R
   if (state.active.player !== player) fail("It is not your turn");
   const active = state.active;
   const { token, unitId } = active;
+  // Games that pick glyphs up as a turn ends: each figure of the unit standing on one takes it now.
+  if (state.config.glyphPickup === "turnEnd") {
+    const unit = state.units.find((u) => u.id === unitId);
+    for (const figure of unit?.figures ?? []) pickUpGlyphs(state, unit!, figure, events, ctx);
+  }
   endOfTurnTerrain(state, unitId, events, ctx);
   endOfTurnAbilities(state, unitId, ctx, events);
   curseTurnEnded(state, player, events);

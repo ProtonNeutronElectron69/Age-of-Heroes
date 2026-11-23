@@ -180,6 +180,10 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenUnits, onOpenMap
         // Swamp rolls a d20, and figures beside an enemy get one free step.
         swampRoll: "d20",
         zoneOfControl: true,
+        // Glyphs are picked up as a turn ends, only melee units strike from behind, and engaged figures may use special actions.
+        glyphPickup: "turnEnd",
+        strikeFromBehind: "meleeOnly",
+        engagedSpecials: true,
         players: Array.from({ length: players }, (_, i) => ({
           id: `p${i + 1}`,
           name: names[i]!.trim() || `Player ${i + 1}`,

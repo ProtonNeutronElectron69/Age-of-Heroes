@@ -63,7 +63,8 @@ export function GlyphPanel({ state, ctx, names, shown, user, onUse, onResurrect,
       <h2>Glyphs</h2>
       {glyphs.onBoard.length > 0 && (
         <p className="muted small">
-          {glyphs.onBoard.length} face down on the battlefield. End a move on one to pick it up.
+          {glyphs.onBoard.length} face down on the battlefield.{" "}
+          {state.config.glyphPickup === "turnEnd" ? "End a turn on one to pick it up." : "End a move on one to pick it up."}
         </p>
       )}
       {held.map((p) => {

@@ -246,9 +246,26 @@ export interface GameConfig {
    * by older games, where only leaving an enemy draws a strike.
    */
   readonly zoneOfControl?: boolean;
+  /**
+   * "turnEnd": a glyph is picked up by a figure of the acting unit standing on it when the turn
+   * ends, not as a move ends on it. Left out by older games, which pick up at the end of a move.
+   */
+  readonly glyphPickup?: GlyphPickup;
+  /**
+   * "meleeOnly": only units whose card has a Range of 1 get the strike from behind; a unit with a
+   * longer Range never does, even next to its target. Left out by older games.
+   */
+  readonly strikeFromBehind?: StrikeFromBehind;
+  /**
+   * An engaged figure may still use its special actions (blasts and the like) on any target in
+   * their range; engagement only limits its normal attack. Left out by older games, where it limits both.
+   */
+  readonly engagedSpecials?: boolean;
 }
 
 export type SwampRoll = "d20";
+export type GlyphPickup = "turnEnd";
+export type StrikeFromBehind = "meleeOnly";
 
 export interface GameState {
   readonly formatVersion: 1;
@@ -331,6 +348,12 @@ export interface GameSetup {
   readonly swampRoll?: SwampRoll;
   /** New games have zone of control; older ones leave it out. */
   readonly zoneOfControl?: boolean;
+  /** New games pick glyphs up when a turn ends; older ones leave it out and pick up as a move ends. */
+  readonly glyphPickup?: GlyphPickup;
+  /** New games give the strike from behind to melee units only; older ones leave it out. */
+  readonly strikeFromBehind?: StrikeFromBehind;
+  /** New games let engaged figures use special actions; older ones leave it out. */
+  readonly engagedSpecials?: boolean;
 }
 
 export interface RulesContext {

@@ -101,6 +101,22 @@ describe("picking up glyphs", () => {
     expect(state.units[0]!.figures[0]!.destroyed).toBe(true);
     expect(state.glyphs!.curses).toEqual([]);
   });
+
+  it("happens only as the turn ends, with glyphPickup: a figure that moves on leaves it", () => {
+    const base = game({ onBoard: [{ id: "g1", kind: "attack", hex: hex(4, 0), elevation: 1 }] });
+    const s = { ...base, config: { ...base.config, glyphPickup: "turnEnd" as const } };
+    const stopped = move(s, "p1:0#1", [[4, 0]]);
+    expect(stopped.state.glyphs!.onBoard).toHaveLength(1);
+    expect(stopped.events.some((e) => e.type === "glyphTaken")).toBe(false);
+    // Moving on, in a second piece, leaves it where it lies.
+    const left = move(stopped.state, "p1:0#1", [[5, 0]]);
+    expect(apply(left.state, { type: "endTurn", player: "p1" }).state.glyphs!.onBoard).toHaveLength(1);
+    // Ending the turn on it picks it up.
+    const ended = apply(stopped.state, { type: "endTurn", player: "p1" });
+    expect(ended.state.glyphs!.onBoard).toEqual([]);
+    expect(ended.state.glyphs!.held.p1).toEqual([{ id: "g1", kind: "attack" }]);
+    expect(ended.events.find((e) => e.type === "glyphTaken")).toEqual({ type: "glyphTaken", player: "p1", figureId: "p1:0#1", glyphId: "g1" });
+  });
 });
 
 describe("using glyphs", () => {

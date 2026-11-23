@@ -114,6 +114,12 @@ const setupSchema = z
     swampRoll: z.enum(["d20"]).optional(),
     /** New games: zone of control. Older files leave it out. */
     zoneOfControl: z.boolean().optional(),
+    /** New games: glyphs are picked up when a turn ends. Older files leave it out (as a move ends). */
+    glyphPickup: z.enum(["turnEnd"]).optional(),
+    /** New games: only melee units strike from behind. Older files leave it out. */
+    strikeFromBehind: z.enum(["meleeOnly"]).optional(),
+    /** New games: engaged figures may use special actions. Older files leave it out. */
+    engagedSpecials: z.boolean().optional(),
   })
   .superRefine((s, ctx) => {
     if (s.mode === "basic") ctx.addIssue({ code: "custom", path: ["mode"], message: BASIC_RULES_GONE });
