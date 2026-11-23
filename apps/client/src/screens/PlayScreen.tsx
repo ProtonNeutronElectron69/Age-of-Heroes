@@ -311,8 +311,11 @@ export function PlayScreen({ session }: { session: Session }) {
       const height = found ? (ctx.cards.get(found.unit.cardId)?.height ?? 5) : 5;
       // A trap shows itself to everyone; a glyph kept is known to its holder only.
       const held = state.glyphs?.held[e.player]?.find((h) => h.id === e.glyphId)?.kind ?? null;
-      const kind = e.trap ?? (glyphsShown.includes(e.player) ? held : null);
-      return [{ key: `${session.events.length}:${e.glyphId}`, glyphId: e.glyphId, hex: spot.hex, elevation: spot.elevation, kind, lift: height * LEVEL_HEIGHT + 1.5 * HEX_SIZE }];
+      // Picked up as a turn ends (`glyphPickup: "turnEnd"`), on one device the turn has already passed
+      // on: the player who ended it is still at the screen, so it shows its face to them.
+      const endedHere = !isOnline && session.lastEvents.some((x) => x.type === "turnEnded" && x.player === e.player);
+      const kind = e.trap ?? (glyphsShown.includes(e.player) || endedHere ? held : null);
+      return [{ key: `${session.events.length}:${e.glyphId}`, glyphId: e.glyphId, hex: spot.hex, elevation: spot.elevation, kind, lift: height * LEVEL_HEIGHT + 2.5 * HEX_SIZE }];
     });
     setPickups((list) => [...list, ...fresh]);
   }, [session.lastEvents]);
@@ -928,7 +931,7 @@ export function PlayScreen({ session }: { session: Session }) {
   for (const o of options.values()) {
     const key = stepKey(o.to);
     if (!originHazards.has(key)) continue;
-    markers.push({ step: o.to, color: originHazards.get(key)! > 0 ? "#ff9800" : "#4caf50", opacity: 0.45 });
+    markers.push({ step: o.to, color: originHazards.get(key)! > 0 ? "#ff9800" : "#4caf50", opacity: 0.45, ring: true });
     originHazards.delete(key);
   }
   if (hoverOption) {

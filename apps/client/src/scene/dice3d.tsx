@@ -32,10 +32,10 @@ const SKULL =
   "M12 3c-4.4 0-8 3.2-8 7.4 0 2.5 1.3 4.6 3.3 5.9V19c0 .6.4 1 1 1h1.2v-2h1.5v2h2v-2h1.5v2h1.2c.6 0 1-.4 1-1v-2.7c2-1.3 3.3-3.4 3.3-5.9C20 6.2 16.4 3 12 3Zm-3.2 9.6a1.8 1.8 0 1 1 0-3.6 1.8 1.8 0 0 1 0 3.6Zm6.4 0a1.8 1.8 0 1 1 0-3.6 1.8 1.8 0 0 1 0 3.6Z";
 const SHIELD = "M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z";
 
-/** Colours as in the dice panel: ivory with red skulls, pale blue with blue shields. */
+/** Colours as in the dice panel: light red with red skulls, light blue with blue shields. */
 const LOOK: Record<DieKind, { body: string; edge: string; mark: string }> = {
-  attack: { body: "#f4f1ea", edge: "#cfc6b4", mark: "#e0503c" },
-  defense: { body: "#cfe0f6", edge: "#9fb6d6", mark: "#2f7ad8" },
+  attack: { body: "#f7d9d2", edge: "#d6a99e", mark: "#d23a26" },
+  defense: { body: "#c6dbf7", edge: "#8fadd6", mark: "#2f7ad8" },
 };
 
 function faceTexture(kind: DieKind, face: DieFace): CanvasTexture {

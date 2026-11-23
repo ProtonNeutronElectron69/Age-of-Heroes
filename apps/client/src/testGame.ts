@@ -96,6 +96,9 @@ export function startTestGame(): string | null {
     facing: true,
     swampRoll: "d20",
     zoneOfControl: true,
+    glyphPickup: "turnEnd",
+    strikeFromBehind: "meleeOnly",
+    engagedSpecials: true,
     glyphs: GLYPH_KINDS.length,
   };
   try {

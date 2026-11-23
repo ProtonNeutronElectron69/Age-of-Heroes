@@ -52,9 +52,9 @@ const SETTLE_LIMIT = 4;
 /** Seconds between one die leaving the hand and the next. */
 const STAGGER = 0.05;
 
-const FLOOR = { friction: 0.42, bounce: 0.28 };
-const WALL = { friction: 0.2, bounce: 0.45 };
-const DIE = { friction: 0.08, bounce: 0.3 };
+const FLOOR = { friction: 0.36, bounce: 0.42 };
+const WALL = { friction: 0.2, bounce: 0.58 };
+const DIE = { friction: 0.08, bounce: 0.4 };
 
 export interface DieSpec {
   readonly kind: DieKind;

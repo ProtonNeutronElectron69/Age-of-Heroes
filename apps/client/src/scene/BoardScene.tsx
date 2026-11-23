@@ -16,9 +16,11 @@ import {
 } from "@aoh/rules";
 import { useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import {
+  AdditiveBlending,
   BufferGeometry,
   Color,
   CylinderGeometry,
+  DoubleSide,
   EdgesGeometry,
   Float32BufferAttribute,
   MOUSE,
@@ -28,6 +30,7 @@ import {
   Raycaster,
   Vector2,
   Vector3,
+  MeshBasicMaterial,
   type InstancedMesh,
   type Material,
   PerspectiveCamera,
@@ -50,6 +53,8 @@ export interface Marker {
   /** A marker that takes clicks: drawn as a see-through column this many levels tall, over any figure there. */
   readonly onClick?: () => void;
   readonly height?: number;
+  /** Draw a soft glowing ring round the hex too, in a lighter shade of the colour (the hexes a figure may move to). */
+  readonly ring?: boolean;
 }
 
 export interface GroundHandlers {
@@ -1088,6 +1093,7 @@ export function BoardScene({
             </mesh>
           );
         })}
+        <MarkerRings markers={markers} />
         {children}
       </group>
       {still ? null : eyeView ? <EyeCamera view={eyeView} center={center} /> : <KeyboardPan />}
@@ -1113,4 +1119,82 @@ export function BoardScene({
       />}
     </>
   );
+}
+
+/**
+ * A soft band round a hex, brightest a little inside its edge and fading to nothing on both
+ * sides, laid flat. Its corners line up with the marker's (a six-sided cylinder's, first corner
+ * towards +z). Each vertex carries an alpha, so the band glows rather than ending in a hard line.
+ */
+const RING_GEOMETRY = (() => {
+  const radii = [0.68, 0.8, 0.9].map((r) => r * HEX_SIZE);
+  const alphas = [0, 1, 0];
+  const positions: number[] = [];
+  const colors: number[] = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    radii.forEach((r, k) => {
+      positions.push(r * Math.sin(a), 0, r * Math.cos(a));
+      colors.push(1, 1, 1, alphas[k]!);
+    });
+  }
+  const index: number[] = [];
+  for (let i = 0; i < 6; i++) {
+    const j = (i + 1) % 6;
+    for (let k = 0; k < 2; k++) {
+      const a = i * 3 + k;
+      const b = j * 3 + k;
+      index.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+  }
+  const g = new BufferGeometry();
+  g.setAttribute("position", new Float32BufferAttribute(positions, 3));
+  g.setAttribute("color", new Float32BufferAttribute(colors, 4));
+  g.setIndex(index);
+  return g;
+})();
+
+const RING_MATERIAL = new MeshBasicMaterial({
+  vertexColors: true,
+  transparent: true,
+  opacity: 0.4,
+  depthWrite: false,
+  blending: AdditiveBlending,
+  // A flat band seen from above or, in eye view, from low down.
+  side: DoubleSide,
+});
+
+/**
+ * The glowing rings of the markers that ask for one, all in one instanced mesh, so a figure
+ * with many hexes to move to still costs a single draw call. They stand still: a resting
+ * board draws nothing.
+ */
+function MarkerRings({ markers }: { markers: readonly Marker[] }) {
+  const rings = useMemo(() => markers.filter((m) => m.ring), [markers]);
+  const mesh = useRef<InstancedMesh>(null);
+  const invalidate = useThree((s) => s.invalidate);
+  useLayoutEffect(() => {
+    const m = mesh.current;
+    if (!m) return;
+    const matrix = new Matrix4();
+    const at = new Vector3();
+    const tint = new Color();
+    const white = new Color("#ffffff");
+    rings.forEach((r, i) => {
+      const { x, z } = hexToWorld(r.step.hex, HEX_SIZE);
+      at.set(x, r.step.elevation * LEVEL_HEIGHT + 0.045, z);
+      m.setMatrixAt(i, matrix.makeTranslation(at.x, at.y, at.z));
+      // A lighter shade of the marker's colour, so the ring reads as its glow.
+      m.setColorAt(i, tint.set(r.color).lerp(white, 0.35));
+    });
+    m.count = rings.length;
+    m.instanceMatrix.needsUpdate = true;
+    if (m.instanceColor) m.instanceColor.needsUpdate = true;
+    m.computeBoundingSphere();
+    invalidate();
+  }, [rings]);
+  if (rings.length === 0) return null;
+  // Room for this many rings; a larger set makes a new mesh.
+  const capacity = Math.max(64, 2 ** Math.ceil(Math.log2(rings.length)));
+  return <instancedMesh key={capacity} ref={mesh} args={[RING_GEOMETRY, RING_MATERIAL, capacity]} raycast={() => null} renderOrder={1} />;
 }

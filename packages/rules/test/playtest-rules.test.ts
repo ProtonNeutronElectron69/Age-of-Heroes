@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  attackProblem,
   createGame,
   hex,
   moveOptions,
@@ -26,6 +27,10 @@ const CARDS_HERE: UnitCard[] = [
     move: 7,
     range: 1,
     abilities: [{ id: "trample", name: "trample", text: "trample", params: { defenseDice: 1 } }],
+  }),
+  testCard("spitter", {
+    range: 4,
+    abilities: [{ id: "ember-spit", name: "Ember Spit", text: "blast", params: { range: 3, dice: 2, splashDice: 1 } }],
   }),
 ];
 
@@ -125,5 +130,24 @@ describe("zone of control", () => {
     // Older games: riding through draws the enemy's strike, so the safe path goes round it.
     const old = game(flat(8), { p1: ["rider"], p2: ["hero"] }, riders);
     expect(moveOptions(old.state, "p1:0#1", old.ctx).get(key)!.path).not.toContainEqual(step(2));
+  });
+});
+
+describe("engaged figures and special actions", () => {
+  // The spitter at (0, 0) is engaged with the hero at (0, 1); the squad's figure stands 3 hexes east.
+  const pos = { "p1:0#1": at(0), "p2:0#1": at(0, 1), "p2:1#1": at(3) };
+  const armies = { p1: ["spitter"], p2: ["hero", "squad"] };
+
+  it("may use a special action on any target in its range with engagedSpecials", () => {
+    const g = game(flat(6), armies, pos, { engagedSpecials: true });
+    expect(attackProblem(g.state, "p1:0#1", "p2:1#1", g.ctx, "ember-spit")).toBeNull();
+    // Its normal attack is still held to the enemy it is engaged with.
+    expect(attackProblem(g.state, "p1:0#1", "p2:1#1", g.ctx)).toBe("An engaged figure can only attack enemies it is engaged with");
+    expect(attackProblem(g.state, "p1:0#1", "p2:0#1", g.ctx)).toBeNull();
+  });
+
+  it("is held to the enemy it is engaged with in games without it", () => {
+    const g = game(flat(6), armies, pos);
+    expect(attackProblem(g.state, "p1:0#1", "p2:1#1", g.ctx, "ember-spit")).toBe("An engaged figure can only attack enemies it is engaged with");
   });
 });

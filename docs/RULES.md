@@ -102,7 +102,7 @@ Each map has up to 6 start zones. The map says which zones are used for each pla
 ### Glyphs
 Glyphs are small hex tiles scattered face down on the battlefield after every unit has been deployed. The game options say how many: none, or 1 to 11 (all of them); new games start at 4, and games saved before glyphs existed have none. There is one of each kind. Each lies on a random open hex of standard terrain, never in a start zone, under a figure or on scenery, and at least 3 hexes from any other glyph where the board allows.
 
-**Picking up**: a figure that ends a move on a glyph's hex picks it up (a flying figure too). Its player learns what it is; the other players are only told that a glyph was picked up, until it is used. A held glyph sits off to the side of the board with its player.
+**Picking up**: a figure picks up a glyph by ending its turn on the glyph's hex (a flying figure too): when its unit's turn ends, every figure of that unit standing on a glyph takes it. A figure that stops on a glyph and then moves on, in a later piece of its move, leaves it where it lies. (Games saved before this rule pick a glyph up as soon as a move ends on it.) Its player learns what it is; the other players are only told that a glyph was picked up, until it is used. A held glyph sits off to the side of the board with its player.
 
 **Using**: a player can use any glyph they hold at any time during their own turn, before or after moving and attacking, even with a unit other than the one taking the turn. A used glyph is gone. The number in brackets is tunable (`TUNING.glyphs`). A stat glyph lies face up on the card of the unit it was played on, for everyone to see, until it ends.
 
@@ -254,7 +254,7 @@ Compare the elevations of the surfaces the two figures stand on (for a multi-hex
 - If the defender is higher: **+1 defense die**, and **another +1** if the difference is at least the attacker's Height.
 
 ### Strike from behind
-A **melee** attack (an adjacent target) from wholly outside the defender's front cone rolls **+2 attack dice** *(tunable)*. It adds to the higher-ground bonus and any others. A figure on the side line of the cone is in front, not behind. **Assumption.**
+A **melee** attack (an adjacent target) from wholly outside the defender's front cone rolls **+2 attack dice** *(tunable)*. It adds to the higher-ground bonus and any others. A figure on the side line of the cone is in front, not behind. Only units whose card has a Range of 1 get it: a unit with a longer Range never does, from range or from right next to its target. (Games saved before this rule give it to any attack from an adjacent hex.) **Assumption.**
 
 ### Wounds and destruction
 - Wounds stay on the figure; when its wounds reach its Life it is destroyed. A destroyed figure is removed from the battlefield.
@@ -262,7 +262,7 @@ A **melee** attack (an adjacent target) from wholly outside the defender's front
 ## 9. Engagement
 
 - Two enemy figures are **engaged** if a hex of one is next to a hex of the other and the difference in those hexes' elevations is less than the Height of the lower figure. **Assumption** (this is the "too high to fight across" rule).
-- An engaged figure may only attack figures it is engaged with. It cannot shoot at distant targets.
+- An engaged figure's normal attack may only target figures it is engaged with: it cannot shoot at distant targets. Its special actions (blasts, mind control, pulls and the like) are not limited: it may use them on any target in their range. (Games saved before this rule limit special actions the same way.)
 - **Passing strike**: when a step takes a figure out of engagement with one or more enemies, each of those enemies rolls 1 attack die *(tunable)* against it before it leaves. The moving figure does not roll defense. Each skull is 1 wound. A figure destroyed this way falls where it stood.
 - **Zone of control**: a figure may take one step a turn that keeps it engaged with an enemy it was already engaged with for free. Every later such step that turn draws a passing strike from each enemy it stays engaged with, as leaving would. A move made in pieces counts as one: the free step is used once a turn, not once a piece. Turning a multi-hex figure in place is not a step. **Assumption.** (Games saved before this rule have no zone of control: moving while staying engaged with the same enemy draws no strike.)
 - **Riding through**: an enemy that a figure moves through with Trample (Ride Them Down and the like) makes no passing strikes on that figure for the rest of its turn, as it is being ridden down. The suggested path for a trampler therefore goes straight through such enemies rather than round them. Games saved before zone of control keep the strikes.

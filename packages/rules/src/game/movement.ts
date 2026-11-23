@@ -576,7 +576,7 @@ export function moveFigure(
   if (mover.flying) {
     flyTo(state, mover, toPlacement(path[0]!, from, "1"), rng, enemies, after, traversed, lavaRolls, ctx);
     faceMoved(state, mover, traversed);
-    pickUpGlyphs(state, unit, figure, after, ctx);
+    if (state.config.glyphPickup !== "turnEnd") pickUpGlyphs(state, unit, figure, after, ctx);
     state.rng = rng.state;
     events.push({ type: "figureMoved", figureId, from: asPathStep(mover.start, mover.footprint), path: traversed }, ...after);
     checkGameOver(state, events, ctx);
@@ -662,8 +662,8 @@ export function moveFigure(
     if (walk.ridden.size > 0) record.ridden = [...walk.ridden];
   }
   faceMoved(state, mover, traversed);
-  // Ending the move on a glyph picks it up.
-  pickUpGlyphs(state, unit, figure, after, ctx);
+  // Ending the move on a glyph picks it up (in games that pick glyphs up as a turn ends, `endTurn` does).
+  if (state.config.glyphPickup !== "turnEnd") pickUpGlyphs(state, unit, figure, after, ctx);
   state.rng = rng.state;
   events.push({ type: "figureMoved", figureId, from: asPathStep(mover.start, mover.footprint), path: traversed }, ...after);
   checkGameOver(state, events, ctx);

@@ -109,6 +109,17 @@ describe("facing", () => {
     expect(attackDice(s, "p1:1#1", "p2:0#1", ctx)).toMatchObject({ attack: 2, attackBonus: 0 });
   });
 
+  it("is for melee units only with strikeFromBehind, even when a ranged unit stands next to its target", () => {
+    // The squad (range 6) at q4, right behind the enemy hero at q5, which faces east.
+    const s = game("p1:1", { "p1:1#1": at(4), "p2:0#1": at(5) }, { "p1:1#1": 90, "p2:0#1": 90 });
+    expect(attackDice(s, "p1:1#1", "p2:0#1", ctx)).toMatchObject({ attackBonus: 2 });
+    const melee = { ...s, config: { ...s.config, strikeFromBehind: "meleeOnly" as const } };
+    expect(attackDice(melee, "p1:1#1", "p2:0#1", ctx)).toMatchObject({ attack: 2, attackBonus: 0 });
+    // A melee unit still gets it.
+    const hero = game("p1:0", { "p1:0#1": at(4), "p2:0#1": at(5) }, { "p2:0#1": 90 });
+    expect(attackDice({ ...hero, config: { ...hero.config, strikeFromBehind: "meleeOnly" } }, "p1:0#1", "p2:0#1", ctx)).toMatchObject({ attackBonus: 2 });
+  });
+
   it("adds to the higher-ground bonus", () => {
     const c = makeCtx(rowMap([["grass", 2], ["grass", 1], ["grass", 1]]), CARDS);
     const s = game("p1:0", { "p1:0#1": { q: 0, r: 0, elevation: 2 }, "p2:0#1": { q: 1, r: 0, elevation: 1 } }, { "p2:0#1": 90 }, c);
