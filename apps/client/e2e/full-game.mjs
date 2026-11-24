@@ -498,15 +498,7 @@ try {
   }
 
   phase("play");
-  // The glyphs are scattered face down once every unit is placed, and listed under the Glyphs tab beside the board.
-  // The next player's pass screen covers the page first: pass the device, as the play loop below would.
-  if (await page.locator(".pass-card").waitFor({ timeout: 5000 }).then(() => true, () => false)) await page.locator(".pass-card button").click();
-  await page.getByRole("tab", { name: "Glyphs" }).click();
-  await page.getByRole("region", { name: "Glyphs" }).getByText("4 face down on the battlefield").waitFor();
-  // The drawer shows one tab at a time; the log comes back with its tab.
-  if (await page.locator(".log-lines").isVisible()) fail("The log is still showing under the Glyphs tab");
-  await page.getByRole("tab", { name: "Log" }).click();
-  await page.locator(".log-lines").waitFor();
+  let glyphsChecked = false;
   const handled = new Set();
   let turnKey = "";
   let roundSeen = "";
@@ -548,6 +540,16 @@ try {
     if (!(await turn.count())) {
       await page.waitForTimeout(50);
       continue;
+    }
+    // Once, at the first turn (nothing covers the board by then): the glyphs scattered face down once every
+    // unit was placed are listed under the drawer's Glyphs tab, which shows one tab at a time.
+    if (!glyphsChecked) {
+      glyphsChecked = true;
+      await page.getByRole("tab", { name: "Glyphs" }).click();
+      await page.getByRole("region", { name: "Glyphs" }).getByText("4 face down on the battlefield").waitFor();
+      if (await page.locator(".log-lines").isVisible()) fail("The log is still showing under the Glyphs tab");
+      await page.getByRole("tab", { name: "Log" }).click();
+      await page.locator(".log-lines").waitFor();
     }
     const key = await turn.locator(".turn-banner").innerText();
     const round = await page.locator(".round-label").innerText();

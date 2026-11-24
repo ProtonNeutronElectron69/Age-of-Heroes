@@ -118,7 +118,7 @@ export function Drawer({ tabs }: { tabs: readonly DrawerTab[] }) {
     }
   };
   return (
-    <section className={`panel ledger-drawer${shown ? " open" : ""}`} aria-label="Log, glyphs and keys">
+    <section className={`panel ledger-drawer${shown ? " open" : ""}`} aria-label="Side drawer">
       <div className="drawer-tabs" role="tablist">
         {tabs.map((t) => (
           <button
