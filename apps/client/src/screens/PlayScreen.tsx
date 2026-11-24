@@ -6,8 +6,10 @@ import {
   attackProblem,
   attackTargets,
   blastSpots,
+  centreOf,
   currentDeployment,
   deploymentPlacements,
+  endFacing,
   summonOptions,
   lostFigures,
   faceProblem,
@@ -35,7 +37,7 @@ import { Canvas } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Names } from "../describe";
 import { BoardScene, boardCenter, type CameraFocusRequest, type Marker } from "../scene/BoardScene";
-import { FigureLabels, Figures, SHAKE_SECONDS, type FigureCarry, type FigureJump, type FigureMotions, type FigureShake, type FigureView } from "../scene/Figures";
+import { FigureLabels, Figures, SHAKE_SECONDS, type FigureCarry, type FigureJump, type FigureMotions, type FigurePreview, type FigureShake, type FigureView } from "../scene/Figures";
 import { ATTACK_RED, FightIntro, WoundNumbers, anchorOf, type FigureAnchor, type WoundNumber } from "../scene/FightFx";
 import { attackRollsIn, fallenSpots, fightIn, woundMarksIn, type WoundMark } from "../fight";
 import { GamingTable, TableCards, tableRoom } from "../scene/Table";
@@ -191,6 +193,8 @@ export function PlayScreen({ session }: { session: Session }) {
     items: [],
   });
   const [rotation, setRotation] = useState(0);
+  /** The way a big figure should face at the end of its move, picked with R (its rotation), or null for the natural one. */
+  const [endRotation, setEndRotation] = useState<number | null>(null);
   /** A Glyph of Resurrection being used: the unit coming back and the spots chosen so far. */
   const [resurrect, setResurrect] = useState<{ glyphId: string; unitId: string; items: Pending[] } | null>(null);
   const [eyeView, setEyeView] = useState(false);
@@ -614,6 +618,7 @@ export function PlayScreen({ session }: { session: Session }) {
     setAttackMode(null);
   }, [selected, turnKey]);
   useEffect(() => setAiming(null), [selected, turnKey, attackMode, state]);
+  useEffect(() => setEndRotation(null), [selected, turnKey, session.events.length]);
   // With the dice show off, this device rolls for its players at once.
   useEffect(() => {
     if (!together || state.phase !== "initiative" || display.dice !== "none" || busy) return;
@@ -663,14 +668,44 @@ export function PlayScreen({ session }: { session: Session }) {
     return blastSpots(state, selected, ctx, attackMode);
   }, [blast, active, selected, attackMode, state, ctx]);
 
-  /** The move option for a hex: for big figures, prefer the facing chosen with R. */
+  /** Where the chosen figure stands now, and the hexes it covers. */
+  const moverAt = selected ? (findFigure(state, selected)?.figure.position ?? null) : null;
+  const moverSpots = useMemo(() => {
+    const found = selected ? findFigure(state, selected) : undefined;
+    if (!found || !moverAt) return [];
+    const card = ctx.cards.get(found.unit.cardId)!;
+    return figureSpots(found.figure, card.footprint, card.height, ctx);
+  }, [state, ctx, selected]);
+  /** The way the chosen figure would face after a move. */
+  const facingAfter = (o: MoveOption): number => (moverAt && activeCard ? endFacing(activeCard.footprint, moverAt.hex, o.path) : null) ?? 0;
+  /** Every way a big figure may end a move with its front on this hex, in turning order (R steps through them). */
+  const optionsAt = (step: Step | null): MoveOption[] =>
+    step && moveBig ? [...options.values()].filter((o) => sameStep(o.to, step)).sort((a, b) => facingAfter(a) - facingAfter(b)) : [];
+  /**
+   * The move option for a hex. A big figure may end its move facing several ways: the one picked
+   * with R if it can, else the safest, then the one facing most nearly the way it travels (from
+   * where it stands to where it ends), then the one nearest its present facing, then the cheapest.
+   */
   const optionAt = (step: Step | null): MoveOption | undefined => {
     if (!step) return undefined;
     if (!moveBig) return options.get(placementKey(step));
-    return (
-      options.get(placementKey({ ...step, rotation })) ??
-      [...options.values()].find((o) => sameStep(o.to, step))
-    );
+    const here = optionsAt(step);
+    const picked = endRotation === null ? undefined : here.find((o) => (o.to.rotation ?? 0) === endRotation);
+    if (picked || here.length === 0) return picked;
+    const from = moverSpots.length > 0 ? centreOf(moverSpots.map((s) => s.hex)) : null;
+    const now = selected ? (findFigure(state, selected)?.figure.facing ?? null) : null;
+    const apart = (a: number, b: number) => Math.abs(((a - b + 540) % 360) - 180);
+    const score = (o: MoveOption) => {
+      const to = centreOf(o.spots.map((s) => s.hex));
+      const travel = from && Math.hypot(to.x - from.x, to.z - from.z) > 1e-6 ? (Math.atan2(to.x - from.x, to.z - from.z) * 180) / Math.PI : null;
+      return [o.hazards, travel === null ? 0 : apart(facingAfter(o), travel), now === null ? 0 : apart(facingAfter(o), now), o.cost];
+    };
+    const ranked = here.map((o) => ({ o, key: score(o) }));
+    ranked.sort((a, b) => {
+      const i = a.key.findIndex((v, j) => v !== b.key[j]);
+      return i < 0 ? 0 : a.key[i]! - b.key[i]!;
+    });
+    return ranked[0]!.o;
   };
   const hoverOption = optionAt(hoverStep);
 
@@ -697,6 +732,16 @@ export function PlayScreen({ session }: { session: Session }) {
       const id = turning()!;
       const facing = findFigure(state, id)?.figure.facing ?? 0;
       dispatch({ type: "face", player: active.player, figureId: id, facing: (facing + (e.shiftKey ? 315 : 45)) % 360 });
+    } else if (key === "r" && active && myTurn && selected && moveBig && options.size > 0 && !deploying && !resurrecting) {
+      // A big figure about to move: step through the ways it may face at the end of the hovered move.
+      const here = optionsAt(hoverStep);
+      if (here.length > 0) {
+        const at = Math.max(0, here.indexOf(hoverOption!));
+        setEndRotation(here[(at + (e.shiftKey ? here.length - 1 : 1)) % here.length]!.to.rotation ?? 0);
+      } else {
+        const now = endRotation ?? moverAt?.rotation ?? 0;
+        setEndRotation((now + (e.shiftKey ? 5 : 1)) % 6);
+      }
     } else if (key === "r") {
       setRotation((r) => (r + (e.shiftKey ? 5 : 1)) % 6);
     } else if (key === "c") {
@@ -766,7 +811,9 @@ export function PlayScreen({ session }: { session: Session }) {
       aiming: aiming ? { id: aiming, spots: aimSpots } : null,
       blastHexes,
       turning: turner ? { id: turner, facing: findFigure(state, turner)?.figure.facing ?? 0 } : null,
+      preview: hoverOption ? { to: hoverOption.to, facing: facingAfter(hoverOption), path: hoverOption.path } : null,
       introsSkipped: () => introsSkipped.current,
+      facingOf: (id: string) => findFigure(state, id)?.figure.facing ?? null,
     };
   }, [state, ctx, selected, options, targets, active, drag, hoverOption, aiming, aimSpots, blastHexes, turner]);
 
@@ -838,6 +885,12 @@ export function PlayScreen({ session }: { session: Session }) {
       });
     }
   }
+  /** The chosen figure as the hovered move would leave it: where it ends and which way it faces. */
+  const selectedView = figures.find((f) => f.id === selected);
+  const preview: FigurePreview | null =
+    hoverOption && selectedView && !eyeView && !drag?.dropped
+      ? { figure: selectedView, spots: hoverOption.spots, facing: facingAfter(hoverOption), cone: !!state.config.facing }
+      : null;
   // Figures destroyed a moment ago stay where they fell until they have shaken.
   for (const g of ghosts) {
     const hit = findFigure(state, g.id);
@@ -1239,6 +1292,7 @@ export function PlayScreen({ session }: { session: Session }) {
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
             onLand={land}
+            preview={preview}
           />
         </BoardScene>
         <PingInput
@@ -1406,7 +1460,7 @@ export function PlayScreen({ session }: { session: Session }) {
                     state.pinned?.includes(selected) ? " This figure is pinned and cannot move this turn." : ""
                   }`
                 : "This unit has finished."}
-              {moveBig ? " Press R to turn." : ""}
+              {moveBig && selected && options.size > 0 ? " The see-through copy shows where the figure ends and which way it faces; R picks another way (Shift+R the other way round)." : ""}
               {turner ? ` Press R to turn ${names.figure(turner)} an eighth (Shift+R the other way), until it attacks.` : ""}
               {myTurn ? ` Keys: ${activeUnit.figures.length > 1 ? "1-4 pick a figure, " : ""}E eye view, H shows where the chosen figure is, Space ends the turn, WASD moves the map; middle-click a hex to read its terrain${isOnline ? "; P points at the spot under the pointer for everyone" : ""}.` : ""}
               {hoverOption ? ` Move cost ${hoverOption.cost}.` : ""}

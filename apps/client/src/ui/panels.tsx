@@ -334,7 +334,7 @@ function hotKeys(online: boolean): readonly (readonly [string, string])[] {
     ["Wheel", "Zoom"],
     ["Middle click", "Terrain of a hex"],
     ["1 to 4", "Pick a squad figure"],
-    ["R", "Turn a moved figure, or a big one"],
+    ["R", "Turn a figure; while hovering a move, a big one's end facing"],
     ["E", "Eye view (arrows look)"],
     ["H", "Find the chosen figure"],
     ["Space", "End the turn"],

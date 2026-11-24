@@ -57,6 +57,21 @@ export interface FigureCarry {
   readonly held: boolean;
 }
 
+/**
+ * Where the chosen figure would end up if it moved to the hovered hex: a see-through copy of it
+ * there, turned the way the move leaves it, with its front cone in games with facing.
+ */
+export interface FigurePreview {
+  /** The figure that would move; its look, not its place. */
+  readonly figure: FigureView;
+  /** Every hex it would cover, front first. */
+  readonly spots: readonly Step[];
+  /** The way it would face, in degrees (as `FigureView.facing`). */
+  readonly facing: number;
+  /** Draw the front cone (games with facing). */
+  readonly cone: boolean;
+}
+
 /** Figures to jump on the spot, so they are easy to find; a new `key` starts a jump. */
 export interface FigureJump {
   readonly key: number;
@@ -86,6 +101,8 @@ interface Props {
   style?: "models" | "tokens";
   /** A hopping figure has landed on the next step of its path (for its sound). */
   onLand?: (figureId: string, step: Step) => void;
+  /** The chosen figure's end place and facing for the hovered move. */
+  preview?: FigurePreview | null;
 }
 
 const RING: Record<FigureView["status"], string | null> = {
@@ -522,6 +539,10 @@ function unitMeshes(cardId: string, footprint: Footprint, detailed: boolean): Un
 /** The figures' two materials: their colours are in the meshes. Glowing parts are unlit, so they stay bright. */
 const SOLID = new MeshStandardMaterial({ vertexColors: true, roughness: 0.68 });
 const GLOWING = new MeshBasicMaterial({ vertexColors: true });
+/** The see-through copy a move preview draws. */
+const GHOST_OPACITY = 0.5;
+const GHOST_SOLID = new MeshStandardMaterial({ vertexColors: true, roughness: 0.68, transparent: true, opacity: GHOST_OPACITY, depthWrite: false });
+const GHOST_GLOWING = new MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: GHOST_OPACITY, depthWrite: false });
 
 /** Baked figures by model, colouring and state, kept for as long as the page is open. */
 const baked = new WeakMap<FigureModel, Map<string, BakedFigure>>();
@@ -539,12 +560,12 @@ function bakedFor(model: FigureModel, context: PaintContext, spent: boolean): Ba
  * A figure's model: a detailed one painted part by part, a classic one all in the model colour.
  * Either way it is one mesh, plus one for any glowing parts.
  */
-export function PaintedModel({ model, context, spent = false }: { model: FigureModel; context: PaintContext; spent?: boolean }) {
+export function PaintedModel({ model, context, spent = false, ghost = false }: { model: FigureModel; context: PaintContext; spent?: boolean; ghost?: boolean }) {
   const { solid, glow } = bakedFor(model, context, spent);
   return (
     <>
-      <mesh geometry={solid} material={SOLID} raycast={() => null} />
-      {glow && <mesh geometry={glow} material={GLOWING} raycast={() => null} />}
+      <mesh geometry={solid} material={ghost ? GHOST_SOLID : SOLID} raycast={() => null} renderOrder={ghost ? 4 : 0} />
+      {glow && <mesh geometry={glow} material={ghost ? GHOST_GLOWING : GLOWING} raycast={() => null} renderOrder={ghost ? 4 : 0} />}
     </>
   );
 }
@@ -784,13 +805,13 @@ const CONE = (() => {
   return { line: new ShapeGeometry([rim, side]), fill: new ShapeGeometry(fill) };
 })();
 
-/** The outline of a figure's front cone, while it may still be turned. */
-function FacingCone({ f }: { f: FigureView }) {
-  const cells = f.spots.map((s) => hexToWorld(s.hex, HEX_SIZE));
+/** The outline of a figure's front cone: while it may still be turned, or where a move would leave it. */
+function FacingCone({ spots, facing }: { spots: readonly Step[]; facing: number }) {
+  const cells = spots.map((s) => hexToWorld(s.hex, HEX_SIZE));
   const x = cells.reduce((n, c) => n + c.x, 0) / cells.length;
   const z = cells.reduce((n, c) => n + c.z, 0) / cells.length;
-  const y = Math.max(...f.spots.map((s) => s.elevation)) * LEVEL_HEIGHT + 0.07;
-  const turn = ((f.facing ?? 0) * Math.PI) / 180;
+  const y = Math.max(...spots.map((s) => s.elevation)) * LEVEL_HEIGHT + 0.07;
+  const turn = (facing * Math.PI) / 180;
   return (
     <group position={[x, y, z]} rotation={[0, turn, 0]}>
       <mesh geometry={CONE.fill} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null} renderOrder={2}>
@@ -803,10 +824,54 @@ function FacingCone({ f }: { f: FigureView }) {
   );
 }
 
+/**
+ * A see-through copy of the chosen figure where the hovered move would leave it, turned the way
+ * it would face. It takes no clicks, so the hex under it can still be clicked.
+ */
+function GhostFigure({ preview, drawn }: { preview: FigurePreview; drawn: "models" | "tokens" }) {
+  const display = useDisplay();
+  const { figure: f, spots } = preview;
+  const h = f.height * LEVEL_HEIGHT;
+  const ground = Math.max(...spots.map((s) => s.elevation)) * LEVEL_HEIGHT;
+  const cells = spots.map((s) => hexToWorld(s.hex, HEX_SIZE));
+  const centre = { x: cells.reduce((n, c) => n + c.x, 0) / cells.length, z: cells.reduce((n, c) => n + c.z, 0) / cells.length };
+  const turn = (preview.facing * Math.PI) / 180;
+  const colors = figureColors(display.scheme, factionTheme(f.faction).primary, f.color);
+  const context = useMemo<PaintContext>(() => ({ scheme: display.scheme, main: colors.model, faction: f.faction }), [display.scheme, colors.model, f.faction]);
+  if (drawn === "tokens") {
+    return (
+      <>
+        {spots.map((s) => {
+          const { x, z } = hexToWorld(s.hex, HEX_SIZE);
+          return (
+            <mesh key={hexKey(s.hex)} position={[x, s.elevation * LEVEL_HEIGHT + h / 2, z]} raycast={() => null} renderOrder={4}>
+              <cylinderGeometry args={[TOKEN_RADIUS, TOKEN_RADIUS, h, 24]} />
+              <meshStandardMaterial color={f.color} transparent opacity={GHOST_OPACITY} depthWrite={false} />
+            </mesh>
+          );
+        })}
+      </>
+    );
+  }
+  const meshes = unitMeshes(f.cardId, f.footprint, display.tiles === "detailed");
+  const model = meshes.poses[f.pose % meshes.poses.length]!;
+  return (
+    <group position={[centre.x, ground, centre.z]} rotation={[0, turn, 0]}>
+      <PaintedModel model={model} context={context} ghost />
+      <mesh geometry={meshes.base.top} raycast={() => null} renderOrder={4}>
+        <meshStandardMaterial color={BASE_COLOR} roughness={0.75} transparent opacity={GHOST_OPACITY} depthWrite={false} />
+      </mesh>
+      <mesh geometry={meshes.base.rim} raycast={() => null} renderOrder={4}>
+        <meshStandardMaterial color={colors.ring} roughness={0.55} transparent opacity={GHOST_OPACITY} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
 /** Pointer travel (pixels) that turns a press on a figure into a drag. */
 const DRAG_PIXELS = 5;
 
-export function Figures({ figures, onClick, onHover, labels, style, motions = null, jump = null, shake = null, carry = null, canDrag, onDragStart, onDragEnd, onLand }: Props) {
+export function Figures({ figures, onClick, onHover, labels, style, motions = null, jump = null, shake = null, carry = null, canDrag, onDragStart, onDragEnd, onLand, preview = null }: Props) {
   const display = useDisplay();
   const drawn = style ?? display.figures;
   const facing = useMemo(() => facings(figures), [figures]);
@@ -869,7 +934,9 @@ export function Figures({ figures, onClick, onHover, labels, style, motions = nu
           <Token key={f.id} f={f} onClick={onClick} onHover={onHover} />
         ),
       )}
-      {figures.map((f) => f.cone && f.facing !== undefined && <FacingCone key={`cone:${f.id}`} f={f} />)}
+      {figures.map((f) => f.cone && f.facing !== undefined && <FacingCone key={`cone:${f.id}`} spots={f.spots} facing={f.facing} />)}
+      {preview && <GhostFigure preview={preview} drawn={drawn === "models" && UNIT_MODELS[preview.figure.cardId] ? "models" : "tokens"} />}
+      {preview?.cone && <FacingCone spots={preview.spots} facing={preview.facing} />}
       {labels && <LabelTracker figures={figures} layer={labels} offsets={offsets} />}
     </AnimationContext.Provider>
   );

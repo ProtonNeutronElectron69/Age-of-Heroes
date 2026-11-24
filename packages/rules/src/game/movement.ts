@@ -7,7 +7,7 @@ import { moveCostOf, type TerrainRules } from "../terrain";
 import { canTrample, combatant, hasAbility, isPinned, moveBonus, trampleRoll } from "./abilities";
 import { spotsEngaged } from "./engagement";
 import { fail } from "./errors";
-import { faceAfterMove } from "./facing";
+import { baseFacing, faceAfterMove, shiftsForward } from "./facing";
 import { figureSpots, placementKey, placementSpots, standingElevation, tuningOf, type Placement } from "./placement";
 import { glyphBonus, pickUpGlyphs } from "./glyphs";
 import { cardOf, findFigure, occupancy, statsOf, stepKey, type EffectiveStats, type Occupant } from "./queries";
@@ -304,9 +304,35 @@ interface Label {
   readonly spots: Step[];
   readonly cost: number;
   readonly hazards: number;
+  /** A multi-hex figure's steps that were not straight ahead: shifts sideways or back, then turns. */
+  readonly sideways: number;
+  readonly turns: number;
   readonly stopped: boolean;
   readonly walk: Walk;
   readonly prev: Label | null;
+}
+
+/** How awkward a sideways or backward step of a multi-hex figure looks, counted in turns. */
+const SIDEWAYS_WEIGHT = 2;
+
+/**
+ * Of two paths as risky and as long, the more natural one for a multi-hex figure: few turns and
+ * few steps sideways or back, a step aside counting as two turns. So a figure shuffles back a hex
+ * or two but turns round to walk further, and turns to face where it goes rather than crabbing
+ * across the board. Turning is free, so without this the path found first won, whatever it looked like.
+ */
+function better(a: Pick<Label, "hazards" | "sideways" | "turns">, b: Pick<Label, "hazards" | "sideways" | "turns">): boolean {
+  if (a.hazards !== b.hazards) return a.hazards < b.hazards;
+  const awkward = (l: Pick<Label, "sideways" | "turns">) => l.sideways * SIDEWAYS_WEIGHT + l.turns;
+  if (awkward(a) !== awkward(b)) return awkward(a) < awkward(b);
+  return a.turns < b.turns;
+}
+
+/** Whether a step of a multi-hex figure is a turn, a forward shift or neither. */
+function stepShape(from: Placement, to: Placement, footprint: Footprint): { sideways: number; turns: number } {
+  if (footprint === "1") return { sideways: 0, turns: 0 };
+  if (hexEquals(from.hex, to.hex)) return { sideways: 0, turns: 1 };
+  return { sideways: shiftsForward(baseFacing(footprint, from.hex, from.rotation), from.hex, to.hex) ? 0 : 1, turns: 0 };
 }
 
 /**
@@ -325,7 +351,7 @@ function search(
   const enemies = enemiesOf(state, mover, ctx);
   const labels = new Map<string, Label>();
   const buckets: Label[][] = Array.from({ length: Math.max(0, budget) + 1 }, () => []);
-  buckets[0]!.push({ placement: mover.start, spots: mover.startSpots, cost: 0, hazards: 0, stopped: false, walk: mover.walk, prev: null });
+  buckets[0]!.push({ placement: mover.start, spots: mover.startSpots, cost: 0, hazards: 0, sideways: 0, turns: 0, stopped: false, walk: mover.walk, prev: null });
 
   for (let c = 0; c <= budget; c++) {
     // Turning costs nothing, so labels can be appended to the bucket being read.
@@ -337,11 +363,14 @@ function search(
         if (onlyTerrain && !info.spots.every((s) => terrainOf(s, ctx)?.id === onlyTerrain)) continue;
         const cost = c + info.cost;
         if (cost > budget) continue;
+        const shape = stepShape(label.placement, to, mover.footprint);
         const next: Label = {
           placement: to,
           spots: info.spots,
           cost,
           hazards: label.hazards + hazardsOf(info, mover, ctx),
+          sideways: label.sideways + shape.sideways,
+          turns: label.turns + shape.turns,
           stopped: info.stops,
           walk: info.walk,
           prev: label,
@@ -349,7 +378,7 @@ function search(
         // Under zone of control, paths that leave the figure in a different state are kept apart.
         const key = `${placementKey(to)}|${cost}|${next.stopped}${mover.zone ? `|${walkKey(info.walk)}` : ""}`;
         const existing = labels.get(key);
-        if (existing && existing.hazards <= next.hazards) continue;
+        if (existing && !better(next, existing)) continue;
         labels.set(key, next);
         buckets[cost]!.push(next);
       }
@@ -357,7 +386,7 @@ function search(
   }
 
   const startKey = placementKey(mover.start);
-  const best = new Map<string, MoveOption>();
+  const best = new Map<string, MoveOption & { shape: Label }>();
   for (const label of labels.values()) {
     const key = placementKey(label.placement);
     if (key === startKey) continue;
@@ -371,9 +400,8 @@ function search(
       continue;
     }
     const current = best.get(key);
-    if (current && (current.hazards < label.hazards || (current.hazards === label.hazards && current.cost <= label.cost))) {
-      continue;
-    }
+    if (current && (current.hazards < label.hazards || (current.hazards === label.hazards && current.cost < label.cost))) continue;
+    if (current && current.hazards === label.hazards && current.cost === label.cost && !better(label, current.shape)) continue;
     const path: PathStep[] = [];
     for (let l: Label | null = label; l && l.prev; l = l.prev) path.unshift(asPathStep(l.placement, mover.footprint));
     best.set(key, {
@@ -382,9 +410,10 @@ function search(
       path,
       cost: label.cost,
       hazards: label.hazards,
+      shape: label,
     });
   }
-  return best;
+  return new Map([...best].map(([key, { shape: _, ...option }]) => [key, option]));
 }
 
 /**

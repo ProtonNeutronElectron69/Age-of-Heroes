@@ -89,6 +89,24 @@ describe("multi-hex movement", () => {
     expect(r.state.units[0]!.figures[0]!.position).toMatchObject({ hex: hex(7, 1), rotation: 0 });
   });
 
+  it("suggests natural paths: forward, a short shuffle back, or turning round to walk further", () => {
+    // Rotation 0 faces west (-q): the body trails east of the front hex.
+    const { ctx, state } = bigGame({ "p1:0#1": { q: 5, r: 1, elevation: 1 } });
+    const options = moveOptions(state, "p1:0#1", ctx);
+    const path = (q: number, rotation: number) => options.get(placementKey({ hex: hex(q, 1), elevation: 1, rotation }))!.path;
+    const turns = (steps: ReturnType<typeof path>, from = 0) =>
+      steps.filter((s, i) => s.rotation !== (i === 0 ? from : steps[i - 1]!.rotation)).length;
+    // Straight ahead: three steps forward, no turning.
+    expect(path(2, 0).map((s) => s.hex.q)).toEqual([4, 3, 2]);
+    expect(turns(path(2, 0))).toBe(0);
+    // Two hexes back, still facing west: it shuffles back rather than spinning round twice.
+    expect(turns(path(7, 0))).toBe(0);
+    // Four hexes east, ending facing east: it turns round first, then walks forward.
+    const east = path(9, 3);
+    expect(east.slice(0, 3).every((s) => s.hex.q === 5)).toBe(true);
+    expect(east.slice(3).map((s) => s.hex.q)).toEqual([6, 7, 8, 9]);
+  });
+
   it("blocks other figures from both of its hexes and cannot overlap enemies", () => {
     const { ctx, state } = bigGame({ "p1:0#1": { q: 5, r: 1, elevation: 1 }, "p2:0#1": { q: 8, r: 1, elevation: 1 } });
     const options = moveOptions(state, "p1:0#1", ctx);
