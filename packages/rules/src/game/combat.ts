@@ -1,60 +1,43 @@
-import { rollCombat } from "../dice";
-import { DIRECTIONS, hexAdd, hexDistance, hexEquals, hexKey, hexNeighbors, hexSub, hexToWorld, isAdjacent, type Hex } from "../hex";
-import { hasLineOfSight, segmentHitsHexPrism, type Token } from "../los";
+import { DEFENSE_DIE, countFaces, rollCombat, rollDice } from "../dice";
+import { DIRECTIONS, hexAdd, hexDistance, hexEquals, hexKey, hexSub, isAdjacent, type Hex } from "../hex";
+import { hasLineOfSight, type Token } from "../los";
 import { Rng } from "../rng";
-import { HEX_SIZE } from "../world";
 import { isUnique } from "../schema";
-import type { Tuning } from "../tuning";
 import {
   abilityModifiers,
   abilityOf,
   afterAttack,
   areaAttackOf,
   combatant,
+  freeSpotNear,
   hasAbility,
   ignoresSwamp,
   isPinned,
   mindControlOf,
   param,
+  onWetTerrain,
+  POWER_COMMAND_KINDS,
+  powerOf,
   pullOf,
-  reduceWounds,
   spotDistance,
   swapOf,
   targetingProblem,
   type AreaAttackSpec,
   type Combatant,
+  type PowerSpec,
   type ReachSpec,
 } from "./abilities";
 import { engagedEnemies, spotsEngaged } from "./engagement";
-import { facingOf, seesAny } from "./facing";
+import { faceTowardsMiddle, facingOf, seesAny } from "./facing";
 import { glyphBonus } from "./glyphs";
 import { fail } from "./errors";
 import { forcedMove, freeSpotFor } from "./movement";
-import { figureSpots, placementSpots, standingElevation, tuningOf } from "./placement";
+import { figureSpots, placementSpots } from "./placement";
 import { cardOf, findFigure, statsOf } from "./queries";
-import { checkGameOver, woundFigure } from "./rounds";
-import type { GameEvent, GameState, PlayerId, RulesContext, Step } from "./types";
+import { checkGameOver, destroyFigure, woundFigure } from "./rounds";
+import { canReach, resolve, tokens } from "./strike";
+import type { ActiveTurn, GameEvent, GameState, PlayerId, RulesContext, Step, UnitState } from "./types";
 
-/**
- * Extra dice for higher ground. The figure standing higher gets
- * +1 (attack if attacking, defense if defending), and another +1 when the
- * difference is at least the lower figure's Height.
- */
-export function elevationBonus(
-  attackerElevation: number,
-  attackerHeight: number,
-  defenderElevation: number,
-  defenderHeight: number,
-  tuning: Tuning,
-): { attackBonus: number; defenseBonus: number } {
-  const diff = attackerElevation - defenderElevation;
-  const { higher, extreme } = tuning.elevationBonus;
-  if (diff > 0) return { attackBonus: higher + (diff >= defenderHeight ? extreme : 0), defenseBonus: 0 };
-  if (diff < 0) return { attackBonus: 0, defenseBonus: higher + (-diff >= attackerHeight ? extreme : 0) };
-  return { attackBonus: 0, defenseBonus: 0 };
-}
-
-const tokens = (spots: readonly Step[], height: number): Token[] => spots.map((s) => ({ ...s, height }));
 
 interface Reach {
   readonly range: number;
@@ -62,6 +45,57 @@ interface Reach {
   readonly ignoresSight: boolean;
   /** A special action rather than the normal attack (games with `engagedSpecials` let an engaged figure use it). */
   readonly special?: boolean;
+  /** Strikes all round, whichever way the figure faces (Circle Cut). */
+  readonly anyFacing?: boolean;
+}
+
+/**
+ * Has the figure already used its attack this turn? An extra attack (Blood Surge, Second Arrow,
+ * Twin Cannons) lets it make one more normal attack; special actions never use one.
+ */
+function attackUsed(active: ActiveTurn, figureId: string, special: boolean): boolean {
+  if (!active.attacked.includes(figureId)) return false;
+  return special || !((active.extraAttacks?.[figureId] ?? 0) > 0);
+}
+
+/** Living figures (other than `except`) that can see the target, for Spotter's Call. */
+function seenByFriend(state: GameState, ctx: RulesContext, attacker: Combatant, target: Combatant, range: number): boolean {
+  for (const unit of state.units) {
+    if (unit.owner !== attacker.unit.owner) continue;
+    for (const figure of unit.figures) {
+      if (figure.destroyed || !figure.position || figure.id === attacker.figure.id) continue;
+      const friend = combatant(unit, figure, ctx);
+      if (spotDistance(friend.spots, target.spots) > range) continue;
+      if (inSight(state, ctx, friend, target)) return true;
+    }
+  }
+  return false;
+}
+
+/** Can one figure see another past the terrain and every other figure? */
+function inSight(state: GameState, ctx: RulesContext, from: Combatant, to: Combatant): boolean {
+  const blockers: Token[] = [];
+  for (const unit of state.units) {
+    const card = ctx.cards.get(unit.cardId);
+    if (!card) continue;
+    for (const figure of unit.figures) {
+      if (figure.id === from.figure.id || figure.id === to.figure.id) continue;
+      blockers.push(...tokens(figureSpots(figure, card.footprint, card.height, ctx), card.height));
+    }
+  }
+  return hasLineOfSight(ctx.board, tokens(from.spots, from.card.height), tokens(to.spots, to.card.height), { blockers });
+}
+
+/** Spotter's Call: a normal attack at an enemy the attacker cannot see but a friend near it can. */
+export function spottedAttack(state: GameState, attackerId: string, targetId: string, ctx: RulesContext): boolean {
+  const a = findFigure(state, attackerId);
+  const t = findFigure(state, targetId);
+  if (!a || !t || !a.figure.position || !t.figure.position) return false;
+  const attacker = combatant(a.unit, a.figure, ctx);
+  const spotter = abilityOf(attacker.card, "spotters-call");
+  if (!spotter) return false;
+  const target = combatant(t.unit, t.figure, ctx);
+  return !inSight(state, ctx, attacker, target) && seenByFriend(state, ctx, attacker, target, param(spotter, "range", 3));
 }
 
 /** Why an attack-like action from one figure at another is not allowed, or null if it is. */
@@ -71,7 +105,7 @@ function actionProblem(state: GameState, attackerId: string, targetId: string, c
   const a = findFigure(state, attackerId);
   if (!a || a.figure.destroyed || !a.figure.position) return "That figure is not on the battlefield";
   if (a.unit.id !== active.unitId) return "Only the activated unit can attack this turn";
-  if (active.attacked.includes(attackerId)) return "That figure has already attacked this turn";
+  if (attackUsed(active, attackerId, !!reach.special)) return "That figure has already attacked this turn";
   const t = findFigure(state, targetId);
   if (!t || t.figure.destroyed || !t.figure.position) return "That target is not on the battlefield";
   if (t.unit.owner === a.unit.owner) return "You cannot attack your own figures";
@@ -95,19 +129,15 @@ function actionProblem(state: GameState, attackerId: string, targetId: string, c
   if (engaged.length > 0 && !withTarget && !freeOfEngagement) return "An engaged figure can only attack enemies it is engaged with";
   if (reach.range === 1 && !withTarget) return "Too far above or below to reach";
   const facing = facingOf(state, a.figure);
-  if (facing !== null && !seesAny(facing, aSpots, tSpots)) return "Out of view: the target must be in front of the attacker";
+  if (!reach.anyFacing && facing !== null && !seesAny(facing, aSpots, tSpots)) return "Out of view: the target must be in front of the attacker";
   if (reach.ignoresSight) return null;
 
-  const blockers: Token[] = [];
-  for (const unit of state.units) {
-    const card = ctx.cards.get(unit.cardId);
-    if (!card) continue;
-    for (const figure of unit.figures) {
-      if (figure.id === attackerId || figure.id === targetId) continue;
-      blockers.push(...tokens(figureSpots(figure, card.footprint, card.height, ctx), card.height));
-    }
-  }
-  if (!hasLineOfSight(ctx.board, tokens(aSpots, aHeight), tokens(tSpots, tHeight), { blockers })) {
+  const attacker = combatant(a.unit, a.figure, ctx);
+  const target = combatant(t.unit, t.figure, ctx);
+  if (!inSight(state, ctx, attacker, target)) {
+    // Spotter's Call: a normal shot may go where a friend near the target can see.
+    const spotter = !reach.special ? abilityOf(aCard, "spotters-call") : undefined;
+    if (spotter && seenByFriend(state, ctx, attacker, target, param(spotter, "range", 3))) return null;
     return "No line of sight";
   }
   return null;
@@ -172,7 +202,34 @@ export function attackProblem(
   }
   const swap = swapOf(card, ability);
   if (swap) return swapProblem(state, attackerId, targetId, ctx, swap);
+  const power = powerOf(card, ability);
+  if (power) return targetedPowerProblem(state, attackerId, targetId, ctx, power);
   return "That power is not an attack";
+}
+
+/** Why a power aimed at a figure (Life Tap, Constrict, Circle Cut, or the target of a Hurl) cannot be used on it. */
+function targetedPowerProblem(state: GameState, attackerId: string, targetId: string, ctx: RulesContext, power: PowerSpec): string | null {
+  const t = findFigure(state, targetId);
+  const tCard = t ? cardOf(t.unit, ctx) : undefined;
+  const smallOrMedium = tCard !== undefined && (tCard.size === "small" || tCard.size === "medium");
+  switch (power.kind) {
+    case "drain":
+      return actionProblem(state, attackerId, targetId, ctx, { range: power.range, minRange: 1, ignoresSight: false, special: true });
+    case "crush":
+      if (tCard && isUnique(tCard)) return `${power.name} cannot destroy a unique figure`;
+      if (tCard && !smallOrMedium) return `${power.name} works only on Small or Medium figures`;
+      return actionProblem(state, attackerId, targetId, ctx, { range: 1, minRange: 1, ignoresSight: false, special: true });
+    case "sweep":
+      return actionProblem(state, attackerId, targetId, ctx, { range: 1, minRange: 1, ignoresSight: false, special: true, anyFacing: true });
+    case "throw": {
+      if (tCard && (tCard.footprint !== "1" || !smallOrMedium)) return `${power.name} works only on Small or Medium single-hex figures`;
+      const problem = actionProblem(state, attackerId, targetId, ctx, { range: 1, minRange: 1, ignoresSight: false, special: true });
+      if (problem) return problem;
+      return hurlSpots(state, attackerId, targetId, ctx).length > 0 ? null : "There is nowhere to throw it";
+    }
+    default:
+      return `${power.name} is not aimed at a figure`;
+  }
 }
 
 /** Why a blast cannot be aimed at this hex of its target: it must be one of the target's hexes, within the blast's range. */
@@ -344,25 +401,6 @@ function shoveSpot(state: GameState, ctx: RulesContext, attacker: Combatant, tar
   return freeSpotFor(state, step, height, ctx) ? step : null;
 }
 
-/** Can a figure (even one just destroyed) reach another with a normal attack? Used by Last Stand. */
-function canReach(state: GameState, ctx: RulesContext, from: Combatant, to: Combatant): boolean {
-  const range = statsOf(from.card).range + glyphBonus(state, from.unit.id, "range", ctx);
-  if (spotDistance(from.spots, to.spots) > range) return false;
-  if (range === 1 && !spotsEngaged(from.spots, from.card.height, to.spots, to.card.height)) return false;
-  const facing = facingOf(state, from.figure);
-  if (facing !== null && !seesAny(facing, from.spots, to.spots)) return false;
-  const blockers: Token[] = [];
-  for (const unit of state.units) {
-    const card = ctx.cards.get(unit.cardId);
-    if (!card) continue;
-    for (const figure of unit.figures) {
-      if (figure.id === from.figure.id || figure.id === to.figure.id) continue;
-      blockers.push(...tokens(figureSpots(figure, card.footprint, card.height, ctx), card.height));
-    }
-  }
-  return hasLineOfSight(ctx.board, tokens(from.spots, from.card.height), tokens(to.spots, to.card.height), { blockers });
-}
-
 /** Enemy figures this figure could attack right now (with a special action, if given). */
 export function attackTargets(state: GameState, figureId: string, ctx: RulesContext, ability?: string): string[] {
   const a = findFigure(state, figureId);
@@ -377,153 +415,6 @@ export function attackTargets(state: GameState, figureId: string, ctx: RulesCont
     }
   }
   return targets;
-}
-
-/**
- * Cover from scenery that gives it (a low wall): the defender stands on a hex next to one of
- * the wall's hexes, below its top, the attack comes from range (not from a neighbouring hex),
- * and the line from the attacker to the defender passes over that hex of the wall. Several
- * walls do not add up.
- */
-export function coverFrom(
-  attackerSpots: readonly Step[],
-  defenderSpots: readonly Step[],
-  ctx: RulesContext,
-): { dice: number; name: string } | null {
-  if (attackerSpots.length === 0 || defenderSpots.length === 0) return null;
-  if (spotDistance(attackerSpots, defenderSpots) <= 1) return null;
-  let best: { dice: number; name: string } | null = null;
-  for (const d of defenderSpots) {
-    const to = hexToWorld(d.hex, HEX_SIZE);
-    for (const n of hexNeighbors(d.hex)) {
-      for (const s of ctx.board.sceneryIn(n)) {
-        const dice = s.rules.cover ?? 0;
-        if (dice <= (best?.dice ?? 0)) continue;
-        const base = s.placement.elevation;
-        if (d.elevation < base || d.elevation >= base + s.rules.height) continue;
-        const wall = hexToWorld(n, HEX_SIZE);
-        // In the ground plane: a flat segment through a hex prism from y 0 to 1.
-        const crosses = attackerSpots.some((a) => {
-          const from = hexToWorld(a.hex, HEX_SIZE);
-          return segmentHitsHexPrism({ x: from.x, y: 0.5, z: from.z }, { x: to.x, y: 0.5, z: to.z }, wall.x, wall.z, 0, 1);
-        });
-        if (crosses) best = { dice, name: s.rules.name };
-      }
-    }
-  }
-  return best;
-}
-
-/** The dice an attack would roll, with height and ability bonuses and the reasons for them. */
-export function attackDice(
-  state: GameState,
-  attackerId: string,
-  targetId: string,
-  ctx: RulesContext,
-  baseAttack?: number,
-): { attack: number; defense: number; attackBonus: number; defenseBonus: number; notes: string[] } {
-  const a = findFigure(state, attackerId) ?? fail(`Unknown figure "${attackerId}"`);
-  const t = findFigure(state, targetId) ?? fail(`Unknown figure "${targetId}"`);
-  return diceFor(state, ctx, combatant(a.unit, a.figure, ctx), combatant(t.unit, t.figure, ctx), baseAttack);
-}
-
-function diceFor(state: GameState, ctx: RulesContext, attacker: Combatant, defender: Combatant, baseAttack?: number) {
-  const aStats = statsOf(attacker.card);
-  const tStats = statsOf(defender.card);
-  const notes: string[] = [];
-  const height = elevationBonus(
-    standingElevation(attacker.spots),
-    aStats.height,
-    standingElevation(defender.spots),
-    tStats.height,
-    tuningOf(ctx),
-  );
-  if (height.attackBonus > 0) notes.push(`Higher ground +${height.attackBonus} attack`);
-  if (height.defenseBonus > 0) notes.push(`Higher ground +${height.defenseBonus} defense`);
-  const mods = abilityModifiers(state, ctx, attacker, defender, spotDistance(attacker.spots, defender.spots));
-  const cover = coverFrom(attacker.spots, defender.spots, ctx);
-  const glyphAttack = glyphBonus(state, attacker.unit.id, "attack", ctx);
-  const glyphDefense = glyphBonus(state, defender.unit.id, "defense", ctx);
-  if (glyphAttack) notes.push(`Glyph +${glyphAttack} attack`);
-  if (glyphDefense) notes.push(`Glyph +${glyphDefense} defense`);
-  const behind = behindBonus(state, ctx, attacker, defender);
-  if (behind) notes.push(`From behind +${behind} attack`);
-  const attackBonus = height.attackBonus + mods.attack + glyphAttack + behind;
-  const defenseBonus = height.defenseBonus + mods.defense + (cover?.dice ?? 0) + glyphDefense;
-  notes.push(...mods.notes);
-  if (cover) notes.push(`Behind a ${cover.name.toLowerCase()} +${cover.dice} defense`);
-  return {
-    attack: (baseAttack ?? aStats.attack) + attackBonus,
-    defense: Math.max(0, tStats.defense + defenseBonus),
-    attackBonus,
-    defenseBonus,
-    notes,
-  };
-}
-
-/**
- * Strike from behind (games with facing): a melee attack by a figure wholly outside the
- * defender's front cone rolls extra attack dice. It adds to the higher-ground bonus. With
- * `strikeFromBehind: "meleeOnly"`, a unit whose Range is above 1 never gets it, even next to its target.
- */
-function behindBonus(state: GameState, ctx: RulesContext, attacker: Combatant, defender: Combatant): number {
-  if (state.config.strikeFromBehind === "meleeOnly" && statsOf(attacker.card).range > 1) return 0;
-  const facing = facingOf(state, defender.figure);
-  if (facing === null || spotDistance(attacker.spots, defender.spots) > 1) return 0;
-  if (seesAny(facing, defender.spots, attacker.spots)) return 0;
-  return tuningOf(ctx).behindBonus ?? 0;
-}
-
-/** Roll one attack against one defender and apply the result. */
-function resolve(
-  state: GameState,
-  ctx: RulesContext,
-  rng: Rng,
-  attacker: Combatant,
-  defender: Combatant,
-  baseAttack: number,
-  ability: string | undefined,
-  events: GameEvent[],
-  numbedBy?: string,
-): void {
-  const dice = diceFor(state, ctx, attacker, defender, baseAttack);
-  // Numbing Glare: the target rolls no defense dice at all.
-  const defense = numbedBy ? 0 : dice.defense;
-  const roll = rollCombat(rng, dice.attack, defense);
-  const distance = spotDistance(attacker.spots, defender.spots);
-  const notes = [...dice.notes, ...(numbedBy ? [`${numbedBy}: no defense dice`] : [])];
-  const wounds = reduceWounds(defender, distance, roll.wounds, notes);
-  events.push({
-    type: "attackRolled",
-    source: "attack",
-    attackerId: attacker.figure.id,
-    targetId: defender.figure.id,
-    attack: roll.attack,
-    defense: roll.defense,
-    hits: roll.hits,
-    blocks: roll.blocks,
-    wounds,
-    attackBonus: dice.attackBonus,
-    defenseBonus: dice.defenseBonus,
-    ...(notes.length > 0 ? { notes } : {}),
-    ...(ability ? { ability } : {}),
-  });
-  const life = statsOf(defender.card).life;
-  woundFigure(state, defender.unit, defender.figure, wounds, life, "attack", events);
-  afterAttack(state, ctx, rng, attacker, defender, distance, roll.hits, roll.blocks, wounds, events);
-
-  // Last Stand: a destroyed figure strikes back at its attacker as it falls.
-  const stand = hasAbility(defender.card, "last-stand") ? abilityOf(defender.card, "last-stand") : undefined;
-  if (stand && defender.figure.destroyed && !attacker.figure.destroyed && attacker.figure.position && canReach(state, ctx, defender, attacker)) {
-    events.push({
-      type: "abilityUsed",
-      ability: stand.id,
-      figureId: defender.figure.id,
-      targetId: attacker.figure.id,
-      detail: `${stand.name}: strikes back as it falls`,
-    });
-    resolve(state, ctx, rng, defender, attacker, statsOf(defender.card).attack, stand.id, events);
-  }
 }
 
 export function attack(
@@ -544,13 +435,23 @@ export function attack(
   const t = findFigure(state, targetId)!;
   const attacker = combatant(a.unit, a.figure, ctx);
   const defender = combatant(t.unit, t.figure, ctx);
+  const active = state.active!;
+  const power = ability ? powerOf(attacker.card, ability) : undefined;
+  if (power && (POWER_COMMAND_KINDS as readonly string[]).includes(power.kind)) fail(`${power.name} needs a place to aim it: use the power`);
   const rng = new Rng(state.rng);
   const area = ability ? areaAttackOf(attacker.card, ability) : undefined;
   const mind = ability ? mindControlOf(attacker.card, ability) : undefined;
   const pull = ability ? pullOf(attacker.card, ability) : undefined;
   const swap = ability ? swapOf(attacker.card, ability) : undefined;
+  // A second normal attack this turn uses up one of the figure's extra attacks.
+  const extra = active.attacked.includes(figureId);
+  if (extra) active.extraAttacks![figureId]! -= 1;
+  const spotted = !ability && spottedAttack(state, figureId, targetId, ctx);
+  const lost = !swap && loseNerve(state, ctx, rng, attacker, events);
 
-  if (area) {
+  if (lost) {
+    // Grave Dread: the attack is lost, but it counts as made.
+  } else if (area) {
     // The target takes the full blast; every other figure next to the aimed hex takes the splash, once.
     // Older saves aimed at no hex: their blasts splash round every hex of the target, as they did then.
     const centre = aim ? defender.spots.filter((s) => hexEquals(s.hex, aim)) : defender.spots;
@@ -586,6 +487,30 @@ export function attack(
       targetId,
       detail: `${swap.name}: swaps places with ${defender.card.name}`,
     });
+  } else if (power?.kind === "drain") {
+    // Life Tap: the attacker removes a wound for each wound it deals.
+    const dealt = resolve(state, ctx, rng, attacker, defender, power.dice, power.id, events);
+    const amount = Math.min(dealt, attacker.figure.wounds);
+    if (amount > 0 && !attacker.figure.destroyed) {
+      attacker.figure.wounds -= amount;
+      events.push({ type: "figureHealed", figureId, amount, total: attacker.figure.wounds });
+      events.push({ type: "abilityUsed", ability: power.id, figureId, detail: `${power.name}: ${amount} wound${amount === 1 ? "" : "s"} removed` });
+    }
+  } else if (power?.kind === "crush") {
+    // Constrict: a d20; on a high roll the target is destroyed outright.
+    const roll = rng.d20();
+    const success = roll >= power.needed;
+    events.push({ type: "abilityRoll", ability: power.id, figureId, targetId, roll, needed: power.needed, success });
+    if (success) destroyFigure(defender.unit, defender.figure, "ability", events);
+  } else if (power?.kind === "sweep") {
+    // Circle Cut: a normal attack on every enemy next to the figure, one after another.
+    const victims = sweepTargets(state, figureId, ctx);
+    events.push({ type: "abilityUsed", ability: power.id, figureId, detail: `${power.name}: strikes at ${victims.length} enem${victims.length === 1 ? "y" : "ies"}` });
+    for (const id of victims) {
+      const v = findFigure(state, id);
+      if (!v || v.figure.destroyed || attacker.figure.destroyed) continue;
+      resolve(state, ctx, rng, attacker, combatant(v.unit, v.figure, ctx), statsOf(attacker.card).attack, power.id, events);
+    }
   } else {
     // Numbing Glare: a d20 before the attack; on a success a Small or Medium target rolls no defense dice.
     const glare = abilityOf(attacker.card, "numbing-glare");
@@ -596,7 +521,11 @@ export function attack(
       events.push({ type: "abilityRoll", ability: glare.id, figureId, targetId, roll, needed, success: roll >= needed });
       if (roll >= needed) numbed = glare.name;
     }
-    resolve(state, ctx, rng, attacker, defender, statsOf(attacker.card).attack, undefined, events, numbed);
+    // Spotter's Call: a shot at an enemy only a friend can see rolls fewer dice.
+    const spotter = spotted ? abilityOf(attacker.card, "spotters-call") : undefined;
+    const cut = spotter ? param(spotter, "reduce", 1) : 0;
+    const struckAt = defender.spots.map((s) => ({ ...s }));
+    resolve(state, ctx, rng, attacker, defender, statsOf(attacker.card).attack - cut, undefined, events, numbed, spotter ? [`${spotter.name}: a friend spots the target, -${cut} attack`] : []);
     // Shoulder Barge: a melee hit shoves the target one hex back.
     const shove = hasAbility(attacker.card, "shove") ? abilityOf(attacker.card, "shove") : undefined;
     if (shove && !attacker.figure.destroyed && !defender.figure.destroyed && defender.card.size !== "huge" && spotDistance(attacker.spots, defender.spots) <= 1) {
@@ -610,11 +539,21 @@ export function attack(
       });
       if (spot) forcedMove(state, defender.unit, defender.figure, spot, rng, events, ctx);
     }
+    // Piercing Bolts: the bolt flies on to the next figure behind the target.
+    const bolt = abilityOf(attacker.card, "bolt-through");
+    if (bolt && !attacker.figure.destroyed) {
+      const next = boltTarget(state, ctx, attacker, struckAt, defender.figure.id);
+      if (next) {
+        events.push({ type: "abilityUsed", ability: bolt.id, figureId, targetId: next.figure.id, detail: `${bolt.name}: the bolt flies on into ${next.card.name}` });
+        resolve(state, ctx, rng, attacker, next, statsOf(attacker.card).attack - param(bolt, "reduce", 1), bolt.id, events);
+      }
+    }
   }
 
+  // After a normal attack: more attacks this turn (Twin Cannons, Blood Surge, Second Arrow).
+  if (!ability && !lost && !attacker.figure.destroyed) grantExtraAttacks(state, rng, attacker, extra, t.figure.destroyed, events);
   state.rng = rng.state;
-  const active = state.active!;
-  active.attacked.push(figureId);
+  if (!active.attacked.includes(figureId)) active.attacked.push(figureId);
   active.attackLog.push({ attackerId: figureId, targetId });
   stopTurning(state, figureId);
   // Smoke Step: a short move after attacking.
@@ -626,6 +565,120 @@ export function attack(
     active.bonusMoves[figureId] = param(abilityOf(attacker.card, "corpse-feast"), "move", 2);
   }
   checkGameOver(state, events, ctx);
+}
+
+/**
+ * More normal attacks after one: Twin Cannons (a second, if the figure has not moved), Blood Surge
+ * (a d20 after the first, for one more) and Second Arrow (one more after a kill, once a turn).
+ */
+function grantExtraAttacks(state: GameState, rng: Rng, attacker: Combatant, extra: boolean, killed: boolean, events: GameEvent[]): void {
+  const active = state.active!;
+  const id = attacker.figure.id;
+  const grant = (n: number) => {
+    const extras = (active.extraAttacks ??= {});
+    extras[id] = (extras[id] ?? 0) + n;
+  };
+  const once = (key: string): boolean => {
+    const used = (active.once ??= []);
+    if (used.includes(key)) return false;
+    used.push(key);
+    return true;
+  };
+  const twin = abilityOf(attacker.card, "twin-cannons");
+  if (twin && !extra && !active.moved.includes(id)) {
+    grant(param(twin, "attacks", 2) - 1);
+    events.push({ type: "abilityUsed", ability: twin.id, figureId: id, detail: `${twin.name}: it may attack again` });
+  }
+  const surge = abilityOf(attacker.card, "blood-surge");
+  if (surge && !extra && once(`blood-surge:${id}`)) {
+    const roll = rng.d20();
+    const needed = param(surge, "needed", 15);
+    events.push({ type: "abilityRoll", ability: surge.id, figureId: id, targetId: id, roll, needed, success: roll >= needed });
+    if (roll >= needed) grant(1);
+  }
+  const arrow = abilityOf(attacker.card, "second-arrow");
+  if (arrow && killed && once(`second-arrow:${id}`)) {
+    grant(1);
+    events.push({ type: "abilityUsed", ability: arrow.id, figureId: id, detail: `${arrow.name}: it may attack again` });
+  }
+}
+
+/**
+ * Grave Dread: an enemy figure next to a figure with it rolls the d20 before it attacks (or uses a
+ * special action), and on a low roll loses its nerve: the attack is lost. Returns true if it was.
+ */
+function loseNerve(state: GameState, ctx: RulesContext, rng: Rng, attacker: Combatant, events: GameEvent[]): boolean {
+  for (const unit of state.units) {
+    if (unit.owner === attacker.unit.owner) continue;
+    const card = ctx.cards.get(unit.cardId);
+    const dread = card ? abilityOf(card, "grave-dread") : undefined;
+    if (!card || !dread) continue;
+    for (const figure of unit.figures) {
+      if (figure.destroyed || !figure.position) continue;
+      if (spotDistance(figureSpots(figure, card.footprint, card.height, ctx), attacker.spots) > 1) continue;
+      const failOn = param(dread, "failOnOrBelow", 6);
+      const roll = rng.d20();
+      const held = roll > failOn;
+      events.push({ type: "abilityRoll", ability: dread.id, figureId: figure.id, targetId: attacker.figure.id, roll, needed: failOn + 1, success: held });
+      if (!held) {
+        events.push({ type: "abilityUsed", ability: dread.id, figureId: figure.id, targetId: attacker.figure.id, detail: `${dread.name}: ${attacker.card.name} loses its nerve and the attack is lost` });
+      }
+      return !held;
+    }
+  }
+  return false;
+}
+
+/** Circle Cut: every enemy figure the figure could strike right now with it, all round. */
+export function sweepTargets(state: GameState, figureId: string, ctx: RulesContext): string[] {
+  const a = findFigure(state, figureId);
+  const power = a ? powerOf(cardOf(a.unit, ctx), "circle-cut") : undefined;
+  if (!a || !power) return [];
+  const result: string[] = [];
+  for (const unit of state.units) {
+    if (unit.owner === a.unit.owner) continue;
+    for (const figure of unit.figures) {
+      if (figure.destroyed || !figure.position) continue;
+      if (spotDistance(combatant(a.unit, a.figure, ctx).spots, combatant(unit, figure, ctx).spots) > 1) continue;
+      if (!spotsEngaged(combatant(a.unit, a.figure, ctx).spots, cardOf(a.unit, ctx).height, combatant(unit, figure, ctx).spots, cardOf(unit, ctx).height)) continue;
+      result.push(figure.id);
+    }
+  }
+  return result;
+}
+
+/**
+ * Piercing Bolts: the next figure behind the target, in a straight line from the attacker and within
+ * its range and sight, or null. Only a straight line along a row of hexes counts.
+ */
+function boltTarget(state: GameState, ctx: RulesContext, attacker: Combatant, struckAt: readonly Step[], struckId: string): Combatant | null {
+  const from = attacker.spots[0];
+  const at = struckAt[0];
+  if (!from || !at || attacker.spots.length !== 1 || struckAt.length !== 1) return null;
+  const n = hexDistance(from.hex, at.hex);
+  const d = hexSub(at.hex, from.hex);
+  const dir = { q: d.q / n, r: d.r / n };
+  if (!DIRECTIONS.some((x) => x.q === dir.q && x.r === dir.r)) return null;
+  const range = statsOf(attacker.card).range + glyphBonus(state, attacker.unit.id, "range", ctx);
+  for (let k = n + 1; k <= range; k++) {
+    const h = { q: from.hex.q + dir.q * k, r: from.hex.r + dir.r * k };
+    if (ctx.board.surfaces(h).length === 0) return null;
+    const there = figuresAt(state, ctx, h).filter((c) => c.figure.id !== struckId && c.figure.id !== attacker.figure.id);
+    if (there.length === 0) continue;
+    const next = there[0]!;
+    const blockers: Token[] = [];
+    for (const unit of state.units) {
+      const card = ctx.cards.get(unit.cardId);
+      if (!card) continue;
+      for (const figure of unit.figures) {
+        if (figure.id === attacker.figure.id || figure.id === next.figure.id || figure.id === struckId) continue;
+        blockers.push(...tokens(figureSpots(figure, card.footprint, card.height, ctx), card.height));
+      }
+    }
+    const seen = hasLineOfSight(ctx.board, tokens(attacker.spots, attacker.card.height), tokens(next.spots, next.card.height), { blockers });
+    return seen ? next : null;
+  }
+  return null;
 }
 
 /** A figure that attacks can no longer be turned this turn. */
@@ -652,8 +705,10 @@ export function blastHex(
   const area = areaAttackOf(attacker.card, ability)!;
   events.push({ type: "abilityUsed", ability, figureId, detail: `${area.name} lands on an empty hex` });
   const rng = new Rng(state.rng);
-  for (const c of splashedBy(state, ctx, [at], [figureId])) {
-    if (!c.figure.destroyed) resolve(state, ctx, rng, attacker, c, area.splashDice, area.id, events);
+  if (!loseNerve(state, ctx, rng, attacker, events)) {
+    for (const c of splashedBy(state, ctx, [at], [figureId])) {
+      if (!c.figure.destroyed) resolve(state, ctx, rng, attacker, c, area.splashDice, area.id, events);
+    }
   }
   state.rng = rng.state;
   const active = state.active!;
@@ -723,3 +778,300 @@ export function endOfTurnTerrain(state: GameState, unitId: string, events: GameE
   state.rng = rng.state;
 }
 
+// ---------------------------------------------------------------------------
+// Powers: special actions with a place or a unit to aim at (the `power` command)
+
+/** What a power is aimed at: a figure (Hurl), a unit (Bonecall, Call to Arms) or a hex (Hurl's landing, Fire Breath's direction). */
+export interface PowerAim {
+  readonly targetId?: string;
+  readonly unitId?: string;
+  readonly at?: Step;
+}
+
+/** Species Bonecall can raise. */
+export const RAISE_SPECIES: readonly string[] = ["Orc", "Undead"];
+
+/** Why the acting figure cannot use a power now, or null. */
+function powerBasics(state: GameState, figureId: string, ability: string, ctx: RulesContext): { problem: string } | { power: PowerSpec; actor: Combatant } {
+  const active = state.active;
+  if (state.phase !== "turns" || !active) return { problem: "No turn is in progress" };
+  const a = findFigure(state, figureId);
+  if (!a || a.figure.destroyed || !a.figure.position) return { problem: "That figure is not on the battlefield" };
+  if (a.unit.id !== active.unitId) return { problem: "Only the activated unit can act this turn" };
+  const power = powerOf(cardOf(a.unit, ctx), ability);
+  if (!power) return { problem: "That figure has no such power" };
+  if (power.kind !== "orders" && active.attacked.includes(figureId)) return { problem: "That figure has already attacked this turn" };
+  return { power, actor: combatant(a.unit, a.figure, ctx) };
+}
+
+/** Why a power cannot be used this way, or null if it can. */
+export function powerProblem(state: GameState, figureId: string, ability: string, aim: PowerAim, ctx: RulesContext): string | null {
+  const basics = powerBasics(state, figureId, ability, ctx);
+  if ("problem" in basics) return basics.problem;
+  const { power, actor } = basics;
+  switch (power.kind) {
+    case "throw": {
+      if (!aim.targetId || !aim.at) return `${power.name} needs a figure to throw and a place to throw it`;
+      const problem = attackProblem(state, figureId, aim.targetId, ctx, ability);
+      if (problem) return problem;
+      return hurlSpots(state, figureId, aim.targetId, ctx).some((s) => sameStep(s, aim.at!)) ? null : "It cannot be thrown there";
+    }
+    case "stomp":
+      return null;
+    case "breath":
+      if (!aim.at) return `Choose which way ${power.name} goes`;
+      return breathLine(state, figureId, aim.at.hex, ctx) ? null : `${power.name} goes along a row of hexes from the figure, in front of it`;
+    case "raise":
+      if (!aim.unitId) return `Choose a squad for ${power.name}`;
+      return raiseUnits(state, figureId, ctx).includes(aim.unitId) ? null : `${power.name} needs a friendly Orc or Undead squad with a fallen figure, and room next to ${actor.card.name}`;
+    case "orders":
+      if (!aim.unitId) return `Choose a squad for ${power.name}`;
+      if ((state.called ?? []).includes(actor.unit.id)) return `${power.name} has been used this round`;
+      return callUnits(state, figureId, ctx).includes(aim.unitId) ? null : `${power.name} needs a friendly Disciplined squad within ${power.range} hexes`;
+    default:
+      return `${power.name} is aimed at a figure: attack with it`;
+  }
+}
+
+/** Use a power (`power` command). Every power but Call to Arms counts as the figure's attack. */
+export function usePower(state: GameState, player: PlayerId, figureId: string, ability: string, aim: PowerAim, events: GameEvent[], ctx: RulesContext): void {
+  if (state.active && state.active.player !== player) fail("It is not your turn");
+  const problem = powerProblem(state, figureId, ability, aim, ctx);
+  if (problem) fail(problem);
+  const active = state.active!;
+  const a = findFigure(state, figureId)!;
+  const actor = combatant(a.unit, a.figure, ctx);
+  const power = powerOf(actor.card, ability)!;
+
+  if (power.kind === "orders") {
+    active.callUnit = aim.unitId!;
+    events.push({ type: "abilityUsed", ability, figureId, detail: `${power.name}: the ${cardName(state, aim.unitId!, ctx)} will take a turn when this one ends` });
+    return;
+  }
+
+  const rng = new Rng(state.rng);
+  const lost = power.kind !== "raise" && loseNerve(state, ctx, rng, actor, events);
+  if (!lost) {
+    if (power.kind === "throw") hurl(state, ctx, rng, actor, power, aim.targetId!, aim.at!, events);
+    else if (power.kind === "stomp") stomp(state, ctx, rng, actor, power, events);
+    else if (power.kind === "breath") breathe(state, ctx, rng, actor, power, aim.at!.hex, events);
+    else if (power.kind === "raise") raise(state, ctx, actor, power, aim.unitId!, events);
+  }
+  state.rng = rng.state;
+  if (!active.attacked.includes(figureId)) active.attacked.push(figureId);
+  stopTurning(state, figureId);
+  checkGameOver(state, events, ctx);
+}
+
+const sameStep = (x: Step, y: Step) => hexEquals(x.hex, y.hex) && x.elevation === y.elevation;
+
+function cardName(state: GameState, unitId: string, ctx: RulesContext): string {
+  const unit = state.units.find((u) => u.id === unitId);
+  return unit ? cardOf(unit, ctx).name : "squad";
+}
+
+/** Hurl: every free spot the figure could throw the target onto, within the power's reach and in its sight. */
+export function hurlSpots(state: GameState, figureId: string, targetId: string, ctx: RulesContext): Step[] {
+  const a = findFigure(state, figureId);
+  const t = findFigure(state, targetId);
+  if (!a?.figure.position || !t?.figure.position) return [];
+  const power = powerOf(cardOf(a.unit, ctx), "hurl");
+  if (!power) return [];
+  const actor = combatant(a.unit, a.figure, ctx);
+  const target = combatant(t.unit, t.figure, ctx);
+  const blockers: Token[] = [];
+  for (const unit of state.units) {
+    const card = ctx.cards.get(unit.cardId);
+    if (!card) continue;
+    for (const figure of unit.figures) {
+      if (figure.id === figureId || figure.id === targetId) continue;
+      blockers.push(...tokens(figureSpots(figure, card.footprint, card.height, ctx), card.height));
+    }
+  }
+  const spots: Step[] = [];
+  for (const h of ctx.board.hexes()) {
+    const reach = Math.min(...actor.spots.map((s) => hexDistance(s.hex, h)));
+    if (reach < 1 || reach > power.range) continue;
+    for (const surface of ctx.board.surfaces(h)) {
+      const at = { hex: h, elevation: surface.elevation };
+      if (target.spots.some((s) => sameStep(s, at))) continue;
+      if (!freeSpotFor(state, at, target.card.height, ctx, targetId)) continue;
+      if (!hasLineOfSight(ctx.board, tokens(actor.spots, actor.card.height), [{ ...at, height: 1 }], { blockers })) continue;
+      spots.push(at);
+    }
+  }
+  return spots;
+}
+
+function hurl(state: GameState, ctx: RulesContext, rng: Rng, actor: Combatant, power: PowerSpec, targetId: string, at: Step, events: GameEvent[]): void {
+  const t = findFigure(state, targetId)!;
+  const card = cardOf(t.unit, ctx);
+  events.push({ type: "abilityUsed", ability: power.id, figureId: actor.figure.id, targetId, detail: `${power.name}: ${card.name} is thrown` });
+  forcedMove(state, t.unit, t.figure, at, rng, events, ctx);
+  if (!t.figure.destroyed) woundFigure(state, t.unit, t.figure, power.wounds, statsOf(card).life, "ability", events, ctx);
+}
+
+/** Quake Stomp: every other figure next to the stomper rolls defense dice; on no shield it is wounded and cannot move on its next turn. */
+function stomp(state: GameState, ctx: RulesContext, rng: Rng, actor: Combatant, power: PowerSpec, events: GameEvent[]): void {
+  events.push({ type: "abilityUsed", ability: power.id, figureId: actor.figure.id, detail: `${power.name}: the ground shakes` });
+  const dice = param(abilityOf(actor.card, power.id), "defenseDice", 1);
+  for (const c of splashedBy(state, ctx, actor.spots, [actor.figure.id])) {
+    if (c.figure.destroyed) continue;
+    const roll = rollDice(rng, DEFENSE_DIE, dice);
+    const safe = countFaces(roll, "shield") > 0;
+    events.push({
+      type: "abilityUsed",
+      ability: power.id,
+      figureId: actor.figure.id,
+      targetId: c.figure.id,
+      detail: safe ? `${power.name}: ${c.card.name} keeps its feet` : `${power.name}: ${c.card.name} takes ${power.wounds} wound and cannot move on its next turn`,
+    });
+    if (safe) continue;
+    woundFigure(state, c.unit, c.figure, power.wounds, statsOf(c.card).life, "ability", events, ctx);
+    if (!c.figure.destroyed && !isPinned(state, c.figure.id)) state.pinned = [...(state.pinned ?? []), c.figure.id];
+  }
+}
+
+/**
+ * Fire Breath: the row of hexes a breath aimed through the neighbouring hex `first` burns, up to
+ * the power's length, or null if it cannot go that way (not a neighbour, or behind the figure).
+ * Terrain or scenery rising above the breather's head stops the flames.
+ */
+export function breathLine(state: GameState, figureId: string, first: Hex, ctx: RulesContext): Hex[] | null {
+  const a = findFigure(state, figureId);
+  if (!a?.figure.position) return null;
+  const card = cardOf(a.unit, ctx);
+  const power = powerOf(card, "fire-breath");
+  if (!power || card.footprint !== "1") return null;
+  const from = a.figure.position;
+  const dir = hexSub(first, from.hex);
+  if (!DIRECTIONS.some((d) => hexEquals(d, dir))) return null;
+  const facing = facingOf(state, a.figure);
+  if (facing !== null && !seesAny(facing, [{ hex: from.hex, elevation: from.elevation }], [{ hex: first, elevation: from.elevation }])) return null;
+  const top = from.elevation + card.height;
+  const line: Hex[] = [];
+  for (let k = 1; k <= power.range; k++) {
+    const h = { q: from.hex.q + dir.q * k, r: from.hex.r + dir.r * k };
+    const surfaces = ctx.board.surfaces(h);
+    if (surfaces.length === 0) break;
+    if (Math.max(...surfaces.map((s) => s.elevation)) > top) break;
+    if (ctx.board.sceneryIn(h).some((s) => s.placement.elevation + s.rules.height > top)) break;
+    line.push(h);
+  }
+  return line.length > 0 ? line : null;
+}
+
+function breathe(state: GameState, ctx: RulesContext, rng: Rng, actor: Combatant, power: PowerSpec, first: Hex, events: GameEvent[]): void {
+  const line = breathLine(state, actor.figure.id, first, ctx)!;
+  events.push({ type: "abilityUsed", ability: power.id, figureId: actor.figure.id, detail: `${power.name}: flames along ${line.length} hex${line.length === 1 ? "" : "es"}` });
+  const burned = new Set<string>();
+  const top = (actor.figure.position?.elevation ?? 0) + actor.card.height;
+  for (const h of line) {
+    for (const c of figuresAt(state, ctx, h)) {
+      if (c.figure.id === actor.figure.id || burned.has(c.figure.id) || c.figure.destroyed) continue;
+      if (!c.spots.some((s) => hexEquals(s.hex, h) && s.elevation <= top)) continue;
+      burned.add(c.figure.id);
+      resolve(state, ctx, rng, actor, c, power.dice, power.id, events);
+    }
+  }
+}
+
+/** Bonecall: friendly Orc or Undead squads with a fallen figure that could return next to the caller. */
+export function raiseUnits(state: GameState, figureId: string, ctx: RulesContext): string[] {
+  const a = findFigure(state, figureId);
+  if (!a?.figure.position) return [];
+  const actor = combatant(a.unit, a.figure, ctx);
+  return state.units
+    .filter((u) => {
+      if (u.owner !== a.unit.owner) return false;
+      const card = cardOf(u, ctx);
+      if (card.figureCount === 1 || !RAISE_SPECIES.includes(card.species) || card.footprint !== "1") return false;
+      return u.figures.some((f) => f.destroyed) && freeSpotNear(state, ctx, actor.spots, card) !== null;
+    })
+    .map((u) => u.id);
+}
+
+function raise(state: GameState, ctx: RulesContext, actor: Combatant, power: PowerSpec, unitId: string, events: GameEvent[]): void {
+  const unit = state.units.find((u) => u.id === unitId)!;
+  const card = cardOf(unit, ctx);
+  const fallen = unit.figures.find((f) => f.destroyed)!;
+  const spot = freeSpotNear(state, ctx, actor.spots, card)!;
+  fallen.destroyed = false;
+  fallen.wounds = 0;
+  fallen.position = { hex: spot.hex, elevation: spot.elevation, rotation: 0 };
+  faceTowardsMiddle(state, fallen, card.footprint, ctx);
+  events.push({ type: "figureRevived", figureId: fallen.id, at: spot });
+  events.push({ type: "abilityUsed", ability: power.id, figureId: actor.figure.id, targetId: fallen.id, detail: `${power.name}: a fallen ${card.name} figure rises` });
+}
+
+/**
+ * Call to Arms: friendly Disciplined squads, other than the caller's own unit, with a living figure
+ * within the power's range of a living figure of the calling unit.
+ */
+export function callUnits(state: GameState, figureId: string, ctx: RulesContext): string[] {
+  const a = findFigure(state, figureId);
+  if (!a?.figure.position) return [];
+  const power = powerOf(cardOf(a.unit, ctx), "call-to-arms");
+  if (!power) return [];
+  return callableFrom(state, a.unit, power.range, ctx);
+}
+
+function callableFrom(state: GameState, caller: UnitState, range: number, ctx: RulesContext): string[] {
+  const callerCard = cardOf(caller, ctx);
+  const callerSpots = caller.figures.filter((f) => !f.destroyed && f.position).flatMap((f) => figureSpots(f, callerCard.footprint, callerCard.height, ctx));
+  if (callerSpots.length === 0) return [];
+  return state.units
+    .filter((u) => {
+      if (u.owner !== caller.owner || u.id === caller.id) return false;
+      const card = cardOf(u, ctx);
+      if (card.figureCount === 1 || card.personality !== "Disciplined") return false;
+      return u.figures.some((f) => !f.destroyed && f.position && spotDistance(figureSpots(f, card.footprint, card.height, ctx), callerSpots) <= range);
+    })
+    .map((u) => u.id);
+}
+
+/** As a turn ends: the squad Call to Arms chose, if it may still take a turn now; else null. */
+export function calledUnit(state: GameState, ctx: RulesContext): string | null {
+  const active = state.active;
+  if (!active?.callUnit || active.called) return null;
+  const caller = state.units.find((u) => u.id === active.unitId);
+  if (!caller || (state.called ?? []).includes(caller.id)) return null;
+  const power = powerOf(cardOf(caller, ctx), "call-to-arms");
+  if (!power) return null;
+  return callableFrom(state, caller, power.range, ctx).includes(active.callUnit) ? active.callUnit : null;
+}
+
+// ---------------------------------------------------------------------------
+// Reactions to a move
+
+/**
+ * Lurk: when an enemy figure ends a move next to a figure with Lurk standing on water or swamp,
+ * that figure attacks it at once, whichever way it faces. Each does this at most once a turn.
+ */
+export function lurkAttacks(state: GameState, moverId: string, events: GameEvent[], ctx: RulesContext): void {
+  const active = state.active;
+  const m = findFigure(state, moverId);
+  if (!active || !m || m.figure.destroyed || !m.figure.position) return;
+  const rng = new Rng(state.rng);
+  for (const unit of state.units) {
+    if (unit.owner === m.unit.owner) continue;
+    const card = ctx.cards.get(unit.cardId);
+    const lurk = card ? abilityOf(card, "lurk") : undefined;
+    if (!card || !lurk) continue;
+    for (const figure of unit.figures) {
+      if (figure.destroyed || !figure.position || m.figure.destroyed) continue;
+      const lurker = combatant(unit, figure, ctx);
+      const mover = combatant(m.unit, m.figure, ctx);
+      if (!onWetTerrain(lurker.spots, ctx)) continue;
+      if (!spotsEngaged(lurker.spots, card.height, mover.spots, mover.card.height)) continue;
+      const key = `lurk:${figure.id}`;
+      if ((active.once ?? []).includes(key)) continue;
+      if (!canReach(state, ctx, lurker, mover, true)) continue;
+      (active.once ??= []).push(key);
+      events.push({ type: "abilityUsed", ability: lurk.id, figureId: figure.id, targetId: moverId, detail: `${lurk.name}: ${card.name} strikes from the water` });
+      resolve(state, ctx, rng, lurker, mover, statsOf(card).attack, lurk.id, events);
+    }
+  }
+  state.rng = rng.state;
+  checkGameOver(state, events, ctx);
+}

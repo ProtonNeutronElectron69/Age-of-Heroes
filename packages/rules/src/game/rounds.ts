@@ -1,5 +1,7 @@
+import { hexDistance } from "../hex";
 import { Rng } from "../rng";
 import { initiativeBonus, spendInitiativeGlyphs } from "./glyphs";
+import { figureSpots } from "./placement";
 import { activePlayers, findUnit, isUnitAlive, livingUnitsOf, mostNumberedTokens, scoreOf } from "./queries";
 import {
   type DamageSource,
@@ -55,6 +57,7 @@ export function startRound(state: GameState, events: GameEvent[]): void {
   delete state.initiativeReady;
   state.pointer = null;
   state.active = null;
+  delete state.called;
   events.push({ type: "roundStarted", round: state.round });
 }
 
@@ -161,7 +164,10 @@ function endRound(state: GameState, events: GameEvent[], ctx: RulesContext): voi
 // ---------------------------------------------------------------------------
 // Damage
 
-/** Apply wounds to a figure, destroying it if they reach its Life. */
+/**
+ * Apply wounds to a figure, destroying it if they reach its Life. With the rules context, a
+ * hero that would be destroyed may be saved by a friendly Second Wind (once a game).
+ */
 export function woundFigure(
   state: GameState,
   unit: UnitState,
@@ -170,11 +176,51 @@ export function woundFigure(
   life: number,
   cause: DamageSource,
   events: GameEvent[],
+  ctx?: RulesContext,
 ): void {
   if (wounds <= 0 || figure.destroyed) return;
+  if (ctx && figure.wounds + wounds >= life) {
+    const saved = secondWind(state, unit, figure, ctx, events);
+    if (saved) wounds = Math.max(0, life - 1 - figure.wounds);
+    if (wounds <= 0) return;
+  }
   figure.wounds += wounds;
   events.push({ type: "figureWounded", figureId: figure.id, wounds, total: figure.wounds });
   if (figure.wounds >= life) destroyFigure(unit, figure, cause, events);
+}
+
+/**
+ * Second Wind: once a game, a friendly hero within range of the medic that would be destroyed by
+ * wounds is left with 1 Life instead. Returns whether it was saved.
+ */
+function secondWind(state: GameState, unit: UnitState, figure: FigureState, ctx: RulesContext, events: GameEvent[]): boolean {
+  const card = ctx.cards.get(unit.cardId);
+  if (!card || card.figureCount !== 1 || !figure.position) return false;
+  const spots = figureSpots(figure, card.footprint, card.height, ctx);
+  for (const u of state.units) {
+    if (u.owner !== unit.owner) continue;
+    const c = ctx.cards.get(u.cardId);
+    const ability = c?.abilities.find((a) => a.id === "second-wind");
+    if (!c || !ability) continue;
+    const range = ability.params?.range ?? 2;
+    for (const medic of u.figures) {
+      if (medic.destroyed || !medic.position) continue;
+      const key = `second-wind:${medic.id}`;
+      if (state.spent?.includes(key)) continue;
+      const near = figureSpots(medic, c.footprint, c.height, ctx).some((m) => spots.some((s) => hexDistance(m.hex, s.hex) <= range));
+      if (!near) continue;
+      state.spent = [...(state.spent ?? []), key];
+      events.push({
+        type: "abilityUsed",
+        ability: "second-wind",
+        figureId: medic.id,
+        targetId: figure.id,
+        detail: `${ability.name}: ${card.name} stays on its feet with 1 Life`,
+      });
+      return true;
+    }
+  }
+  return false;
 }
 
 export function destroyFigure(unit: UnitState, figure: FigureState, cause: DamageSource, events: GameEvent[]): void {

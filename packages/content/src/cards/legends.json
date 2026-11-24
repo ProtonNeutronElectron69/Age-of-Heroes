@@ -80,12 +80,9 @@
     "points": 125,
     "abilities": [
       {
-        "id": "pack-hunt",
-        "name": "Pack Hunt",
-        "text": "When a Prowler attacks a figure that another Prowler is standing next to, it rolls 1 extra attack die.",
-        "params": {
-          "bonus": 1
-        }
+        "id": "harry",
+        "name": "Harry",
+        "text": "When an enemy figure leaves a hex next to a Prowler, the Prowler's passing strike is a full normal attack instead."
       }
     ]
   },
@@ -167,14 +164,14 @@
     "range": 3,
     "attack": 3,
     "defense": 2,
-    "points": 80,
+    "points": 85,
     "abilities": [
       {
-        "id": "bloodrage",
-        "name": "Bloodrage",
-        "text": "Once any Raider of this squad has been destroyed, every Raider left rolls 1 extra attack die.",
+        "id": "blood-surge",
+        "name": "Blood Surge",
+        "text": "After a Raider's first normal attack in a turn, roll the d20. On 15 or more it may make one more normal attack this turn.",
         "params": {
-          "bonus": 1
+          "needed": 15
         }
       }
     ]
@@ -197,15 +194,15 @@
     "range": 5,
     "attack": 3,
     "defense": 2,
-    "points": 85,
+    "points": 80,
     "abilities": [
       {
-        "id": "command-the-dead",
-        "name": "Command the Dead",
-        "text": "Other friendly Undead figures within 4 hexes of Morvane roll 1 extra attack die.",
+        "id": "life-tap",
+        "name": "Life Tap",
+        "text": "Instead of attacking, Morvane may drain an enemy figure up to 4 hexes away and in sight: roll 2 attack dice against it (it defends normally). Morvane heals 1 wound for each wound it takes.",
         "params": {
           "range": 4,
-          "bonus": 1
+          "dice": 2
         }
       },
       {
@@ -276,23 +273,22 @@
     "range": 1,
     "attack": 4,
     "defense": 3,
-    "points": 115,
+    "points": 125,
     "abilities": [
       {
-        "id": "trample",
-        "name": "Crushing Coils",
-        "text": "Marrowcoil may move through Small and Medium enemy figures. Each figure it moves through rolls 1 defense die; on a blank it takes 1 wound.",
+        "id": "constrict",
+        "name": "Constrict",
+        "text": "Instead of attacking, Marrowcoil may coil around an adjacent Small or Medium enemy figure that is not unique and roll the d20. On 16 or more that figure is destroyed.",
         "params": {
-          "defenseDice": 1
+          "needed": 16
         }
       },
       {
-        "id": "thick-hide",
-        "name": "Bone Plates",
-        "text": "Attacks on Marrowcoil from 3 or more hexes away deal 1 less wound.",
+        "id": "grave-dread",
+        "name": "Grave Dread",
+        "text": "When an enemy figure next to Marrowcoil attacks or uses a special action on its own turn, it rolls the d20 first. On 1 to 6 it loses its nerve and the attack is lost.",
         "params": {
-          "minDistance": 3,
-          "reduce": 1
+          "failOnOrBelow": 6
         }
       }
     ]
@@ -378,12 +374,12 @@
     "points": 65,
     "abilities": [
       {
-        "id": "longshot",
-        "name": "Longshot",
-        "text": "When an Archer attacks a figure 5 or more hexes away, it rolls 1 extra attack die.",
+        "id": "spotters-call",
+        "name": "Spotter's Call",
+        "text": "A Sunbound Archer may shoot at an enemy it cannot see if another friendly figure within 3 hexes of that enemy can see it. It rolls 1 fewer attack die for that shot.",
         "params": {
-          "minDistance": 5,
-          "bonus": 1
+          "range": 3,
+          "reduce": 1
         }
       }
     ]
@@ -406,7 +402,7 @@
     "range": 1,
     "attack": 4,
     "defense": 3,
-    "points": 165,
+    "points": 140,
     "abilities": [
       {
         "id": "flying",
@@ -422,12 +418,9 @@
         }
       },
       {
-        "id": "field-dressing",
-        "name": "Benediction",
-        "text": "At the end of Solenne's turn, remove 1 wound from the most wounded friendly hero next to her, or from herself.",
-        "params": {
-          "heal": 1
-        }
+        "id": "wings-of-refuge",
+        "name": "Wings of Refuge",
+        "text": "When Solenne flies, she may carry one friendly Small or Medium single-hex figure from next to her and set it down next to where she lands. It takes no passing strikes."
       }
     ]
   },
@@ -449,7 +442,7 @@
     "range": 5,
     "attack": 3,
     "defense": 2,
-    "points": 80,
+    "points": 75,
     "abilities": [
       {
         "id": "arc-lightning",
@@ -462,12 +455,11 @@
         }
       },
       {
-        "id": "deflector-field",
-        "name": "Arcane Ward",
-        "text": "Friendly figures next to Orrin (not Orrin himself) roll 1 extra defense die against attacks from 3 or more hexes away.",
+        "id": "blink",
+        "name": "Blink",
+        "text": "Instead of moving normally, Orrin may vanish and reappear on a free hex up to 4 hexes away that he can see. That is his whole move: he takes no passing strikes, and nothing between matters.",
         "params": {
-          "minDistance": 3,
-          "bonus": 1
+          "range": 4
         }
       }
     ]

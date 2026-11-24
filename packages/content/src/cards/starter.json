@@ -17,7 +17,7 @@
     "range": 4,
     "attack": 3,
     "defense": 3,
-    "points": 100,
+    "points": 120,
     "abilities": [
       {
         "id": "rally-the-line",
@@ -29,11 +29,11 @@
         }
       },
       {
-        "id": "duelist",
-        "name": "Officer's Sabre",
-        "text": "When Captain Vance attacks an adjacent hero, she rolls 1 extra attack die.",
+        "id": "call-to-arms",
+        "name": "Call to Arms",
+        "text": "Once a round, choose a friendly Disciplined squad with a figure within 4 hexes of Captain Vance. When her turn ends, that squad takes a turn straight away, without a token.",
         "params": {
-          "bonus": 1
+          "range": 4
         }
       }
     ]
@@ -87,7 +87,7 @@
     "range": 1,
     "attack": 4,
     "defense": 4,
-    "points": 135,
+    "points": 145,
     "abilities": [
       {
         "id": "answering-blade",
@@ -98,12 +98,9 @@
         }
       },
       {
-        "id": "charge",
-        "name": "Lightning Draw",
-        "text": "When Lady Asagiri attacks an adjacent enemy after moving this turn, she rolls 1 extra attack die.",
-        "params": {
-          "bonus": 1
-        }
+        "id": "circle-cut",
+        "name": "Circle Cut",
+        "text": "Instead of a normal attack, Lady Asagiri may strike every enemy figure next to her, whichever way she faces, rolling her attack dice against each in turn."
       }
     ]
   },
@@ -163,13 +160,12 @@
         "text": "Cinderjaw flies: count its move in hexes straight to where it lands, ignoring terrain, height and figures on the way. Terrain only affects it where it lands, and it never takes falling damage."
       },
       {
-        "id": "ember-spit",
-        "name": "Ember Spit",
-        "text": "Instead of a normal attack, Cinderjaw may spit fire at a figure up to 3 hexes away with 2 attack dice. Every other figure next to the target, except Cinderjaw, is also attacked with 1 die.",
+        "id": "fire-breath",
+        "name": "Fire Breath",
+        "text": "Instead of attacking, Cinderjaw breathes fire along a straight row of 4 hexes from its own, in front of it. Roll 3 attack dice against every figure in the row, friend or foe; each defends normally. Terrain or scenery higher than Cinderjaw's head stops the flames.",
         "params": {
-          "range": 3,
-          "dice": 2,
-          "splashDice": 1
+          "range": 4,
+          "dice": 3
         }
       },
       {
@@ -232,7 +228,7 @@
     "range": 5,
     "attack": 3,
     "defense": 5,
-    "points": 140,
+    "points": 165,
     "abilities": [
       {
         "id": "deflector-field",
@@ -244,11 +240,11 @@
         }
       },
       {
-        "id": "steady-aim",
-        "name": "Targeting Array",
-        "text": "If K-7 has not moved this turn, it rolls 1 extra attack die.",
+        "id": "twin-cannons",
+        "name": "Twin Cannons",
+        "text": "If K-7 has not moved this turn, it may make two normal attacks, at the same target or different ones.",
         "params": {
-          "bonus": 1
+          "attacks": 2
         }
       }
     ]
@@ -337,15 +333,12 @@
     "range": 1,
     "attack": 3,
     "defense": 3,
-    "points": 80,
+    "points": 90,
     "abilities": [
       {
-        "id": "brace",
-        "name": "Brace",
-        "text": "When an adjacent enemy that moved this turn attacks a Pikeman, the Pikeman rolls 2 extra defense dice.",
-        "params": {
-          "bonus": 2
-        }
+        "id": "shieldbearers",
+        "name": "Shieldbearers",
+        "text": "When a friendly hero next to a Pikeman takes wounds from an attack, a Pikeman next to that hero takes 1 of those wounds instead."
       }
     ]
   },
@@ -367,7 +360,7 @@
     "range": 3,
     "attack": 2,
     "defense": 3,
-    "points": 65,
+    "points": 70,
     "abilities": [
       {
         "id": "field-dressing",
@@ -378,11 +371,11 @@
         }
       },
       {
-        "id": "smite-the-unholy",
-        "name": "Blessed Rounds",
-        "text": "When Sister Maren attacks an Undead or Oni figure, she rolls 2 extra attack dice.",
+        "id": "second-wind",
+        "name": "Second Wind",
+        "text": "Once a game, when wounds would destroy a friendly hero within 2 hexes of Sister Maren (or Maren herself), it is left with 1 Life instead.",
         "params": {
-          "bonus": 2
+          "range": 2
         }
       }
     ]
@@ -417,11 +410,11 @@
         }
       },
       {
-        "id": "smoke-step",
-        "name": "Drifting Lantern",
-        "text": "After Kenzo attacks or uses Lantern Gaze, he may move up to 2 hexes. He does not take passing strikes during this move.",
+        "id": "mist-form",
+        "name": "Mist Form",
+        "text": "When Kenzo is attacked from 2 or more hexes away and rolls at least one shield, he takes no wounds from that attack.",
         "params": {
-          "move": 2
+          "minDistance": 2
         }
       }
     ]
@@ -447,12 +440,12 @@
     "points": 125,
     "abilities": [
       {
-        "id": "thick-hide",
-        "name": "Thick Hide",
-        "text": "Attacks from 3 or more hexes away deal 1 less wound to the Oni.",
+        "id": "hurl",
+        "name": "Hurl",
+        "text": "Instead of attacking, the Oni may grab an adjacent Small or Medium single-hex enemy and throw it onto a free hex up to 3 hexes away that the Oni can see. It takes 1 wound as it lands, plus any fall, and rolls for lava where it lands.",
         "params": {
-          "minDistance": 3,
-          "reduce": 1
+          "range": 3,
+          "wounds": 1
         }
       },
       {
@@ -495,12 +488,11 @@
         }
       },
       {
-        "id": "hidden-in-the-leaves",
-        "name": "Forest Veil",
-        "text": "While standing on forest, Sylvanne rolls 2 extra defense dice against attacks from 4 or more hexes away.",
+        "id": "treewalk",
+        "name": "Treewalk",
+        "text": "Sylvanne may step from a forest hex to any other forest hex up to 8 hexes away, as one step costing 1 Move.",
         "params": {
-          "minDistance": 4,
-          "bonus": 2
+          "range": 8
         }
       }
     ]
@@ -538,11 +530,12 @@
         }
       },
       {
-        "id": "trample",
-        "name": "Crushing Stride",
-        "text": "Atlas may move through Small and Medium enemy figures. Each figure it moves through rolls 1 defense die; on a blank it takes 1 wound.",
+        "id": "quake-stomp",
+        "name": "Quake Stomp",
+        "text": "Instead of attacking, Atlas stamps: every other figure next to it, friend or foe, rolls 1 defense die. On a blank it takes 1 wound and cannot move on its unit's next turn.",
         "params": {
-          "defenseDice": 1
+          "defenseDice": 1,
+          "wounds": 1
         }
       }
     ]

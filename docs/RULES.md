@@ -287,7 +287,10 @@ General rulings:
 - Bonus dice from abilities add to height bonuses. Every roll lists why its dice changed.
 - **Special actions** (Ember Spit, Mortar Barrage, Arc Lightning, Lantern Gaze, Grapple Line, Fae Step, and their renamed copies such as Mind Tether, Spore Pod and Tongue Lash) are used **instead of** the figure's normal attack, and follow the normal attack rules (engagement, line of sight) unless they say otherwise.
 - **Blasts** (Ember Spit, Mortar Barrage, Arc Lightning, and the units' own blasts such as grenades) hit the target and every other figure next to the hex the blast lands on. A target on one hex is hit on that hex. Against a target on several hexes, the player picks which of its hexes to aim at (click the target, then one of its red hexes); that hex must be within the blast's range, and only figures next to it are caught. No figure is hit twice by one blast: the target takes the full dice once, however many of its hexes touch the aimed hex, and every other figure caught takes the splash dice once. A blast whose card says it may be aimed at a hex (`hexTarget`) can instead land on an empty hex in range and, unless it ignores sight, in sight; it then hits only the figures next to that hex, with the splash dice. Games saved before aiming existed have no aimed hex: they replay as they were played, splashing round every hex of a big target.
-- **Forced moves** (Shove, Grapple Line) move a figure without walking: there are no passing strikes and no ice slips, but the figure takes falling damage if it drops far enough and rolls for lava where it lands. **Assumption.**
+- **Forced moves** (Shove, Grapple Line, Hurl) move a figure without walking: there are no passing strikes and no ice slips, but the figure takes falling damage if it drops far enough and rolls for lava where it lands. **Assumption.**
+- **Powers** (Hurl, Quake Stomp, Fire Breath, Bonecall) are special actions aimed at a place or a squad rather than at a figure; like the others they are used instead of the normal attack. Life Tap, Constrict and Circle Cut are aimed at a figure like any attack. Call to Arms is not instead of attacking.
+- **Extra attacks** (Blood Surge, Second Arrow, Twin Cannons) are normal attacks only, never special actions, and the figure still cannot move after attacking.
+- **Grave Dread** is rolled before an attack or special action a figure makes on its own turn; reactions (Last Stand, Lurk, Harry) are not checked.
 
 | Ability | What it does |
 |---|---|
@@ -300,7 +303,7 @@ General rulings:
 | **Deflector Field** | Friendly figures next to the guardian (not the guardian itself) get +1 defense die against attacks from 3 or more hexes away. |
 | **Hidden in the Leaves** | On forest, +2 defense dice against attacks from 4 or more hexes away. |
 | **Moss Armor** | +1 defense die against attacks from 4 or more hexes away. |
-| **Brace** | +2 defense dice when attacked by an adjacent enemy that moved this turn. |
+| **Brace** (on no card now) | +2 defense dice when attacked by an adjacent enemy that moved this turn. |
 | **Answering Blade** | When defending against an adjacent attacker and rolling more shields than it rolled skulls, the attacker takes 1 wound. |
 | **Thick Hide** | Attacks from 3 or more hexes away deal 1 less wound. |
 | **Salvage Protocol** | When a figure of the squad destroys an enemy, one destroyed figure of that squad returns, unwounded, on a free spot next to the attacker. |
@@ -311,12 +314,12 @@ General rulings:
 | **Arc Lightning** (special action) | Range 5, in sight: 3 attack dice against the target, and 1 attack die against every other figure next to the target (friend or foe, never the attacker). Each defends normally. |
 | **Charge** | +1 attack die when attacking an adjacent enemy after moving this turn. (Brace answers it.) |
 | **Steady Aim** | +1 attack die if the figure has not moved this turn. |
-| **Longshot** | +1 attack die against a figure 5 or more hexes away. |
+| **Longshot** (on no card now) | +1 attack die against a figure 5 or more hexes away. |
 | **Pack Hunt** | +1 attack die when another figure of the same squad is next to the target. |
 | **Way of the Blade** (duelist) | +1 attack die when attacking an adjacent hero. |
-| **Bloodrage** | +1 attack die once any figure of the squad has been destroyed. |
+| **Bloodrage** (on no card now) | +1 attack die once any figure of the squad has been destroyed. |
 | **Smite the Unholy** | +2 attack dice against Undead and Oni figures. |
-| **Command the Dead** | Other friendly Undead figures within 4 hexes of the necromancer get +1 attack die (an aura). |
+| **Command the Dead** (on no card now) | Other friendly Undead figures within 4 hexes of the necromancer get +1 attack die (an aura). |
 | **Shield Wall** | +1 defense die while another figure of the same squad stands next to the defender. |
 | **Soul Reap** | When the figure destroys a figure with an attack, it removes 1 wound from itself. |
 | **Reboot** | When a figure of the squad is destroyed by an attack, roll a d20. On 17 or more it stands back up where it fell, with no wounds. |
@@ -333,13 +336,38 @@ General rulings:
 | **War Drums** | Other friendly Orc figures that start a move within 3 hexes of the drummer get +2 Move for that move (an aura). |
 | **Corpse Feast** | When a figure of the squad destroys a figure with a normal attack, it may move up to 2 hexes, drawing no passing strikes. |
 | **Challenge** | An enemy figure next to this figure may only target this figure with its attacks and special actions. |
-| **Piercing** | The target rolls 1 fewer defense die (never fewer than none). |
+| **Piercing** (on no card now) | The target rolls 1 fewer defense die (never fewer than none). |
 | **Mending Hymn** | At the end of the squad's turn, the most wounded friendly hero within 3 hexes of any figure of the squad removes 1 wound. |
 | **Hive Command** | Other friendly Alien figures within 3 hexes of the overmind get +1 attack die (an aura). |
-| **Mire Skin** (bog-skin) | On water or swamp, +2 defense dice. Swamp never wounds the squad. |
+| **Mire Skin** (bog-skin) (on no card now) | On water or swamp, +2 defense dice. Swamp never wounds the squad. |
 | **Long Strides** (amphibious) | Water and swamp cost no extra Move to enter and do not end the figure's move, so it wades through them as through open ground. Swamp never wounds it. |
 | **Numbing Glare** | Before a normal attack on a Small or Medium figure, roll a d20. On 14 or more the target rolls no defense dice against that attack (cover and other bonuses included). Large and Huge targets are not rolled for. |
 | **Spawning Pool** (spawn-pool) | At the end of the squad's turn, if none of its figures attacked (special actions count as attacks), roll a d20 for each standing figure of the squad in turn, while any are destroyed. On 16 or more (12 or more for a figure on water or swamp) one destroyed figure returns, with no wounds, on a free spot next to the figure that rolled (if there is none, that roll is lost). |
+| **Blood Surge** (blood-surge) | After a figure's first normal attack in a turn, roll the d20. On 15 or more it may make one more normal attack this turn. |
+| **Second Arrow** (second-arrow) | Once a turn, when the figure destroys a figure with a normal attack, it may make one more normal attack this turn. |
+| **Twin Cannons** (twin-cannons) | If the figure has not moved this turn, it may make two normal attacks, at the same target or different ones. |
+| **Life Tap** (special action) | Range 4, in sight: roll 2 attack dice against an enemy (it defends normally). The figure heals 1 wound for each wound dealt. |
+| **Constrict** (special action) | Against an adjacent Small or Medium enemy that is not unique: roll the d20. On 16 or more it is destroyed outright. |
+| **Circle Cut** (special action) | A normal attack on every enemy next to the figure, one after another, whichever way it faces. |
+| **Hurl** (power) | Pick up an adjacent Small or Medium single-hex enemy and throw it onto a free hex up to 3 hexes away that the figure can see. It lands as a forced move and takes 1 wound. |
+| **Quake Stomp** (power) | Every other figure next to the figure, friend or foe, rolls 1 defense die. On no shield it takes 1 wound and cannot move on its unit's next turn. |
+| **Fire Breath** (power) | Aimed through one of the six hexes next to the figure, in front of it: a straight row of 4 hexes. Roll 3 attack dice against every figure in the row (each defends normally), friend or foe. Terrain or scenery higher than the figure's head stops the flames there. |
+| **Bonecall** (power) | One destroyed figure of a friendly Orc or Undead squad returns unwounded on a free hex next to the figure. |
+| **Call to Arms** | Once a round, the player picks a friendly Disciplined squad with a figure within 4 hexes of the figure's unit. When this turn ends, if the squad is still in reach, it takes a turn straight away without a token; then play moves on as it would have. |
+| **Grave Dread** (grave-dread) | An enemy figure next to the figure rolls the d20 before it attacks or uses a special action; on 1 to 6 the attack is lost (it still counts as made). |
+| **Mist Form** (mist-form) | Attacked from 2 or more hexes away, the figure takes no wounds if it rolls at least one shield. |
+| **Shieldbearers** | When a friendly hero next to a figure with this ability takes wounds from an attack, that figure takes 1 of them instead. |
+| **Second Wind** (second-wind) | Once a game, when wounds would destroy a friendly hero within 2 hexes of the figure (the figure included), it is left with 1 Life. |
+| **Lurk** | When an enemy figure ends a move next to the figure while it stands on water or swamp, it attacks that enemy at once, whichever way it faces; each figure does this once a turn. Swamp never wounds it. |
+| **Harry** | A passing strike from the figure is a full normal attack (the mover defends as usual). |
+| **Caustic Spores** (caustic-spores) | A figure that takes at least one skull from the attack is poisoned: at the end of each of its unit's next two turns it rolls the d20, and on 1 to 7 takes 1 wound. Poisoning again starts the count again. |
+| **Piercing Bolts** (bolt-through) | After a normal attack by a single-hex figure on a single-hex target along a straight row of hexes, the next figure behind the target on that row, within range and in sight, is also attacked with 1 fewer attack die, friend or foe. |
+| **Spotter's Call** (spotters-call) | A normal attack may target an enemy the figure cannot see if another friendly figure within 3 hexes of that enemy can see it; it rolls 1 fewer attack die. Range and facing still apply. |
+| **Blink** | Instead of walking, a single-hex figure that has not moved this turn may reappear on a free hex up to 4 hexes away that it can see. That ends its movement for the turn: no passing strikes, lava where it lands. |
+| **Treewalk** | From a forest hex, one step of 1 Move may reach any forest hex within 8. |
+| **Phase Walk** (phase-walk) | The figure moves through any figure, friend or foe, and never takes passing strikes. It still cannot end on another figure. |
+| **Mag-Lock Boots** (mag-lock-boots) | The figure climbs any height in one step, with no extra Move for the climb, and never takes falling damage. |
+| **Wings of Refuge** (wings-of-refuge) | When the flying figure flies, it may carry one friendly Small or Medium single-hex figure that stands next to it and is not pinned, setting it down on a free hex next to where it lands. The carried figure takes no passing strikes and rolls for lava where it is set down. |
 
 Every squad has 1 special ability and every hero has 2; Flying comes on top and does not count. Many cards give one of these rules a name of their own, and the card text spells it out. For example:
 - Flying: Jet Packs (Skyhook Raiders).

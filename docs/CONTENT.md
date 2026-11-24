@@ -66,11 +66,13 @@ An ability is engine code named by an id. To add one:
    - `afterAttack` for reactions (it gets the RNG for rolls);
    - `endOfTurnAbilities` for end-of-turn effects;
    - movement (`movement.ts`) for things like flying and trample;
-   - `AREA_IDS` / `MIND_IDS` for special actions. A blast (an `AREA_IDS` ability) reads `range`, `minRange`, `dice`, `splashDice` and `ignoresSight`; give it `"hexTarget": 1` if its text lets it land on an empty hex (the `blast` command), and say so in the text.
+   - `AREA_IDS` / `MIND_IDS` for special actions. A blast (an `AREA_IDS` ability) reads `range`, `minRange`, `dice`, `splashDice` and `ignoresSight`; give it `"hexTarget": 1` if its text lets it land on an empty hex (the `blast` command), and say so in the text;
+   - `POWER_KINDS` for a power: a special action of one of the newer kinds (drain, crush, sweep, aimed at a figure with `attack`; throw, stomp, breath, raise and orders, used with the `power` command in `combat.ts`). A new kind needs its rule in `combat.ts` and a control on the play screen;
+   - `grantExtraAttacks` in `combat.ts` for more attacks in a turn, and `resolve` in `strike.ts` for anything that changes one attack's wounds (Shieldbearers, Second Wind in `woundFigure`).
 
    Read numbers with `param(ability, "name", default)`. Update the id list in the comment at the top of the file.
-2. Add a test in `packages/rules/test/abilities.test.ts`: a test card in `ABILITY_CARDS` and a case for when it applies and when it does not. Use `withOutcome` for rolls.
-3. Add the id to the implemented list in `packages/content/test/content.test.ts`.
+2. Add a test in `packages/rules/test/abilities.test.ts` (or the file for its drop, such as `abilities-drop2.test.ts`): a test card and a case for when it applies and when it does not. Use `withOutcome` for rolls.
+3. Add the id to the implemented list in `packages/content/test/content.test.ts`. A test there keeps every ability (Flying aside) on at most two units.
 4. Give it a value multiplier in `ABILITY_VALUE` in `packages/content/src/balance.ts`. Support auras are worth more than their holder's stats suggest.
 5. Describe it in the abilities table in [RULES.md](RULES.md) section 11.
 6. If it produces new event types, describe them in `apps/client/src/describe.ts` (the log) and, for rolls, in `DiceOverlay` (`apps/client/src/ui/panels.tsx`).

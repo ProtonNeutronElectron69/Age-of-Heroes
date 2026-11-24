@@ -162,15 +162,12 @@
     "range": 1,
     "attack": 3,
     "defense": 2,
-    "points": 75,
+    "points": 80,
     "abilities": [
       {
-        "id": "bog-skin",
-        "name": "Mire Skin",
-        "text": "A Murk Stalker standing on water or swamp rolls 2 extra defense dice, and swamp never wounds it.",
-        "params": {
-          "bonus": 2
-        }
+        "id": "lurk",
+        "name": "Lurk",
+        "text": "When an enemy figure ends a move next to a Murk Stalker standing on water or swamp, that Stalker attacks it at once, whichever way it faces (each Stalker once a turn). Swamp never wounds a Murk Stalker."
       }
     ]
   },
@@ -195,15 +192,12 @@
     "points": 60,
     "abilities": [
       {
-        "id": "mortar-barrage",
-        "name": "Spore Pod",
-        "text": "Instead of attacking, a Spore Lobber may lob a spore pod at a figure 2 to 6 hexes away; it needs no line of sight. The target takes 2 attack dice and every other figure next to it takes 1.",
+        "id": "caustic-spores",
+        "name": "Caustic Spores",
+        "text": "A figure that takes at least one skull from a Spore Lobber's attack is poisoned: at the end of each of its unit's next two turns it rolls the d20, and on 1 to 7 it takes 1 wound.",
         "params": {
-          "range": 6,
-          "minRange": 2,
-          "dice": 2,
-          "splashDice": 1,
-          "ignoresSight": 1
+          "turns": 2,
+          "woundOnOrBelow": 7
         }
       }
     ]

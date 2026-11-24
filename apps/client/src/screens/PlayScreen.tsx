@@ -4,6 +4,12 @@ import {
   LEVEL_HEIGHT,
   areaAttackOf,
   attackProblem,
+  breathLine,
+  callUnits,
+  carryFriends,
+  carrySpots,
+  hurlSpots,
+  raiseUnits,
   attackTargets,
   blastSpots,
   centreOf,
@@ -19,6 +25,7 @@ import {
   findFigure,
   specialActions,
   hexToWorld,
+  DIRECTIONS,
   hexDistance,
   moveOptions,
   placementKey,
@@ -203,6 +210,10 @@ export function PlayScreen({ session }: { session: Session }) {
   const [attackMode, setAttackMode] = useState<string | null>(null);
   /** A blast at a figure covering several hexes waits here while the player picks the hex to aim at. */
   const [aiming, setAiming] = useState<string | null>(null);
+  /** Hurl: the enemy picked up, while the player picks where to throw it. */
+  const [throwing, setThrowing] = useState<string | null>(null);
+  /** Wings of Refuge: the friend the chosen flyer will carry on its next flight, if any. */
+  const [carryId, setCarryId] = useState<string | null>(null);
   const [revealedFor, setRevealedFor] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(true);
   /** Keep the selected figure's unit card on screen (a viewer preference, kept in the browser). */
@@ -287,7 +298,11 @@ export function PlayScreen({ session }: { session: Session }) {
   const mayAct = (id: string) =>
     !!active &&
     !!activeUnit?.figures.some((f) => f.id === id && !f.destroyed && f.position) &&
-    (!active.attacked.includes(id) || (active.bonusMoves[id] ?? 0) > 0);
+    (!active.attacked.includes(id) || (active.bonusMoves[id] ?? 0) > 0 || extraAttacks(id) > 0);
+  /** Normal attacks a figure may still make after its first this turn (Blood Surge, Second Arrow, Twin Cannons). */
+  function extraAttacks(id: string): number {
+    return active?.extraAttacks?.[id] ?? 0;
+  }
   /** Can this device pick the figure to act with? */
   const canAct = (id: string) => myTurn && mayAct(id);
   /** A figure of the acting unit that has moved, not attacked, and has movement left for another piece. */
@@ -336,7 +351,15 @@ export function PlayScreen({ session }: { session: Session }) {
 
   /** A figure of the acting unit that has not attacked and has a target, now or once turned to face it. */
   const canAttack = (id: string): boolean => {
-    if (!active || !activeCard || active.attacked.includes(id)) return false;
+    if (!active || !activeCard) return false;
+    if (active.attacked.includes(id)) {
+      if (extraAttacks(id) === 0) return false;
+      try {
+        return attackTargets(state, id, ctx).length > 0;
+      } catch {
+        return false;
+      }
+    }
     // With facing, a figure that may still turn can face any target in range and sight.
     const sight = state.config.facing && canTurn(id) ? { ...state, config: { ...state.config, facing: false } } : state;
     const modes = [undefined, ...specialActions(activeCard).map((sp) => sp.id)];
@@ -624,6 +647,8 @@ export function PlayScreen({ session }: { session: Session }) {
     setAttackMode(null);
   }, [selected, turnKey]);
   useEffect(() => setAiming(null), [selected, turnKey, attackMode, state]);
+  useEffect(() => setThrowing(null), [selected, turnKey, attackMode, state]);
+  useEffect(() => setCarryId(null), [selected, turnKey, session.events.length]);
   useEffect(() => setEndRotation(null), [selected, turnKey, session.events.length]);
   // With the dice show off, this device rolls for its players at once.
   useEffect(() => {
@@ -637,12 +662,17 @@ export function PlayScreen({ session }: { session: Session }) {
   const initiativeEvent = show?.kind === "initiative" ? initiativeIn(show.events) : freshInitiative;
   const initiativeOpen =
     display.dice !== "none" && (together ? state.phase === "initiative" || initiativeEvent !== null : show?.kind === "initiative");
-  const specials = activeCard ? specialActions(activeCard) : [];
+  // Call to Arms is not used instead of attacking: it has a control of its own.
+  const allSpecials = activeCard ? specialActions(activeCard) : [];
+  const specials = allSpecials.filter((s) => s.kind !== "orders");
+  const orders = allSpecials.find((s) => s.kind === "orders");
   const modeKind = specials.find((s) => s.id === attackMode)?.kind ?? null;
   const blast = activeCard && attackMode ? areaAttackOf(activeCard, attackMode) : undefined;
 
   const options = useMemo<Map<string, MoveOption>>(() => {
     if (!active || !selected || resurrecting) return new Map();
+    // Aiming Fire Breath or a throw: the red and orange hexes are for that, not for moving.
+    if (modeKind === "breath" || throwing) return new Map();
     const bonus = active.attacked.includes(selected) && (active.bonusMoves[selected] ?? 0) > 0;
     // A figure that has moved may move on with what it has left, until it attacks.
     if (!bonus && active.attacked.includes(selected)) return new Map();
@@ -651,11 +681,29 @@ export function PlayScreen({ session }: { session: Session }) {
     } catch {
       return new Map();
     }
-  }, [state, ctx, active, selected, resurrecting]);
+  }, [state, ctx, active, selected, resurrecting, modeKind, throwing]);
   const targets = useMemo(() => {
-    if (!active || !selected || resurrecting || active.attacked.includes(selected)) return new Set<string>();
+    if (!active || !selected || resurrecting) return new Set<string>();
+    // After its first attack, a figure with an extra attack may make another normal one.
+    if (active.attacked.includes(selected) && (attackMode || (active.extraAttacks?.[selected] ?? 0) === 0)) return new Set<string>();
+    // Powers aimed at a place or a squad have no figure to click.
+    if (modeKind === "stomp" || modeKind === "breath" || modeKind === "raise") return new Set<string>();
     return new Set(attackTargets(state, selected, ctx, attackMode ?? undefined));
-  }, [state, ctx, active, selected, attackMode, resurrecting]);
+  }, [state, ctx, active, selected, attackMode, modeKind, resurrecting]);
+  /** Hurl: where the picked-up enemy may be thrown. */
+  const throwSpots = useMemo<Step[]>(() => (throwing && selected ? hurlSpots(state, selected, throwing, ctx) : []), [throwing, selected, state, ctx]);
+  /** Fire Breath: the hexes next to the figure it may breathe through, each with the row it would burn. */
+  const breaths = useMemo(() => {
+    if (modeKind !== "breath" || !selected || !active || active.attacked.includes(selected)) return [];
+    const here = findFigure(state, selected)?.figure.position;
+    if (!here) return [];
+    return DIRECTIONS.flatMap((d) => {
+      const first = { q: here.hex.q + d.q, r: here.hex.r + d.r };
+      const line = breathLine(state, selected, first, ctx);
+      const top = Math.max(...ctx.board.surfaces(first).map((s) => s.elevation));
+      return line && Number.isFinite(top) ? [{ first: { hex: first, elevation: top }, line }] : [];
+    });
+  }, [modeKind, selected, active, state, ctx]);
   const moveBig = activeCard ? activeCard.footprint !== "1" : false;
   /** The hexes of the aimed-at figure a blast may land on. */
   const aimSpots = useMemo<Step[]>(() => {
@@ -726,6 +774,8 @@ export function PlayScreen({ session }: { session: Session }) {
     const key = e.key.toLowerCase();
     if (key === "escape" && aiming) {
       setAiming(null);
+    } else if (key === "escape" && throwing) {
+      setThrowing(null);
     } else if (key === "escape" && resurrecting) {
       setResurrect(null);
     } else if (key === "t") {
@@ -959,10 +1009,17 @@ export function PlayScreen({ session }: { session: Session }) {
     });
   }
 
+  // ---- New powers' choices: squads to raise, friends to carry, squads to call to arms ----
+  const raiseChoices = modeKind === "raise" && selected ? raiseUnits(state, selected, ctx) : [];
+  const carryChoices = selected && active && !active.moved.includes(selected) ? carryFriends(state, selected, ctx) : [];
+  const callerId = orders && activeUnit ? (activeUnit.figures.find((f) => !f.destroyed && f.position)?.id ?? null) : null;
+  const calledThisRound = !!active && (state.called ?? []).includes(active.unitId);
+  const callChoices = callerId ? callUnits(state, callerId, ctx) : [];
+
   // ---- The turn sheet: each figure's state, the chosen figure's pills and one line of help ----
   const figureState = (id: string): string => {
     if (!active) return "";
-    if (active.attacked.includes(id)) return (active.bonusMoves[id] ?? 0) > 0 ? "may still move" : "done";
+    if (active.attacked.includes(id)) return extraAttacks(id) > 0 ? "may attack again" : (active.bonusMoves[id] ?? 0) > 0 ? "may still move" : "done";
     if (active.moved.includes(id)) return canMoveOn(id) ? "moved, can move on" : "moved";
     return "";
   };
@@ -971,6 +1028,7 @@ export function PlayScreen({ session }: { session: Session }) {
     const pills: Pill[] = [];
     const attacked = active.attacked.includes(id);
     if (options.size > 0) pills.push({ text: active.moved.includes(id) ? "Can move on" : "Can move", tone: "good" });
+    else if (attacked && extraAttacks(id) > 0) pills.push({ text: "May attack again", tone: "good" });
     else if (attacked) pills.push({ text: "Has attacked" });
     else if (active.moved.includes(id)) pills.push({ text: "Has moved" });
     if (!attacked) {
@@ -979,8 +1037,11 @@ export function PlayScreen({ session }: { session: Session }) {
       else if (n > 0) pills.push({ text: n === 1 ? "1 target" : `${n} targets`, tone: "good" });
       else if (blastHexes.length === 0) pills.push({ text: "No target in range" });
     }
+    if (attacked && extraAttacks(id) > 0 && targets.size > 0) pills.push({ text: targets.size === 1 ? "1 target" : `${targets.size} targets`, tone: "good" });
     if (engagedCount(id) > 0) pills.push({ text: "Engaged", tone: "warn" });
     if (state.pinned?.includes(id)) pills.push({ text: "Pinned", tone: "warn" });
+    const poison = state.poisoned?.find((p) => p.figureId === id);
+    if (poison) pills.push({ text: `Poisoned (${poison.turnsLeft} turn${poison.turnsLeft === 1 ? "" : "s"})`, tone: "warn" });
     return pills;
   };
   /** What to do now, in a sentence, then what the hovered move costs and what R does. */
@@ -990,6 +1051,12 @@ export function PlayScreen({ session }: { session: Session }) {
     if (eyeView) return "Drag or use the arrow keys to look around. Clicking an enemy faces it; a red-ringed one is attacked. Exit eye view to end the turn.";
     if (!selected) return "This unit has finished: end the turn.";
     if (aiming) return "Click a red hex to aim the blast; figures next to it are hit too. Esc picks another target.";
+    if (throwing) return `Click an orange hex to throw ${names.figure(throwing)} there. Esc picks another enemy.`;
+    if (modeKind === "throw") return targets.size > 0 ? "Click an enemy beside the figure to pick it up." : "No Small or Medium enemy beside it to throw.";
+    if (modeKind === "breath") return breaths.length > 0 ? "Click a red hex beside the figure to breathe fire that way; hover one to see the row it burns." : "There is no way in front of it to breathe fire.";
+    if (modeKind === "stomp") return "Press the button below to stamp: every figure beside it, friend or foe, may be wounded.";
+    if (modeKind === "raise") return "Choose a squad below to call back one of its fallen.";
+    if (modeKind === "sweep") return targets.size > 0 ? "Click any enemy beside the figure: it strikes every one of them." : "No enemy beside it.";
     const canMove = options.size > 0;
     const hits = targets.size > 0;
     let first: string;
@@ -1068,6 +1135,56 @@ export function PlayScreen({ session }: { session: Session }) {
     }
   }
   for (const s of blastHexes) markers.push({ step: s, color: "#e53935", opacity: 0.3 });
+  /** Use a power (the `power` command) with the chosen figure. */
+  const sendPower = (ability: string, aim: { targetId?: string; unitId?: string; at?: Step }) => {
+    if (!active || !selected) return;
+    setThrowing(null);
+    dispatch({
+      type: "power",
+      player: active.player,
+      figureId: selected,
+      ability,
+      ...(aim.targetId ? { targetId: aim.targetId } : {}),
+      ...(aim.unitId ? { unitId: aim.unitId } : {}),
+      ...(aim.at ? { at: { hex: aim.at.hex, elevation: aim.at.elevation } } : {}),
+    });
+  };
+  // Hurl: orange hexes the picked-up enemy may be thrown onto.
+  if (throwing && attackMode) {
+    for (const s of throwSpots) markers.push({ step: s, color: "#ff9800", opacity: 0.45, onClick: () => !busy && sendPower(attackMode, { targetId: throwing, at: s }) });
+  }
+  // Fire Breath: a red hex next to the figure for each way it may breathe; hovering one shows the row it burns.
+  if (attackMode && breaths.length > 0) {
+    const shown = hoverStep ? breaths.find((b) => b.line.some((h) => h.q === hoverStep.hex.q && h.r === hoverStep.hex.r)) : undefined;
+    for (const b of breaths) {
+      markers.push({ step: b.first, color: "#e53935", opacity: shown === b ? 0.6 : 0.35, onClick: () => !busy && sendPower(attackMode, { at: b.first }) });
+    }
+    for (const h of shown?.line.slice(1) ?? []) {
+      const top = Math.max(...ctx.board.surfaces(h).map((s) => s.elevation));
+      markers.push({ step: { hex: h, elevation: top }, color: "#ff7043", opacity: 0.4 });
+    }
+  }
+  /** Wings of Refuge: where a carried friend is set down beside a landing spot: the free hex nearest where it stands now. */
+  const carryFor = (landing: Step): { figureId: string; to: Step } | null => {
+    if (!carryId || !selected) return null;
+    const from = findFigure(state, carryId)?.figure.position;
+    const spots = carrySpots(state, selected, carryId, landing, ctx);
+    if (!from || spots.length === 0) return null;
+    const best = [...spots].sort((a, b) => hexDistance(a.hex, from.hex) - hexDistance(b.hex, from.hex))[0]!;
+    return { figureId: carryId, to: { hex: best.hex, elevation: best.elevation } };
+  };
+  /** The move command for a move option: a teleport says so, and a flyer may carry a friend. */
+  const moveCommand = (figureId: string, option: MoveOption) => {
+    const carry = option.ability ? null : carryFor(option.to);
+    return {
+      type: "move" as const,
+      player: active!.player,
+      figureId,
+      path: option.path,
+      ...(option.ability ? { ability: option.ability } : {}),
+      ...(carry ? { carry } : {}),
+    };
+  };
 
   // ---- Interaction -------------------------------------------------------
   const onSurfaceClick = (step: Step) => {
@@ -1096,7 +1213,7 @@ export function PlayScreen({ session }: { session: Session }) {
     }
     if (active && selected) {
       const option = optionAt(step);
-      if (option) dispatch({ type: "move", player: active.player, figureId: selected, path: option.path });
+      if (option) dispatch(moveCommand(selected, option));
     }
   };
 
@@ -1113,6 +1230,11 @@ export function PlayScreen({ session }: { session: Session }) {
       return;
     }
     if (active && selected && targets.has(id)) {
+      // Hurl: pick the enemy up, then click where to throw it.
+      if (modeKind === "throw") {
+        setThrowing(throwing === id ? null : id);
+        return;
+      }
       // A blast at a figure on several hexes: the player picks which of its hexes to aim at.
       if (blast && spotsOfFigure(id).length > 1) {
         setAiming(aiming === id ? null : id);
@@ -1165,7 +1287,7 @@ export function PlayScreen({ session }: { session: Session }) {
     if (active && hoverOption && selected === drag.id && !busy) {
       carried.current = drag.id;
       setDrag({ id: drag.id, dropped: hoverOption.to });
-      dispatch({ type: "move", player: active.player, figureId: drag.id, path: hoverOption.path });
+      dispatch(moveCommand(drag.id, hoverOption));
     } else {
       setDrag(null);
     }
@@ -1438,7 +1560,7 @@ export function PlayScreen({ session }: { session: Session }) {
             <Ribbon
               color={names.playerColor(active.player)}
               faction={activeCard.faction}
-              eyebrow={`${names.player(active.player)} · Turn ${active.token}`}
+              eyebrow={`${names.player(active.player)} · ${active.called ? "Called to arms" : `Turn ${active.token}`}`}
               title={names.unit(activeUnit.id)}
             />
             {activeUnit.figures.length > 1 && (
@@ -1480,6 +1602,61 @@ export function PlayScreen({ session }: { session: Session }) {
                     {a.name}
                   </button>
                 ))}
+              </div>
+            )}
+            {myTurn && selected && attackMode && modeKind === "stomp" && !active.attacked.includes(selected) && (
+              <div className="actions power-actions">
+                <button type="button" className="primary" disabled={busy} onClick={() => sendPower(attackMode, {})}>
+                  {specials.find((s) => s.id === attackMode)?.name}
+                </button>
+              </div>
+            )}
+            {myTurn && selected && attackMode && modeKind === "raise" && !active.attacked.includes(selected) && (
+              <div className="power-choices" role="group" aria-label="Squads to call back">
+                {raiseChoices.length === 0 ? (
+                  <p className="muted small">No friendly Orc or Undead squad has a fallen figure to call back.</p>
+                ) : (
+                  raiseChoices.map((u) => (
+                    <button key={u} type="button" disabled={busy} onClick={() => sendPower(attackMode, { unitId: u })}>
+                      {names.unit(u)}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+            {myTurn && selected && carryChoices.length > 0 && options.size > 0 && (
+              <div className="segmented carry-choice" role="radiogroup" aria-label="Carry a friend">
+                {[null, ...carryChoices].map((id) => (
+                  <button key={id ?? "alone"} type="button" role="radio" aria-checked={carryId === id} className={carryId === id ? "on" : ""} onClick={() => setCarryId(id)}>
+                    {id ? `Carry ${names.figure(id)}` : "Fly alone"}
+                  </button>
+                ))}
+              </div>
+            )}
+            {myTurn && orders && callerId && (
+              <div className="power-choices" role="group" aria-label={orders.name}>
+                <span className="power-label">{orders.name}</span>
+                {calledThisRound ? (
+                  <span className="muted small">used this round</span>
+                ) : callChoices.length === 0 ? (
+                  <span className="muted small">no Disciplined squad in reach</span>
+                ) : (
+                  callChoices.map((u) => (
+                    <button
+                      key={u}
+                      type="button"
+                      aria-pressed={active.callUnit === u}
+                      className={active.callUnit === u ? "on" : ""}
+                      disabled={busy}
+                      onClick={() => {
+                        if (!active || !callerId) return;
+                        dispatch({ type: "power", player: active.player, figureId: callerId, ability: orders.id, unitId: u });
+                      }}
+                    >
+                      {names.unit(u)}
+                    </button>
+                  ))
+                )}
               </div>
             )}
             {othersWatching.length > 0 && !beat && (

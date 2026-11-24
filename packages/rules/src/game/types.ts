@@ -144,6 +144,14 @@ export interface ActiveTurn {
   attackLog: { attackerId: string; targetId: string }[];
   /** Extra moves granted after attacking (Smoke Step), by figure id: movement points allowed. */
   bonusMoves: Record<string, number>;
+  /** Extra normal attacks a figure may still make this turn (Blood Surge, Second Arrow, Twin Cannons), by figure id. */
+  extraAttacks?: Record<string, number>;
+  /** Once-a-turn reactions already used this turn, as "ability:figureId" (Blood Surge, Lurk). */
+  once?: string[];
+  /** Call to Arms: the squad chosen to take a turn when this one ends. */
+  callUnit?: string;
+  /** This turn was granted by Call to Arms; when it ends, play moves on from the turn that called it. */
+  called?: boolean;
   /**
    * Figures that have moved and not attacked since (games with facing). Any figure that has not
    * attacked may turn too; this list lets one turn again after a move after attacking (Smoke Step).
@@ -301,6 +309,12 @@ export interface GameState {
    * like). Cleared when that unit's turn ends.
    */
   pinned?: string[];
+  /** Poisoned figures (Caustic Spores): each rolls at the end of its unit's next `turnsLeft` turns. */
+  poisoned?: { readonly figureId: string; turnsLeft: number; readonly woundOnOrBelow: number }[];
+  /** Once-a-game powers already used, as "ability:figureId" (Second Wind). */
+  spent?: string[];
+  /** Units whose Call to Arms has been used this round, as their unit ids. Cleared as a round begins. */
+  called?: string[];
   pointer: TurnPointer | null;
   active: ActiveTurn | null;
   result: GameResult | null;
@@ -374,7 +388,16 @@ export type Command =
       readonly placements: readonly FigurePlacement[];
     }
   | { readonly type: "placeTokens"; readonly player: PlayerId; readonly tokens: TokenAssignment }
-  | { readonly type: "move"; readonly player: PlayerId; readonly figureId: string; readonly path: readonly PathStep[] }
+  | {
+      readonly type: "move";
+      readonly player: PlayerId;
+      readonly figureId: string;
+      readonly path: readonly PathStep[];
+      /** Move by an ability rather than walking: "blink" (a teleport; the path is the one hex it lands on). */
+      readonly ability?: string;
+      /** Wings of Refuge: a friend carried by a flying figure, and where it is set down. */
+      readonly carry?: { readonly figureId: string; readonly to: Step };
+    }
   | {
       readonly type: "attack";
       readonly player: PlayerId;
@@ -395,6 +418,22 @@ export type Command =
       readonly figureId: string;
       readonly ability: string;
       readonly at: Step;
+    }
+  | {
+      /**
+       * Use a power: a special action aimed at a place or a unit (Hurl, Quake Stomp, Fire Breath,
+       * Bonecall), or Call to Arms, which picks a squad to take a turn when this one ends.
+       */
+      readonly type: "power";
+      readonly player: PlayerId;
+      readonly figureId: string;
+      readonly ability: string;
+      /** The figure it acts on (Hurl). */
+      readonly targetId?: string;
+      /** The unit it acts on (Bonecall, Call to Arms). */
+      readonly unitId?: string;
+      /** Where it is aimed: Hurl's landing spot, or the first hex of Fire Breath's row. */
+      readonly at?: Step;
     }
   | { readonly type: "draftPass"; readonly player: PlayerId }
   /** A player rolls for initiative (`initiative: "players"` games). */

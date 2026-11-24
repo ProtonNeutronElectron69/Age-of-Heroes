@@ -162,6 +162,13 @@ export function describeEvent(e: GameEvent, names: Names): string | null {
       return `${names.figure(e.figureId)}: ${detail}.`;
     }
     case "abilityRoll":
+      // Grave Dread: the figure beside it rolls to keep its nerve. Poison: the poisoned figure rolls to shake it off.
+      if (e.ability === "grave-dread") {
+        return `${names.figure(e.targetId)} faces ${names.figure(e.figureId)}'s ${names.ability(e.figureId, e.ability)}: rolls ${e.roll}, needs ${e.needed}. ${e.success ? "It holds its nerve." : "It loses its nerve!"}`;
+      }
+      if (e.ability === "caustic-spores") {
+        return `${names.figure(e.figureId)} rolls against the poison: ${e.roll}, needs ${e.needed}. ${e.success ? "It shakes it off." : "It takes 1 wound."}`;
+      }
       return e.targetId === e.figureId
         ? `${names.figure(e.figureId)} rolls for ${names.ability(e.figureId, e.ability)}: ${e.roll}, needs ${e.needed}. ${e.success ? "Success!" : "No effect."}`
         : `${names.figure(e.figureId)} uses ${names.ability(e.figureId, e.ability)} on ${names.figure(e.targetId)}: rolls ${e.roll}, needs ${e.needed}. ${e.success ? "Success!" : "No effect."}`;
