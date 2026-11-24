@@ -45,9 +45,15 @@ export function attackTitle(roll: AttackRoll, names: Names): string {
   return `${names.figure(roll.attackerId)} attacks ${names.figure(roll.targetId)}`;
 }
 
-function resultText(roll: AttackRoll): string {
+/** The result line: hits in red, blocks in blue, wounds in orange. */
+function resultText(roll: AttackRoll) {
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-  return `${plural(roll.hits, "hit")}, ${plural(roll.blocks, "block")}: ${roll.wounds > 0 ? plural(roll.wounds, "wound") : "no damage"}`;
+  return (
+    <>
+      <span className="result-hits">{plural(roll.hits, "hit")}</span>, <span className="result-blocks">{plural(roll.blocks, "block")}</span>:{" "}
+      <span className="result-wounds">{roll.wounds > 0 ? plural(roll.wounds, "wound") : "no damage"}</span>
+    </>
+  );
 }
 
 /** A unit's model for the scene, standing on the table at one end of the tray, turned to face the other end. */

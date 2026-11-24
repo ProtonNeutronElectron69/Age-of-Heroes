@@ -1448,12 +1448,16 @@ p.bad {
   font-weight: 700;
 }
 
-.scene-result.hit {
+.scene-result .result-hits {
   color: var(--skull);
 }
 
-.scene-result.miss {
+.scene-result .result-blocks {
   color: var(--shield);
+}
+
+.scene-result .result-wounds {
+  color: #ff9800;
 }
 
 .scene-hint {
