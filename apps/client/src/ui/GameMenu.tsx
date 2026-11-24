@@ -2,10 +2,14 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { closeOnline, isOnlineHost, leaveOnline, requestSave, useOnline } from "../online";
 import { endSession, recordOf, type Session } from "../session";
+import { CornerIcon } from "./Ledger";
 import { Notice, SaveDialog } from "./SaveDialog";
 
-/** Save and leave buttons, shared by the draft and play screens. Online, only the host can save. */
-export function GameMenu({ session, className = "" }: { session: Session; className?: string }) {
+/**
+ * Save and leave buttons, shared by the draft and play screens. Online, only the host can save.
+ * `round` draws them as round icon buttons (the play screen's corner), named for screen readers.
+ */
+export function GameMenu({ session, className = "", round = false }: { session: Session; className?: string; round?: boolean }) {
   const online = useOnline();
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -34,14 +38,25 @@ export function GameMenu({ session, className = "" }: { session: Session; classN
   return (
     <>
       <div className={`actions menu ${className}`}>
-        {canSave && (
-          <button type="button" onClick={() => setSaving(true)}>
-            Save game
+        {canSave &&
+          (round ? (
+            <button type="button" className="round-button" aria-label="Save game" title="Save game" onClick={() => setSaving(true)}>
+              <CornerIcon id="save" />
+            </button>
+          ) : (
+            <button type="button" onClick={() => setSaving(true)}>
+              Save game
+            </button>
+          ))}
+        {round ? (
+          <button type="button" className="round-button" aria-label={quitLabel} title={quitLabel} onClick={quit}>
+            <CornerIcon id="quit" />
+          </button>
+        ) : (
+          <button type="button" onClick={quit}>
+            {quitLabel}
           </button>
         )}
-        <button type="button" onClick={quit}>
-          {quitLabel}
-        </button>
       </div>
       {/* Drawn over the whole page, not inside the panel that holds the buttons. */}
       {createPortal(

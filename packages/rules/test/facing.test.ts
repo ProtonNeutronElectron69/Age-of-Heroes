@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyCommand, attackDice, attackProblem, createGame, hex, type GameState, type RulesContext } from "../src";
+import { applyCommand, attackDice, attackProblem, createGame, endFacing, hex, moveOptions, type GameState, type RulesContext } from "../src";
 import { CARDS, apply, ctx, deployAll, makeCtx, rowMap, setup, turnState } from "./fixtures";
 
 const at = (q: number, r = 1, elevation = 1) => ({ q, r, elevation });
@@ -51,6 +51,28 @@ describe("facing", () => {
     // East, then down a row (+r): that last step bears 30 degrees, which snaps to 45.
     const turned = apply(s, { type: "move", player: "p1", figureId: "p1:0#1", path: [step(3), step(3, 2)] }).state;
     expect(facingOf(turned, "p1:0#1")).toBe(45);
+  });
+
+  it("is known before a move: endFacing gives the facing the move leaves", () => {
+    const s = game("p1:0", { "p1:0#1": at(2) }, { "p1:0#1": 270 });
+    for (const option of moveOptions(s, "p1:0#1", ctx).values()) {
+      const moved = apply(s, { type: "move", player: "p1", figureId: "p1:0#1", path: option.path }).state;
+      expect(endFacing("1", hex(2, 1), option.path)).toBe(facingOf(moved, "p1:0#1"));
+    }
+    expect(endFacing("1", hex(2, 1), [])).toBeNull();
+  });
+
+  it("is known before a move for a figure on several hexes, whichever way it ends", () => {
+    const big = makeCtx(undefined, CARDS);
+    const base = createGame(setup(2, { facing: true, armies: { p1: ["big"], p2: ["hero"] } }), big).state;
+    const s = turnState(base, "p1:0", { "p1:0#1": at(5) });
+    const options = [...moveOptions(s, "p1:0#1", big).values()];
+    // Every reachable hex may be reached facing several ways; each option says which.
+    expect(new Set(options.filter((o) => o.to.hex.q === 3 && o.to.hex.r === 1).map((o) => o.to.rotation)).size).toBeGreaterThan(1);
+    for (const option of options) {
+      const moved = apply(s, { type: "move", player: "p1", figureId: "p1:0#1", path: option.path }, big).state;
+      expect(endFacing("2x1", hex(5, 1), option.path)).toBe(facingOf(moved, "p1:0#1"));
+    }
   });
 
   it("can be turned before or after a move, in eighths, until the figure attacks", () => {

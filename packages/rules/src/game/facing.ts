@@ -3,7 +3,7 @@ import { footprintCells, type Footprint } from "../shapes";
 import { HEX_SIZE } from "../world";
 import { fail } from "./errors";
 import { cardOf, findFigure } from "./queries";
-import type { FigurePosition, FigureState, GameEvent, GameState, PlayerId, RulesContext, Step } from "./types";
+import type { FigurePosition, FigureState, GameEvent, GameState, PathStep, PlayerId, RulesContext, Step } from "./types";
 
 /**
  * Facing (games with `config.facing`): which way a figure looks, in whole degrees turned from the
@@ -85,6 +85,26 @@ export function faceAfterMove(state: GameState, figure: FigureState, footprint: 
   const before = i > 0 ? route[i - 1]! : undefined;
   if (!before) return;
   figure.facing = snapFacing(bearing(hexToWorld(before, HEX_SIZE), hexToWorld(pos.hex, HEX_SIZE)));
+}
+
+/**
+ * The way a figure will face once it has moved along `path` from `start` (games with facing): a
+ * multi-hex figure along its base where the path ends, a single-hex one along its last step,
+ * as `faceAfterMove` turns it. Null for an empty path. The play screen shows it before the move.
+ */
+export function endFacing(footprint: Footprint, start: Hex, path: readonly PathStep[]): number | null {
+  const last = path[path.length - 1];
+  if (!last) return null;
+  if (footprint !== "1") return baseFacing(footprint, last.hex, last.rotation ?? 0);
+  const before = path.length > 1 ? path[path.length - 2]!.hex : start;
+  if (hexEquals(before, last.hex)) return null;
+  return snapFacing(bearing(hexToWorld(before, HEX_SIZE), hexToWorld(last.hex, HEX_SIZE)));
+}
+
+/** Whether a figure on several hexes, facing `facing`, shifting from one hex to the next, goes forward: within 30 degrees of its facing. */
+export function shiftsForward(facing: number, from: Hex, to: Hex): boolean {
+  const turn = Math.abs(((bearing(hexToWorld(from, HEX_SIZE), hexToWorld(to, HEX_SIZE)) - facing + 540) % 360) - 180);
+  return turn <= 31;
 }
 
 /** Why a figure cannot be turned to `facing` now, or null if it can. */

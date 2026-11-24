@@ -353,6 +353,7 @@ let splitChecked = false;
 let dragged = false;
 let jumpChecked = false;
 let tipChecked = false;
+let previewChecked = false;
 
 /** Middle-clicks a point on the board and returns the hex tooltip's text, then closes it with Escape. */
 async function hexTipAt(x, y) {
@@ -497,14 +498,13 @@ try {
   }
 
   phase("play");
-  // The glyphs are scattered face down once every unit is placed, and listed beside the board.
-  await page.getByRole("region", { name: "Glyphs" }).getByText("4 face down on the battlefield").waitFor();
+  let glyphsChecked = false;
   const handled = new Set();
   let turnKey = "";
   let roundSeen = "";
   /** Every one-off check is done: from here on, turns are ended at once. */
   const checksDone = () =>
-    dragged && jumpChecked && tipChecked && followChecked && hoverChecked && eyeChecked && sceneChecked && diceOnlyChecked && attacks >= ATTACKS_WANTED && (squadMoves === 0 || cycled > 0);
+    dragged && jumpChecked && tipChecked && previewChecked && followChecked && hoverChecked && eyeChecked && sceneChecked && diceOnlyChecked && attacks >= ATTACKS_WANTED && (squadMoves === 0 || cycled > 0);
   for (let step = 0; step < 2000; step++) {
     if (await page.getByRole("dialog", { name: "Game over" }).count()) break;
     // The dice show covers the board: deal with it before anything else.
@@ -540,6 +540,16 @@ try {
     if (!(await turn.count())) {
       await page.waitForTimeout(50);
       continue;
+    }
+    // Once, at the first turn (nothing covers the board by then): the glyphs scattered face down once every
+    // unit was placed are listed under the drawer's Glyphs tab, which shows one tab at a time.
+    if (!glyphsChecked) {
+      glyphsChecked = true;
+      await page.getByRole("tab", { name: "Glyphs" }).click();
+      await page.getByRole("region", { name: "Glyphs" }).getByText("4 face down on the battlefield").waitFor();
+      if (await page.locator(".log-lines").isVisible()) fail("The log is still showing under the Glyphs tab");
+      await page.getByRole("tab", { name: "Log" }).click();
+      await page.locator(".log-lines").waitFor();
     }
     const key = await turn.locator(".turn-banner").innerText();
     const round = await page.locator(".round-label").innerText();
@@ -753,11 +763,28 @@ try {
       for (const m of order.slice(0, 8)) {
         const p = await screenPoint(m.hex.q, m.hex.r, m.elevation);
         if (!p) continue;
+        // Once a game: hovering the hex shows where the figure ends and which way it will face, and the move leaves it so.
+        let preview = null;
+        if (!previewChecked) {
+          await page.mouse.move(p.x, p.y);
+          preview = await page
+            .waitForFunction(({ q, r }) => {
+              const v = window.__aohUi?.preview;
+              return v && v.to.hex.q === q && v.to.hex.r === r ? v : null;
+            }, m.hex, { timeout: 5000 })
+            .then((h) => h.jsonValue(), () => null);
+          if (!preview) fail(`Hovering a hex the figure may move to shows no preview: ${JSON.stringify(await page.evaluate(() => window.__aohUi?.preview))}`);
+        }
         await page.mouse.click(p.x, p.y);
         await page.waitForTimeout(120);
         const after = await page.evaluate(() => window.__aohUi);
         if (after.moves.length === 0 || JSON.stringify(after.moves) !== JSON.stringify(ui.moves)) {
           moves++;
+          if (preview) {
+            const facing = await page.evaluate((id) => window.__aohUi.facingOf(id), ui.selected);
+            if (facing !== preview.facing) fail(`The preview showed ${ui.selected} ending its move facing ${preview.facing} degrees, but it faces ${facing}`);
+            previewChecked = true;
+          }
           if (moves === 1) await shot("5-moved");
           if (squad) squadMoves++;
           if (squad) squadHandOff(ui, after);
@@ -841,6 +868,7 @@ try {
   if (!turnChecked) fail("No figure that had moved was turned with R");
   if (!dragged) fail("No figure was ever moved by dragging it");
   if (!jumpChecked) fail("The H key was never tried");
+  if (!previewChecked) fail("The move preview was never checked");
   if (!followChecked) fail("The camera was never checked following the acting figure");
   if (!hoverChecked) fail("Resting the pointer on another unit never showed its card");
   if (!eyeChecked) fail("Eye view was never tried");

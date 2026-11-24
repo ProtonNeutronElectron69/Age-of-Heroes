@@ -44,8 +44,12 @@ declare global {
       blastHexes: UiStep[];
       /** The figure R turns (games with facing), and its facing in degrees. */
       turning: { id: string; facing: number } | null;
+      /** The hovered move: where the chosen figure would end, its facing then (degrees) and the path. */
+      preview: { to: UiStep & { rotation?: number }; facing: number; path: (UiStep & { rotation?: number })[] } | null;
       /** How many attack intros a click has skipped so far. */
       introsSkipped: () => number;
+      /** Which way a figure faces now, in degrees (null in games without facing). */
+      facingOf: (id: string) => number | null;
 
     };
   }

@@ -1,0 +1,542 @@
+/*
+ * The play screen's ledger look (ui/Ledger.tsx): parchment sheets pinned to the gaming table, brass
+ * buttons, a wooden round track and wooden buttons in the corner. Scoped to the play screen; the
+ * editor and the draft keep the plain dark panels.
+ */
+
+.screen.play {
+  --wood-dark: #3b2414;
+  --wood: #6a4122;
+  --wood-light: #8b5a31;
+  --parch: #efe2c2;
+  --parch-dark: #dcc79a;
+  --ink: #2b2014;
+  --ink-soft: #5c4a32;
+  --brass-hi: #f2d27a;
+  --brass: #c79a3c;
+  --brass-lo: #7d5a1c;
+  --ledger-title: "Cinzel", "Trajan Pro", Georgia, serif;
+  --ledger-body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --wood-grain:
+    repeating-linear-gradient(92deg, rgba(255, 255, 255, 0.04) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(88deg, rgba(0, 0, 0, 0.1) 0 1px, transparent 1px 23px),
+    linear-gradient(180deg, var(--wood-light), var(--wood) 55%, #5a361b);
+  --wood-edge: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -2px 0 rgba(0, 0, 0, 0.35), 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+
+/* ---- Parchment sheets: every panel in the left column, and the Display panel ---- */
+
+.screen.play .hud-left,
+.screen.play .display-panel {
+  --text: var(--ink);
+  --muted: var(--ink-soft);
+  --border: rgba(110, 80, 36, 0.38);
+  --accent: #8a5a12;
+  --accent-text: #fff8e6;
+  font-family: var(--ledger-body);
+  font-size: 15px;
+}
+
+.screen.play .hud-left .panel {
+  position: relative;
+}
+
+.screen.play .hud-left .panel,
+.screen.play .display-panel {
+  border: 0;
+  border-radius: 4px;
+  color: var(--ink);
+  backdrop-filter: none;
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(255, 255, 255, 0.45), transparent 55%),
+    radial-gradient(ellipse at 90% 100%, rgba(150, 110, 50, 0.25), transparent 60%),
+    linear-gradient(var(--parch), var(--parch-dark));
+  box-shadow: inset 0 0 0 1px rgba(120, 85, 30, 0.35), inset 0 0 22px rgba(120, 85, 30, 0.28), 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+
+.screen.play .hud-left .panel h2,
+.screen.play .display-panel h2 {
+  font-family: var(--ledger-title);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+.screen.play .hud-left .muted,
+.screen.play .display-panel .muted {
+  color: var(--ink-soft);
+}
+
+/* Brass buttons: the main action bright, the rest dull. */
+.screen.play .hud-left button,
+.screen.play .display-panel button {
+  border: 0;
+  border-radius: 7px;
+  color: #3a2608;
+  background: linear-gradient(180deg, #e2d3ae, #b9a57c 55%, #86724f);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -2px 0 rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.3);
+  font-family: var(--ledger-body);
+  font-weight: 700;
+}
+
+.screen.play .hud-left button.primary,
+.screen.play .hud-left .segmented button.on,
+.screen.play .display-panel .segmented button.on {
+  background: linear-gradient(180deg, var(--brass-hi), var(--brass) 55%, var(--brass-lo));
+  color: #3a2608;
+}
+
+.screen.play .hud-left .actions button {
+  font-family: var(--ledger-title);
+  letter-spacing: 0.04em;
+  padding: 9px 16px;
+}
+
+.screen.play .hud-left button:focus-visible,
+.screen.play .display-panel button:focus-visible,
+.screen.play .hud-left input:focus-visible,
+.screen.play .hud-left select:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.screen.play .hud-left input,
+.screen.play .hud-left select,
+.screen.play .display-panel input,
+.screen.play .display-panel select {
+  background: #fbf4e2;
+  color: var(--ink);
+  border: 1px solid rgba(110, 80, 36, 0.45);
+}
+
+.screen.play .hud-left .tag {
+  background: rgba(158, 31, 26, 0.14);
+  color: #7d1d18;
+}
+
+/* ---- The ribbon: who is acting, in their colour ---- */
+
+.screen.play .ribbon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 -22px 12px;
+  padding: 8px 22px 9px;
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.12)), var(--ribbon);
+  color: var(--ribbon-ink);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* The ribbon's ends fold behind the sheet. */
+.screen.play .ribbon::before,
+.screen.play .ribbon::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  border-top: 8px solid color-mix(in srgb, var(--ribbon) 55%, #000);
+}
+
+.screen.play .ribbon::before {
+  left: 0;
+  border-left: 8px solid transparent;
+}
+
+.screen.play .ribbon::after {
+  right: 0;
+  border-right: 8px solid transparent;
+}
+
+.screen.play .faction-seal {
+  flex: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+.screen.play .ribbon-text {
+  display: grid;
+  min-width: 0;
+}
+
+.screen.play .ribbon-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.92;
+}
+
+.screen.play .ribbon-title {
+  font-family: var(--ledger-title);
+  font-size: 19px;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+/* Brass tacks at the top corners of the sheet that holds the ribbon. */
+.screen.play .ledger-sheet::before,
+.screen.play .ledger-sheet::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  z-index: 1;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--brass-hi), var(--brass-lo));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.screen.play .ledger-sheet::before {
+  left: 8px;
+}
+
+.screen.play .ledger-sheet::after {
+  right: 8px;
+}
+
+.screen.play .ledger-sheet {
+  padding: 18px 22px 16px;
+}
+
+/* ---- Figures, pills and the hint ---- */
+
+.screen.play .figure-list {
+  margin: 0 0 10px;
+}
+
+.screen.play .figure-button {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 6px 10px;
+  font-weight: 600;
+}
+
+.screen.play .figure-button.on {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+  background: linear-gradient(180deg, var(--brass-hi), var(--brass) 55%, var(--brass-lo));
+}
+
+.screen.play .figure-state {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.screen.play .pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.screen.play .pill {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(90, 65, 30, 0.12);
+  border: 1px solid rgba(90, 65, 30, 0.3);
+}
+
+.screen.play .pill.good {
+  background: rgba(47, 107, 58, 0.16);
+  border-color: rgba(47, 107, 58, 0.5);
+  color: #1d4a27;
+}
+
+.screen.play .pill.warn {
+  background: rgba(158, 31, 26, 0.12);
+  border-color: rgba(158, 31, 26, 0.45);
+  color: #7d1d18;
+}
+
+.screen.play .ledger-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: var(--ink-soft);
+  line-height: 1.35;
+}
+
+.screen.play .ledger-hint svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.screen.play .hud-left .actions {
+  margin-top: 0;
+}
+
+.screen.play .watching-note {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ---- The drawer: log, glyphs and keys ---- */
+
+.screen.play .ledger-drawer {
+  margin-top: auto;
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.screen.play .drawer-tabs {
+  display: flex;
+  flex: none;
+  background: var(--wood-grain);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.35);
+}
+
+.screen.play .hud-left .drawer-tab {
+  flex: 1;
+  border-radius: 0;
+  padding: 9px 4px;
+  background: none;
+  box-shadow: none;
+  color: #f6e7c8;
+  font-family: var(--ledger-title);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  border-right: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.screen.play .hud-left .drawer-tab:last-child {
+  border-right: 0;
+}
+
+.screen.play .hud-left .drawer-tab[aria-selected="true"] {
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 -3px 0 var(--brass-hi);
+}
+
+.screen.play .hud-left .drawer-tab:focus-visible {
+  outline: 2px solid var(--brass-hi);
+  outline-offset: -3px;
+}
+
+.screen.play .tab-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 5px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--brass);
+  color: #3a2608;
+  font: 700 11px/1 var(--ledger-body);
+}
+
+/* A glyph just picked up: the Glyphs tab glows a moment. */
+.screen.play .drawer-tab.fresh {
+  animation: tab-fresh 1.4s ease-out 2;
+}
+
+@keyframes tab-fresh {
+  0%,
+  100% {
+    box-shadow: none;
+  }
+  40% {
+    box-shadow: inset 0 0 14px var(--brass-hi);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen.play .drawer-tab.fresh {
+    animation: none;
+    box-shadow: inset 0 0 10px var(--brass-hi);
+  }
+}
+
+.screen.play .drawer-body {
+  min-height: 0;
+  max-height: min(30vh, 260px);
+  overflow-y: auto;
+  padding: 10px 14px 12px;
+}
+
+/* The panels inside the drawer lose their own sheet and heading: the tab names them. */
+.screen.play .drawer-body > .panel {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.screen.play .drawer-body > .panel > h2 {
+  display: none;
+}
+
+.screen.play .drawer-body .small {
+  font-size: 14px;
+}
+
+.screen.play .event-log {
+  min-height: 0;
+  max-height: none;
+}
+
+.screen.play .event-log ol {
+  font-size: 14px;
+  gap: 4px;
+  color: var(--ink);
+}
+
+.screen.play .event-log li:not(:last-child) {
+  color: var(--ink-soft);
+}
+
+.screen.play .keys-list {
+  margin: 0;
+  font-size: 14px;
+}
+
+.screen.play .keys-list dt {
+  color: #7a4d0e;
+  font-weight: 700;
+}
+
+.screen.play .keys-list dd {
+  color: var(--ink);
+}
+
+/* ---- The round track: a wooden strip with each player's tokens ---- */
+
+.screen.play .round-bar {
+  border: 0;
+  border-radius: 10px;
+  background: var(--wood-grain);
+  box-shadow: var(--wood-edge);
+  backdrop-filter: none;
+  color: #f6e7c8;
+  font-family: var(--ledger-body);
+}
+
+.screen.play .round-label {
+  font-family: var(--ledger-title);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.screen.play .initiative li.active {
+  background: rgba(0, 0, 0, 0.28);
+  outline: 2px solid var(--brass-hi);
+}
+
+.screen.play .mini-token {
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--player, #2b3445) 35%, #2b1a0d);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.screen.play .mini-token.shown {
+  background: var(--player, var(--brass));
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--brass-hi);
+}
+
+/* ---- The right column: a leather tab over the card, round wooden buttons in the corner ---- */
+
+.screen.play .hud-right .card-toggle {
+  border: 0;
+  border-radius: 6px 6px 0 0;
+  padding: 6px 12px;
+  background: linear-gradient(#7a3b1f, #552611);
+  color: #f6e7c8;
+  font: 700 12px/1.2 var(--ledger-title);
+  letter-spacing: 0.06em;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+.screen.play .hud-corner {
+  position: relative;
+  margin-top: auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.screen.play .hud-corner .menu,
+.screen.play .hud-corner .display-menu {
+  margin-top: 0;
+  flex-wrap: nowrap;
+}
+
+/* The Display panel opens above the whole row of corner buttons, not just its own. */
+.screen.play .hud-corner .display-menu {
+  position: static;
+}
+
+.screen.play .round-button {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--wood-grain);
+  box-shadow: var(--wood-edge);
+  color: #f6e7c8;
+}
+
+.screen.play .round-button[aria-expanded="true"] {
+  box-shadow: var(--wood-edge), 0 0 0 2px var(--brass-hi);
+}
+
+.screen.play .corner-icon {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Activation tokens being placed: round counters, sealed red once picked (grey for the bluff). */
+.screen.play .hud-left .token-chip {
+  border-radius: 50%;
+}
+
+.screen.play .hud-left .token-chip.on {
+  background: radial-gradient(circle at 35% 30%, #d2453a, #9e1f1a 55%, #5e0f0b);
+  color: #fde9d6;
+}
+
+.screen.play .hud-left .token-chip.bluff.on {
+  background: radial-gradient(circle at 35% 30%, #a99f8f, #6f6657 55%, #3f382e);
+}
+
+/* The strip under the unit card (figures left, a larger view). */
+.screen.play .hud-right .unit-card-foot {
+  background: var(--wood-grain);
+  box-shadow: var(--wood-edge);
+  color: #f6e7c8;
+}
+
+.screen.play .hud-right .unit-card-foot .link-button {
+  color: var(--brass-hi);
+}
