@@ -498,8 +498,13 @@ try {
   }
 
   phase("play");
-  // The glyphs are scattered face down once every unit is placed, and listed beside the board.
+  // The glyphs are scattered face down once every unit is placed, and listed under the Glyphs tab beside the board.
+  await page.getByRole("tab", { name: "Glyphs" }).click();
   await page.getByRole("region", { name: "Glyphs" }).getByText("4 face down on the battlefield").waitFor();
+  // The drawer shows one tab at a time; the log comes back with its tab.
+  if (await page.locator(".log-lines").isVisible()) fail("The log is still showing under the Glyphs tab");
+  await page.getByRole("tab", { name: "Log" }).click();
+  await page.locator(".log-lines").waitFor();
   const handled = new Set();
   let turnKey = "";
   let roundSeen = "";

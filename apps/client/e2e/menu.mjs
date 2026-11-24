@@ -163,6 +163,7 @@ try {
   const test = await open({ width: 1280, height: 720 });
   await test.getByRole("button", { name: "Test game" }).click();
   await test.locator(".pass-card").waitFor();
+  await test.getByRole("tab", { name: "Glyphs" }).click();
   const glyphs = await test.getByRole("region", { name: "Glyphs" }).innerText();
   if (!/11 face down/.test(glyphs)) fail(`The test game should have all 11 glyphs on the board: ${glyphs}`);
   const armies = await test.evaluate(() => JSON.parse(localStorage.getItem("age-of-heroes:save:v2") ?? "null"));

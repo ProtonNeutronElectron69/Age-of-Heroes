@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { COLOR_SCHEMES, type ColorScheme } from "../models";
+import { CornerIcon } from "./Ledger";
 import { SoundControls } from "./MusicControl";
 import { DICE_SHOWS, TABLE_STYLES, TILE_LOOKS, setDisplay, useDisplay, type DiceShow, type TableStyle } from "../settings";
 
@@ -103,8 +104,8 @@ export function DisplayMenu() {
           <SoundControls />
         </section>
       )}
-      <button type="button" className="display-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
-        Display
+      <button type="button" className="display-toggle round-button" aria-label="Display" title="Display" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <CornerIcon id="display" />
       </button>
     </div>
   );

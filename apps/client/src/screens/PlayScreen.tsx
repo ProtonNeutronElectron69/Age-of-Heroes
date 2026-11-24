@@ -54,7 +54,8 @@ import { toggleFigures, toggleTiles, useDisplay } from "../settings";
 import { GameMenu } from "../ui/GameMenu";
 import { HexTip, useHexTip, zoneOwners } from "../ui/HexTip";
 import { OnlineBar } from "../ui/OnlineBar";
-import { DiceOverlay, EventLog, GameOver, KeysPanel, PassScreen, RoundBar, TokenPanel } from "../ui/panels";
+import { DiceOverlay, EventLog, GameOver, HotKeys, PassScreen, RoundBar, TokenPanel } from "../ui/panels";
+import { Drawer, Hint, Pills, Ribbon, type Pill } from "../ui/Ledger";
 import { AttackShow, InitiativeShow, attackTitle, initiativeIn } from "../ui/RollShow";
 import { UnitCardView } from "../ui/UnitCardView";
 import { GlyphPanel } from "../ui/GlyphPanel";
@@ -302,6 +303,11 @@ export function PlayScreen({ session }: { session: Session }) {
   // ---- Glyphs picked up: the tile lifts off and shows its face (`GlyphPickups`) ----
   /** Players whose held glyphs this device shows face up: online its own, on one device the player whose turn it is. */
   const glyphsShown = isOnline ? (me ? [me] : []) : active && myTurn ? [active.player] : [];
+  /** The Glyphs tab: shown while the game has glyphs on the board, held or in play; its badge counts the viewer's own. */
+  const glyphsInPlay =
+    !!state.glyphs &&
+    (state.glyphs.onBoard.length > 0 || Object.values(state.glyphs.held).some((h) => h.length > 0) || state.glyphs.boosts.length > 0 || state.glyphs.curses.length > 0);
+  const glyphsHeld = glyphsShown.reduce((n, p) => n + (state.glyphs?.held[p]?.length ?? 0), 0);
   const [pickups, setPickups] = useState<(GlyphPickup & { glyphId: string })[]>([]);
   /** Where each glyph on the board lay before the latest command, to lift it from there. */
   const glyphSpots = useRef(new Map<string, Step>());
@@ -953,6 +959,57 @@ export function PlayScreen({ session }: { session: Session }) {
     });
   }
 
+  // ---- The turn sheet: each figure's state, the chosen figure's pills and one line of help ----
+  const figureState = (id: string): string => {
+    if (!active) return "";
+    if (active.attacked.includes(id)) return (active.bonusMoves[id] ?? 0) > 0 ? "may still move" : "done";
+    if (active.moved.includes(id)) return canMoveOn(id) ? "moved, can move on" : "moved";
+    return "";
+  };
+  const figurePills = (id: string): Pill[] => {
+    if (!active) return [];
+    const pills: Pill[] = [];
+    const attacked = active.attacked.includes(id);
+    if (options.size > 0) pills.push({ text: active.moved.includes(id) ? "Can move on" : "Can move", tone: "good" });
+    else if (attacked) pills.push({ text: "Has attacked" });
+    else if (active.moved.includes(id)) pills.push({ text: "Has moved" });
+    if (!attacked) {
+      const n = targets.size;
+      if (modeKind === "swap") pills.push(n > 0 ? { text: `${n} to swap with`, tone: "good" } : { text: "No friend in range" });
+      else if (n > 0) pills.push({ text: n === 1 ? "1 target" : `${n} targets`, tone: "good" });
+      else if (blastHexes.length === 0) pills.push({ text: "No target in range" });
+    }
+    if (engagedCount(id) > 0) pills.push({ text: "Engaged", tone: "warn" });
+    if (state.pinned?.includes(id)) pills.push({ text: "Pinned", tone: "warn" });
+    return pills;
+  };
+  /** What to do now, in a sentence, then what the hovered move costs and what R does. */
+  const turnHint = (): string => {
+    if (!active) return "";
+    if (!myTurn) return `Waiting for ${names.player(active.player)} to play this turn.`;
+    if (eyeView) return "Drag or use the arrow keys to look around. Clicking an enemy faces it; a red-ringed one is attacked. Exit eye view to end the turn.";
+    if (!selected) return "This unit has finished: end the turn.";
+    if (aiming) return "Click a red hex to aim the blast; figures next to it are hit too. Esc picks another target.";
+    const canMove = options.size > 0;
+    const hits = targets.size > 0;
+    let first: string;
+    if (modeKind === "swap") first = hits ? "Click a ringed friend to swap places with it." : "No friend in range to swap with.";
+    else if (blastHexes.length > 0) first = hits ? "Click a red ring or a red hex to aim the blast." : "Click a red hex to aim the blast.";
+    else if (canMove && hits) first = "Click a green hex to move, or a red ring to attack.";
+    else if (canMove) first = "Click a green hex to move there, or drag the figure.";
+    else if (hits) first = blast ? "Click a red ring to attack; on a big figure, then pick the hex to aim at." : "Click a red ring to attack.";
+    else if (activeUnit?.figures.some((f) => f.id !== selected && canAct(f.id))) first = "This figure is done: pick another, or end the turn.";
+    else first = "Nothing left to do: end the turn.";
+    const more: string[] = [];
+    if (hoverOption) {
+      const cost = hoverOption.cost === 0 ? "Turning is free." : `Costs ${hoverOption.cost} Move.`;
+      more.push(hoverOption.hazards > 0 ? `Risky: lava, ice, a fall or a passing strike. ${cost}` : cost);
+    }
+    if (moveBig && canMove) more.push("R picks the way it faces.");
+    else if (turner) more.push(`R turns ${names.figure(turner)}.`);
+    return [first, ...more].join(" ");
+  };
+
   const markers: Marker[] = [];
   if (resurrecting && resurrectUnit && resurrecting.items.length < resurrectFigures.length) {
     const seen = new Set<string>();
@@ -1310,19 +1367,18 @@ export function PlayScreen({ session }: { session: Session }) {
 
       <aside className="hud-left">
         {deploying && deployUnit && deployCard && (
-          <section className="panel" aria-label="Deployment">
-            <h2>Deployment</h2>
-            <p className="turn-banner" style={{ borderColor: names.playerColor(deploying.player) }}>
-              <span className="swatch" style={{ background: names.playerColor(deploying.player) }} />
-              <span>
-                <strong>{names.player(deploying.player)}</strong>: place {deployCard.name}
-              </span>
-            </p>
-            <p className="muted small">
-              Click highlighted hexes in your start zone. {pending.length} of {deployUnit.figures.length} placed. Click a
-              placed figure to pick it up again.
-              {deployBig ? " This figure covers several hexes: press R to turn it." : ""}
-            </p>
+          <section className="panel ledger-sheet" aria-label="Deployment">
+            <Ribbon
+              color={names.playerColor(deploying.player)}
+              faction={deployCard.faction}
+              eyebrow={`${names.player(deploying.player)} · Deployment`}
+              title={`Place ${deployCard.name}`}
+            />
+            <Pills pills={[{ text: `${pending.length} of ${deployUnit.figures.length} placed`, tone: pending.length === deployUnit.figures.length ? "good" : undefined }]} />
+            <Hint>
+              Click highlighted hexes in your start zone; click a placed figure to pick it up again.
+              {deployBig ? " R turns it." : ""}
+            </Hint>
             <div className="actions">
               <button type="button" onClick={autoDeploy} disabled={pending.length === deployUnit.figures.length}>
                 Auto place
@@ -1343,15 +1399,14 @@ export function PlayScreen({ session }: { session: Session }) {
         )}
 
         {nextDeployment && !deploying && (
-          <section className="panel" aria-label="Deployment">
-            <h2>Deployment</h2>
-            <p className="turn-banner" style={{ borderColor: names.playerColor(nextDeployment.player) }}>
-              <span className="swatch" style={{ background: names.playerColor(nextDeployment.player) }} />
-              <span>
-                Waiting for <strong>{names.player(nextDeployment.player)}</strong> to place{" "}
-                {names.unit(nextDeployment.unitId)}
-              </span>
-            </p>
+          <section className="panel ledger-sheet" aria-label="Deployment">
+            <Ribbon
+              color={names.playerColor(nextDeployment.player)}
+              faction={ctx.cards.get(state.units.find((u) => u.id === nextDeployment.unitId)?.cardId ?? "")?.faction}
+              eyebrow={`${names.player(nextDeployment.player)} · Deployment`}
+              title={names.unit(nextDeployment.unitId)}
+            />
+            <Hint>Waiting for {names.player(nextDeployment.player)} to place this unit.</Hint>
           </section>
         )}
 
@@ -1378,47 +1433,39 @@ export function PlayScreen({ session }: { session: Session }) {
           </section>
         )}
 
-        {active && activeUnit && (
-          <section className="panel" aria-label="Current turn">
-            <h2>Turn {active.token}</h2>
-            <p className="turn-banner" style={{ borderColor: names.playerColor(active.player) }}>
-              <span className="swatch" style={{ background: names.playerColor(active.player) }} />
-              <span>
-                <strong>{names.player(active.player)}</strong>: {names.unit(activeUnit.id)}
-              </span>
-            </p>
-            <ul className="figure-list">
-              {activeUnit.figures
-                .filter((f) => !f.destroyed)
-                .map((f) => {
-                  const engaged = engagedCount(f.id);
-                  return (
-                    <li key={f.id}>
-                      <button
-                        type="button"
-                        className={`figure-button ${selected === f.id ? "on" : ""}`}
-                        disabled={!canAct(f.id)}
-                        onClick={() => setSelected(f.id)}
-                      >
-                        {names.figure(f.id)}
-                        <span className="muted small">
-                          {active.attacked.includes(f.id)
-                            ? (active.bonusMoves[f.id] ?? 0) > 0
-                              ? " may still move"
-                              : " done"
-                            : active.moved.includes(f.id)
-                              ? canMoveOn(f.id)
-                                ? " moved, can move on"
-                                : " moved"
-                              : ""}
-                        </span>
-                        {engaged > 0 && <span className="tag">engaged</span>}
-                        {state.pinned?.includes(f.id) && <span className="tag">pinned</span>}
-                      </button>
-                    </li>
-                  );
-                })}
-            </ul>
+        {active && activeUnit && activeCard && (
+          <section className="panel ledger-sheet" aria-label="Current turn">
+            <Ribbon
+              color={names.playerColor(active.player)}
+              faction={activeCard.faction}
+              eyebrow={`${names.player(active.player)} · Turn ${active.token}`}
+              title={names.unit(activeUnit.id)}
+            />
+            {activeUnit.figures.length > 1 && (
+              <ul className="figure-list">
+                {activeUnit.figures
+                  .filter((f) => !f.destroyed)
+                  .map((f) => {
+                    const engaged = engagedCount(f.id);
+                    return (
+                      <li key={f.id}>
+                        <button
+                          type="button"
+                          className={`figure-button ${selected === f.id ? "on" : ""}`}
+                          disabled={!canAct(f.id)}
+                          onClick={() => setSelected(f.id)}
+                        >
+                          {names.figure(f.id)}
+                          <span className="figure-state">{figureState(f.id)}</span>
+                          {engaged > 0 && <span className="tag">engaged</span>}
+                          {state.pinned?.includes(f.id) && <span className="tag">pinned</span>}
+                        </button>
+                      </li>
+                    );
+                  })}
+              </ul>
+            )}
+            {myTurn && selected && <Pills pills={figurePills(selected)} />}
             {specials.length > 0 && selected && !active.attacked.includes(selected) && (
               <div className="segmented action-modes" role="radiogroup" aria-label="Attack with">
                 {[{ id: null as string | null, name: "Attack" }, ...specials].map((a) => (
@@ -1440,73 +1487,47 @@ export function PlayScreen({ session }: { session: Session }) {
                 Waiting for {othersWatching.map((p) => names.player(p)).join(", ")} to finish watching the attack.
               </p>
             )}
-            <p className="muted small">
-              {!myTurn
-                ? `Waiting for ${names.player(active.player)} to play this turn.`
-                : selected
-                ? `Green hexes: click one to move there, or drag the figure onto it. ${
-                    modeKind === "swap"
-                      ? targets.size > 0
-                        ? "Rings: friends to swap places with."
-                        : "No friend in range to swap with."
-                      : aiming
-                        ? "Click one of the red hexes to aim the blast there; figures next to it are hit too. Escape picks another target."
-                        : targets.size > 0
-                          ? `Red rings: attack.${blast ? " A big figure: click it, then pick the hex to aim at." : ""}`
-                          : blastHexes.length > 0
-                            ? ""
-                            : "No enemy in range and sight."
-                  }${blastHexes.length > 0 ? " Red hexes: empty ground the blast can land on." : ""} Orange hexes are risky (lava, ice, falls or passing strikes).${
-                    state.pinned?.includes(selected) ? " This figure is pinned and cannot move this turn." : ""
-                  }`
-                : "This unit has finished."}
-              {moveBig && selected && options.size > 0 ? " The see-through copy shows where the figure ends and which way it faces; R picks another way (Shift+R the other way round)." : ""}
-              {turner ? ` Press R to turn ${names.figure(turner)} an eighth (Shift+R the other way), until it attacks.` : ""}
-              {myTurn ? ` Keys: ${activeUnit.figures.length > 1 ? "1-4 pick a figure, " : ""}E eye view, H shows where the chosen figure is, Space ends the turn, WASD moves the map; middle-click a hex to read its terrain${isOnline ? "; P points at the spot under the pointer for everyone" : ""}.` : ""}
-              {hoverOption ? ` Move cost ${hoverOption.cost}.` : ""}
-              {eyeView && myTurn ? " Drag or use the arrow keys to look around. Clicking an enemy faces it (a red-ringed one is attacked). Exit eye view to end the turn." : ""}
-            </p>
-            <div className="actions">
-              {myTurn && (
+            <Hint>{turnHint()}</Hint>
+            {myTurn && (
+              <div className="actions">
                 <button
                   type="button"
                   className="primary"
                   disabled={busy || eyeView}
-                  title={eyeView ? "Exit eye view before ending the turn" : undefined}
+                  title={eyeView ? "Exit eye view before ending the turn" : "End the turn (Space)"}
                   onClick={() => dispatch({ type: "endTurn", player: active.player })}
                 >
                   End turn
                 </button>
-              )}
-              {myTurn && (
                 <button
                   type="button"
                   aria-pressed={eyeView}
                   onClick={() => setEyeView(!eyeView)}
                   disabled={!selected && !eyeView}
-                  title="See the battlefield from the selected figure's eyes"
+                  title="See the battlefield from the selected figure's eyes (E)"
                 >
                   {eyeView ? "Exit eye view" : "Eye view"}
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </section>
         )}
 
         {resurrecting && resurrectUnit && resurrectCard && (
-          <section className="panel" aria-label="Resurrection">
-            <h2>Resurrection</h2>
-            <p className="turn-banner" style={{ borderColor: names.playerColor(resurrectUnit.owner) }}>
-              <span className="swatch" style={{ background: names.playerColor(resurrectUnit.owner) }} />
-              <span>
-                Place <strong>{resurrectCard.name}</strong>
-              </span>
-            </p>
-            <p className="muted small">
-              Click highlighted hexes, each within {ctx.tuning?.glyphs?.summonRange ?? 3} hexes of one of your figures.{" "}
-              {resurrecting.items.length} of {resurrectFigures.length} placed. Click a placed figure to pick it up again.
-              {resurrectBig ? " This figure covers several hexes: press R to turn it." : ""} Escape cancels.
-            </p>
+          <section className="panel ledger-sheet" aria-label="Resurrection">
+            <Ribbon
+              color={names.playerColor(resurrectUnit.owner)}
+              faction={resurrectCard.faction}
+              eyebrow={`${names.player(resurrectUnit.owner)} · Resurrection`}
+              title={`Place ${resurrectCard.name}`}
+            />
+            <Pills
+              pills={[{ text: `${resurrecting.items.length} of ${resurrectFigures.length} placed`, tone: resurrecting.items.length === resurrectFigures.length ? "good" : undefined }]}
+            />
+            <Hint>
+              Click highlighted hexes, each within {ctx.tuning?.glyphs?.summonRange ?? 3} hexes of one of your figures; click a placed figure to pick it
+              up again.{resurrectBig ? " R turns it." : ""} Esc cancels.
+            </Hint>
             <div className="actions">
               <button type="button" onClick={autoResurrect} disabled={resurrecting.items.length === resurrectFigures.length}>
                 Auto place
@@ -1529,22 +1550,6 @@ export function PlayScreen({ session }: { session: Session }) {
           </section>
         )}
 
-        <GlyphPanel
-          state={state}
-          ctx={ctx}
-          names={names}
-          shown={glyphsShown}
-          fresh={pickups.map((p) => p.glyphId)}
-          user={active && myTurn && !busy && !eyeView ? active.player : null}
-          onUse={(glyphId, unitId) => active && dispatch({ type: "useGlyph", player: active.player, glyphId, unitId })}
-          onResurrect={(glyphId, unitId) => {
-            setAiming(null);
-            setEyeView(false);
-            setResurrect({ glyphId, unitId, items: [] });
-          }}
-          resurrecting={resurrecting?.glyphId ?? null}
-        />
-
         {tokenPlayer && tokenPanelOpen && (
           <TokenPanel
             key={`${state.round}:${tokenPlayer}`}
@@ -1558,8 +1563,39 @@ export function PlayScreen({ session }: { session: Session }) {
           />
         )}
 
-        <EventLog events={session.events} names={names} />
-        <KeysPanel online={isOnline} />
+        <Drawer
+          tabs={[
+            { id: "log", label: "Log", content: <EventLog events={session.events} names={names} /> },
+            ...(glyphsInPlay
+              ? [
+                  {
+                    id: "glyphs",
+                    label: "Glyphs",
+                    badge: glyphsHeld,
+                    fresh: pickups.length > 0,
+                    content: (
+              <GlyphPanel
+                state={state}
+                ctx={ctx}
+                names={names}
+                shown={glyphsShown}
+                fresh={pickups.map((p) => p.glyphId)}
+                user={active && myTurn && !busy && !eyeView ? active.player : null}
+                onUse={(glyphId, unitId) => active && dispatch({ type: "useGlyph", player: active.player, glyphId, unitId })}
+                onResurrect={(glyphId, unitId) => {
+                  setAiming(null);
+                  setEyeView(false);
+                  setResurrect({ glyphId, unitId, items: [] });
+                }}
+                resurrecting={resurrecting?.glyphId ?? null}
+              />
+                    ),
+                  },
+                ]
+              : []),
+            { id: "keys", label: "Keys", content: <HotKeys online={isOnline} /> },
+          ]}
+        />
       </aside>
 
       <aside className={`hud-right${mainCard && otherCard ? " two-cards" : ""}`}>
@@ -1574,8 +1610,10 @@ export function PlayScreen({ session }: { session: Session }) {
             {cardView(otherCard)}
           </div>
         )}
-        <DisplayMenu />
-        <GameMenu session={session} />
+        <div className="hud-corner">
+          <GameMenu session={session} round />
+          <DisplayMenu />
+        </div>
       </aside>
 
       {session.error && (

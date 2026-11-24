@@ -11,7 +11,7 @@ import {
   type TokenAssignment,
   type TokenId,
 } from "@aoh/rules";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { describeEvent, type Names } from "../describe";
 
 // ---------------------------------------------------------------------------
@@ -153,7 +153,7 @@ export function RoundBar({ state, names }: { state: GameState; names: Names }) {
           const p = state.players.find((x) => x.id === id)!;
           const shown = view.tokens[id] ?? {};
           return (
-            <li key={id} className={`${active?.player === id ? "active" : ""} ${p.eliminated ? "out" : ""}`}>
+            <li key={id} className={`${active?.player === id ? "active" : ""} ${p.eliminated ? "out" : ""}`} style={{ "--player": p.color } as CSSProperties}>
               <span className="swatch" style={{ background: p.color }} />
               <span>{names.player(id)}</span>
               <span className="revealed">
@@ -323,8 +323,6 @@ export function EventLog({ events, names }: { events: readonly GameEvent[]; name
 // ---------------------------------------------------------------------------
 // Hot keys
 
-const KEYS_OPEN = "age-of-heroes:show-keys:v1";
-
 /** The play screen's keys and mouse controls, as [what to press, what it does]. */
 function hotKeys(online: boolean): readonly (readonly [string, string])[] {
   return [
@@ -346,42 +344,17 @@ function hotKeys(online: boolean): readonly (readonly [string, string])[] {
   ];
 }
 
-/** A small list of the hot keys, under the log. Click its heading to open or close it; the choice is remembered. */
-export function KeysPanel({ online }: { online: boolean }) {
-  const [open, setOpen] = useState(() => {
-    try {
-      return localStorage.getItem(KEYS_OPEN) !== "false";
-    } catch {
-      return true;
-    }
-  });
-  const toggle = () =>
-    setOpen((was) => {
-      try {
-        localStorage.setItem(KEYS_OPEN, String(!was));
-      } catch {
-        // Kept for this visit only.
-      }
-      return !was;
-    });
+/** The hot keys as a short two-column list (the Keys tab of the play screen's drawer). */
+export function HotKeys({ online }: { online: boolean }) {
   return (
-    <section className={`panel keys-panel${open ? " open" : ""}`} aria-label="Hot keys">
-      <h2>
-        <button type="button" className="keys-toggle" aria-expanded={open} onClick={toggle}>
-          Keys <span aria-hidden="true">{open ? "▾" : "▸"}</span>
-        </button>
-      </h2>
-      {open && (
-        <dl className="keys-list">
-          {hotKeys(online).map(([key, does]) => (
-            <div key={key}>
-              <dt>{key}</dt>
-              <dd>{does}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-    </section>
+    <dl className="keys-list" aria-label="Hot keys">
+      {hotKeys(online).map(([key, does]) => (
+        <div key={key}>
+          <dt>{key}</dt>
+          <dd>{does}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
