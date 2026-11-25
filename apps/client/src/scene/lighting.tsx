@@ -42,13 +42,14 @@ export function BoardLights({ span }: { span: number }) {
       </>
     );
   }
-  // The key light's shadow covers the board with a margin; the table beyond it stays unshadowed.
+  // The key light stands about 44° above the board, so a shadow is about as long as its figure is
+  // tall. Its shadow covers the board with a margin; the table beyond it stays unshadowed.
   const reach = span * 0.78;
   return (
     <>
       <hemisphereLight args={["#e6edff", "#3b3026", 0.45]} />
       <directionalLight
-        position={[span * 0.75, span * 0.7, span * 0.5]}
+        position={[span * 0.75, span * 0.875, span * 0.5]}
         intensity={2.4}
         color="#fff0db"
         castShadow
