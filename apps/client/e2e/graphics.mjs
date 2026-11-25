@@ -1,8 +1,10 @@
 // Checks the board at high graphics quality, the one browser test that turns every effect on (the
 // others draw at low in test mode): the key light casts shadows and the figures and scenery throw
 // them, draw calls stay within a budget, a resting board still stops drawing, and the Graphics
-// choice under Display switches the shadows off and on again. It runs only when graphics code
-// changes (scripts/affected.mjs). With E2E_SCREENSHOTS it saves the board at high and at low.
+// choice under Display switches the shadows off and on again. Then, with motion allowed (the
+// effects keep still under reduced motion), a figure's move kicks up a particle burst where it
+// lands. It runs only when graphics code changes (scripts/affected.mjs). With E2E_SCREENSHOTS it
+// saves the board at high and at low.
 // Usage: node e2e/graphics.mjs   (serves the build in apps/client/dist)
 import { chromium } from "playwright";
 import { preview } from "vite";
@@ -23,7 +25,7 @@ const browser = await chromium.launch({
 });
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, reducedMotion: "reduce" });
 // Test mode (src/testMode.ts), but at high graphics quality, with the dice show off so it cannot cover the board.
-await context.addInitScript(() => {
+const highTestMode = () => {
   window.__aohTest = true;
   window.__aohHighGraphics = true;
   try {
@@ -31,8 +33,9 @@ await context.addInitScript(() => {
   } catch {
     // The test still runs without storage.
   }
-});
-const page = await context.newPage();
+};
+await context.addInitScript(highTestMode);
+let page = await context.newPage();
 const errors = [];
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 page.on("pageerror", (e) => errors.push(e.stack ?? e.message));
@@ -80,6 +83,27 @@ async function boardRests() {
   );
 }
 
+/** Place each player's tokens behind the pass screen, one on each unit, until a turn begins. */
+async function playToFirstTurn() {
+  for (let i = 0; i < 400; i++) {
+    if (await page.locator(".pass-card").count()) {
+      await page.locator(".pass-card button").click();
+      const rows = page.locator(".token-table tbody tr");
+      const n = await rows.count();
+      const ids = (await page.locator(".token-table thead th").allInnerTexts()).slice(1);
+      for (const [row, token] of ids.slice(0, Math.min(ids.length, n)).entries()) {
+        await rows.nth(row).getByRole("button", { name: new RegExp(`^Token ${token} on`) }).click();
+      }
+      await page.getByRole("button", { name: "Lock in tokens" }).click();
+      continue;
+    }
+    const moves = await page.evaluate(() => (window.__aohUi?.selected ? window.__aohUi.moves.length : 0));
+    if ((await page.getByRole("region", { name: "Current turn" }).count()) && moves > 0) return;
+    await page.waitForTimeout(50);
+  }
+  fail("No turn with a figure to move began");
+}
+
 /** Choose a graphics quality under Display, and wait for the board to show it. */
 async function chooseGraphics(name, shadows) {
   await page.getByRole("button", { name: "Display" }).click();
@@ -112,8 +136,38 @@ try {
   if (shots) await page.screenshot({ path: `${shots}/graphics-low.png` });
   await chooseGraphics("High", true);
 
+  // With motion allowed: a figure's move kicks up dust (or a splash, or embers) where it lands.
+  await context.close();
+  const moving = await browser.newContext({ viewport: { width: 1280, height: 720 }, reducedMotion: "no-preference" });
+  await moving.addInitScript(highTestMode);
+  page = await moving.newPage();
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  page.on("pageerror", (e) => errors.push(e.stack ?? e.message));
+  await page.goto(url);
+  await page.getByRole("button", { name: "Test game" }).click();
+  await page.waitForFunction(() => window.__aoh?.canvas.isConnected, null, { timeout: 60000 });
+  await playToFirstTurn();
+  await steadyCamera();
+  const before = await page.evaluate(() => window.__aoh.graphics().bursts);
+  // The new round's dice panel can cover the board: close it.
+  const closeDice = page.getByRole("button", { name: "Close dice" });
+  if (await closeDice.count()) await closeDice.click({ timeout: 3000 }).catch(() => {});
+  // The furthest move to a hex in plain sight on the board, so the figure hops a few times.
+  const at = await page.evaluate(() =>
+    window.__aohUi.moves
+      .map((m) => window.__aoh.project(m.hex.q, m.hex.r, m.elevation))
+      .filter((p) => document.elementFromPoint(p.x, p.y)?.tagName === "CANVAS")
+      .pop(),
+  );
+  if (!at) fail("No move to a hex in sight");
+  await page.mouse.click(at.x, at.y);
+  await page.waitForFunction((n) => window.__aoh.graphics().bursts > n, before, { timeout: 15000 });
+  const { calls: burstCalls } = await page.evaluate(() => window.__aoh.stats());
+  if (burstCalls > HIGH_CALL_BUDGET) fail(`A burst took the board to ${burstCalls} draw calls (budget ${HIGH_CALL_BUDGET})`);
+  if (shots) await page.screenshot({ path: `${shots}/graphics-burst.png` });
+
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
-  console.log(`Graphics test passed: shadows from ${high.casters} meshes at high quality in ${calls} draw calls, none at low, and the board rests.`);
+  console.log(`Graphics test passed: shadows from ${high.casters} meshes at high quality in ${calls} draw calls, none at low, the board rests, and a move kicks up a burst.`);
 } catch (err) {
   if (failureShots) await page.screenshot({ path: `${failureShots}/graphics-failure.png` }).catch(() => {});
   throw err;

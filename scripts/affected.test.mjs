@@ -129,7 +129,7 @@ describe("affected checks", () => {
 
   it("runs the graphics test only for graphics code, the build setup and itself", () => {
     expect(PLAY).not.toContain("graphics");
-    for (const f of ["apps/client/src/scene/lighting.tsx", "apps/client/src/scene/BoardScene.tsx", "apps/client/src/scene/tileArt.ts", "apps/client/src/settings.ts", "apps/client/src/models/units/hive.ts"]) {
+    for (const f of ["apps/client/src/scene/lighting.tsx", "apps/client/src/scene/BoardScene.tsx", "apps/client/src/scene/tileArt.ts", "apps/client/src/scene/particles.ts", "apps/client/src/scene/reactions.ts", "apps/client/src/settings.ts", "apps/client/src/models/units/hive.ts"]) {
       expect(pick([f]).e2e, f).toBe("all");
     }
     expect(pick(["apps/client/e2e/graphics.mjs"]).e2e).toEqual(["graphics"]);

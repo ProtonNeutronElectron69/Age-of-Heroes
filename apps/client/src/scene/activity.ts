@@ -13,6 +13,9 @@ export interface BoardActivity {
   gliding: boolean;
   /** How many wound numbers this board has floated, for browser tests (`window.__aoh.woundsShown()`). */
   woundsShown: number;
+  /** How many particle bursts and figure reactions this board has played, for the graphics test (`window.__aoh.graphics()`). */
+  bursts: number;
+  reactions: number;
 }
 
 const byScene = new WeakMap<object, BoardActivity>();
@@ -22,7 +25,7 @@ export function useBoardActivity(): BoardActivity {
   const scene = useThree((s) => s.scene);
   let activity = byScene.get(scene);
   if (!activity) {
-    activity = { hopping: new Set(), gliding: false, woundsShown: 0 };
+    activity = { hopping: new Set(), gliding: false, woundsShown: 0, bursts: 0, reactions: 0 };
     byScene.set(scene, activity);
   }
   return activity;

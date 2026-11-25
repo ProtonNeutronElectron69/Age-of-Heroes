@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 56-unit roster in 7 factions, a map editor with seven premade maps, hot-seat and online play, and saved games. 794 unit and simulation tests and 8 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 56-unit roster in 7 factions, a map editor with seven premade maps, hot-seat and online play, and saved games. 803 unit and simulation tests and 8 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 In progress: better graphics (item 2 below). Planned, in no set order; each starts when the owner asks:
@@ -361,6 +361,6 @@ The owner approved a list of 25 changes, made after the kinds of ability in clas
 ### Better graphics
 The owner chose two qualities, Low and High (the default, every effect on), no visual effects for special abilities for now, and a review after each part.
 - [x] Part 1: **Graphics** under Display (High or Low; browser tests draw at Low). High lights the board with a warm key light casting soft shadows from figures, scenery and stacked tiles onto the board and the table, a cool fill and a softer sky light; Low keeps the plain light. A `graphics` browser test checks High, run only when graphics code changes
-- [ ] Part 2: effects and reactions in play: sparks as wounds land, dust as figures land, splashes, lava embers, a burst as a figure is destroyed, a healing sparkle, poison bubbles; an attacker's lunge, a defender's recoil, a destroyed figure toppling
+- [x] Part 2: effects and reactions in play, at High and not under reduced motion: sparks as wounds land (a blue glint off a blow that does no harm), dust where figures land (the ground's colour; splashes in water and swamp, embers on lava), a burst of dust and chips as a destroyed figure leaves, a sparkle on a heal or a return from the dead; the attacker's lunge (or kick as it shoots), the wounded figure's recoil, and a destroyed figure toppling instead of shaking. They fit the existing timings, so a fight takes no longer. Poison bubbles were left out with the other visuals for special abilities
 - [ ] Part 3: sharper terrain at High: 1024-pixel textures, relief that catches the light, gently moving water and slowly flowing lava (switchable, still under reduced motion)
 - [ ] Part 4: more detailed figures: bevelled bases and a soft edge light for every model, then each faction's detailed models; the triangle budget per figure doubles to 3,000

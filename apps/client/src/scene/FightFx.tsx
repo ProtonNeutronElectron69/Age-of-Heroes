@@ -417,14 +417,15 @@ export interface WoundNumber {
 }
 
 /**
- * One command's wound numbers: once no figure is hopping, each floats up from its
- * figure's head and fades. Then `onFloated` (the destroyed figures shake), and
- * after `then` more seconds, `onDone`.
+ * One command's wound numbers: once no figure is hopping, `onStart` (the sparks and recoils at
+ * high quality) and each floats up from its figure's head and fades. Then `onFloated` (the
+ * destroyed figures shake or topple), and after `then` more seconds, `onDone`.
  */
 export function WoundNumbers({
   numbers,
   center,
   then,
+  onStart,
   onFloated,
   onDone,
 }: {
@@ -432,6 +433,7 @@ export function WoundNumbers({
   center: { x: number; z: number };
   /** Seconds between the numbers fading and `onDone`. */
   then: number;
+  onStart?: () => void;
   onFloated: () => void;
   onDone: () => void;
 }) {
@@ -442,8 +444,8 @@ export function WoundNumbers({
   const reduced = useReducedMotion();
   const sprites = useRef<(Sprite | null)[]>([]);
   const clock = useRef({ waited: 0, started: -1, floated: false, done: false });
-  const report = useRef({ onFloated, onDone });
-  report.current = { onFloated, onDone };
+  const report = useRef({ onStart, onFloated, onDone });
+  report.current = { onStart, onFloated, onDone };
   const spot = useMemo(() => new Vector3(), []);
   // With no number to show (a figure lost to lava), go straight on to what comes next.
   const floatFor = numbers.length > 0 ? WOUND_SECONDS : 0;
@@ -463,6 +465,7 @@ export function WoundNumbers({
         return;
       }
       c.started = performance.now();
+      report.current.onStart?.();
     }
     const t = (performance.now() - c.started) / 1000;
     numbers.forEach((n, i) => {

@@ -2,11 +2,12 @@ import type { ThreeEvent } from "@react-three/fiber";
 import { useFrame, useThree } from "@react-three/fiber";
 import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS, hex, hexKey, hexToWorld, type Footprint, type Step } from "@aoh/rules";
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
-import { BufferGeometry, Color, ExtrudeGeometry, MeshBasicMaterial, MeshStandardMaterial, Shape, ShapeGeometry, Vector3, type Group, type Mesh } from "three";
+import { BufferGeometry, Color, ExtrudeGeometry, MeshBasicMaterial, MeshStandardMaterial, Quaternion, Shape, ShapeGeometry, Vector3, type Group, type Mesh } from "three";
 import { BASE_COLOR, BASE_RADIUS, UNIT_MODELS, baseFrame, baseGeometry, bakedGeometry, figureColors, unitModel, type BakedFigure, type FigureModel, type PaintContext } from "../models";
 import { useReducedMotion } from "../motion";
 import { useDisplay } from "../settings";
 import { useBoardActivity } from "./activity";
+import { REACTION_SECONDS, reactionPose, type ReactionKind } from "./reactions";
 import { useWake } from "./wake";
 import { factionTheme } from "../ui/factionThemes";
 
@@ -81,6 +82,16 @@ export interface FigureJump {
 /** Figures to shake on the spot (a destroyed figure, just before it leaves the board); a new `key` starts a shake. */
 export type FigureShake = FigureJump;
 
+/**
+ * Reactions in a fight (high graphics quality): a new `key` starts each listed figure's. The
+ * direction is across the board: toward the target for a lunge or a kick, away from the attacker
+ * for a recoil or a topple. A toppled figure stays down until it leaves the board.
+ */
+export interface FigureReactions {
+  readonly key: number;
+  readonly list: readonly { readonly id: string; readonly kind: ReactionKind; readonly dir: { readonly x: number; readonly z: number } }[];
+}
+
 interface Props {
   figures: readonly FigureView[];
   onClick?: (id: string) => void;
@@ -88,6 +99,7 @@ interface Props {
   motions?: FigureMotions | null;
   jump?: FigureJump | null;
   shake?: FigureShake | null;
+  reactions?: FigureReactions | null;
   carry?: FigureCarry | null;
   /** Figures the pointer may pick up and drag. While one is held the camera stays still. */
   canDrag?: (id: string) => boolean;
@@ -197,6 +209,7 @@ interface Animation {
   readonly motions: FigureMotions | null;
   readonly jump: FigureJump | null;
   readonly shake: FigureShake | null;
+  readonly reactions: FigureReactions | null;
   readonly carry: FigureCarry | null;
   /** How far each figure is drawn from where it stands, for the name tags. */
   readonly offsets: Map<string, Vector3>;
@@ -214,6 +227,8 @@ function worldOf(step: Step, out: Vector3): Vector3 {
 const scratch = new Vector3();
 const scratch2 = new Vector3();
 const lastDrawn = new Vector3();
+const tiltAxis = new Vector3();
+const NO_TURN = new Quaternion();
 
 /**
  * Moves a figure's drawing about its place on the board: hopping hex by hex
@@ -231,17 +246,22 @@ function useFigureAnimation(f: FigureView): RefObject<Group | null> {
     seenMotions: anim?.motions?.key,
     seenJump: anim?.jump?.key,
     seenShake: anim?.shake?.key,
+    seenReactions: anim?.reactions?.key,
     /** A hop along a path: where each landing is drawn, the step it lands on, and how many have landed. */
     hop: null as { points: Vector3[]; steps: Step[]; landed: number; t: number } | null,
     jumpT: -1,
     shakeT: -1,
+    /** A reaction under way: its kind, its direction (a unit vector across the board) and how long it has run. */
+    reaction: null as { kind: ReactionKind; dx: number; dz: number; t: number } | null,
+    /** How far the name tag is drawn from its place: the figure's offset, without a reaction's tilt. */
+    label: new Vector3(),
   });
   const reduced = useReducedMotion();
   const invalidate = useThree((s) => s.invalidate);
   const wake = useWake();
   const activity = useBoardActivity();
   // A new move, jump, drag or place needs a frame to start from.
-  useEffect(() => wake(), [anim?.motions, anim?.jump, anim?.shake, anim?.carry, f.spots, wake]);
+  useEffect(() => wake(), [anim?.motions, anim?.jump, anim?.shake, anim?.reactions, anim?.carry, f.spots, wake]);
   // Report a hop about to start before the next frame, so the camera waits for it to land.
   useLayoutEffect(() => {
     const m = anim?.motions;
@@ -254,7 +274,7 @@ function useFigureAnimation(f: FigureView): RefObject<Group | null> {
     const offsets = anim?.offsets;
     if (!offsets) return;
     const g = group.current;
-    if (g) offsets.set(f.id, g.position);
+    if (g) offsets.set(f.id, live.current.label);
     return () => void offsets.delete(f.id);
   }, [anim?.offsets, f.id]);
   useFrame((_, frameDelta) => {
@@ -343,11 +363,45 @@ function useFigureAnimation(f: FigureView): RefObject<Group | null> {
       if (u >= 1) st.shakeT = -1;
       else side = SHAKE_WIDTH * (1 - u) * Math.sin(st.shakeT * SHAKE_RATE * 2 * Math.PI);
     }
+    const rx = anim.reactions;
+    if (rx && rx.key !== st.seenReactions) {
+      st.seenReactions = rx.key;
+      const mine = reduced ? undefined : rx.list.find((x) => x.id === f.id);
+      const length = mine ? Math.hypot(mine.dir.x, mine.dir.z) : 0;
+      if (mine) {
+        st.reaction = { kind: mine.kind, dx: length > 1e-6 ? mine.dir.x / length : 0, dz: length > 1e-6 ? mine.dir.z / length : 1, t: 0 };
+        activity.reactions++;
+      }
+    }
     const was = lastDrawn.copy(g.position);
     g.position.set(st.offset.x + side, st.offset.y + up, st.offset.z + side * 0.4);
+    st.label.copy(g.position);
+    const r = st.reaction;
+    let reacting = false;
+    if (r) {
+      r.t += delta;
+      reacting = r.t < REACTION_SECONDS[r.kind] + delta;
+      const pose = reactionPose(r.kind, r.t);
+      // Tipped about a line on the ground through the middle of its base (a topple: its edge).
+      const cells = f.spots.map((s) => hexToWorld(s.hex, HEX_SIZE));
+      const cx = cells.reduce((n, c) => n + c.x, 0) / cells.length;
+      const cz = cells.reduce((n, c) => n + c.z, 0) / cells.length;
+      const edge = r.kind === "topple" ? Math.max(0, ...cells.map((c) => Math.hypot(c.x - cx, c.z - cz))) + BASE_RADIUS : 0;
+      const pivot = scratch.set(cx + r.dx * edge, Math.max(...f.spots.map((s) => s.elevation)) * LEVEL_HEIGHT, cz + r.dz * edge);
+      tiltAxis.set(r.dz, 0, -r.dx);
+      g.quaternion.setFromAxisAngle(tiltAxis, pose.tilt);
+      const turned = scratch2.copy(pivot).applyQuaternion(g.quaternion);
+      g.position.x += r.dx * pose.push + pivot.x - turned.x;
+      g.position.y += pose.lift + pivot.y - turned.y;
+      g.position.z += r.dz * pose.push + pivot.z - turned.z;
+      if (!reacting && r.kind !== "topple") {
+        st.reaction = null;
+        g.quaternion.identity();
+      }
+    } else if (!g.quaternion.equals(NO_TURN)) g.quaternion.identity();
     // Keep drawing while the figure moves, and once more after it stops, so its name tag
     // (placed in the same frame, perhaps before it moved) catches up.
-    if (!was.equals(g.position) || st.hop || st.jumpT >= 0 || st.shakeT >= 0) invalidate();
+    if (!was.equals(g.position) || st.hop || st.jumpT >= 0 || st.shakeT >= 0 || reacting) invalidate();
   });
   return group;
 }
@@ -871,7 +925,7 @@ function GhostFigure({ preview, drawn }: { preview: FigurePreview; drawn: "model
 /** Pointer travel (pixels) that turns a press on a figure into a drag. */
 const DRAG_PIXELS = 5;
 
-export function Figures({ figures, onClick, onHover, labels, style, motions = null, jump = null, shake = null, carry = null, canDrag, onDragStart, onDragEnd, onLand, preview = null }: Props) {
+export function Figures({ figures, onClick, onHover, labels, style, motions = null, jump = null, shake = null, reactions = null, carry = null, canDrag, onDragStart, onDragEnd, onLand, preview = null }: Props) {
   const display = useDisplay();
   const drawn = style ?? display.figures;
   const facing = useMemo(() => facings(figures), [figures]);
@@ -916,7 +970,7 @@ export function Figures({ figures, onClick, onHover, labels, style, motions = nu
     };
   }, []);
 
-  const animation = useMemo<Animation>(() => ({ motions, jump, shake, carry, offsets, onDown, onLand }), [motions, jump, shake, carry, offsets, onDown, onLand]);
+  const animation = useMemo<Animation>(() => ({ motions, jump, shake, reactions, carry, offsets, onDown, onLand }), [motions, jump, shake, reactions, carry, offsets, onDown, onLand]);
   return (
     <AnimationContext.Provider value={animation}>
       {figures.map((f) =>
