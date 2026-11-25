@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { E2E, plan } from "./affected.mjs";
+import { E2E, PLAY, plan } from "./affected.mjs";
 
 const pick = (files) => {
   const { check, unit, e2e } = plan(files);
@@ -25,15 +25,15 @@ describe("affected checks", () => {
   });
 
   it("treats the card loader as code the browser runs", () => {
-    expect(pick(["packages/content/src/cards.ts"]).e2e).toBe("all");
+    expect(pick(["packages/content/src/cards.ts"]).e2e).toEqual(PLAY);
   });
 
   it("runs every browser test for a map change", () => {
-    expect(pick(["packages/content/src/maps/the-mesa.json"]).e2e).toBe("all");
+    expect(pick(["packages/content/src/maps/the-mesa.json"]).e2e).toEqual(PLAY);
   });
 
   it("runs everything for an engine change", () => {
-    expect(pick(["packages/rules/src/game/engine.ts"])).toEqual({ check: true, unit: "all", e2e: "all" });
+    expect(pick(["packages/rules/src/game/engine.ts"])).toEqual({ check: true, unit: "all", e2e: PLAY });
   });
 
   it("runs only the changed package's tests for a test-only change", () => {
@@ -57,7 +57,7 @@ describe("affected checks", () => {
   });
 
   it("runs every browser test for the rest of the client", () => {
-    expect(pick(["apps/client/src/screens/PlayScreen.tsx"])).toEqual({ check: true, unit: ["apps/client"], e2e: "all" });
+    expect(pick(["apps/client/src/screens/PlayScreen.tsx"])).toEqual({ check: true, unit: ["apps/client"], e2e: PLAY });
   });
 
   it("runs the client tests and every browser test for a figure model, which the board draws", () => {
@@ -75,7 +75,7 @@ describe("affected checks", () => {
   });
 
   it("runs every browser test for the main menu, which every test starts from", () => {
-    expect(pick(["apps/client/src/screens/menu/menu.css"]).e2e).toBe("all");
+    expect(pick(["apps/client/src/screens/menu/menu.css"]).e2e).toEqual(PLAY);
     expect(pick(["apps/client/e2e/menu.mjs"]).e2e).toEqual(["menu"]);
   });
 
@@ -122,8 +122,18 @@ describe("affected checks", () => {
         "apps/client/e2e/models.mjs",
         "apps/client/e2e/gallery.mjs",
         "apps/client/e2e/menu.mjs",
+        "apps/client/e2e/graphics.mjs",
       ]).e2e,
     ).toBe("all");
+  });
+
+  it("runs the graphics test only for graphics code, the build setup and itself", () => {
+    expect(PLAY).not.toContain("graphics");
+    for (const f of ["apps/client/src/scene/lighting.tsx", "apps/client/src/scene/BoardScene.tsx", "apps/client/src/scene/tileArt.ts", "apps/client/src/settings.ts", "apps/client/src/models/units/hive.ts"]) {
+      expect(pick([f]).e2e, f).toBe("all");
+    }
+    expect(pick(["apps/client/e2e/graphics.mjs"]).e2e).toEqual(["graphics"]);
+    expect(pick(["apps/client/src/ui/Ledger.tsx"]).e2e).toEqual(PLAY);
   });
 
   it("runs everything for build setup and unknown files", () => {

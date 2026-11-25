@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { COLOR_SCHEMES, type ColorScheme } from "./models";
+import { TEST_MODE } from "./testMode";
 
 /**
  * How the board draws figures, chosen by each player for their own screen and
@@ -18,6 +19,8 @@ export interface DisplaySettings {
   readonly tiles: TileLook;
   /** How attacks and initiative show their dice. */
   readonly dice: DiceShow;
+  /** Graphics quality: high turns every effect on (shadows, warmer light); low is the plainest and quickest. */
+  readonly graphics: GraphicsQuality;
   /** The play screen's camera follows the acting figure: moving to it, turning to face the board, and zooming. */
   readonly autoPan: boolean;
   readonly autoRotate: boolean;
@@ -41,6 +44,13 @@ export const DICE_SHOWS: readonly { readonly id: DiceShow; readonly name: string
   { id: "scene", name: "Full scene" },
   { id: "dice", name: "Dice only" },
   { id: "none", name: "None" },
+];
+
+/** Graphics quality. High (the default) turns every effect on; low draws the plainest board, for slow computers. */
+export type GraphicsQuality = "low" | "high";
+export const GRAPHICS_QUALITIES: readonly { readonly id: GraphicsQuality; readonly name: string }[] = [
+  { id: "high", name: "High" },
+  { id: "low", name: "Low" },
 ];
 
 /** The two looks of the board's tiles. */
@@ -75,6 +85,7 @@ const DEFAULTS: DisplaySettings = {
   table: "tavern",
   tiles: "detailed",
   dice: "scene",
+  graphics: "high",
   autoPan: true,
   autoRotate: true,
   autoZoom: true,
@@ -94,6 +105,7 @@ function load(): DisplaySettings {
       table: TABLE_STYLES.some((t) => t.id === saved.table) ? saved.table! : DEFAULTS.table,
       tiles: saved.tiles === "classic" ? "classic" : "detailed",
       dice: DICE_SHOWS.some((d) => d.id === saved.dice) ? saved.dice! : DEFAULTS.dice,
+      graphics: saved.graphics === "low" ? "low" : "high",
       autoPan: saved.autoPan !== false,
       autoRotate: saved.autoRotate !== false,
       autoZoom: saved.autoZoom !== false,
@@ -145,3 +157,15 @@ export function subscribe(listener: () => void) {
 export function useDisplay(): DisplaySettings {
   return useSyncExternalStore(subscribe, () => settings);
 }
+
+/**
+ * The graphics quality this screen draws with: the player's choice, except that browser tests
+ * always draw at low, so they stay quick without a graphics card, unless a test asks for high
+ * (`window.__aohHighGraphics`, the graphics test).
+ */
+export function useGraphics(): GraphicsQuality {
+  const chosen = useDisplay().graphics;
+  if (TEST_MODE && !(typeof window !== "undefined" && window.__aohHighGraphics === true)) return "low";
+  return chosen;
+}
+
