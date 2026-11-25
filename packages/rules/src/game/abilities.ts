@@ -28,6 +28,21 @@ import type { FigureState, GameEvent, GameState, RulesContext, Step, UnitState }
  * - End of turn: field-dressing, reassemble, regrowth, mending-hymn, spawn-pool (if the squad did not attack)
  * - Special actions (used instead of a normal attack): ember-spit, mortar-barrage, arc-lightning (area attacks),
  *   lantern-gaze (mind control), grapple-line (pull an enemy close), fae-step (swap places with a friend)
+ *
+ * Added with the second ability drop (each is used once in the roster; see RULES.md):
+ * - More attacks: blood-surge (a d20 after a normal attack for one more), second-arrow (one more after a kill),
+ *   twin-cannons (two normal attacks if it has not moved)
+ * - Special actions aimed at a figure (`attack` with `ability`): life-tap (drain), constrict (a d20 to destroy),
+ *   circle-cut (hit every enemy next to it)
+ * - Powers (`power` command): hurl (throw an enemy), quake-stomp (wound and root everything next to it),
+ *   fire-breath (a line of fire), bonecall (bring back a fallen Orc or Undead), call-to-arms (a squad takes a turn next)
+ * - Movement: blink (teleport), treewalk (forest to forest), phase-walk (through figures, no passing strikes),
+ *   mag-lock-boots (climb any height, never fall), wings-of-refuge (carry a friend while flying)
+ * - Reactions and defence: grave-dread (enemies beside it may lose their nerve), mist-form (dodge ranged attacks),
+ *   shieldbearers (take a hero's wound), second-wind (once a game, a hero stays up), lurk (attack what ends a move
+ *   beside it in water or swamp), harry (passing strikes become full attacks)
+ * - Attacks that reach further: bolt-through (the bolt hits the next figure behind), spotters-call (shoot what a friend sees),
+ *   caustic-spores (poison that wounds over the victim's next turns)
  */
 
 /** Species that Smite the Unholy is aimed at. */
@@ -41,9 +56,9 @@ export function onWetTerrain(spots: readonly Step[], ctx: RulesContext): boolean
   return spots.some((s) => WET_TERRAIN.includes(ctx.board.surfaceAt(s.hex, s.elevation)?.terrain ?? ""));
 }
 
-/** Swamp never wounds a figure with Long Strides (amphibious) or Mire Skin (bog-skin). */
+/** Swamp never wounds a figure with Long Strides (amphibious), Mire Skin (bog-skin) or Lurk. */
 export function ignoresSwamp(card: UnitCard): boolean {
-  return hasAbility(card, "amphibious") || hasAbility(card, "bog-skin");
+  return hasAbility(card, "amphibious") || hasAbility(card, "bog-skin") || hasAbility(card, "lurk");
 }
 
 export function abilityOf(card: UnitCard, id: string): Ability | undefined {
@@ -321,13 +336,19 @@ export function isPinned(state: GameState, figureId: string): boolean {
   return state.pinned?.includes(figureId) ?? false;
 }
 
-/** Wounds after defensive abilities that reduce damage (Thick Hide). */
+/** Wounds after defensive abilities that reduce damage (Thick Hide; Mist Form, which needs a shield among the defense dice). */
 export function reduceWounds(
   defender: Combatant,
   distance: number,
   wounds: number,
   notes: string[],
+  blocks = 0,
 ): number {
+  const mist = abilityOf(defender.card, "mist-form");
+  if (mist && wounds > 0 && blocks > 0 && distance >= param(mist, "minDistance", 2)) {
+    notes.push(`${mist.name}: no wounds`);
+    return 0;
+  }
   const hide = hasAbility(defender.card, "thick-hide") ? abilityOf(defender.card, "thick-hide") : undefined;
   if (hide && wounds > 0 && distance >= param(hide, "minDistance", 3)) {
     const cut = Math.min(wounds, param(hide, "reduce", 1));
@@ -335,6 +356,17 @@ export function reduceWounds(
     return wounds - cut;
   }
   return wounds;
+}
+
+/**
+ * Shieldbearers: a friendly figure with the ability next to a hero that is about to take wounds
+ * from an attack, which takes one of them. The hero must be of another unit.
+ */
+export function shieldbearerFor(state: GameState, ctx: RulesContext, defender: Combatant): Combatant | undefined {
+  if (defender.card.figureCount !== 1) return undefined;
+  return friendsWith(state, defender.unit.owner, "shieldbearers", ctx).find(
+    (c) => c.unit.id !== defender.unit.id && spotDistance(c.spots, defender.spots) <= 1,
+  );
 }
 
 /** Reactions after an attack has been resolved against a defender. */
@@ -361,6 +393,21 @@ export function afterAttack(
       figureId: attacker.figure.id,
       targetId: defender.figure.id,
       detail: `${pin.name}: ${defender.card.name} cannot move on its next turn`,
+    });
+  }
+
+  // Caustic Spores: a figure struck by at least one skull is poisoned for its unit's next turns.
+  const spores = abilityOf(attacker.card, "caustic-spores");
+  if (spores && hits > 0 && !defender.figure.destroyed) {
+    const turns = param(spores, "turns", 2);
+    const entry = { figureId: defender.figure.id, turnsLeft: turns, woundOnOrBelow: param(spores, "woundOnOrBelow", 7) };
+    state.poisoned = [...(state.poisoned ?? []).filter((p) => p.figureId !== defender.figure.id), entry];
+    events.push({
+      type: "abilityUsed",
+      ability: spores.id,
+      figureId: attacker.figure.id,
+      targetId: defender.figure.id,
+      detail: `${spores.name}: ${defender.card.name} is poisoned`,
     });
   }
 
@@ -500,6 +547,7 @@ export function endOfTurnAbilities(state: GameState, unitId: string, ctx: RulesC
     state.pinned = state.pinned.filter((id) => !mine.has(id));
     if (state.pinned.length === 0) delete state.pinned;
   }
+  poison(state, unit, card, ctx, events);
   reassemble(state, unit, card, ctx, events);
   spawnPool(state, unit, card, ctx, events);
   regrowth(unit, card, ctx, events);
@@ -534,6 +582,29 @@ export function endOfTurnAbilities(state: GameState, unitId: string, ctx: RulesC
       detail: `${dressing.name}: ${amount} wound removed`,
     });
   }
+}
+
+/**
+ * Caustic Spores: each poisoned figure of the unit that just acted rolls the d20 and is wounded on a
+ * low roll; the poison wears off after its last roll.
+ */
+function poison(state: GameState, unit: UnitState, card: UnitCard, ctx: RulesContext, events: GameEvent[]): void {
+  if (!state.poisoned?.length) return;
+  const rng = new Rng(state.rng);
+  for (const figure of unit.figures) {
+    const entry = state.poisoned.find((p) => p.figureId === figure.id);
+    if (!entry) continue;
+    entry.turnsLeft -= 1;
+    if (figure.destroyed) continue;
+    const roll = rng.d20();
+    const woundOn = entry.woundOnOrBelow;
+    const hurt = roll <= woundOn;
+    events.push({ type: "abilityRoll", ability: "caustic-spores", figureId: figure.id, targetId: figure.id, roll, needed: woundOn + 1, success: !hurt });
+    if (hurt) woundFigure(state, unit, figure, 1, card.life, "ability", events, ctx);
+  }
+  state.poisoned = state.poisoned.filter((p) => p.turnsLeft > 0 && !unit.figures.some((f) => f.id === p.figureId && f.destroyed));
+  if (state.poisoned.length === 0) delete state.poisoned;
+  state.rng = rng.state;
 }
 
 /** Heal one figure and log it. */
@@ -722,14 +793,65 @@ export function swapOf(card: UnitCard, id: string): ReachSpec | undefined {
   return reachOf(card, id, SWAP_IDS, 5);
 }
 
-export type SpecialKind = "area" | "mindControl" | "pull" | "swap";
+/**
+ * The kinds of special action. The first four, and drain, crush and sweep, are aimed at a figure
+ * with the `attack` command; throw, stomp, breath and raise use the `power` command. Orders (Call
+ * to Arms) is not instead of attacking: it picks the squad that takes a turn when this one ends.
+ */
+export type SpecialKind = "area" | "mindControl" | "pull" | "swap" | "drain" | "crush" | "sweep" | "throw" | "stomp" | "breath" | "raise" | "orders";
+
+/** The new powers, by ability id. */
+const POWER_KINDS: Readonly<Record<string, SpecialKind>> = {
+  "life-tap": "drain",
+  constrict: "crush",
+  "circle-cut": "sweep",
+  hurl: "throw",
+  "quake-stomp": "stomp",
+  "fire-breath": "breath",
+  bonecall: "raise",
+  "call-to-arms": "orders",
+};
+
+/** Kinds used with the `power` command rather than `attack`. */
+export const POWER_COMMAND_KINDS: readonly SpecialKind[] = ["throw", "stomp", "breath", "raise", "orders"];
+
+/** A power and its numbers (only those its kind uses mean anything). */
+export interface PowerSpec {
+  readonly id: string;
+  readonly name: string;
+  readonly kind: SpecialKind;
+  /** How far it reaches, in hexes (drain, throw: how far the target is thrown, breath: the line's length, orders: to the squad). */
+  readonly range: number;
+  /** Attack dice it rolls (drain, breath). */
+  readonly dice: number;
+  /** d20 roll needed, or higher (crush). */
+  readonly needed: number;
+  /** Wounds it deals outright (throw: on landing; stomp: on a blank). */
+  readonly wounds: number;
+}
+
+/** One of the new powers on a card, with its numbers. */
+export function powerOf(card: UnitCard, id: string): PowerSpec | undefined {
+  const kind = POWER_KINDS[id];
+  const a = abilityOf(card, id);
+  if (!kind || !a) return undefined;
+  return {
+    id,
+    name: a.name,
+    kind,
+    range: param(a, "range", kind === "breath" ? 4 : kind === "throw" ? 3 : kind === "orders" ? 4 : 1),
+    dice: param(a, "dice", kind === "breath" ? 3 : 2),
+    needed: param(a, "needed", 16),
+    wounds: param(a, "wounds", 1),
+  };
+}
 
 function specialKind(card: UnitCard, id: string): SpecialKind | null {
   if (areaAttackOf(card, id)) return "area";
   if (mindControlOf(card, id)) return "mindControl";
   if (pullOf(card, id)) return "pull";
   if (swapOf(card, id)) return "swap";
-  return null;
+  return powerOf(card, id)?.kind ?? null;
 }
 
 export function areaAttackOf(card: UnitCard, id: string): AreaAttackSpec | undefined {

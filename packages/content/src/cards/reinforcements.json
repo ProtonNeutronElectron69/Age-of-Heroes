@@ -121,13 +121,9 @@
     "points": 70,
     "abilities": [
       {
-        "id": "longshot",
-        "name": "Whistling Arrow",
-        "text": "When Lady Suzume attacks a figure 5 or more hexes away, she rolls 1 extra attack die.",
-        "params": {
-          "minDistance": 5,
-          "bonus": 1
-        }
+        "id": "second-arrow",
+        "name": "Second Arrow",
+        "text": "Once a turn, when Lady Suzume destroys a figure with a normal attack, she may make one more normal attack this turn."
       },
       {
         "id": "pin",
@@ -333,12 +329,9 @@
         }
       },
       {
-        "id": "smoke-step",
-        "name": "Phase Shift",
-        "text": "After Proxima attacks or uses Grapple Line, she may move up to 2 hexes. She does not take passing strikes during this move.",
-        "params": {
-          "move": 2
-        }
+        "id": "phase-walk",
+        "name": "Phase Walk",
+        "text": "Proxima may move through any figure, friend or foe, and never takes passing strikes."
       }
     ]
   },
@@ -363,9 +356,9 @@
     "points": 95,
     "abilities": [
       {
-        "id": "pin",
-        "name": "Shock Gauntlets",
-        "text": "An enemy that a Breacher wounds but does not destroy cannot move on its unit's next turn. It can still attack."
+        "id": "mag-lock-boots",
+        "name": "Mag-Lock Boots",
+        "text": "A Breacher climbs any height in a single step, with no extra Move for the climb, and never takes falling damage."
       }
     ]
   },
@@ -435,14 +428,9 @@
         }
       },
       {
-        "id": "arc-lightning",
-        "name": "Hex Bolt",
-        "text": "Instead of a normal attack, Grubnak may hurl a hex bolt at a figure up to 4 hexes away in his line of sight with 2 attack dice. Every other figure next to the target, friend or foe, is also attacked with 1 die.",
-        "params": {
-          "range": 4,
-          "dice": 2,
-          "splashDice": 1
-        }
+        "id": "bonecall",
+        "name": "Bonecall",
+        "text": "Instead of attacking, Grubnak may call back one destroyed figure of a friendly Orc or Undead squad. It returns unwounded on a free hex next to Grubnak."
       }
     ]
   },
@@ -559,9 +547,9 @@
     "points": 90,
     "abilities": [
       {
-        "id": "piercing",
+        "id": "bolt-through",
         "name": "Piercing Bolts",
-        "text": "A figure attacked by a Crossbowman rolls 1 fewer defense die.",
+        "text": "A Crossbowman's bolt flies on past its target: the next figure behind it, along the same straight row of hexes and within range and sight, is also attacked, with 1 fewer attack die. Friends can be hit too.",
         "params": {
           "reduce": 1
         }

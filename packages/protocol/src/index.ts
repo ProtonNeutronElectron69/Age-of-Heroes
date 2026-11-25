@@ -50,9 +50,25 @@ export const commandSchema = z.discriminatedUnion("type", [
     // Token "1" up to the player's count, and "X": every one in older games; under the "onePerUnit" rule, one for each of the player's units.
     tokens: z.record(z.string().regex(/^([1-9][0-9]?|X)$/), id).refine((t) => Object.keys(t).length <= 100),
   }),
-  z.object({ type: z.literal("move"), player: id, figureId: id, path: z.array(stepSchema).min(1).max(64) }),
+  z.object({
+    type: z.literal("move"),
+    player: id,
+    figureId: id,
+    path: z.array(stepSchema).min(1).max(64),
+    ability: id.optional(),
+    carry: z.object({ figureId: id, to: stepSchema.omit({ rotation: true }) }).optional(),
+  }),
   z.object({ type: z.literal("attack"), player: id, figureId: id, targetId: id, ability: id.optional(), aim: hexSchema.optional() }),
   z.object({ type: z.literal("blast"), player: id, figureId: id, ability: id, at: stepSchema.omit({ rotation: true }) }),
+  z.object({
+    type: z.literal("power"),
+    player: id,
+    figureId: id,
+    ability: id,
+    targetId: id.optional(),
+    unitId: id.optional(),
+    at: stepSchema.omit({ rotation: true }).optional(),
+  }),
   z.object({ type: z.literal("endTurn"), player: id }),
   z.object({ type: z.literal("face"), player: id, figureId: id, facing: z.number().int().min(0).max(359) }),
   z.object({

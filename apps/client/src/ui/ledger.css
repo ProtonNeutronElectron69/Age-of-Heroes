@@ -540,3 +540,37 @@
 .screen.play .hud-right .unit-card-foot .link-button {
   color: var(--brass-hi);
 }
+
+/* Powers with a choice of squad (Bonecall, Call to Arms) and the carry choice (Wings of Refuge). */
+.screen.play .power-choices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.screen.play .power-label {
+  font-family: var(--ledger-title);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.screen.play .power-choices button,
+.screen.play .carry-choice button {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.screen.play .power-choices button.on {
+  background: linear-gradient(180deg, var(--brass-hi), var(--brass) 55%, var(--brass-lo));
+  outline: 2px solid var(--ink);
+}
+
+.screen.play .carry-choice,
+.screen.play .power-actions {
+  margin: 0 0 10px;
+}
+

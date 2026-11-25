@@ -35,6 +35,17 @@ describe("message validation", () => {
     expect(commandSchema.safeParse(glyph).success).toBe(true);
     expect(commandSchema.safeParse({ ...glyph, placements: [{ figureId: "f1", hex: { q: 1, r: 2 }, elevation: 1 }] }).success).toBe(true);
     expect(commandSchema.safeParse({ ...glyph, glyphId: 3 }).success).toBe(false);
+    // Powers: a throw aimed at a figure and a spot, a squad called to arms, and nothing else.
+    const power = { type: "power", player: "p1", figureId: "p1:0#1", ability: "hurl" };
+    expect(commandSchema.safeParse({ ...power, targetId: "p2:0#1", at: { hex: { q: 2, r: 1 }, elevation: 1 } }).success).toBe(true);
+    expect(commandSchema.safeParse({ ...power, ability: "call-to-arms", unitId: "p1:2" }).success).toBe(true);
+    expect(commandSchema.safeParse({ ...power, at: { hex: { q: 2, r: 1 }, elevation: -1 } }).success).toBe(false);
+    expect(commandSchema.safeParse({ type: "power", player: "p1", figureId: "p1:0#1" }).success).toBe(false);
+    // A teleport and a carried friend ride on the move command.
+    const step = { hex: { q: 1, r: 2 }, elevation: 1 };
+    expect(commandSchema.safeParse({ type: "move", player: "p1", figureId: "p1:0#1", path: [step], ability: "blink" }).success).toBe(true);
+    expect(commandSchema.safeParse({ type: "move", player: "p1", figureId: "p1:0#1", path: [step], carry: { figureId: "p1:1#1", to: step } }).success).toBe(true);
+    expect(commandSchema.safeParse({ type: "move", player: "p1", figureId: "p1:0#1", path: [step], carry: { to: step } }).success).toBe(false);
   });
 
   it("normalises room codes and names", () => {

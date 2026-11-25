@@ -21,6 +21,7 @@ export * from "./game/rounds";
 export * from "./game/draft";
 export * from "./game/deploy";
 export * from "./game/movement";
+export * from "./game/strike";
 export * from "./game/combat";
 export * from "./game/glyphs";
 export * from "./game/facing";

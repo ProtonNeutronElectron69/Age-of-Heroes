@@ -1,7 +1,7 @@
 import { deepClone } from "../clone";
 import { MAX_PLAYERS, MIN_PLAYERS } from "../schema";
 import { endOfTurnAbilities } from "./abilities";
-import { attack, blastHex, endOfTurnTerrain } from "./combat";
+import { attack, blastHex, calledUnit, endOfTurnTerrain, lurkAttacks, usePower } from "./combat";
 import { advanceDeployment, currentDeployment, deployUnit, startDeployment } from "./deploy";
 import {
   continueDraft,
@@ -168,13 +168,30 @@ export function applyCommand(state: GameState, command: Command, ctx: RulesConte
         placeTokens(next, command.player, command.tokens, events, ctx);
         break;
       case "move":
-        moveFigure(next, command.player, command.figureId, command.path, events, ctx);
+        moveFigure(next, command.player, command.figureId, command.path, events, ctx, command.ability, command.carry);
+        // Lurk: an enemy in water or swamp strikes at a figure that ends its move beside it.
+        if (next.phase === "turns") lurkAttacks(next, command.figureId, events, ctx);
         break;
       case "attack":
         attack(next, command.player, command.figureId, command.targetId, events, ctx, command.ability, command.aim);
         break;
       case "blast":
         blastHex(next, command.player, command.figureId, command.ability, command.at, events, ctx);
+        break;
+      case "power":
+        usePower(
+          next,
+          command.player,
+          command.figureId,
+          command.ability,
+          {
+            ...(command.targetId !== undefined ? { targetId: command.targetId } : {}),
+            ...(command.unitId !== undefined ? { unitId: command.unitId } : {}),
+            ...(command.at !== undefined ? { at: command.at } : {}),
+          },
+          events,
+          ctx,
+        );
         break;
       case "endTurn":
         endTurn(next, command.player, events, ctx);
@@ -300,8 +317,16 @@ function endTurn(state: GameState, player: PlayerId, events: GameEvent[], ctx: R
   curseTurnEnded(state, player, events);
   if (checkGameOver(state, events, ctx)) return;
   if (state.active !== active) return; // the player was knocked out and play has moved on
+  const call = calledUnit(state, ctx);
   events.push({ type: "turnEnded", player, token, unitId });
   state.active = null;
+  // Call to Arms: the chosen squad takes a turn straight away, then play moves on as it would have.
+  if (call) {
+    state.called = [...(state.called ?? []), unitId];
+    state.active = { player, unitId: call, token, moved: [], attacked: [], attackLog: [], bonusMoves: {}, called: true };
+    events.push({ type: "turnStarted", player, token, unitId: call });
+    return;
+  }
   stepPointer(state);
   advance(state, events, ctx);
 }

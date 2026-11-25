@@ -1,6 +1,7 @@
 import { applyCommand, createGame, currentDeployment, deploymentPlacements, hexDistance, playerZone, type Step } from "@aoh/rules";
 import { describe, expect, it } from "vitest";
 import {
+  ABILITY_VALUE,
   CARDS,
   FACTIONS,
   MAPS,
@@ -169,8 +170,21 @@ describe("cards", () => {
       "pin", "shove", "grapple-line", "last-stand", "fae-step", "will-o-wisp", "regrowth", "volatile-core",
       "war-drums", "corpse-feast", "challenge", "piercing", "mending-hymn",
       "spawn-pool", "hive-command", "numbing-glare", "amphibious", "bog-skin",
+      "blood-surge", "life-tap", "constrict", "grave-dread", "bonecall", "wings-of-refuge", "blink", "bolt-through",
+      "spotters-call", "mist-form", "circle-cut", "second-arrow", "hurl", "call-to-arms", "shieldbearers", "second-wind",
+      "quake-stomp", "twin-cannons", "mag-lock-boots", "phase-walk", "caustic-spores", "lurk", "harry", "treewalk",
+      "fire-breath",
     ]);
     for (const c of CARDS) for (const a of c.abilities) expect(implemented.has(a.id), `${c.id} ${a.id}`).toBe(true);
+  });
+
+  it("repeats no ability on more than two units (Flying aside), and values every ability in the balance model", () => {
+    const users = new Map<string, string[]>();
+    for (const c of CARDS) for (const a of c.abilities) users.set(a.id, [...(users.get(a.id) ?? []), c.id]);
+    for (const [id, cards] of users) {
+      if (id !== "flying") expect(cards.length, `${id} is on ${cards.join(", ")}`).toBeLessThanOrEqual(2);
+      expect(ABILITY_VALUE[id], `${id} has no value in the balance model`).toBeDefined();
+    }
   });
 
   it("gives heroes 2 to 8 Life, and most squads 1 (tough squads of 2 or 3 figures up to 3)", () => {
