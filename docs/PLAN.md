@@ -7,9 +7,9 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 56-unit roster in 7 factions, a map editor with seven premade maps, hot-seat and online play, and saved games. 793 unit and simulation tests and 7 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 8 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
-Nothing is in progress. Planned, in no set order; each starts when the owner asks:
+In progress: better graphics (item 2 below). Planned, in no set order; each starts when the owner asks:
 1. **A balance pass on unit stats.** Point costs come from the balance model so far; use real playtests to adjust each card's Life, Move, Range, Attack and Defense, and then its cost, faction by faction. Glyph numbers (`TUNING.glyphs`) and the newer rule numbers (the swamp d20, the strike from behind) are part of it.
-2. **Better graphics.** Particle bursts (hits, destroyed figures, landings, splashes, lava embers), short reaction animations (a lunge as a figure attacks, a recoil as it is hit), board shadows and lighting, sharper tile and scenery textures, gentle water and lava movement, and more detail on the figure models. First add graphics quality levels (Low, Medium, High) under Display, with test mode always on the plainest level, so the browser tests stay as quick as now; then one small screenshot test, run only when graphics code changes, that turns everything on. Effects that never stop (idle animations, moving water) stay subtle and switchable, since they keep the board from resting.
+2. **Better graphics** (in progress, in four parts with the owner's review after each; see "Better graphics" below). A **Graphics** setting, High (the default, every effect on) or Low, with test mode on Low; lighting and shadows first, then effects and reactions in play, then sharper terrain, then more detailed figures.
 3. **Better hit boxes.** Line of sight now needs some part of the target's hit band, the top 40% of a token as tall as its Height (`HIT_BAND_FROM` in `world.ts`). Fit it better to each unit: a shape or band per unit or per kind (crouching, wide, flying on a stand, large beasts), still from the rules, never the 3D model. It changes who can see whom, so it is a new rule option for new games (see CLAUDE.md), and the eye view and token display should show the new shape.
 
 Also open:
@@ -357,3 +357,10 @@ The owner approved a list of 25 changes, made after the kinds of ability in clas
 - [x] Plain dice-bonus slots down from 34 to 18; no ability (Flying aside) is on more than two units, and a content test keeps it so
 - [x] Point costs set again from the balance model (Solenne, Orrin and Morvane cheaper; Captain Vance, K-7, the Pikemen, Marrowcoil, Lady Asagiri, Sister Maren, the Ruinmaw Raiders and the Murk Stalkers dearer)
 - [x] Games saved before this change may not load: the owner accepted that
+
+### Better graphics
+The owner chose two qualities, Low and High (the default, every effect on), no visual effects for special abilities for now, and a review after each part.
+- [x] Part 1: **Graphics** under Display (High or Low; browser tests draw at Low). High lights the board with a warm key light casting soft shadows from figures, scenery and stacked tiles onto the board and the table, a cool fill and a softer sky light; Low keeps the plain light. A `graphics` browser test checks High, run only when graphics code changes
+- [ ] Part 2: effects and reactions in play: sparks as wounds land, dust as figures land, splashes, lava embers, a burst as a figure is destroyed, a healing sparkle, poison bubbles; an attacker's lunge, a defender's recoil, a destroyed figure toppling
+- [ ] Part 3: sharper terrain at High: 1024-pixel textures, relief that catches the light, gently moving water and slowly flowing lava (switchable, still under reduced motion)
+- [ ] Part 4: more detailed figures: bevelled bases and a soft edge light for every model, then each faction's detailed models; the triangle budget per figure doubles to 3,000

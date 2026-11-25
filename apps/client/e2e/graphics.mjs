@@ -1,0 +1,123 @@
+// Checks the board at high graphics quality, the one browser test that turns every effect on (the
+// others draw at low in test mode): the key light casts shadows and the figures and scenery throw
+// them, draw calls stay within a budget, a resting board still stops drawing, and the Graphics
+// choice under Display switches the shadows off and on again. It runs only when graphics code
+// changes (scripts/affected.mjs). With E2E_SCREENSHOTS it saves the board at high and at low.
+// Usage: node e2e/graphics.mjs   (serves the build in apps/client/dist)
+import { chromium } from "playwright";
+import { preview } from "vite";
+
+const shots = process.env.E2E_SCREENSHOTS;
+const failureShots = process.env.E2E_FAILURE_SCREENSHOTS ?? shots;
+/** Draw calls a frame may take at high quality, the shadow pass included (low holds the board to 300). */
+const HIGH_CALL_BUDGET = 600;
+
+function fail(message) {
+  throw new Error(message);
+}
+
+const server = await preview({ preview: { port: 4187, strictPort: true }, logLevel: "error" });
+const url = server.resolvedUrls.local[0];
+const browser = await chromium.launch({
+  args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+});
+const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, reducedMotion: "reduce" });
+// Test mode (src/testMode.ts), but at high graphics quality, with the dice show off so it cannot cover the board.
+await context.addInitScript(() => {
+  window.__aohTest = true;
+  window.__aohHighGraphics = true;
+  try {
+    localStorage.setItem("aoh.display", JSON.stringify({ ...JSON.parse(localStorage.getItem("aoh.display") ?? "{}"), dice: "none" }));
+  } catch {
+    // The test still runs without storage.
+  }
+});
+const page = await context.newPage();
+const errors = [];
+page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+page.on("pageerror", (e) => errors.push(e.stack ?? e.message));
+
+/** Wait until the camera has stopped moving. */
+async function steadyCamera(frames = 5) {
+  await page.evaluate(
+    (frames) =>
+      new Promise((resolve) => {
+        let last = "";
+        let same = 0;
+        const tick = () => {
+          const p = JSON.stringify(window.__aoh?.project(0, 0, 0));
+          same = p === last && !window.__aoh?.cameraBusy() ? same + 1 : 0;
+          last = p;
+          if (same >= frames) resolve();
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }),
+    frames,
+  );
+}
+
+/** True once the board has drawn no frame for 1.5 s (a resting board costs nothing). */
+async function boardRests() {
+  return page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const end = performance.now() + 15000;
+        let last = window.__aoh.stats().frames;
+        let since = performance.now();
+        const check = () => {
+          const now = window.__aoh.stats().frames;
+          if (now !== last) {
+            last = now;
+            since = performance.now();
+          }
+          if (performance.now() - since > 1500) resolve(true);
+          else if (performance.now() > end) resolve(false);
+          else setTimeout(check, 100);
+        };
+        check();
+      }),
+  );
+}
+
+/** Choose a graphics quality under Display, and wait for the board to show it. */
+async function chooseGraphics(name, shadows) {
+  await page.getByRole("button", { name: "Display" }).click();
+  await page.getByRole("radiogroup", { name: "Graphics" }).getByRole("radio", { name }).click();
+  await page.getByRole("button", { name: "Display" }).click();
+  await page.waitForFunction((on) => window.__aoh.graphics().shadows === on, shadows, { timeout: 15000 });
+}
+
+try {
+  await page.goto(url);
+  // The test game: two armies already on Twin Fords, tokens to place behind the pass screen.
+  await page.getByRole("button", { name: "Test game" }).click();
+  await page.locator(".pass-card").waitFor();
+  await page.locator(".pass-card button").click();
+  await page.waitForFunction(() => window.__aoh?.canvas.isConnected, null, { timeout: 60000 });
+  await steadyCamera();
+
+  // High, the default: the key light casts shadows, and the figures, scenery and tiles throw them.
+  await page.waitForFunction(() => window.__aoh.graphics().shadows && window.__aoh.graphics().casters > 0, null, { timeout: 15000 });
+  const high = await page.evaluate(() => window.__aoh.graphics());
+  if (high.casters < 20) fail(`Too few meshes cast shadows at high quality: ${high.casters}`);
+  const { calls } = await page.evaluate(() => window.__aoh.stats());
+  if (calls > HIGH_CALL_BUDGET) fail(`High quality drew ${calls} draw calls in a frame (budget ${HIGH_CALL_BUDGET})`);
+  if (!(await boardRests())) fail("The board kept drawing at high quality while nothing moved");
+  if (shots) await page.screenshot({ path: `${shots}/graphics-high.png` });
+
+  // Low: no shadows at all; and back to high.
+  await chooseGraphics("Low", false);
+  if ((await page.evaluate(() => window.__aoh.graphics().casters)) !== 0) fail("Meshes still cast shadows at low quality");
+  if (shots) await page.screenshot({ path: `${shots}/graphics-low.png` });
+  await chooseGraphics("High", true);
+
+  if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
+  console.log(`Graphics test passed: shadows from ${high.casters} meshes at high quality in ${calls} draw calls, none at low, and the board rests.`);
+} catch (err) {
+  if (failureShots) await page.screenshot({ path: `${failureShots}/graphics-failure.png` }).catch(() => {});
+  throw err;
+} finally {
+  await browser.close();
+  await new Promise((resolve) => server.httpServer.close(resolve));
+}

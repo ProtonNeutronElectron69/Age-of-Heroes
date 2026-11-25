@@ -29,9 +29,15 @@ export const E2E = {
   models: "node e2e/models.mjs",
   gallery: "node e2e/gallery.mjs",
   menu: "node e2e/menu.mjs",
+  graphics: "node e2e/graphics.mjs",
 };
 
 const ALL = "all";
+/**
+ * Every browser test but the graphics test, which draws the board at high quality and runs only
+ * when graphics code changes (the others draw at low in test mode, so they cover the rest).
+ */
+export const PLAY = Object.keys(E2E).filter((id) => id !== "graphics");
 /** Unit tests for a package and every package that depends on it. */
 const WITH_DEPENDENTS = {
   rules: ALL,
@@ -55,10 +61,10 @@ export const RULES = [
   { area: "unit cards", match: /^packages\/content\/src\/(cards\/.*\.json|balance\.ts)$/, check: true, unit: WITH_DEPENDENTS.content, e2e: [] },
   { area: "content tests", match: /^packages\/content\/test\//, check: true, unit: [UNIT.content], e2e: [] },
   // Maps, terrain, scenery, tuning: they change how the board plays.
-  { area: "content", match: /^packages\/content\//, check: true, unit: WITH_DEPENDENTS.content, e2e: ALL },
+  { area: "content", match: /^packages\/content\//, check: true, unit: WITH_DEPENDENTS.content, e2e: PLAY },
 
   { area: "rules tests", match: /^packages\/rules\/test\//, check: true, unit: [UNIT.rules], e2e: [] },
-  { area: "rules", match: /^packages\/rules\//, check: true, unit: ALL, e2e: ALL },
+  { area: "rules", match: /^packages\/rules\//, check: true, unit: ALL, e2e: PLAY },
 
   // The protocol is only used online and for save files.
   { area: "protocol tests", match: /^packages\/protocol\/test\//, check: true, unit: [UNIT.protocol], e2e: [] },
@@ -75,6 +81,7 @@ export const RULES = [
   { area: "browser test", match: /^apps\/client\/e2e\/models\.mjs$/, check: false, unit: [], e2e: ["models"] },
   { area: "browser test", match: /^apps\/client\/e2e\/gallery\.mjs$/, check: false, unit: [], e2e: ["gallery"] },
   { area: "browser test", match: /^apps\/client\/e2e\/menu\.mjs$/, check: false, unit: [], e2e: ["menu"] },
+  { area: "browser test", match: /^apps\/client\/e2e\/graphics\.mjs$/, check: false, unit: [], e2e: ["graphics"] },
 
   { area: "client tests", match: /^apps\/client\/test\//, check: true, unit: [UNIT.client], e2e: [] },
   // Figure models are drawn on the board as well as on the model page and in the gallery, so they fall through to the rest of the client.
@@ -88,8 +95,16 @@ export const RULES = [
   { area: "map editor", match: /^apps\/client\/src\/screens\/EditorScreen\.tsx$/, check: true, unit: [], e2e: ["editor"] },
   { area: "online play", match: /^apps\/client\/src\/(online\.ts|screens\/LobbyScreen\.tsx|ui\/OnlineBar\.tsx)$/, check: true, unit: [], e2e: ["online"] },
   { area: "saves", match: /^apps\/client\/src\/(saves\.ts|ui\/SaveDialog\.tsx)$/, check: true, unit: [], e2e: ["saves", "online"] },
-  // Styles and the rest of the client: every browser test goes through them.
-  { area: "client", match: /^apps\/client\//, check: true, unit: [UNIT.client], e2e: ALL },
+  // Graphics: how the board, the table and the figures are drawn and lit. Every browser test, the graphics test too.
+  {
+    area: "graphics",
+    match: /^apps\/client\/src\/(scene\/(BoardScene|Figures|Table|lighting|tileArt|tileMaterials|sceneryArt|Glyphs)\.tsx?|models\/|settings\.ts$)/,
+    check: true,
+    unit: [UNIT.client],
+    e2e: ALL,
+  },
+  // Styles and the rest of the client: every browser test but the graphics test goes through them.
+  { area: "client", match: /^apps\/client\//, check: true, unit: [UNIT.client], e2e: PLAY },
 
   // Shared build setup, dependencies, CI and this script: everything.
   { area: "build setup", match: /^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json|vitest\.config\.ts|\.github\/workflows\/ci\.yml|scripts\/)/, check: true, unit: ALL, e2e: ALL },

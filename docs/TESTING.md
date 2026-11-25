@@ -8,7 +8,7 @@ Checks run only for the parts of the game a change can affect. The browser tests
 |---|---|---|
 | Typecheck and build | Every package compiles, and the client and server build | under a minute |
 | Unit tests | Vitest, by package: `packages/rules`, `packages/content`, `packages/protocol`, `apps/server`, `apps/client` (the figure models, classic and detailed, the table layout, the 3D dice and the dice tray's throws, the tile and scenery shapes, the jukebox, the music and sound lists, the version) | seconds |
-| Browser tests | Seven Playwright scripts in `apps/client/e2e`: `full-game`, `editor`, `saves`, `online`, `models`, `gallery`, `menu` | under a minute to about 4 minutes each in CI; `full-game` is the longest, at about 8 (9 locally), since the detailed tiles and scenery cost more to draw in software |
+| Browser tests | Eight Playwright scripts in `apps/client/e2e`: `full-game`, `editor`, `saves`, `online`, `models`, `gallery`, `menu`, and `graphics`, which runs only for graphics changes | under a minute to about 4 minutes each in CI; `full-game` is the longest, at about 8 (9 locally), since the detailed tiles and scenery cost more to draw in software |
 
 ## The browser tests
 
@@ -20,6 +20,7 @@ Checks run only for the parts of the game a change can affect. The browser tests
 | `editor` | Building a map (with a large tree, refused first where it would overlap, and a low wall), exporting and importing it, and playing on it |
 | `models` | Every figure model on the model page |
 | `gallery` | The unit gallery: filters, sorts, sizes and the model viewer; then the map gallery: another map previewed and chosen for play |
+| `graphics` | The one test at high graphics quality (the others draw at low): in the test game, the key light casts shadows and figures, scenery and tiles throw them, draw calls stay within 600 with the shadow pass, the board still rests, and **Graphics** under Display turns the shadows off at Low and on again at High |
 | `menu` | The main menu in all four styles at three window sizes, with nothing scrolling, the version and last update in the corner, the music and sound controls and credits on every style, the menu music playing and being turned off, and menu hover and click sounds (silent with Sounds off); the Test game choice starting a game with every glyph down |
 
 ## What a change runs
@@ -31,8 +32,8 @@ The first matching row decides for each file; a change runs everything its files
 | Docs and other `.md` files | no | none | none |
 | Deployment files (`.dockerignore`, `render.yaml`, the server `Dockerfile`, `deploy.yml`) | no | none | none |
 | Unit card data (`packages/content/src/cards/*.json`) and the balance model | yes | content, protocol, server, client | none |
-| Other content: maps, terrain, scenery, tuning, the card loader | yes | content, protocol, server, client | all |
-| Engine (`packages/rules`) | yes | all | all |
+| Other content: maps, terrain, scenery, tuning, the card loader | yes | content, protocol, server, client | all but graphics |
+| Engine (`packages/rules`) | yes | all | all but graphics |
 | Protocol | yes | protocol, server | saves, online |
 | Server | yes | server | online |
 | A package's own tests only | yes | that package | none |
@@ -44,7 +45,8 @@ The first matching row decides for each file; a change runs everything its files
 | The unit gallery (`UnitGalleryScreen`, `unit-gallery.css`) | yes | none | gallery |
 | The map gallery (`MapGalleryScreen`, `map-gallery.css`) | yes | none | gallery |
 | The test game (`testGame.ts`) | yes | none | menu |
-| Any other client file | yes | client | all |
+| Graphics: how the board, table and figures are drawn and lit (`scene/BoardScene`, `Figures`, `Table`, `lighting`, `tileArt`, `tileMaterials`, `sceneryArt`, `Glyphs`, the figure models in `models/`, and `settings.ts`) | yes | client | all |
+| Any other client file | yes | client | all but graphics |
 | A browser test script | yes | none | that script |
 | Shared setup: `package.json`, the lockfile, `tsconfig.base.json`, `vitest.config.ts`, `ci.yml`, `scripts/` | yes | all | all |
 | Anything else | yes | all | all |
@@ -55,7 +57,7 @@ Figure models (`apps/client/src/models`) are drawn on the game board too, so a m
 
 ## Test mode and reduced motion
 
-Every browser test sets `window.__aohTest` before the page loads (`apps/client/src/testMode.ts`). In test mode the gaming table is drawn more simply (plainer lighting, a floor without a picture, drawn after the board), which is much quicker without a graphics card, and the camera keeps its older, narrower zoom limits. Players never have test mode: they get the full table and the wider zoom.
+Every browser test sets `window.__aohTest` before the page loads (`apps/client/src/testMode.ts`). In test mode the gaming table is drawn more simply (plainer lighting, a floor without a picture, drawn after the board), which is much quicker without a graphics card, the camera keeps its older, narrower zoom limits, and the board draws at low graphics quality (no shadows) whatever the player setting says, unless the test also sets `window.__aohHighGraphics` (the `graphics` test does). Players never have test mode: they get the full table and the wider zoom.
 
 The browser tests that show the game board (`full-game`, `online`, `saves`, `editor`) run with reduced motion. The board is drawn only when something changes, and reduced motion stills its endless decorations (the selection arrow's bob, the rings' pulse), so it rests between actions instead of drawing every frame in software. `full-game` checks once that the decorations do move without it.
 

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { COLOR_SCHEMES, type ColorScheme } from "../models";
 import { CornerIcon } from "./Ledger";
 import { SoundControls } from "./MusicControl";
-import { DICE_SHOWS, TABLE_STYLES, TILE_LOOKS, setDisplay, useDisplay, type DiceShow, type TableStyle } from "../settings";
+import { DICE_SHOWS, GRAPHICS_QUALITIES, TABLE_STYLES, TILE_LOOKS, setDisplay, useDisplay, type DiceShow, type TableStyle } from "../settings";
 
 /**
  * How this screen draws the game: figure models or tokens, the colour scheme
@@ -16,6 +16,22 @@ export function DisplayMenu() {
     <div className="display-menu">
       {open && (
         <section className="panel display-panel" aria-label="Display">
+          <h2>Graphics</h2>
+          <div className="segmented" role="radiogroup" aria-label="Graphics">
+            {GRAPHICS_QUALITIES.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                role="radio"
+                aria-checked={display.graphics === g.id}
+                className={display.graphics === g.id ? "on" : ""}
+                onClick={() => setDisplay({ graphics: g.id })}
+              >
+                {g.name}
+              </button>
+            ))}
+          </div>
+          <p className="muted small">High turns every effect on: soft shadows and warmer light. Low is plainer and quicker on slow computers.</p>
           <h2>Figures</h2>
           <div className="segmented" role="radiogroup" aria-label="Figures">
             {(["models", "tokens"] as const).map((v) => (

@@ -45,6 +45,7 @@ import { detailedMaterials, tileGeometry } from "./tileMaterials";
 import { HEX_GAP } from "./scale";
 import { useBoardActivity } from "./activity";
 import { useWake } from "./wake";
+import { BoardLights } from "./lighting";
 
 export interface Marker {
   readonly step: Step;
@@ -1018,8 +1019,7 @@ export function BoardScene({
   return (
     <>
       <color attach="background" args={[backdrop]} />
-      <hemisphereLight args={["#dfe9ff", "#3a3128", 0.9]} />
-      <directionalLight position={[12, 24, 10]} intensity={1.6} />
+      <BoardLights span={fitted.span} />
       <group position={[-center.x, 0, -center.z]}>
         {ground && (
           <>

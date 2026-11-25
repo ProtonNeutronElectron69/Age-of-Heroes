@@ -18,6 +18,8 @@ declare global {
       stats: () => { calls: number; triangles: number; lines: number; frames: number };
       /** The camera has a glide to make (perhaps waiting for a hop to land first), or is making one. */
       cameraBusy: () => boolean;
+      /** What the board draws with: whether shadows are on, and how many meshes cast one (the graphics test). */
+      graphics: () => { shadows: boolean; casters: number };
       /** How many wound numbers have floated up from figures on this board. */
       woundsShown: () => number;
       /**
@@ -57,7 +59,7 @@ declare global {
 
 /** Exposes a projection helper for automated browser tests. */
 export function TestHook({ offset }: { offset: { x: number; z: number } }) {
-  const { camera, gl } = useThree();
+  const { camera, gl, scene } = useThree();
   const activity = useBoardActivity();
   useEffect(() => {
     const hook: NonNullable<Window["__aoh"]> = {
@@ -72,6 +74,13 @@ export function TestHook({ offset }: { offset: { x: number; z: number } }) {
         return { calls: r.calls, triangles: r.triangles, lines: r.lines, frames: r.frame };
       },
       cameraBusy: () => activity.gliding,
+      graphics() {
+        let casters = 0;
+        scene.traverse((o) => {
+          if ((o as { isMesh?: boolean }).isMesh && o.castShadow) casters++;
+        });
+        return { shadows: gl.shadowMap.enabled, casters };
+      },
       woundsShown: () => activity.woundsShown,
       canvas: gl.domElement,
     };
