@@ -20,7 +20,7 @@ Dependencies only point downwards: `client` and `server` use `protocol`, `conten
 - **Determinism.** All randomness goes through the seeded `Rng` whose state lives in `GameState.rng`. A game is fully described by its setup and command list, so `replayGame(setup, commands, ctx)` rebuilds it exactly. Saves, online resume and bug reports all rely on this.
 - **Hidden information.** `viewFor(state, viewer)` removes what a viewer may not see (which of another player's unrevealed tokens is which, the RNG and the dice seed); `hiddenTokens` still says which units hold them, as they stand face down on the cards. The server only ever sends views; `stateFromView` (in `protocol`) turns a view back into a state the client can draw and query.
 - **Data-driven content.** Units, maps, terrain, scenery and tunable rule numbers are data validated with zod schemas. Abilities are code, named by id on the cards with numbers in `params`.
-- **Line of sight** is computed against simple shapes (terrain prisms and figure cylinders), never against rendered models, so it is fast and identical on client and server.
+- **Line of sight** is computed against simple shapes (terrain prisms, and figure cylinders or, in games with hit zones, each figure's boxes from `hitShapes.json`), never against rendered models, so it is fast and identical on client and server.
 
 ## Rules engine (`packages/rules/src`)
 
@@ -32,7 +32,9 @@ Dependencies only point downwards: `client` and `server` use `protocol`, `conten
 | `schema.ts` | Zod schemas for maps and unit cards, and engine-wide limits |
 | `terrain.ts`, `tuning.ts` | The shape of terrain rules and tunable numbers (the values live in `content`) |
 | `dice.ts`, `rng.ts` | Attack and defense dice, and the seeded RNG (mulberry32) |
-| `los.ts` | Line of sight: a strict check from the eye point to the hit band, with terrain, scenery and other figures blocking |
+| `los.ts` | Line of sight: a strict check from the eye point to the hit band, with terrain, scenery and other figures blocking; with hit zones, `shareInSight` counts how much of a target's body is in sight |
+| `hitShapes.ts` | Hit shapes: a figure's boxes (body or gear) in its own frame, read from their stored form (`decodeHitShape`), put on the board (`placeShape`, `shapeFrame`), tested against a line (`segmentHitsBox`) and sampled (`bodySamples`) |
+| `game/sight.ts` | Line of sight in a game: what blocks the view (`sightBlockers`: tokens, or figures' boxes with `hitZones`), whether one figure sees another (`figureInSight`), how much of it (`figureShareInSight`) and whether it sees a hex (`spotInSight`). Every check in the engine goes through it |
 | `game/combat.ts` cover | `coverFrom` gives the cover of scenery with `cover` (the low wall) to a figure next to it, against an attack from range whose line passes over it. Scenery bigger than one hex (`footprint`, turned by the placement's `rotation`) is stored in every hex it fills, so movement, placement and line of sight treat each hex like one-hex scenery. Scenery with `climb` (the low wall) can be crossed by walking figures at that extra cost: moves pass over it (`placementSpots` and `canStep` with `passing`) but never end on it |
 | `editor.ts` | Pure map-editing operations used by the map editor: placing and removing pieces, side placement, start zones, fixing problems, and seeded random fills |
 | `game/types.ts` | `GameState`, `Command`, `GameEvent`, `PlayerView` and friends |

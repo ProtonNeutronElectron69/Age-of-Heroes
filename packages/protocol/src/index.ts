@@ -136,6 +136,8 @@ const setupSchema = z
     strikeFromBehind: z.enum(["meleeOnly"]).optional(),
     /** New games: engaged figures may use special actions. Older files leave it out. */
     engagedSpecials: z.boolean().optional(),
+    /** New games: line of sight sees each figure's hit shape. Older files leave it out (tokens). */
+    hitZones: z.enum(["models"]).optional(),
   })
   .superRefine((s, ctx) => {
     if (s.mode === "basic") ctx.addIssue({ code: "custom", path: ["mode"], message: BASIC_RULES_GONE });

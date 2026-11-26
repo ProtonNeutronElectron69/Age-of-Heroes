@@ -60,7 +60,7 @@ export function DisplayMenu() {
               </button>
             ))}
           </div>
-          <p className="muted small">Tokens show the hit band that line of sight checks. Press T to switch.</p>
+          <p className="muted small">Tokens show what line of sight checks: the hit band, or with hit zones the body in its colour and gear in grey. Press T to switch.</p>
           <label className="field">
             <span>Model colours</span>
             <select

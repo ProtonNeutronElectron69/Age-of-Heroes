@@ -20,6 +20,8 @@ export interface Tuning {
   readonly grownZoneSize?: number;
   /** Glyph numbers (defaults in `DEFAULT_GLYPHS`). */
   readonly glyphs?: GlyphTuning;
+  /** Hit zones: the least share of a target's body the attacker must see, from 0 to 1 (default 0.2). */
+  readonly sightShare?: number;
 }
 
 export interface GlyphTuning {
@@ -47,4 +49,5 @@ export const DEFAULT_TUNING: Tuning = {
   maxStraddle: 1,
   grownZoneSize: 40,
   glyphs: DEFAULT_GLYPHS,
+  sightShare: 0.2,
 };

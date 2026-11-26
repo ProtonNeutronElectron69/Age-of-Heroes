@@ -1,6 +1,6 @@
 import { DEFENSE_DIE, countFaces, rollCombat, rollDice } from "../dice";
 import { DIRECTIONS, hexAdd, hexDistance, hexEquals, hexKey, hexSub, isAdjacent, type Hex } from "../hex";
-import { hasLineOfSight, type Token } from "../los";
+import { hasLineOfSight } from "../los";
 import { Rng } from "../rng";
 import { isUnique } from "../schema";
 import {
@@ -35,6 +35,7 @@ import { forcedMove, freeSpotFor } from "./movement";
 import { figureSpots, placementSpots } from "./placement";
 import { cardOf, findFigure, statsOf } from "./queries";
 import { checkGameOver, destroyFigure, woundFigure } from "./rounds";
+import { figureInSight, sightBlockers, spotInSight } from "./sight";
 import { canReach, resolve, tokens } from "./strike";
 import type { ActiveTurn, GameEvent, GameState, PlayerId, RulesContext, Step, UnitState } from "./types";
 
@@ -74,16 +75,7 @@ function seenByFriend(state: GameState, ctx: RulesContext, attacker: Combatant, 
 
 /** Can one figure see another past the terrain and every other figure? */
 function inSight(state: GameState, ctx: RulesContext, from: Combatant, to: Combatant): boolean {
-  const blockers: Token[] = [];
-  for (const unit of state.units) {
-    const card = ctx.cards.get(unit.cardId);
-    if (!card) continue;
-    for (const figure of unit.figures) {
-      if (figure.id === from.figure.id || figure.id === to.figure.id) continue;
-      blockers.push(...tokens(figureSpots(figure, card.footprint, card.height, ctx), card.height));
-    }
-  }
-  return hasLineOfSight(ctx.board, tokens(from.spots, from.card.height), tokens(to.spots, to.card.height), { blockers });
+  return figureInSight(state, ctx, from, to);
 }
 
 /** Spotter's Call: a normal attack at an enemy the attacker cannot see but a friend near it can. */
@@ -275,17 +267,8 @@ export function blastProblem(state: GameState, attackerId: string, at: Step, ctx
   const facing = facingOf(state, a.figure);
   if (facing !== null && !seesAny(facing, attacker.spots, [at])) return "Out of view: the target must be in front of the attacker";
   if (area.ignoresSight) return null;
-  const blockers: Token[] = [];
-  for (const unit of state.units) {
-    const c = ctx.cards.get(unit.cardId);
-    if (!c) continue;
-    for (const figure of unit.figures) {
-      if (figure.id === attackerId) continue;
-      blockers.push(...tokens(figureSpots(figure, c.footprint, c.height, ctx), c.height));
-    }
-  }
   // The hex is in sight if a figure of Height 1 standing there could be seen.
-  if (!hasLineOfSight(ctx.board, tokens(attacker.spots, attacker.card.height), [{ ...at, height: 1 }], { blockers })) {
+  if (!spotInSight(state, ctx, tokens(attacker.spots, attacker.card.height), at, [attackerId])) {
     return "No line of sight";
   }
   return null;
@@ -666,17 +649,7 @@ function boltTarget(state: GameState, ctx: RulesContext, attacker: Combatant, st
     const there = figuresAt(state, ctx, h).filter((c) => c.figure.id !== struckId && c.figure.id !== attacker.figure.id);
     if (there.length === 0) continue;
     const next = there[0]!;
-    const blockers: Token[] = [];
-    for (const unit of state.units) {
-      const card = ctx.cards.get(unit.cardId);
-      if (!card) continue;
-      for (const figure of unit.figures) {
-        if (figure.id === attacker.figure.id || figure.id === next.figure.id || figure.id === struckId) continue;
-        blockers.push(...tokens(figureSpots(figure, card.footprint, card.height, ctx), card.height));
-      }
-    }
-    const seen = hasLineOfSight(ctx.board, tokens(attacker.spots, attacker.card.height), tokens(next.spots, next.card.height), { blockers });
-    return seen ? next : null;
+    return figureInSight(state, ctx, attacker, next, [struckId]) ? next : null;
   }
   return null;
 }
@@ -879,15 +852,7 @@ export function hurlSpots(state: GameState, figureId: string, targetId: string, 
   if (!power) return [];
   const actor = combatant(a.unit, a.figure, ctx);
   const target = combatant(t.unit, t.figure, ctx);
-  const blockers: Token[] = [];
-  for (const unit of state.units) {
-    const card = ctx.cards.get(unit.cardId);
-    if (!card) continue;
-    for (const figure of unit.figures) {
-      if (figure.id === figureId || figure.id === targetId) continue;
-      blockers.push(...tokens(figureSpots(figure, card.footprint, card.height, ctx), card.height));
-    }
-  }
+  const blockers = sightBlockers(state, ctx, [figureId, targetId]);
   const spots: Step[] = [];
   for (const h of ctx.board.hexes()) {
     const reach = Math.min(...actor.spots.map((s) => hexDistance(s.hex, h)));
@@ -896,7 +861,7 @@ export function hurlSpots(state: GameState, figureId: string, targetId: string, 
       const at = { hex: h, elevation: surface.elevation };
       if (target.spots.some((s) => sameStep(s, at))) continue;
       if (!freeSpotFor(state, at, target.card.height, ctx, targetId)) continue;
-      if (!hasLineOfSight(ctx.board, tokens(actor.spots, actor.card.height), [{ ...at, height: 1 }], { blockers })) continue;
+      if (!hasLineOfSight(ctx.board, tokens(actor.spots, actor.card.height), [{ ...at, height: 1 }], blockers)) continue;
       spots.push(at);
     }
   }

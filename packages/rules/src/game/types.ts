@@ -1,6 +1,7 @@
 import type { Board } from "../board";
 import type { DieFace } from "../dice";
 import type { Hex } from "../hex";
+import type { HitShapes } from "../hitShapes";
 import type { UnitCard } from "../schema";
 import type { TerrainTable } from "../terrain";
 import type { Tuning } from "../tuning";
@@ -266,8 +267,15 @@ export interface GameConfig {
    * their range; engagement only limits its normal attack. Left out by older games, where it limits both.
    */
   readonly engagedSpecials?: boolean;
+  /**
+   * "models": line of sight sees each figure as boxes made from its model, not a token: the
+   * attacker must see enough of the target's body (arms, legs, torso, head, a mount), while
+   * weapons, shields and flight stands only block the view. Left out by older games, which use tokens.
+   */
+  readonly hitZones?: HitZones;
 }
 
+export type HitZones = "models";
 export type SwampRoll = "d20";
 export type GlyphPickup = "turnEnd";
 export type StrikeFromBehind = "meleeOnly";
@@ -365,6 +373,8 @@ export interface GameSetup {
   readonly strikeFromBehind?: StrikeFromBehind;
   /** New games let engaged figures use special actions; older ones leave it out. */
   readonly engagedSpecials?: boolean;
+  /** New games see figures by their hit shapes; older ones leave it out and see tokens. */
+  readonly hitZones?: HitZones;
 }
 
 export interface RulesContext {
@@ -373,6 +383,8 @@ export interface RulesContext {
   readonly terrain: TerrainTable;
   /** Rule numbers; defaults to DEFAULT_TUNING. */
   readonly tuning?: Tuning;
+  /** Each unit's hit shapes, for games with `hitZones`. A unit without one is a plain token. */
+  readonly hitShapes?: HitShapes;
 }
 
 export interface FigurePlacement extends PathStep {
