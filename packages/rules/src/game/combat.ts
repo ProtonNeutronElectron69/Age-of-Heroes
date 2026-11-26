@@ -4,9 +4,7 @@ import { hasLineOfSight } from "../los";
 import { Rng } from "../rng";
 import { isUnique } from "../schema";
 import {
-  abilityModifiers,
   abilityOf,
-  afterAttack,
   areaAttackOf,
   combatant,
   freeSpotNear,

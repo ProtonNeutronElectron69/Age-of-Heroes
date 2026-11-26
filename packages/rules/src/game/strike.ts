@@ -9,7 +9,7 @@ import { spotsEngaged } from "./engagement";
 import { facingOf, seesAny } from "./facing";
 import { glyphBonus } from "./glyphs";
 import { fail } from "./errors";
-import { figureSpots, standingElevation, tuningOf } from "./placement";
+import { standingElevation, tuningOf } from "./placement";
 import { findFigure, statsOf } from "./queries";
 import { woundFigure } from "./rounds";
 import { figureInSight } from "./sight";

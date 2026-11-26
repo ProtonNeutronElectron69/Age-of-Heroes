@@ -7,8 +7,8 @@ Checks run only for the parts of the game a change can affect. The browser tests
 | Check | What it covers | Time |
 |---|---|---|
 | Typecheck and build | Every package compiles, and the client and server build | under a minute |
-| Unit tests | Vitest, by package: `packages/rules`, `packages/content`, `packages/protocol`, `apps/server`, `apps/client` (the figure models, classic and detailed, the table layout, the 3D dice and the dice tray's throws, the tile and scenery shapes, the jukebox, the music and sound lists, the version) | seconds |
-| Browser tests | Eight Playwright scripts in `apps/client/e2e`: `full-game`, `editor`, `saves`, `online`, `models`, `gallery`, `menu`, and `graphics`, which runs only for graphics changes | under a minute to about 4 minutes each in CI; `full-game` is the longest, at about 8 (9 locally), since the detailed tiles and scenery cost more to draw in software |
+| Unit tests | Vitest, by package: `packages/rules`, `packages/content`, `packages/protocol`, `apps/server`, `apps/client` (the figure models, classic and detailed, and the hit shapes made from them, the table layout, the 3D dice and the dice tray's throws, the tile and scenery shapes, the jukebox, the music and sound lists, the version) | seconds |
+| Browser tests | Eight Playwright scripts in `apps/client/e2e`: `full-game`, `editor`, `saves`, `online`, `models`, `gallery`, `menu`, and `graphics`, which runs only for graphics changes | under a minute to about 4 minutes each in CI; `full-game` is the longest, at about 4 in CI (8 to 9 locally), since the detailed tiles and scenery cost more to draw in software |
 
 ## The browser tests
 
@@ -51,7 +51,7 @@ The first matching row decides for each file; a change runs everything its files
 | Shared setup: `package.json`, the lockfile, `tsconfig.base.json`, `vitest.config.ts`, `ci.yml`, `scripts/` | yes | all | all |
 | Anything else | yes | all | all |
 
-Unit tests follow the package graph: `rules` is used by everything, `content` by the protocol, the server and the client, and the protocol by the server. The client's own tests (`apps/client/test`) cover the figure models (each one must be as tall as its card's Height, fit its base and stay low polygon) the gaming table's layout (every card on the table, clear of the board and of the other cards), and the 3D dice (each lands showing the result it was given).
+Unit tests follow the package graph: `rules` is used by everything, `content` by the protocol, the server and the client, and the protocol by the server. The client's own tests (`apps/client/test`) cover the figure models (each one must be as tall as its card's Height, fit its base and stay within its triangle budget), the hit shapes made from them (`hitShapes.json` must match the models), the gaming table's layout (every card on the table, clear of the board and of the other cards), and the 3D dice (each lands showing the result it was given).
 
 Figure models (`apps/client/src/models`) are drawn on the game board too, so a model change runs every browser test, like the rest of the client.
 
