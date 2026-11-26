@@ -3,8 +3,8 @@ import { useThree } from "@react-three/fiber";
 import { HEX_SIZE, LEVEL_HEIGHT, TOKEN_RADIUS, footprintCells, hex, hexKey, hexNeighbors, hexToWorld, type Hex, type UnitCard } from "@aoh/rules";
 import { useEffect, useMemo } from "react";
 import { CylinderGeometry } from "three";
-import { BASE_COLOR, DETAILED_MODELS, UNIT_MODELS, baseFrame, baseGeometry, measure, type BaseFrame, type ColorScheme, type Fit, type UnitModel } from "../models";
-import { useDisplay } from "../settings";
+import { BASE_COLOR, DETAILED_MODELS, UNIT_MODELS, baseFrame, baseGeometry, measure, seedOf, withGround, type BaseFrame, type ColorScheme, type Fit, type UnitModel } from "../models";
+import { useDisplay, useGraphics } from "../settings";
 import { PaintedModel } from "./Figures";
 import { HEX_GAP } from "./scale";
 
@@ -93,9 +93,13 @@ export interface Colors {
 export function StandingUnit({ standing, colors, tokens, scheme }: { standing: Standing; colors: Colors; tokens: boolean; scheme: ColorScheme }) {
   // The detailed look shows a unit's detailed model where it has one (the fit is measured on the classic one).
   const detailed = useDisplay().tiles === "detailed";
+  // At high quality the detailed look shows the fine detail, as on the board: the ground on each
+  // base, high-only parts and smooth shading, and a rounder base.
+  const high = useGraphics() === "high";
+  const fine = detailed && high;
   const model = (detailed && DETAILED_MODELS[standing.card.id]) || standing.unit;
   const figures = model.figures;
-  const base = useMemo(() => baseGeometry(standing.card.footprint), [standing.card.footprint]);
+  const base = useMemo(() => baseGeometry(standing.card.footprint, fine), [standing.card.footprint, fine]);
   useEffect(
     () => () => {
       base.top.dispose();
@@ -109,7 +113,11 @@ export function StandingUnit({ standing, colors, tokens, scheme }: { standing: S
       {standing.frames.map((frame, i) => (
         <group key={i}>
           <group position={[frame.x, 0, frame.z]} rotation={[0, frame.yaw, 0]}>
-            <PaintedModel model={figures[i % figures.length]!} context={{ scheme, main: colors.model, faction: standing.card.faction }} />
+            <PaintedModel
+              model={fine ? withGround(figures[i % figures.length]!, standing.card.faction, standing.card.footprint, seedOf(standing.card.id) + (i % figures.length)) : figures[i % figures.length]!}
+              context={{ scheme, main: colors.model, faction: standing.card.faction }}
+              high={fine}
+            />
             <mesh geometry={base.top}>
               <meshStandardMaterial color={BASE_COLOR} roughness={0.75} />
             </mesh>

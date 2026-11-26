@@ -695,16 +695,19 @@ function ModelFigure({
   scheme: Parameters<typeof figureColors>[0];
   /** The detailed look: a detailed model where the unit has one. */
   detailed: boolean;
-  /** High graphics quality: rounder base, smooth shading, the ground on its base and an edge light. */
+  /** High graphics quality: in the detailed look, a rounder base, smooth shading, the ground on its base and an edge light. */
   high: boolean;
 }) {
   const ring = useRef<MeshBasicMaterial>(null);
   const moving = useFigureAnimation(f);
   const down = useContext(AnimationContext)?.onDown;
-  const meshes = unitMeshes(f.cardId, f.footprint, detailed, high);
+  // High quality's figure detail comes with the detailed look only: the classic look (B) keeps its
+  // plain, faceted, single-colour models and plain bases at any quality.
+  const fine = high && detailed;
+  const meshes = unitMeshes(f.cardId, f.footprint, detailed, fine);
   const pose = meshes.poses[f.pose % meshes.poses.length]!;
-  // The ground on its base, in its faction's style, comes with the detailed look at high quality.
-  const model = high && detailed ? withGround(pose, f.faction, f.footprint, seedOf(f.cardId) + f.pose) : pose;
+  // The ground on its base, in its faction's style.
+  const model = fine ? withGround(pose, f.faction, f.footprint, seedOf(f.cardId) + f.pose) : pose;
   const handlers = pointerHandlers(f.id, onClick, onHover, down);
   const h = f.height * LEVEL_HEIGHT;
   const ground = Math.max(...f.spots.map((s) => s.elevation)) * LEVEL_HEIGHT;
@@ -740,7 +743,7 @@ function ModelFigure({
       <group ref={moving}>
       <group position={[centre.x, ground, centre.z]}>
         <group rotation={[0, turn, 0]}>
-          <PaintedModel model={model} context={context} spent={f.status === "spent"} high={high} edge={high ? f.color : undefined} />
+          <PaintedModel model={model} context={context} spent={f.status === "spent"} high={fine} edge={fine ? f.color : undefined} />
           <mesh geometry={meshes.base.top} raycast={() => null}>
             <meshStandardMaterial color={BASE_COLOR} roughness={0.75} />
           </mesh>
