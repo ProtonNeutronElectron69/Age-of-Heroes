@@ -17,6 +17,8 @@ function row(n: number): Board {
       { seat: 0, hexes: pad.slice(0, 4) },
       { seat: 1, hexes: pad.slice(4, 8) },
     ],
+    layouts: {},
+    scenery: [],
   };
   return Board.fromMap(map, TERRAIN_TABLE, SCENERY_TABLE).board;
 }
