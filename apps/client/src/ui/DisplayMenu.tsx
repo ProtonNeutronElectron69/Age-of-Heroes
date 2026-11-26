@@ -36,6 +36,15 @@ export function DisplayMenu() {
             <input type="checkbox" checked={display.flow} disabled={display.graphics !== "high"} onChange={(e) => setDisplay({ flow: e.target.checked })} />
             Moving water and lava
           </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={display.outlineGlow}
+              disabled={display.graphics !== "high"}
+              onChange={(e) => setDisplay({ outlineGlow: e.target.checked })}
+            />
+            Outline glow in player colours
+          </label>
           <h2>Figures</h2>
           <div className="segmented" role="radiogroup" aria-label="Figures">
             {(["models", "tokens"] as const).map((v) => (

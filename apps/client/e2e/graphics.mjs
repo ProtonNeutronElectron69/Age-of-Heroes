@@ -140,6 +140,15 @@ try {
   if (shots) await page.screenshot({ path: `${shots}/graphics-low.png` });
   await chooseGraphics("High", true);
 
+  // The outline glow switches off and on again under Display.
+  await page.waitForFunction(() => window.__aoh.graphics().edgeLit >= 8, null, { timeout: 15000 });
+  await page.getByRole("button", { name: "Display" }).click();
+  await page.getByLabel("Outline glow in player colours").uncheck();
+  await page.waitForFunction(() => window.__aoh.graphics().edgeLit === 0, null, { timeout: 15000 });
+  await page.getByLabel("Outline glow in player colours").check();
+  await page.getByRole("button", { name: "Display" }).click();
+  await page.waitForFunction(() => window.__aoh.graphics().edgeLit >= 8, null, { timeout: 15000 });
+
   // With motion allowed: a figure's move kicks up dust (or a splash, or embers) where it lands.
   await context.close();
   const moving = await browser.newContext({ viewport: { width: 1280, height: 720 }, reducedMotion: "no-preference" });
@@ -180,7 +189,7 @@ try {
   await page.waitForFunction(() => !window.__aoh.graphics().flowing, null, { timeout: 15000 });
 
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
-  console.log(`Graphics test passed: shadows from ${high.casters} meshes at high quality in ${calls} draw calls, none at low, the board rests, a move kicks up a burst, and the water moves until switched off.`);
+  console.log(`Graphics test passed: shadows from ${high.casters} meshes at high quality in ${calls} draw calls, none at low, the outline glow switches off and on, the board rests, a move kicks up a burst, and the water moves until switched off.`);
 } catch (err) {
   if (failureShots) await page.screenshot({ path: `${failureShots}/graphics-failure.png` }).catch(() => {});
   throw err;
