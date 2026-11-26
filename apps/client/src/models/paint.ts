@@ -14,7 +14,9 @@ export type Paint =
   | "bone" | "ironDark" | "mail" | "pelt" | "beard" | "hairLight" | "machine" | "glowCyan" | "coatDark" | "tunic"
   | "bark" | "moss" | "straw" | "horse" | "stand"
   | "ghoul" | "orc" | "faeWing"
-  | "alien" | "brain" | "tongue";
+  | "alien" | "brain" | "tongue"
+  // The ground on a base, at high quality (`ground.ts`).
+  | "earth" | "stone" | "ash" | "wetSand" | "shell" | "coral" | "gravel" | "flower" | "brass";
 
 export interface PaintLook {
   readonly color: string;
@@ -100,5 +102,14 @@ export function paintLook(p: Paint, { scheme, main, faction }: PaintContext): Pa
     case "alien": return look("#8fa99a", 0.35);
     case "brain": return look("#b6a8c9", 0.45);
     case "tongue": return look("#d4708e", 0.3);
+    case "earth": return look("#5e4a34", 0.9);
+    case "stone": return look("#8f8a80", 0.8);
+    case "ash": return look("#5d5956", 0.95);
+    case "wetSand": return look("#b39a6c", 0.5);
+    case "shell": return look("#efe3d0", 0.45);
+    case "coral": return look("#d0644e", 0.6);
+    case "gravel": return look("#b3ad9f", 0.85);
+    case "flower": return look("#ead24a", 0.6);
+    case "brass": return look("#c99a3e", 0.35, 0.4);
   }
 }

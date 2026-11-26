@@ -1,10 +1,11 @@
 // Checks the board at high graphics quality, the one browser test that turns every effect on (the
 // others draw at low in test mode): the key light casts shadows and the figures and scenery throw
-// them, draw calls stay within a budget, a resting board still stops drawing, and the Graphics
-// choice under Display switches the shadows off and on again. Water and lava keep still under
-// reduced motion. Then, with motion allowed, a figure's move kicks up a particle burst where it
-// lands, the water on Twin Fords moves, and **Moving water and lava** under Display stops it. It runs only when graphics code changes (scripts/affected.mjs). With E2E_SCREENSHOTS it
-// saves the board at high and at low.
+// them, figures have an edge light, draw calls stay within a budget, a resting board still stops
+// drawing, and the Graphics choice under Display switches the shadows and edge lights off and on
+// again. Water and lava keep still under reduced motion. Then, with motion allowed, a figure's
+// move kicks up a particle burst where it lands, the water on Twin Fords moves, and **Moving water
+// and lava** under Display stops it. It runs only when graphics code changes (scripts/affected.mjs).
+// With E2E_SCREENSHOTS it saves the board at high and at low.
 // Usage: node e2e/graphics.mjs   (serves the build in apps/client/dist)
 import { chromium } from "playwright";
 import { preview } from "vite";
@@ -125,6 +126,7 @@ try {
   await page.waitForFunction(() => window.__aoh.graphics().shadows && window.__aoh.graphics().casters > 0, null, { timeout: 15000 });
   const high = await page.evaluate(() => window.__aoh.graphics());
   if (high.casters < 20) fail(`Too few meshes cast shadows at high quality: ${high.casters}`);
+  if (high.edgeLit < 8) fail(`Too few figures have an edge light at high quality: ${high.edgeLit}`);
   const { calls } = await page.evaluate(() => window.__aoh.stats());
   if (calls > HIGH_CALL_BUDGET) fail(`High quality drew ${calls} draw calls in a frame (budget ${HIGH_CALL_BUDGET})`);
   if (await page.evaluate(() => window.__aoh.graphics().flowing)) fail("Water and lava moved under reduced motion");
@@ -134,6 +136,7 @@ try {
   // Low: no shadows at all; and back to high.
   await chooseGraphics("Low", false);
   if ((await page.evaluate(() => window.__aoh.graphics().casters)) !== 0) fail("Meshes still cast shadows at low quality");
+  if ((await page.evaluate(() => window.__aoh.graphics().edgeLit)) !== 0) fail("Figures kept their edge light at low quality");
   if (shots) await page.screenshot({ path: `${shots}/graphics-low.png` });
   await chooseGraphics("High", true);
 

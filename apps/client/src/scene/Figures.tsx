@@ -3,9 +3,9 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS, hex, hexKey, hexToWorld, type Footprint, type Step } from "@aoh/rules";
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import { BufferGeometry, Color, ExtrudeGeometry, MeshBasicMaterial, MeshStandardMaterial, Quaternion, Shape, ShapeGeometry, Vector3, type Group, type Mesh } from "three";
-import { BASE_COLOR, BASE_RADIUS, UNIT_MODELS, baseFrame, baseGeometry, bakedGeometry, figureColors, unitModel, type BakedFigure, type FigureModel, type PaintContext } from "../models";
+import { BASE_COLOR, BASE_RADIUS, UNIT_MODELS, baseFrame, baseGeometry, bakedGeometry, figureColors, seedOf, unitModel, withGround, type BakedFigure, type FigureModel, type PaintContext } from "../models";
 import { useReducedMotion } from "../motion";
-import { useDisplay } from "../settings";
+import { useDisplay, useGraphics } from "../settings";
 import { useBoardActivity } from "./activity";
 import { REACTION_SECONDS, reactionPose, type ReactionKind } from "./reactions";
 import { useWake } from "./wake";
@@ -579,12 +579,12 @@ interface UnitMeshes {
 /** Built once per unit card and look and shared by every figure of it, for as long as the page is open. */
 const meshCache = new Map<string, UnitMeshes>();
 
-function unitMeshes(cardId: string, footprint: Footprint, detailed: boolean): UnitMeshes {
-  const key = `${cardId}:${detailed ? "detailed" : "classic"}`;
+function unitMeshes(cardId: string, footprint: Footprint, detailed: boolean, high = false): UnitMeshes {
+  const key = `${cardId}:${detailed ? "detailed" : "classic"}:${high ? "high" : "low"}`;
   let found = meshCache.get(key);
   if (!found) {
     const unit = unitModel(cardId, detailed)!;
-    found = { poses: unit.figures, base: baseGeometry(footprint) };
+    found = { poses: unit.figures, base: baseGeometry(footprint, high) };
     meshCache.set(key, found);
   }
   return found;
@@ -598,27 +598,73 @@ const GHOST_OPACITY = 0.5;
 const GHOST_SOLID = new MeshStandardMaterial({ vertexColors: true, roughness: 0.68, transparent: true, opacity: GHOST_OPACITY, depthWrite: false });
 const GHOST_GLOWING = new MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: GHOST_OPACITY, depthWrite: false });
 
-/** Baked figures by model, colouring and state, kept for as long as the page is open. */
+/**
+ * At high quality a figure's outline catches a soft light in its player's colour (an edge light),
+ * so armies stand out from the board and from each other. One material per colour; they share a
+ * shader. The light grows where the surface turns away from the eye, as a rim light does.
+ */
+const EDGE_STRENGTH = 0.32;
+const EDGE_POWER = 3.4;
+const edgeLit = new Map<string, MeshStandardMaterial>();
+function edgeLitMaterial(color: string): MeshStandardMaterial {
+  let found = edgeLit.get(color);
+  if (found) return found;
+  found = SOLID.clone();
+  const rim = { value: new Color(color) };
+  found.onBeforeCompile = (shader) => {
+    shader.uniforms.uEdgeColor = rim;
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", "#include <common>\nuniform vec3 uEdgeColor;")
+      .replace(
+        "#include <emissivemap_fragment>",
+        `#include <emissivemap_fragment>
+        float aohEdge = 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
+        totalEmissiveRadiance += uEdgeColor * pow(aohEdge, ${EDGE_POWER.toFixed(2)}) * ${EDGE_STRENGTH.toFixed(2)};`,
+      );
+  };
+  found.customProgramCacheKey = () => "aoh-edge-light";
+  // Read by the graphics test (`window.__aoh.graphics().edgeLit`).
+  found.userData.edgeLight = true;
+  edgeLit.set(color, found);
+  return found;
+}
+
+/** Baked figures by model, colouring, state and quality, kept for as long as the page is open. */
 const baked = new WeakMap<FigureModel, Map<string, BakedFigure>>();
 
-function bakedFor(model: FigureModel, context: PaintContext, spent: boolean): BakedFigure {
+function bakedFor(model: FigureModel, context: PaintContext, spent: boolean, high = false): BakedFigure {
   let byColour = baked.get(model);
   if (!byColour) baked.set(model, (byColour = new Map()));
-  const key = `${context.scheme}|${context.main}|${context.faction}|${spent}`;
+  const key = `${context.scheme}|${context.main}|${context.faction}|${spent}|${high}`;
   let found = byColour.get(key);
-  if (!found) byColour.set(key, (found = bakedGeometry(model, context, spent)));
+  if (!found) byColour.set(key, (found = bakedGeometry(model, context, spent, high)));
   return found;
 }
 
 /**
  * A figure's model: a detailed one painted part by part, a classic one all in the model colour.
- * Either way it is one mesh, plus one for any glowing parts.
+ * Either way it is one mesh, plus one for any glowing parts. At high quality (`high`) it keeps its
+ * high-only details and smooth shading, and `edge` gives it an edge light in that colour.
  */
-export function PaintedModel({ model, context, spent = false, ghost = false }: { model: FigureModel; context: PaintContext; spent?: boolean; ghost?: boolean }) {
-  const { solid, glow } = bakedFor(model, context, spent);
+export function PaintedModel({
+  model,
+  context,
+  spent = false,
+  ghost = false,
+  high = false,
+  edge,
+}: {
+  model: FigureModel;
+  context: PaintContext;
+  spent?: boolean;
+  ghost?: boolean;
+  high?: boolean;
+  edge?: string;
+}) {
+  const { solid, glow } = bakedFor(model, context, spent, high);
   return (
     <>
-      <mesh geometry={solid} material={ghost ? GHOST_SOLID : SOLID} raycast={() => null} renderOrder={ghost ? 4 : 0} />
+      <mesh geometry={solid} material={ghost ? GHOST_SOLID : edge ? edgeLitMaterial(edge) : SOLID} raycast={() => null} renderOrder={ghost ? 4 : 0} />
       {glow && <mesh geometry={glow} material={ghost ? GHOST_GLOWING : GLOWING} raycast={() => null} renderOrder={ghost ? 4 : 0} />}
     </>
   );
@@ -640,6 +686,7 @@ function ModelFigure({
   yaw,
   scheme,
   detailed,
+  high,
 }: {
   f: FigureView;
   onClick?: Props["onClick"];
@@ -648,12 +695,16 @@ function ModelFigure({
   scheme: Parameters<typeof figureColors>[0];
   /** The detailed look: a detailed model where the unit has one. */
   detailed: boolean;
+  /** High graphics quality: rounder base, smooth shading, the ground on its base and an edge light. */
+  high: boolean;
 }) {
   const ring = useRef<MeshBasicMaterial>(null);
   const moving = useFigureAnimation(f);
   const down = useContext(AnimationContext)?.onDown;
-  const meshes = unitMeshes(f.cardId, f.footprint, detailed);
-  const model = meshes.poses[f.pose % meshes.poses.length]!;
+  const meshes = unitMeshes(f.cardId, f.footprint, detailed, high);
+  const pose = meshes.poses[f.pose % meshes.poses.length]!;
+  // The ground on its base, in its faction's style, comes with the detailed look at high quality.
+  const model = high && detailed ? withGround(pose, f.faction, f.footprint, seedOf(f.cardId) + f.pose) : pose;
   const handlers = pointerHandlers(f.id, onClick, onHover, down);
   const h = f.height * LEVEL_HEIGHT;
   const ground = Math.max(...f.spots.map((s) => s.elevation)) * LEVEL_HEIGHT;
@@ -689,7 +740,7 @@ function ModelFigure({
       <group ref={moving}>
       <group position={[centre.x, ground, centre.z]}>
         <group rotation={[0, turn, 0]}>
-          <PaintedModel model={model} context={context} spent={f.status === "spent"} />
+          <PaintedModel model={model} context={context} spent={f.status === "spent"} high={high} edge={high ? f.color : undefined} />
           <mesh geometry={meshes.base.top} raycast={() => null}>
             <meshStandardMaterial color={BASE_COLOR} roughness={0.75} />
           </mesh>
@@ -927,6 +978,7 @@ const DRAG_PIXELS = 5;
 
 export function Figures({ figures, onClick, onHover, labels, style, motions = null, jump = null, shake = null, reactions = null, carry = null, canDrag, onDragStart, onDragEnd, onLand, preview = null }: Props) {
   const display = useDisplay();
+  const high = useGraphics() === "high";
   const drawn = style ?? display.figures;
   const facing = useMemo(() => facings(figures), [figures]);
   const controls = useThree((s) => s.controls) as unknown as { enabled: boolean } | null;
@@ -983,6 +1035,7 @@ export function Figures({ figures, onClick, onHover, labels, style, motions = nu
             yaw={f.facing !== undefined ? (f.facing * Math.PI) / 180 : (facing.get(f.id) ?? SIDES[0]!)}
             scheme={display.scheme}
             detailed={display.tiles === "detailed"}
+            high={high}
           />
         ) : (
           <Token key={f.id} f={f} onClick={onClick} onHover={onHover} />

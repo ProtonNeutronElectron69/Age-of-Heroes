@@ -13,13 +13,13 @@ export const BASE_BEVEL = 0.12;
  */
 const BLEND = 0.65;
 
-interface Point {
+export interface Point {
   readonly x: number;
   readonly z: number;
 }
 
 /** Roughly how far a point is outside a base made of a circle on each centre (negative inside). */
-function outside(x: number, z: number, centres: readonly Point[]): number {
+export function outside(x: number, z: number, centres: readonly Point[]): number {
   let d = Infinity;
   for (const c of centres) {
     const next = Math.hypot(x - c.x, z - c.z) - BASE_RADIUS;
@@ -39,17 +39,18 @@ function outward(x: number, z: number, centres: readonly Point[]): Point {
   return { x: gx / length, z: gz / length };
 }
 
-/** About how far apart the corners of an outline are. */
+/** About how far apart the corners of an outline are; closer at high quality, for a rounder base. */
 const SPACING = 0.11;
+const SPACING_HIGH = 0.065;
 
 /**
  * The edge of a base as evenly spaced points, each with the way out of the
  * base there: a circle round one hex centre, a row of lobes with waists
  * between them round several.
  */
-function edge(centres: readonly Point[]): { at: Point; out: Point }[] {
+function edge(centres: readonly Point[], high = false): { at: Point; out: Point }[] {
   if (centres.length === 1) {
-    const corners = 28;
+    const corners = high ? 48 : 28;
     return Array.from({ length: corners }, (_, i) => {
       const a = (i / corners) * Math.PI * 2;
       const out = { x: Math.cos(a), z: Math.sin(a) };
@@ -68,7 +69,7 @@ function edge(centres: readonly Point[]): { at: Point; out: Point }[] {
   // Then step round it evenly, pulling each point onto the true edge.
   const lengths = rough.map((p, i) => Math.hypot(rough[(i + 1) % rough.length]!.x - p.x, rough[(i + 1) % rough.length]!.z - p.z));
   const around = lengths.reduce((a, b) => a + b, 0);
-  const corners = Math.round(around / SPACING);
+  const corners = Math.round(around / (high ? SPACING_HIGH : SPACING));
   const out: { at: Point; out: Point }[] = [];
   let i = 0;
   let passed = 0;
@@ -90,29 +91,39 @@ function edge(centres: readonly Point[]): { at: Point; out: Point }[] {
   return out;
 }
 
-/**
- * The base a figure stands on, in two parts: its top (`base`) and its
- * bevelled edge (`rim`). On one hex it is a disc a little smaller than the
- * hex; on a larger footprint it is one piece with a lobe on each hex, thinner
- * where it passes from hex to hex. It is written in the figure's own frame,
- * like the model that stands on it.
- */
-export function baseParts(footprint: Footprint): Part[] {
+/** The middle of each hex of a base, in the figure's own frame (the base's middle at 0, facing +z). */
+export function baseCentres(footprint: Footprint): Point[] {
   const frame = baseFrame(footprint);
   const cos = Math.cos(frame.yaw);
   const sin = Math.sin(frame.yaw);
-  const centres = frame.cells.map((cell) => {
+  return frame.cells.map((cell) => {
     const w = hexToWorld(cell, HEX_SIZE);
     const dx = w.x - frame.x;
     const dz = w.z - frame.z;
     return { x: dx * cos - dz * sin, z: dx * sin + dz * cos };
   });
-  const points = edge(centres);
+}
+
+/**
+ * The base a figure stands on, in two parts: its top (`base`) and its
+ * bevelled edge (`rim`). On one hex it is a disc a little smaller than the
+ * hex; on a larger footprint it is one piece with a lobe on each hex, thinner
+ * where it passes from hex to hex. It is written in the figure's own frame,
+ * like the model that stands on it. At high quality (`high`) its outline has
+ * more corners and the bevel bulges a little, like a moulded base.
+ */
+export function baseParts(footprint: Footprint, high = false): Part[] {
+  const centres = baseCentres(footprint);
+  const points = edge(centres, high);
   // The bevel slopes in from the foot of the base to the edge of its top.
   const inner = points.map((p) => ({ x: p.at.x - p.out.x * BASE_BEVEL, z: p.at.z - p.out.z * BASE_BEVEL }));
   const foot = points.map((p): V3 => [p.at.x, 0, p.at.z]);
   const shoulder = inner.map((p): V3 => [p.x, BASE_HEIGHT, p.z]);
   const under = inner.map((p): V3 => [p.x, 0, p.z]);
+  // At high quality the slope rounds over: two more rings, each a little outside the straight line.
+  const bulge = (t: number, push: number) =>
+    points.map((p): V3 => [p.at.x - p.out.x * BASE_BEVEL * (t - push), BASE_HEIGHT * t, p.at.z - p.out.z * BASE_BEVEL * (t - push)]);
+  const slope = high ? [foot, bulge(0.45, 0.18), bulge(0.8, 0.12), shoulder] : [foot, shoulder];
   return [
     plate(
       inner.map((p) => [p.x, p.z] as const),
@@ -121,6 +132,6 @@ export function baseParts(footprint: Footprint): Part[] {
       BASE_HEIGHT / 2,
       "base",
     ),
-    hoop([foot, shoulder, under], "rim"),
+    hoop([...slope, under], "rim"),
   ];
 }
