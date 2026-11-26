@@ -12,7 +12,8 @@ import { figureSpots, placementKey, placementSpots, standingElevation, tuningOf,
 import { glyphBonus, pickUpGlyphs } from "./glyphs";
 import { cardOf, findFigure, occupancy, statsOf, stepKey, type EffectiveStats, type Occupant } from "./queries";
 import { checkGameOver, destroyFigure, woundFigure } from "./rounds";
-import { hasLineOfSight, type Token } from "../los";
+import { sightBlockers } from "./sight";
+import { hasLineOfSight } from "../los";
 import { resolve } from "./strike";
 import type { FigureState, GameEvent, GameState, PathStep, PlayerId, RulesContext, Step, UnitState } from "./types";
 
@@ -900,15 +901,7 @@ function blinkOptions(state: GameState, mover: Mover, ctx: RulesContext): Map<st
   if (!blink || mover.footprint !== "1" || mover.noStrikes || state.active?.moved.includes(mover.figure.id)) return options;
   const range = param(blink, "range", 4);
   const occ = occupancy(state, ctx);
-  const blockers: Token[] = [];
-  for (const unit of state.units) {
-    const card = ctx.cards.get(unit.cardId);
-    if (!card) continue;
-    for (const figure of unit.figures) {
-      if (figure.id === mover.figure.id) continue;
-      for (const s of figureSpots(figure, card.footprint, card.height, ctx)) blockers.push({ ...s, height: card.height });
-    }
-  }
+  const blockers = sightBlockers(state, ctx, [mover.figure.id]);
   const eyes = mover.startSpots.map((s) => ({ ...s, height: mover.stats.height }));
   for (const hex of ctx.board.hexes()) {
     const cost = hexDistance(mover.start.hex, hex);
@@ -919,7 +912,7 @@ function blinkOptions(state: GameState, mover: Mover, ctx: RulesContext): Map<st
       if (!spots) continue;
       const o = occ.get(stepKey(spots[0]!));
       if (o && o.figure.id !== mover.figure.id) continue;
-      if (!hasLineOfSight(ctx.board, eyes, [{ ...to, height: 1 }], { blockers })) continue;
+      if (!hasLineOfSight(ctx.board, eyes, [{ ...to, height: 1 }], blockers)) continue;
       const lava = ctx.terrain.get(s.terrain)?.entryDestroyOnOrBelow !== undefined ? 1 : 0;
       const dest = asPathStep(to, "1");
       options.set(placementKey(to), { to: dest, spots, path: [dest], cost, hazards: lava, ability: "blink" });

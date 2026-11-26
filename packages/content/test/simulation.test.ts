@@ -160,8 +160,8 @@ function checkInvariants(state: GameState): void {
   }
 }
 
-/** `online`: the online game's rules, an open draft and initiative rolled by each player. */
-function playRandomGame(seed: number, players: number, budget: number, online = false) {
+/** `online`: the online game's rules, an open draft and initiative rolled by each player. `hitZones`: line of sight by hit shapes. */
+function playRandomGame(seed: number, players: number, budget: number, online = false, hitZones = false) {
   const setup: GameSetup = {
     seed,
     mapId: map.id,
@@ -177,6 +177,7 @@ function playRandomGame(seed: number, players: number, budget: number, online = 
     facing: true,
     // Tokens for half of each army, rounded up, plus the bluff.
     tokenAllowance: "half",
+    ...(hitZones ? { hitZones: "models" as const } : {}),
   };
   const rng = new Rng(seed * 7919 + 1);
   let state = createGame(setup, ctx).state;
@@ -212,7 +213,7 @@ function playRandomGame(seed: number, players: number, budget: number, online = 
 }
 
 describe("random games on the Proving Grounds", () => {
-  for (const [seed, players, budget, online] of [
+  const games: readonly (readonly [number, number, number, boolean, boolean?])[] = [
     [1, 2, 250, false],
     [2, 3, 250, false],
     [3, 4, 250, false],
@@ -223,9 +224,13 @@ describe("random games on the Proving Grounds", () => {
     [8, 6, 400, false],
     [11, 2, 400, true],
     [10, 4, 250, true],
-  ] as const) {
-    it(`seed ${seed}, ${players} players, ${budget} points${online ? ", online rules" : ""}: stays legal to the end and replays exactly`, () => {
-      const game = playRandomGame(seed, players, budget, online);
+    [12, 2, 400, false, true],
+    [13, 4, 400, true, true],
+  ];
+  for (const [seed, players, budget, online, shaped = false] of games) {
+    const rules = `${online ? ", online rules" : ""}${shaped ? ", hit zones" : ""}`;
+    it(`seed ${seed}, ${players} players, ${budget} points${rules}: stays legal to the end and replays exactly`, () => {
+      const game = playRandomGame(seed, players, budget, online, shaped);
       expect(game.state.phase).toBe("gameOver");
       expect(game.moves).toBeGreaterThan(0);
       expect(game.attacks).toBeGreaterThan(0);

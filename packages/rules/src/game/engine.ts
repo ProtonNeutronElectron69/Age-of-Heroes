@@ -60,6 +60,8 @@ export const NEW_GAME_RULES = {
   glyphPickup: "turnEnd",
   strikeFromBehind: "meleeOnly",
   engagedSpecials: true,
+  // Line of sight sees each figure's body and gear, made from its model.
+  hitZones: "models",
 } as const satisfies Partial<GameSetup>;
 
 export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameState; events: GameEvent[] } {
@@ -100,6 +102,7 @@ export function createGame(setup: GameSetup, ctx: RulesContext): { state: GameSt
       ...(setup.glyphPickup ? { glyphPickup: setup.glyphPickup } : {}),
       ...(setup.strikeFromBehind ? { strikeFromBehind: setup.strikeFromBehind } : {}),
       ...(setup.engagedSpecials ? { engagedSpecials: true } : {}),
+      ...(setup.hitZones ? { hitZones: setup.hitZones } : {}),
     },
     rng: setup.seed >>> 0,
     round: 0,

@@ -1,8 +1,9 @@
 import type { ThreeEvent } from "@react-three/fiber";
 import { useFrame, useThree } from "@react-three/fiber";
-import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS, hex, hexKey, hexToWorld, type Footprint, type Step } from "@aoh/rules";
+import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS, hex, hexKey, hexToWorld, shapeFrame, type Footprint, type HitShape, type Step } from "@aoh/rules";
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
-import { BufferGeometry, Color, ExtrudeGeometry, MeshBasicMaterial, MeshStandardMaterial, Quaternion, Shape, ShapeGeometry, Vector3, type Group, type Mesh } from "three";
+import { BoxGeometry, BufferGeometry, Color, ExtrudeGeometry, Matrix4, MeshBasicMaterial, MeshStandardMaterial, Quaternion, Shape, ShapeGeometry, Vector3, type Group, type Mesh } from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { BASE_COLOR, BASE_RADIUS, UNIT_MODELS, baseFrame, baseGeometry, bakedGeometry, figureColors, seedOf, unitModel, withGround, type BakedFigure, type FigureModel, type PaintContext } from "../models";
 import { useReducedMotion } from "../motion";
 import { useDisplay, useGraphics } from "../settings";
@@ -41,6 +42,11 @@ export interface FigureView {
   readonly facing?: number;
   /** Show the outline of the figure's front cone: it may still be turned (R). */
   readonly cone?: boolean;
+  /**
+   * Its hit shape, in games with hit zones: the token view draws these boxes, its body in its
+   * colour and its gear grey, turned the way the figure faces, as line of sight sees it.
+   */
+  readonly hitShape?: HitShape;
 }
 
 /** Figures that moved with the last command; a new `key` sets them hopping along their paths. */
@@ -811,6 +817,23 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
 
   const handlers = pointerHandlers(f.id, onClick, onHover, down);
 
+  if (f.hitShape) {
+    return (
+      <group ref={moving}>
+        <ShapeToken f={f} shape={f.hitShape} handlers={handlers} />
+        <group position={[frontPos.x, front.elevation * LEVEL_HEIGHT, frontPos.z]}>
+          {ringColor && (
+            <mesh ref={ring} position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
+              <ringGeometry args={[TOKEN_RADIUS * 1.12, TOKEN_RADIUS * 1.4, 32]} />
+              <meshBasicMaterial color={ringColor} transparent opacity={0.9} depthWrite={false} />
+            </mesh>
+          )}
+          {f.arrow && <SelectionArrow top={h} />}
+        </group>
+      </group>
+    );
+  }
+
   if (f.spots.length > 1) {
     return (
       <group ref={moving}>
@@ -867,6 +890,69 @@ function Token({ f, onClick, onHover }: { f: FigureView; onClick?: Props["onClic
         )}
       </group>
     </group>
+  );
+}
+
+/** Each hit shape's boxes as two meshes, body and gear, kept for as long as the page is open (the shapes never change). */
+const shapeMeshes = new WeakMap<HitShape, { body: BufferGeometry | null; gear: BufferGeometry | null }>();
+
+function shapeGeometry(shape: HitShape): { body: BufferGeometry | null; gear: BufferGeometry | null } {
+  const known = shapeMeshes.get(shape);
+  if (known) return known;
+  const parts = (kind: "body" | "gear") => {
+    const boxes = shape
+      .filter((b) => b.kind === kind)
+      .map((b) => {
+        const g = new BoxGeometry(b.half.x * 2, b.half.y * 2, b.half.z * 2);
+        const [u, v, w] = b.axes;
+        g.applyMatrix4(new Matrix4().set(u.x, v.x, w.x, b.centre.x, u.y, v.y, w.y, b.centre.y, u.z, v.z, w.z, b.centre.z, 0, 0, 0, 1));
+        return g;
+      });
+    if (boxes.length === 0) return null;
+    const merged = mergeGeometries(boxes);
+    for (const g of boxes) g.dispose();
+    return merged;
+  };
+  const made = { body: parts("body"), gear: parts("gear") };
+  shapeMeshes.set(shape, made);
+  return made;
+}
+
+const GEAR_GREY = "#8d9096";
+
+/**
+ * A figure as line of sight sees it in games with hit zones: its body boxes in its player's
+ * colour and its gear boxes grey, standing where the rules put them (`shapeFrame`). Clicks land
+ * on an unseen token on each of its hexes, as for a model.
+ */
+function ShapeToken({ f, shape, handlers }: { f: FigureView; shape: HitShape; handlers: object }) {
+  const frame = shapeFrame(f.spots, f.facing ?? 0);
+  const { body, gear } = shapeGeometry(shape);
+  const h = f.height * LEVEL_HEIGHT;
+  const spent = f.status === "spent";
+  return (
+    <>
+      <group position={[frame.x, frame.y, frame.z]} rotation={[0, (frame.facing * Math.PI) / 180, 0]}>
+        {body && (
+          <mesh geometry={body} raycast={() => null}>
+            <meshStandardMaterial color={f.color} roughness={0.6} transparent={spent} opacity={spent ? 0.6 : 1} />
+          </mesh>
+        )}
+        {gear && (
+          <mesh geometry={gear} raycast={() => null}>
+            <meshStandardMaterial color={GEAR_GREY} roughness={0.7} transparent={spent} opacity={spent ? 0.6 : 1} />
+          </mesh>
+        )}
+      </group>
+      {f.spots.map((s) => {
+        const { x, z } = hexToWorld(s.hex, HEX_SIZE);
+        return (
+          <mesh key={hexKey(s.hex)} position={[x, s.elevation * LEVEL_HEIGHT + h / 2, z]} visible={false} {...handlers}>
+            <cylinderGeometry args={[TOKEN_RADIUS, TOKEN_RADIUS, h, 12]} />
+          </mesh>
+        );
+      })}
+    </>
   );
 }
 

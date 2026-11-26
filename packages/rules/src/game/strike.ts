@@ -1,6 +1,6 @@
 import { rollCombat } from "../dice";
 import { hexNeighbors, hexToWorld } from "../hex";
-import { hasLineOfSight, segmentHitsHexPrism, type Token } from "../los";
+import { segmentHitsHexPrism } from "../los";
 import { Rng } from "../rng";
 import type { Tuning } from "../tuning";
 import { HEX_SIZE } from "../world";
@@ -12,6 +12,7 @@ import { fail } from "./errors";
 import { figureSpots, standingElevation, tuningOf } from "./placement";
 import { findFigure, statsOf } from "./queries";
 import { woundFigure } from "./rounds";
+import { figureInSight } from "./sight";
 import type { GameEvent, GameState, RulesContext, Step } from "./types";
 
 /**
@@ -40,7 +41,7 @@ export function elevationBonus(
   return { attackBonus: 0, defenseBonus: 0 };
 }
 
-export const tokens = (spots: readonly Step[], height: number): Token[] => spots.map((s) => ({ ...s, height }));
+export { tokens } from "./sight";
 
 /**
  * Can a figure (even one just destroyed) reach another with a normal attack? Used by Last Stand,
@@ -52,16 +53,7 @@ export function canReach(state: GameState, ctx: RulesContext, from: Combatant, t
   if (range === 1 && !spotsEngaged(from.spots, from.card.height, to.spots, to.card.height)) return false;
   const facing = facingOf(state, from.figure);
   if (!anyFacing && facing !== null && !seesAny(facing, from.spots, to.spots)) return false;
-  const blockers: Token[] = [];
-  for (const unit of state.units) {
-    const card = ctx.cards.get(unit.cardId);
-    if (!card) continue;
-    for (const figure of unit.figures) {
-      if (figure.id === from.figure.id || figure.id === to.figure.id) continue;
-      blockers.push(...tokens(figureSpots(figure, card.footprint, card.height, ctx), card.height));
-    }
-  }
-  return hasLineOfSight(ctx.board, tokens(from.spots, from.card.height), tokens(to.spots, to.card.height), { blockers });
+  return figureInSight(state, ctx, from, to);
 }
 
 /**

@@ -6,6 +6,11 @@ import {
   attackProblem,
   breathLine,
   callUnits,
+  combatant,
+  figureShareInSight,
+  hasHitZones,
+  hitShapeOf,
+  sightShareNeeded,
   carryFriends,
   carrySpots,
   hurlSpots,
@@ -988,6 +993,7 @@ export function PlayScreen({ session }: { session: Session }) {
 
   // ---- Board contents ------------------------------------------------------
   const figures: FigureView[] = [];
+  const shaped = hasHitZones(state);
   for (const unit of state.units) {
     const card = ctx.cards.get(unit.cardId)!;
     const color = names.playerColor(unit.owner);
@@ -1019,6 +1025,7 @@ export function PlayScreen({ session }: { session: Session }) {
         ...(life > 1 ? { lifeLeft: life - f.wounds } : {}),
         ...(state.config.facing && f.facing !== undefined ? { facing: f.facing } : {}),
         ...(f.id === turner ? { cone: true } : {}),
+        ...(shaped ? { hitShape: hitShapeOf(unit, f, card, ctx) } : {}),
       });
     }
   }
@@ -1125,6 +1132,15 @@ export function PlayScreen({ session }: { session: Session }) {
     if (poison) pills.push({ text: `Poisoned (${poison.turnsLeft} turn${poison.turnsLeft === 1 ? "" : "s"})`, tone: "warn" });
     return pills;
   };
+  /** Hit zones: how much of the hovered enemy's body the chosen figure sees, or null. */
+  const shareSeen = useMemo(() => {
+    if (!hasHitZones(state) || !selected || !hoveredFigure || hoveredFigure === selected) return null;
+    const a = findFigure(state, selected);
+    const t = findFigure(state, hoveredFigure);
+    if (!a?.figure.position || !t?.figure.position || a.unit.owner === t.unit.owner) return null;
+    return figureShareInSight(state, ctx, combatant(a.unit, a.figure, ctx), combatant(t.unit, t.figure, ctx));
+  }, [state, ctx, selected, hoveredFigure]);
+
   /** What to do now, in a sentence, then what the hovered move costs and what R does. */
   const turnHint = (): string => {
     if (!active) return "";
@@ -1152,6 +1168,11 @@ export function PlayScreen({ session }: { session: Session }) {
     if (hoverOption) {
       const cost = hoverOption.cost === 0 ? "Turning is free." : `Costs ${hoverOption.cost} Move.`;
       more.push(hoverOption.hazards > 0 ? `Risky: lava, ice, a fall or a passing strike. ${cost}` : cost);
+    }
+    if (shareSeen !== null && hoveredFigure) {
+      const need = sightShareNeeded(ctx);
+      const pct = Math.round(shareSeen * 100);
+      more.push(`${pct}% of ${names.figure(hoveredFigure)} in sight${shareSeen < need - 1e-9 ? `; it needs ${Math.round(need * 100)}%` : ""}.`);
     }
     if (moveBig && canMove) more.push("R picks the way it faces.");
     else if (turner) more.push(`R turns ${names.figure(turner)}.`);

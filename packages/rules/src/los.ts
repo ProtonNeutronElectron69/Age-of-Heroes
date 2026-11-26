@@ -1,5 +1,6 @@
 import type { Board } from "./board";
 import { hexKey, hexLine, hexNeighbors, hexToWorld, type Hex } from "./hex";
+import { segmentHitsShape, type PlacedShape } from "./hitShapes";
 import { HEX_SIZE, HIT_BAND_FROM, LEVEL_HEIGHT, TOKEN_RADIUS } from "./world";
 
 /**
@@ -24,8 +25,10 @@ export interface Token {
 }
 
 export interface SightOptions {
-  /** Figures that can block the view. Exclude the attacker and the target. */
+  /** Figures that can block the view, as tokens. Exclude the attacker and the target. */
   readonly blockers?: readonly Token[];
+  /** Figures that block the view with their hit shapes (games with hit zones): their body and gear. */
+  readonly shapes?: readonly PlacedShape[];
 }
 
 const INRADIUS = (HEX_SIZE * Math.sqrt(3)) / 2;
@@ -169,6 +172,7 @@ function segmentBlocked(
     const y0 = t.elevation * LEVEL_HEIGHT;
     if (segmentHitsCylinder(eye, target, x, z, TOKEN_RADIUS, y0, y0 + t.height * LEVEL_HEIGHT)) return true;
   }
+  for (const shape of opts.shapes ?? []) if (segmentHitsShape(eye, target, shape)) return true;
   return false;
 }
 
@@ -194,4 +198,54 @@ export function hasLineOfSight(
     }
   }
   return false;
+}
+
+/** A target as line of sight sees it in games with hit zones. */
+export interface ShapedTarget {
+  /** The hexes it stands on, as tokens: their ground never blocks the view. */
+  readonly tokens: readonly Token[];
+  /** Its boxes on the board: its gear (a shield, a weapon) hides its body. */
+  readonly shape: PlacedShape;
+  /** Points spread through its body, on the board. */
+  readonly samples: readonly Vec3[];
+}
+
+/**
+ * Hit zones: the share of the target's body the viewer can see, from 0 to 1. A line from the
+ * viewer's eye point to each sample point of the body counts if terrain, scenery, the other
+ * figures' shapes and the target's own gear all leave it clear (the body itself never hides its
+ * own points, so the share is of the body's whole outline). A multi-hex viewer sees from the best
+ * of its hexes. With `atLeast`, the count stops as soon as the answer to "is the share at least
+ * this?" is known, and the result is then only good for that question.
+ */
+export function shareInSight(
+  board: Board,
+  from: Token | readonly Token[],
+  target: ShapedTarget,
+  opts: SightOptions = {},
+  atLeast?: number,
+): number {
+  const viewers: readonly Token[] = Array.isArray(from) ? from : [from as Token];
+  const n = target.samples.length;
+  if (n === 0 || viewers.length === 0) return 0;
+  const need = atLeast === undefined ? Infinity : Math.max(1, Math.ceil(atLeast * n - 1e-9));
+  const ground = groundUnder([...viewers, ...target.tokens]);
+  let best = 0;
+  for (const v of viewers) {
+    const eye = eyePoint(v);
+    const seen = new Map<string, Hex>();
+    for (const t of target.tokens) for (const h of corridor(v.hex, t.hex)) seen.set(hexKey(h), h);
+    const cells = [...seen.values()];
+    let clear = 0;
+    let hidden = 0;
+    for (const p of target.samples) {
+      const blocked = segmentHitsShape(eye, p, target.shape, true) || segmentBlocked(board, ground, eye, p, cells, opts);
+      if (blocked) hidden++;
+      else clear++;
+      if (clear >= need) return clear / n;
+      if (atLeast !== undefined && n - hidden < need) break;
+    }
+    best = Math.max(best, clear / n);
+  }
+  return best;
 }

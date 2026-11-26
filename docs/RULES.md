@@ -10,7 +10,7 @@ In short:
 - Each unit card has Life, Move, Range, Attack, Defense, Points, traits and abilities.
 - Armies are drafted within a points budget: a snake draft on one device, an open draft online.
 - Higher ground gives combat bonuses, long drops cause falling damage, and a figure cannot climb a single step taller than its Height.
-- Line of sight is a strict 3D check, and other figures block it.
+- Line of sight is a strict 3D check, and other figures block it. The attacker must see at least a fifth of the target's body; shields and weapons block the view but cannot be hit.
 - Figures next to enemies are engaged and draw passing strikes when they leave, or when they keep moving beside them after one free step (zone of control).
 - Figures face a way: an attack needs its target in front of the attacker, and a melee attack from behind rolls 2 more attack dice.
 - Every unit has special abilities, and terrain has its own effects.
@@ -236,9 +236,20 @@ New games give every figure a **facing**: the way it looks. Games saved before t
 - **Facing**: every attack, melee or ranged (blasts and other powers aimed at a figure or a hex included), needs some part of the target in the attacker's front cone (see Facing).
 
 ### Line of sight
-Line of sight treats every figure as a token as tall as its Height, whether the board shows it as a figure model or as that token (the Display setting). Each token has an **eye point** (the centre of its top) and a **hit band** (a coloured band around its upper part).
-- The attacker needs a clear straight line from its eye point to some part of the target's hit band. Terrain, scenery and other figures (friend or enemy) block the line. The game checks this automatically; a figure's-eye camera shows the player what the figure sees.
+Every figure has an **eye point**: the centre of the top of a token as tall as its Height, on each hex it covers. What it must see depends on the game.
+
+**Hit zones (new games).** Each figure is a set of boxes made from its figure model, turned the way it faces: its **body** (head, torso, arms, legs, a mount, a beast's whole body) and its **gear** (weapons, shields, flight stands).
+- Only the body can be hit. The attacker needs a clear straight line from its eye point to at least **20%** *(tunable)* of the target's body. The game measures the share with lines to points spread evenly through the body; a multi-hex attacker sees from the best of its hexes.
+- Terrain, scenery, other figures' bodies and gear (friend or enemy), and the target's own gear block the lines. So a shield held towards the attacker hides part of its bearer, and the attacker can see between another figure's legs or past its spear.
+- The token view (T) draws every figure as these boxes: the body in its player's colour, gear in grey. Hovering an enemy with a figure chosen says how much of its body that figure sees.
+- The shapes are rule data, made from the models (see CONTENT.md); the figures drawn on the board never change what is seen.
+
+**Tokens (games saved before hit zones).** Every figure is a token as tall as its Height, whether the board shows a model or the token. Its **hit band** is the coloured band around its upper part (the top 40%). The attacker needs a clear straight line from its eye point to some part of the target's hit band. Terrain, scenery and other figures' tokens block the line.
+
+Either way:
+- The game checks this automatically; a figure's-eye camera shows the player what the figure sees.
 - The ground each figure stands on never blocks the line, so a figure at the edge of a cliff can see the figure at its foot. A bridge or overhang above either figure still can.
+- Aiming at a hex (a blast, a throw, a Blink) needs a line to a Height 1 token standing there, past the figures as the game sees them.
 
 ### Rolling
 1. The attacker rolls attack dice equal to its Attack, plus any bonuses.
