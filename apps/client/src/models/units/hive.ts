@@ -13,6 +13,12 @@ import type { FigureModel, Part, UnitModel, V3 } from "../types";
 
 const paint = (parts: readonly Part[], p: Paint): Part[] => parts.map((x) => ({ ...x, paint: p }));
 const bare = (parts: readonly Part[]): Part[] => parts.map(({ paint: _, ...rest }) => rest);
+/**
+ * Detail only high graphics quality draws (`Part.high`), in the detailed look; as gear, it never
+ * changes a figure's Height or fit. Nothing when `detail` is off (the classic model).
+ */
+const fine = (detail: boolean, parts: readonly Part[]): Part[] =>
+  detail ? parts.map((p) => ({ ...p, high: true, role: p.role === "body" ? ("gear" as const) : p.role })) : [];
 
 /** The paints of `human()`'s parts in order: hips, chest, neck, head, each arm, each leg. */
 function alienBody(b: Human, look: { hips?: Paint; chest?: Paint; arm?: Paint; thigh?: Paint; shin?: Paint } = {}): Part[] {
@@ -80,6 +86,12 @@ function spawnPose(kneeling: boolean, detail: boolean): Part[] {
     ...(detail ? backRidge(body) : []),
     ...(detail ? body.onChest(paint([limb([0.14, 0.32, 0.07], [-0.12, 0.06, 0.1], 0.024, 0.024, 4)], "leather")) : []),
     ...spineGun(body.handR, AIM_TURN, detail),
+    // At high quality: glowing spots down the back, and a pouch of spines on the strap.
+    ...fine(detail, body.onChest([
+      ...paint([[0.05, 0.3], [-0.05, 0.24], [0.04, 0.16], [-0.04, 0.1]].map(([x, y]) => ball([x!, y!, -0.115], 0.014, 0)), "glowGreen"),
+      ...paint([box([0.06, 0.06, 0.04], [-0.05, 0.13, 0.11])], "leather"),
+      ...paint([-0.015, 0.015].map((dx) => limb([-0.05 + dx, 0.16, 0.11], [-0.05 + dx, 0.22, 0.11], 0.008, 0, 3)), "bone"),
+    ])),
   ];
 }
 
@@ -104,7 +116,13 @@ function vothrekPose(detail: boolean): Part[] {
   const mantle = body.onChest(paint([spine([[0, 0.38, 0.2, 0.12], [0, 0.31, 0.24, 0.15], [0, 0.24, 0.2, 0.13]], { sides: 8 })], "coat"));
   const orb = gear([...paint([ball([0, 0.9, 0.3], 0.07, 1)], "glowGreen")]);
   const sash = detail ? place(paint([spine([[0, 0.06, 0.135, 0.105], [0, 0.11, 0.13, 0.1]], { sides: 8 })], "gold"), { at: pelvis }) : [];
-  return [...alienBody(body, { hips: "coatDark", arm: "coatDark" }), ...robe, ...mantle, ...brain, ...orb, ...sash];
+  // At high quality: veins over the brain, motes circling the orb, and tendrils trailing from the robe's hem.
+  const finery = fine(detail, [
+    ...body.onHead(paint([[0.1, 0.17], [-0.1, 0.16], [0.06, 0.24], [-0.07, 0.23]].map(([x, y]) => limb([x! * 0.4, 0.26, 0.02], [x!, y!, 0.1], 0.006, 0.004, 3)), "coatDark")),
+    ...paint([0, 1, 2, 3, 4].map((i) => { const a = (i / 5) * Math.PI * 2; return ball([Math.cos(a) * 0.13, 0.9 + Math.sin(a * 2) * 0.03, 0.3 + Math.sin(a) * 0.13], 0.014, 0); }), "glowGreen"),
+    ...place(paint([0, 72, 144, 216, 288].map((t) => place([limb([0, -0.45, 0.2], [0, -0.52, 0.27], 0.022, 0.004, 4)], { turn: [0, t, 0] })[0]!), "alien"), { at: pelvis }),
+  ]);
+  return [...alienBody(body, { hips: "coatDark", arm: "coatDark" }), ...robe, ...mantle, ...brain, ...orb, ...sash, ...finery];
 }
 
 // ---------- Ixaru Mirestrider ----------
@@ -151,7 +169,13 @@ function ixaruPose(detail: boolean): Part[] {
   const spineBow = gear(paint(bow(body.handL, 0.4), "bone"));
   const bolt = gear(paint([limb([-0.04, 1.545, 0.0], [0.03, 1.5, 0.52], 0.008, 0.008, 3), limb([0.03, 1.5, 0.52], [0.035, 1.5, 0.58], 0.016, 0, 4)], "glowGreen"));
   const saddle = paint([box([0.22, 0.05, 0.22], [0, 1.12, -0.02])], "leather");
-  return [...strider(detail), ...saddle, ...alienBody(body, { thigh: "coatDark" }), ...alienHead(body, detail, 0.9), ...spineBow, ...bolt];
+  // At high quality: girth straps under the strider, spurs of bone on its knees, and glowing spots on its body.
+  const finery = fine(detail, [
+    ...paint(([1, -1] as const).map((sx) => limb([sx * 0.11, 1.12, -0.02], [sx * 0.2, 0.92, -0.02], 0.012, 0.012, 3)), "leather"),
+    ...paint(([[1, 1], [-1, 1], [1, -1], [-1, -1]] as const).map(([x, z]) => limb([x * 0.34, 1.24, z * 0.28], [x * 0.38, 1.33, z * 0.3], 0.02, 0, 4)), "bone"),
+    ...paint(([[0.15, 1.07, 0.15], [-0.16, 1.06, 0.1], [0.12, 1.05, -0.22], [-0.1, 1.08, -0.2]] as V3[]).map((p) => ball(p, 0.018, 0)), "glowGreen"),
+  ]);
+  return [...strider(detail), ...saddle, ...alienBody(body, { thigh: "coatDark" }), ...alienHead(body, detail, 0.9), ...spineBow, ...bolt, ...finery];
 }
 
 // ---------- Gulpmaw ----------
@@ -176,6 +200,12 @@ function gulpmawPose(detail: boolean): Part[] {
           ...paint([-1, -0.5, 0.5, 1].map((x) => limb([x * 0.14, 0.41, 0.27], [x * 0.14, 0.35, 0.29], 0.016, 0, 3)), "bone"),
         ]
       : []),
+    // At high quality: warts over the hide, more teeth along the jaw, and slime dripping from it.
+    ...fine(detail, [
+      ...paint(([[0.25, 0.6, 0.1], [-0.27, 0.55, 0.05], [0.2, 0.7, -0.15], [-0.18, 0.72, -0.2], [0.3, 0.42, -0.12], [-0.31, 0.4, -0.1], [0.05, 0.82, -0.12]] as V3[]).map((p) => ball(p, 0.03, 0)), "coatDark"),
+      ...paint([-0.75, -0.25, 0.25, 0.75].map((x) => limb([x * 0.14, 0.33, 0.28], [x * 0.14, 0.38, 0.29], 0.012, 0, 3)), "bone"),
+      ...paint([limb([0.1, 0.32, 0.28], [0.1, 0.22, 0.3], 0.012, 0.004, 3), limb([-0.06, 0.32, 0.29], [-0.06, 0.25, 0.3], 0.01, 0.004, 3)], "glowGreen"),
+    ]),
   ];
 }
 
@@ -195,6 +225,11 @@ function stalkerPose(lunging: boolean, detail: boolean): Part[] {
     ...(detail ? backRidge(body, 4) : []),
     ...armBlade(body.handL, lunging ? [-10, 30, 0] : [-60, 20, 0]),
     ...armBlade(body.handR, lunging ? [-70, -20, 0] : [-60, -20, 0]),
+    // At high quality: a membrane between the back ridge's plates, and glowing spots along the flanks.
+    ...fine(detail, body.onChest([
+      ...paint([plate(([[0.12, 0.1], [0.42, 0.37], [0.42, 0.2], [0.12, 0.05]] as const).map(([y, z]): [number, number] => [-0.1 - z * 0.1, y]), 0.008, "side")], "coat"),
+      ...paint([[0.11, 0.2], [-0.11, 0.18], [0.12, 0.08], [-0.12, 0.06]].map(([x, y]) => ball([x!, y!, 0.03], 0.014, 0)), "glowGreen"),
+    ])),
   ];
 }
 
@@ -217,7 +252,12 @@ function lobberPose(loading: boolean, detail: boolean): Part[] {
     ...(detail ? paint([ball([0.06, 0.3, -0.27], 0.035, 0), ball([-0.05, 0.2, -0.27], 0.03, 0)], "glowGreen") : []),
     ...(detail ? paint([limb([0.15, 0.33, 0.06], [-0.13, 0.08, 0.09], 0.024, 0.024, 4)], "leather") : []),
   ]);
-  return [...alienBody(body), ...alienHead(body, detail), ...sac, ...tube];
+  // At high quality: spores drifting from the tube's mouth, and veins over the sac.
+  const finery = fine(detail, [
+    ...paint([1, 2, 3].map((i) => ball([tubeTo[0] + 0.02 * i, tubeTo[1] + 0.05 * i, tubeTo[2] + 0.03 * i], 0.012 + 0.004 * i, 0)), "glowGreen"),
+    ...body.onChest(paint([[0.1, 0.36], [-0.09, 0.34], [0.12, 0.18], [-0.1, 0.16]].map(([x, y]) => limb([0, 0.26, -0.29], [x!, y!, -0.24], 0.006, 0.004, 3)), "coatDark")),
+  ]);
+  return [...alienBody(body), ...alienHead(body, detail), ...sac, ...tube, ...finery];
 }
 
 // ---------- Ulshae, Brood Tender ----------
@@ -234,7 +274,13 @@ function ulshaePose(detail: boolean): Part[] {
   const staff = gear([...paint([limb([-0.28, 0, 0.12], [-0.25, 1.18, 0.16], 0.02, 0.016, 5)], "wood"), ...paint([ball([-0.25, 1.24, 0.16], 0.07, 1)], "glowGreen")]);
   const [x, y, z] = body.handL;
   const ooze = gear(paint([ball([x, y + 0.05, z + 0.02], [0.06, 0.07, 0.06], 0), limb([x, y - 0.02, z + 0.02], [x + 0.01, y - 0.14, z + 0.03], 0.025, 0.004, 4)], "glowGreen"));
-  return [...alienBody(body, { arm: "coatDark" }), ...robe, ...alienHead(body, detail, 0.95), ...sacs, ...staff, ...ooze];
+  // At high quality: more small sacs, tendrils hanging from the robe, and drips of ooze from the staff's head.
+  const finery = fine(detail, [
+    ...body.onChest(paint([ball([-0.02, 0.38, -0.12], [0.05, 0.05, 0.04], 0), ball([0.12, 0.22, -0.12], [0.045, 0.05, 0.04], 0)], "coat")),
+    ...place(paint([0, 60, 120, 180, 240, 300].map((t) => place([limb([0, -0.42, 0.19], [0, -0.48, 0.24], 0.018, 0.004, 4)], { turn: [0, t, 0] })[0]!), "alien"), { at: pelvis }),
+    ...paint([limb([-0.23, 1.18, 0.18], [-0.23, 1.1, 0.19], 0.012, 0.004, 3), limb([-0.27, 1.19, 0.14], [-0.28, 1.12, 0.14], 0.01, 0.004, 3)], "glowGreen"),
+  ]);
+  return [...alienBody(body, { arm: "coatDark" }), ...robe, ...alienHead(body, detail, 0.95), ...sacs, ...staff, ...ooze, ...finery];
 }
 
 // ---------- Fen Leapers ----------
@@ -285,6 +331,12 @@ function leaperPose(spring: number, detail: boolean): Part[] {
           ...paint([ball([0, 0.36 + lift, 0.02], [0.1, 0.06, 0.18], 0)], "belly"),
         ]
       : []),
+    // At high quality: a throat sac, webbing between the hind toes, and dark spots over the back.
+    ...fine(detail, [
+      ...paint([ball([0, 0.4 + lift, 0.36], [0.05, 0.035, 0.05], 0)], "belly"),
+      ...paint(([1, -1] as const).map((side) => plate([[0, 0], [0.04, 0.03], [-0.04, 0.03]], 0.006, "top", 0.004)).map((p, i) => place([p], { at: [(i ? -1 : 1) * 0.13, lift * 0.2, -0.24 - 0.0], turn: [0, 180, 0] })[0]!), "coatDark"),
+      ...paint([[0.06, -0.1], [-0.05, 0.02], [0.05, 0.12], [-0.06, -0.2]].map(([x, z]) => ball([x!, 0.47 + lift, z!], [0.025, 0.008, 0.025], 0)), "coatDark"),
+    ]),
   ];
 }
 
