@@ -20,6 +20,9 @@ export class Bursts {
   }
 }
 
+/** The smallest a glowing particle is drawn, in CSS pixels, however far the camera is. */
+const MIN_GLOW_PIXELS = 5;
+
 /** The most particles drawn at once in each layer; a burst beyond that waits its turn for room. */
 const MAX_PARTICLES = 2048;
 
@@ -29,13 +32,15 @@ const VERTEX = /* glsl */ `
   varying vec3 vColor;
   varying float vAlpha;
   uniform float uViewport;
+  uniform float uMinSize;
   void main() {
     vColor = color;
     vAlpha = alpha;
     vec4 view = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * view;
-    // A particle keeps its size in the world: nearer is bigger.
-    gl_PointSize = max(1.0, size * uViewport * projectionMatrix[1][1] * 0.5 / -view.z);
+    // A particle keeps its size in the world (nearer is bigger), but a glowing one never shrinks
+    // below a few pixels, so sparks and glints still show with the camera far back.
+    gl_PointSize = max(uMinSize, size * uViewport * projectionMatrix[1][1] * 0.5 / -view.z);
   }
 `;
 
@@ -75,7 +80,7 @@ function makeLayer(glow: boolean): Layer {
   const material = new ShaderMaterial({
     vertexShader: VERTEX,
     fragmentShader: FRAGMENT,
-    uniforms: { uViewport: { value: 720 }, uGlow: { value: glow ? 1 : 0 } },
+    uniforms: { uViewport: { value: 720 }, uMinSize: { value: 1 }, uGlow: { value: glow ? 1 : 0 } },
     vertexColors: true,
     transparent: true,
     depthWrite: false,
@@ -144,6 +149,7 @@ export function Particles({ bursts }: { bursts: Bursts }) {
     }
     for (const [layer, count] of [[layers.glow, glow], [layers.solid, solid]] as const) {
       layer.material.uniforms.uViewport!.value = height;
+      layer.material.uniforms.uMinSize!.value = layer === layers.glow ? MIN_GLOW_PIXELS * gl.getPixelRatio() : 1;
       layer.points.geometry.setDrawRange(0, count);
       layer.points.visible = count > 0;
       if (count > 0) {

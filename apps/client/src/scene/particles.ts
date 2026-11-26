@@ -90,9 +90,9 @@ interface Recipe {
 
 const RECIPES: Record<BurstKind, Recipe> = {
   // Hot sparks flying from a wound, falling as they cool.
-  sparks: { count: 26, spread: 0.12, rise: 0.15, out: [1.2, 2.2], up: [0.6, 1.8], life: [0.35, 0.4], delay: 0.05, size: [0.1, 0.08], grow: 0.3, colors: ["#fff3c4", "#ffb347", "#ff6a2b", "#ffd36b"], gravity: 6, drag: 2.5, glow: true },
+  sparks: { count: 38, spread: 0.16, rise: 0.15, out: [1.3, 2.4], up: [0.7, 1.9], life: [0.45, 0.45], delay: 0.05, size: [0.15, 0.1], grow: 0.45, colors: ["#fff3c4", "#ffb347", "#ff6a2b", "#ffd36b"], gravity: 6, drag: 2.5, glow: true },
   // A few cold blue glints off a shield: the blow did no harm.
-  glint: { count: 12, spread: 0.15, rise: 0.1, out: [0.9, 0.8], up: [0.3, 0.9], life: [0.3, 0.25], delay: 0.03, size: [0.1, 0.06], grow: 0.2, colors: ["#e6f2ff", "#8cc4ff", "#4f9dff"], gravity: 3, drag: 3, glow: true },
+  glint: { count: 30, spread: 0.22, rise: 0.12, out: [1.1, 1.2], up: [0.4, 1.1], life: [0.5, 0.35], delay: 0.03, size: [0.19, 0.1], grow: 0.5, colors: ["#ffffff", "#e6f2ff", "#8cc4ff", "#4f9dff"], gravity: 3, drag: 3, glow: true },
   // Soft dust kicked up round a figure's feet.
   dust: { count: 12, spread: 0.3, rise: 0.02, out: [0.5, 0.5], up: [0.15, 0.3], life: [0.6, 0.4], delay: 0, size: [0.22, 0.14], grow: 2.4, colors: ["#b9a68a", "#a08c70", "#cbbb9f"], gravity: 0.25, drag: 3, glow: false },
   // Drops thrown up from water or swamp, falling back.
@@ -102,7 +102,7 @@ const RECIPES: Record<BurstKind, Recipe> = {
   // A destroyed figure goes in a puff of dust and bright chips.
   shatter: { count: 40, spread: 0.3, rise: 0.25, out: [0.8, 1.4], up: [0.6, 1.4], life: [0.55, 0.5], delay: 0.02, size: [0.13, 0.12], grow: 1.3, colors: ["#d9cbb3", "#a89379", "#fff1cf", "#8a7660"], gravity: 2.5, drag: 2.5, glow: false },
   // Green-gold motes rising round a figure that is healed or returns.
-  heal: { count: 22, spread: 0.45, rise: 0.6, out: [0.05, 0.15], up: [0.5, 0.7], life: [0.8, 0.5], delay: 0.5, size: [0.1, 0.06], grow: 0.5, colors: ["#f4ffd0", "#9dff9a", "#59e38c", "#ffe58a"], gravity: -0.3, drag: 0.8, glow: true },
+  heal: { count: 56, spread: 0.6, rise: 0.8, out: [0.05, 0.2], up: [0.5, 0.8], life: [0.9, 0.6], delay: 0.5, size: [0.2, 0.1], grow: 0.6, colors: ["#ffffff", "#f4ffd0", "#b6ffb0", "#7dffa0", "#ffe58a"], gravity: -0.3, drag: 0.8, glow: true },
 };
 
 /** How long a burst of this kind can last, in seconds, from its first particle to its last. */
