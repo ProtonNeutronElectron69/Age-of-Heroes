@@ -59,6 +59,56 @@ function face(b: Human, hairPaint: Paint): Part[] {
   ]);
 }
 
+// ---------- Fine detail, drawn at high quality only ----------
+/**
+ * Detail only High draws (`Part.high`): Low leaves it out, so Low's figures stay as they were.
+ * It counts as gear, so it never changes a figure's Height or how it fits its base.
+ */
+function fine(parts: readonly Part[]): Part[] {
+  return parts.map((p) => ({ ...p, high: true, role: p.role === "body" ? ("gear" as const) : p.role }));
+}
+/** A thin edging round a rectangle in the front (x-y) plane, at depth `z`: the trim of a tabard or surcoat. */
+function trimRect(w: number, h: number, at: V3, paintAs: Paint = "gold", r = 0.007): Part[] {
+  const [x, y, z] = at;
+  const c: V3[] = [[x - w / 2, y - h / 2, z], [x + w / 2, y - h / 2, z], [x + w / 2, y + h / 2, z], [x - w / 2, y + h / 2, z]];
+  return paint(c.map((p, i) => limb(p, c[(i + 1) % 4]!, r, r, 3)), paintAs);
+}
+/** Small domed rivets or studs. */
+function rivets(points: readonly V3[], paintAs: Paint = "gold", r = 0.012): Part[] {
+  return paint(points.map((p) => ball(p, r, 0)), paintAs);
+}
+/** A ring of `n` short rods round the y axis at height `y`: a band, a hoop or a rim. */
+function hoopRing(radius: number, y: number, paintAs: Paint, r = 0.008, n = 10): Part[] {
+  const pts: V3[] = Array.from({ length: n }, (_, i) => [Math.cos((i / n) * Math.PI * 2) * radius, y, Math.sin((i / n) * Math.PI * 2) * radius]);
+  return paint(pts.map((p, i) => limb(p, pts[(i + 1) % n]!, r, r, 3)), paintAs);
+}
+/** A plume of feathers sweeping back and up from `at`, the outer ones a second colour. */
+function plume(at: V3, paintAs: Paint, tips: Paint = paintAs, length = 0.24): Part[] {
+  const out: Part[] = [];
+  for (let i = 0; i < 5; i++) {
+    const side = (i - 2) * 0.022;
+    const end: V3 = [at[0] + side, at[1] + length * (0.45 + 0.08 * (2 - Math.abs(i - 2))), at[2] - length];
+    const mid: V3 = [at[0] + side * 0.6, at[1] + length * 0.5, at[2] - length * 0.35];
+    out.push(...paint([limb(at, mid, 0.03, 0.026, 5)], paintAs), ...paint([limb(mid, end, 0.026, 0, 5)], Math.abs(i - 2) === 2 ? tips : paintAs));
+  }
+  return out;
+}
+/** Plate guards over the knees and elbows of a `human()`. */
+function jointGuards(b: Human, paintAs: Paint, r = 0.06): Part[] {
+  return paint([6, 11, 15, 19].map((i) => ball(centroid(b.parts[i]!), r, 0)), paintAs);
+}
+/** A guard over one forearm of a `human()`: `left` the figure's left (its bow arm). */
+function bracer(b: Human, left: boolean, paintAs: Paint, band: Paint): Part[] {
+  const [elbow, hand] = left ? [6, 8] : [11, 13];
+  const e = centroid(b.parts[elbow]!), h = centroid(b.parts[hand]!);
+  return [...paint([limb(lerp(e, h, 0.3), lerp(e, h, 0.72), 0.05, 0.046, 6)], paintAs), ...paint([limb(lerp(e, h, 0.5), lerp(e, h, 0.55), 0.053, 0.053, 6)], band)];
+}
+/** A small leaf, flat, pointing along `dir` from `at`. */
+function leafAt(at: V3, dir: V3, size = 0.05, paintAs: Paint = "leaf"): Part[] {
+  const turn = pointing([0, 0, 0], dir);
+  return paint(place([plate([[0, 0], [size * 0.35, size * 0.5], [0, size], [-size * 0.35, size * 0.5]], 0.008, "top")], { at, turn }), paintAs);
+}
+
 // ---------- Captain Marisol Vance, stage 2 ----------
 function sabre(at: V3, turn: V3): Part[] {
   return gear(place([
@@ -296,10 +346,19 @@ const cinderjawDetailed = (() => {
   const wingParts: Part[] = [
     ...paint([plate(OUTLINE, 0.03, "front")], "wing"),
     ...paint([bone(OUTLINE[0]!, OUTLINE[1]!, 0.03), bone(OUTLINE[1]!, OUTLINE[2]!, 0.024), bone(OUTLINE[2]!, OUTLINE[3]!, 0.018), bone(OUTLINE[1]!, OUTLINE[4]!, 0.016), bone(OUTLINE[1]!, OUTLINE[6]!, 0.016)], "wingbone"),
+    // At high quality: finer veins across the membrane.
+    ...fine(paint([bone(OUTLINE[1]!, OUTLINE[5]!, 0.01), bone(OUTLINE[1]!, OUTLINE[8]!, 0.01), bone(OUTLINE[0]!, OUTLINE[7]!, 0.01), bone(OUTLINE[2]!, OUTLINE[4]!, 0.008)], "wingbone")),
   ];
   const wing = place(wingParts, { at: [0, 0, 0.05], turn: [0, 25, 0] });
   const otherWing = mirror(wing);
-  const all = [...body, ...belly, ...ridge, ...head, ...legs, ...wing, ...otherWing];
+  // At high quality: dark scales along the flanks, embers glowing between the belly plates, and smoke
+  // curling from the nostrils.
+  const finery = fine([
+    ...paint(finer(BODY).slice(1, -1).flatMap(([z, y, rx]) => [ball([rx * 0.9, y + 0.04, z], [0.05, 0.035, 0.06], 0), ball([-rx * 0.9, y + 0.04, z], [0.05, 0.035, 0.06], 0)]), "coatDark"),
+    ...paint([1, 2].map((i) => { const { at } = edgeOf(BODY, i, false); return ball([0, at[1] + 0.01, at[2]], [0.06, 0.02, 0.04], 0); }), "glow"),
+    ...paint(([1, -1] as const).flatMap((sx) => [ball([sx * 0.045, 1.78, 1.08], 0.035, 0), ball([sx * 0.07, 1.86, 1.15], 0.05, 0)]), "powder"),
+  ]);
+  const all = [...body, ...belly, ...ridge, ...head, ...legs, ...wing, ...otherWing, ...finery];
   return figure(all, 7);
 })();
 
@@ -341,6 +400,16 @@ function prowlerDetailed(drop: number, lift: number): Part[] {
     ...paint(LEGS.map(([secs, x]) => { const f = secs[3]!; return limb([x, 0.03, f[0] + 0.03], [x, 0.012, f[0] + 0.085], 0.02, 0, 3); }), "horn"),
     ...paint([spine([[-0.5, 0.64, 0.045, 0.05], [-0.64, 0.58 + lift * 0.18, 0.04, 0.045], [-0.72, 0.5 + lift * 0.42, 0.02, 0.022]], { sides: 5 })], "fur"),
     ...paint([ball(tailEnd, 0.032, 0)], "stripe"),
+    // At high quality: whiskers, tufted ears, more claws on each paw, and stripes round the tail.
+    ...fine([
+      ...paint(([1, -1] as const).flatMap((sx) => [0.66, 0.64, 0.62].map((y) => limb([sx * 0.045, y - d, 0.79], [sx * 0.17, y - d + (y - 0.64) * 1.5, 0.77], 0.003, 0.002, 3))), "white"),
+      ...paint(([1, -1] as const).map((sx) => limb([sx * 0.1, 0.95 - d, 0.47], [sx * 0.112, 1.02 - d, 0.45], 0.012, 0, 3)), "black"),
+      ...paint(LEGS.flatMap(([secs, x]) => { const f = secs[3]!; return [-0.025, 0.025].map((dx) => limb([x + dx, 0.03, f[0] + 0.03], [x + dx * 1.4, 0.012, f[0] + 0.08], 0.016, 0, 3)); }), "horn"),
+      ...paint([0.3, 0.65].map((t) => {
+        const a: V3 = lerp([0, 0.64, -0.5], [0, 0.58 + lift * 0.18, -0.64], t), b: V3 = lerp([0, 0.64, -0.5], [0, 0.58 + lift * 0.18, -0.64], t + 0.12);
+        return limb(a, b, 0.05, 0.048, 6);
+      }), "stripe"),
+    ]),
   ];
 }
 const prowlersDetailed: FigureModel[] = (() => {
@@ -487,9 +556,13 @@ const vorhalDetailed = (() => {
 })();
 
 // ---------- Dame Rowena Ashgrove, stage 2 ----------
+const SUN_SHIELD: [number, number][] = [[-0.17, 0.2], [0.17, 0.2], [0.17, -0.02], [0, -0.28], [-0.17, -0.02]];
 function sunShieldP(at: V3, turn: V3, size = 1): Part[] {
   return gear(place([
-    ...paint([plate([[-0.17, 0.2], [0.17, 0.2], [0.17, -0.02], [0, -0.28], [-0.17, -0.02]], 0.036, "front")], "coat"),
+    ...paint([plate(SUN_SHIELD, 0.036, "front")], "coat"),
+    // At high quality: a gold rim round its edge, and studs at its corners.
+    ...fine(paint(SUN_SHIELD.map(([x, y], i) => { const [nx, ny] = SUN_SHIELD[(i + 1) % SUN_SHIELD.length]!; return limb([x, y, 0.02], [nx, ny, 0.02], 0.011, 0.011, 3); }), "gold")),
+    ...fine(rivets(SUN_SHIELD.map(([x, y]): V3 => [x * 0.85, y * 0.88 + 0.01, 0.024]), "gold", 0.014)),
     ...paint([ball([0, 0.03, 0.03], [0.075, 0.075, 0.035], 0)], "gold"),
     // Rays of the sun round the boss.
     ...paint([0, 60, 120, 180, 240, 300].flatMap((a) => place([box([0.016, 0.06, 0.012], [0, 0.11, 0.022])], { at: [0, 0.03, 0], turn: [0, 0, a] })), "gold"),
@@ -518,8 +591,20 @@ const rowenaDetailed = (() => {
     ...paint([plate([[0.024, 0.06], [0.024, 0.52], [0, 0.62], [-0.024, 0.52], [-0.024, 0.06]], 0.022)], "steel"),
     ...paint([box([0.03, 0.028, 0.18], [0, 0.045, 0])], "gold"),
     ...paint([limb([0, -0.08, 0], [0, 0.04, 0], 0.018, 0.018, 5)], "leather"),
+    // At high quality: a dark fuller down the blade and a gold pommel.
+    ...fine([...paint([box([0.026, 0.36, 0.008], [0, 0.3, 0])], "ironDark"), ...paint([ball([0, -0.095, 0], 0.026, 0)], "gold")]),
   ], { at: body.handR, turn: [22, 0, 14] }));
-  return figure([...parts, ...face(body, "hairLight"), ...armour, ...sword, ...sunShieldP([0.17, 0.62, 0.33], [0, 14, 0])], 5);
+  // At high quality: a plume, gold rivets on the pauldrons, gold trim on the surcoat, and guards over knees and elbows.
+  const finery = fine([
+    ...body.onHead(plume([0, 0.11, -0.04], "white", "coat")),
+    ...body.onChest([
+      ...rivets(([1, -1] as const).flatMap((sx): V3[] => [[sx * 0.205, 0.39, 0.075], [sx * 0.27, 0.37, 0.06], [sx * 0.14, 0.37, 0.07]])),
+      ...trimRect(0.17, 0.26, [0, 0.2, 0.119]),
+    ]),
+    ...jointGuards(body, "steel", 0.055),
+    ...paint([box([0.05, 0.04, 0.02], [pelvis[0], pelvis[1] + 0.1, pelvis[2] + 0.115])], "gold"),
+  ]);
+  return figure([...parts, ...face(body, "hairLight"), ...armour, ...sword, ...sunShieldP([0.17, 0.62, 0.33], [0, 14, 0]), ...finery], 5);
 })();
 
 // ---------- Stormwake Huscarls, stage 2 ----------
@@ -533,15 +618,33 @@ const huscarlKitP = (body: Human, pelvis: V3): Part[] => [
   ...body.onChest(paint([spine([[0, 0.375, 0.09, 0.085], [-0.01, 0.31, 0.225, 0.135], [-0.02, 0.235, 0.23, 0.14]], { sides: 8 })], "pelt")),
   ...place(paint([spine([[0, 0.12, 0.145, 0.105], [0, -0.15, 0.2, 0.155]], { sides: 8 })], "mail"), { at: pelvis }),
   ...belt(pelvis, "leather", 0.1, [0.15, 0.11]),
+  // At high quality: a gold band round the helm, braids in the beard with gold beads, and a belt buckle.
+  ...fine([
+    ...body.onHead([
+      ...hoopRing(0.1, 0.03, "gold", 0.009, 10),
+      ...paint(([1, -1] as const).map((sx) => limb([sx * 0.03, -0.13, 0.085], [sx * 0.036, -0.22, 0.08], 0.014, 0.01, 4)), "beard"),
+      ...rivets(([1, -1] as const).map((sx): V3 => [sx * 0.036, -0.225, 0.08]), "gold", 0.016),
+    ]),
+    ...paint([box([0.05, 0.045, 0.02], [pelvis[0], pelvis[1] + 0.1, pelvis[2] + 0.118])], "gold"),
+  ]),
 ];
 const huscarlBody = (b: Human) => paintBody(b, { hips: "coat", chest: "mail", sleeve: "coat", hand: "skin", thigh: "hakama", shin: "leather", foot: "boot" });
 function axeP(at: V3, turn: V3): Part[] {
   return gear(place([
     ...paint([limb([0, -0.12, 0], [0, 0.42, 0], 0.019, 0.019, 5)], "wood"),
     ...paint([plate([[0.015, 0.41], [0.15, 0.47], [0.175, 0.36], [0.15, 0.25], [0.015, 0.31]], 0.026)], "steel"),
+    // At high quality: leather wraps round the haft.
+    ...fine(paint([limb([0, -0.02, 0], [0, 0.02, 0], 0.025, 0.025, 5), limb([0, 0.16, 0], [0, 0.2, 0], 0.025, 0.025, 5)], "leather")),
   ], { at, turn }));
 }
-const huscarlShield = (at: V3, turn: V3) => each(roundShield(at, 0.25, turn), ["coat", "steel"]);
+const huscarlShield = (at: V3, turn: V3) => [
+  ...each(roundShield(at, 0.25, turn), ["coat", "steel"]),
+  // At high quality: an iron rim and a ring of studs.
+  ...gear(fine(place([
+    ...place(hoopRing(0.245, 0, "ironDark", 0.014, 14), { turn: [90, 0, 0] }),
+    ...rivets(Array.from({ length: 8 }, (_, i): V3 => [Math.cos((i / 8) * Math.PI * 2) * 0.19, Math.sin((i / 8) * Math.PI * 2) * 0.19, 0.026]), "steel", 0.016),
+  ], { at, turn }))),
+];
 const huscarlStrikingP = (() => {
   const pelvis: V3 = [0, 0.48, 0];
   const body = human({ pelvis, lean: 6, twist: -15, look: 12, handL: [0.14, 0.66, 0.3], handR: [-0.33, 0.98, 0.02], elbowR: [-1, -0.3, -0.5], footL: [0.1, 0, 0.16], footR: [-0.11, 0, -0.12] }, HUSCARL);
@@ -641,22 +744,36 @@ const wardenQuiver = (body: Human) =>
   body.onChest([
     ...paint([limb([-0.08, 0.1, -0.115], [0.07, 0.4, -0.13], 0.042, 0.048, 6), limb([0.07, 0.4, -0.13], [0.1, 0.47, -0.133], 0.036, 0.04, 5)], "leather"),
     ...gear(paint([-0.015, 0.015].map((dx) => limb([0.09 + dx, 0.46, -0.13], [0.1 + dx, 0.52, -0.13], 0.011, 0.006, 3)), "white")),
+    // At high quality: more arrows in it, each fletched.
+    ...fine([
+      ...paint([-0.03, 0, 0.03].map((dx) => limb([0.085 + dx, 0.44, -0.122], [0.095 + dx, 0.55, -0.12], 0.006, 0.006, 3)), "wood"),
+      ...paint([-0.03, 0, 0.03].flatMap((dx) => place([plate([[0, 0], [0.012, 0.01], [0.012, 0.04], [0, 0.03]], 0.004, "side")], { at: [0.095 + dx, 0.51, -0.12] })), "white"),
+    ]),
   ]);
 function wardenCloak(body: Human, sweep: number): Part[] {
   return body.onChest(paint([spine([[-0.07, 0.35, 0.12, 0.034], [-0.105 - sweep * 0.2, 0.18, 0.165, 0.04], [-0.14 - sweep * 0.6, -0.08, 0.2, 0.038], [-0.17 - sweep, -0.3, 0.22, 0.018]], { sides: 6 })], "coat"));
 }
 const wardenBow = (at: V3, draw: number, turn?: V3) => paint(bow(at, draw, turn), "wood");
 const wardenArrow = (from: V3, to: V3) => each(arrow(from, to), ["wood", "steel"]);
+/** At high quality: a leaf clasp at the throat, leaves along the cloak's hem, and a bracer on the bow arm. */
+const wardenFinery = (body: Human, sweep: number): Part[] => fine([
+  ...body.onChest([
+    ...leafAt([0.07, 0.355, 0.085], [0.4, 1, 0.3], 0.07),
+    ...rivets([[0.07, 0.355, 0.09]], "gold", 0.014),
+    ...[-0.18, -0.09, 0, 0.09, 0.18].flatMap((x) => leafAt([x, -0.29, -0.16 - sweep], [x * 0.5, -1, -0.25], 0.07)),
+  ]),
+  ...bracer(body, true, "leather", "leaf"),
+]);
 const wardenLoosingP = (() => {
   const body = human(loosing(), WARDEN);
   const hood = body.onChest(paint([ball([0, 0.37, -0.09], [0.09, 0.06, 0.07], 0)], "coat"));
-  return [...wardenBody(body), ...face(body, "hairLight"), ...wardenEars(body), ...hood, ...wardenCloak(body, 0.1), ...wardenQuiver(body), ...wardenBow(body.handL, 0.09), ...wardenArrow(...DRAWN)];
+  return [...wardenBody(body), ...face(body, "hairLight"), ...wardenEars(body), ...hood, ...wardenCloak(body, 0.1), ...wardenQuiver(body), ...wardenBow(body.handL, 0.09), ...wardenArrow(...DRAWN), ...wardenFinery(body, 0.1)];
 })();
 const wardenWatchingP = (() => {
   const body = human({ twist: 10, look: 14, handL: [0.25, 0.5, 0.07], handR: [-0.22, 0.5, 0.09], footL: [0.085, 0, 0.03], footR: [-0.08, 0, -0.03] }, WARDEN);
   const hood = body.onHead(paint([ball([0, 0.008, -0.014], [HEAD * 1.16, HEAD * 1.22, HEAD * 1.2]), limb([0, 0.05, -0.05], [0, 0.03, -0.17], 0.05, 0, 5)], "coat"));
   const mantle = body.onChest(paint([spine([[0, 0.37, 0.08, 0.075], [-0.01, 0.31, 0.185, 0.12], [-0.02, 0.22, 0.2, 0.13]], { sides: 8 })], "coat"));
-  return [...wardenBody(body), ...faceOnly(body), ...hood, ...mantle, ...wardenCloak(body, 0), ...wardenQuiver(body), ...wardenBow(body.handL, 0, [0, 12, 0]), ...wardenArrow([-0.22, 0.5, 0.09], [-0.26, 0.2, 0.3])];
+  return [...wardenBody(body), ...faceOnly(body), ...hood, ...mantle, ...wardenCloak(body, 0), ...wardenQuiver(body), ...wardenBow(body.handL, 0, [0, 12, 0]), ...wardenArrow([-0.22, 0.5, 0.09], [-0.26, 0.2, 0.3]), ...wardenFinery(body, 0)];
 })();
 
 // ---------- Harrow Riflemen, stage 2 ----------
@@ -828,6 +945,19 @@ function treefolkP(reach: number): Part[] {
       ball([0.2, 0.5, 0.2], [0.12, 0.06, 0.1], 0), ball([-0.18, 0.95, 0.18], [0.1, 0.12, 0.08], 0),
     ], "moss"),
     ...paint([ball([0.64, 0.7, 0.3], 0.08, 0), ball([-0.72, 1.2 + r * 0.72, 0.24], 0.08, 0)], "leaf"),
+    // At high quality: deep cracks in the bark, vines hanging from the boughs, a cluster of mushrooms,
+    // and flowers in the crown.
+    ...fine([
+      ...paint([-0.9, -0.3, 0.4, 1.0].flatMap((a) => {
+        const at = (y: number, rx: number, rn: number): V3 => [Math.sin(a) * rx * 1.01, y, Math.cos(a) * rn * 1.01];
+        return [limb(at(0.36, 0.3, 0.28), at(0.85, 0.26, 0.24), 0.018, 0.018, 3), limb(at(0.85, 0.26, 0.24), at(1.3, 0.3, 0.27), 0.018, 0.012, 3)];
+      }), "hair"),
+      ...paint([limb([0.45, 1.16, 0.1], [0.47, 0.86, 0.15], 0.012, 0.008, 3), limb([-0.48, 1.42, 0.1], [-0.5, 1.1, 0.13], 0.012, 0.008, 3), limb([0.1, 1.72, 0.2], [0.12, 1.45, 0.3], 0.012, 0.008, 3)], "leaf"),
+      ...leafAt([0.47, 0.98, 0.15], [1, -0.3, 0.3], 0.07), ...leafAt([-0.5, 1.22, 0.13], [-1, -0.3, 0.3], 0.07),
+      ...paint([ball([0.29, 0.72, 0.1], [0.06, 0.025, 0.06], 0), ball([0.27, 0.62, 0.16], [0.045, 0.02, 0.045], 0)], "shell"),
+      ...paint([limb([0.24, 0.7, 0.1], [0.29, 0.71, 0.1], 0.015, 0.015, 3), limb([0.23, 0.6, 0.15], [0.27, 0.61, 0.16], 0.012, 0.012, 3)], "white"),
+      ...paint(([[0.3, 2.3, 0.3], [-0.35, 2.25, 0.25], [0.1, 2.38, -0.3], [-0.2, 2.3, -0.35], [0.45, 2.1, -0.15], [0, 2.4, 0.1]] as V3[]).map((p) => ball(p, 0.04, 0)), "flower"),
+    ]),
   ];
 }
 
@@ -858,7 +988,22 @@ const sylvanneDetailed = (() => {
     ...paint([ball([-0.17, 1.31, 0.23], 0.026, 0)], "glowGreen"),
   ]);
   const mote = gear(paint([ball([body.handL[0], body.handL[1] + 0.13, body.handL[2]], 0.055, 0)], "glowGreen"));
-  return figure([...parts, ...face(body, "hairLight"), ...wardenEars(body), ...circlet, ...antlers, ...robe, ...staff, ...mote], 5);
+  // At high quality: flowers in her circlet, leaves winding up the staff and round the robe's hem, and
+  // more motes of light drifting round her.
+  const finery = fine([
+    ...body.onHead(paint([-50, -15, 20, 55].map((a): Part => ball([Math.sin((a * Math.PI) / 180) * 0.096, 0.05, Math.cos((a * Math.PI) / 180) * 0.096], 0.016, 0)), "flower")),
+    ...[0.15, 0.3, 0.45, 0.6, 0.75].flatMap((t, i) => {
+      const at = lerp([-0.3, 0, 0.1], [-0.27, 0.8, 0.14], t);
+      const a = i * 2.1;
+      return leafAt([at[0] + Math.cos(a) * 0.024, at[1], at[2] + Math.sin(a) * 0.024], [Math.cos(a), 0.4, Math.sin(a)], 0.06);
+    }),
+    ...place([0, 45, 90, 135, 180, 225, 270, 315].flatMap((a) => {
+      const r = (a * Math.PI) / 180;
+      return leafAt([Math.sin(r) * 0.23, -0.43, Math.cos(r) * 0.185], [Math.sin(r), -1.2, Math.cos(r)], 0.07);
+    }), { at: pelvis }),
+    ...paint([ball([0.2, 1.05, -0.15], 0.02, 0), ball([-0.12, 1.12, 0.3], 0.016, 0), ball([0.32, 0.7, 0.05], 0.018, 0)], "glowGreen"),
+  ]);
+  return figure([...parts, ...face(body, "hairLight"), ...wardenEars(body), ...circlet, ...antlers, ...robe, ...staff, ...mote, ...finery], 5);
 })();
 
 // ---------- Sentinel K-7, stage 2 ----------
@@ -949,6 +1094,16 @@ const crossbowmanKitP = (body: Human, pelvis: V3): Part[] => [
     ...paint([box([0.07, 0.2, 0.07], [0.15, 0, -0.1])], "leather"),
     ...gear(paint([-0.015, 0.015].map((dx) => limb([0.15 + dx, 0.1, -0.1], [0.15 + dx, 0.15, -0.1], 0.01, 0.006, 3)), "white")),
   ]),
+  // At high quality: rivets round the kettle hat's brim, gold trim on the tabard, and a dagger at the belt.
+  ...fine([
+    ...body.onHead(rivets(Array.from({ length: 8 }, (_, i): V3 => [Math.cos((i / 8) * Math.PI * 2) * 0.165, 0.045, Math.sin((i / 8) * Math.PI * 2) * 0.165]), "steel", 0.011)),
+    ...body.onChest([...trimRect(0.17, 0.26, [0, 0.2, 0.105]), ...trimRect(0.17, 0.26, [0, 0.2, -0.103])]),
+    ...place([
+      ...paint([limb([0, 0, 0], [0, -0.15, 0.02], 0.014, 0, 4)], "steel"),
+      ...paint([limb([0, 0, 0], [0, 0.06, 0], 0.012, 0.012, 4)], "leather"),
+      ...paint([box([0.06, 0.012, 0.016], [0, 0, 0])], "gold"),
+    ], { at: [pelvis[0] + 0.145, pelvis[1] + 0.06, pelvis[2] + 0.05] }),
+  ]),
 ];
 function crossbowP(at: V3, turn: V3): Part[] {
   return gear(place([
@@ -956,6 +1111,11 @@ function crossbowP(at: V3, turn: V3): Part[] {
     ...paint([plate([[-0.22, 0.2], [-0.11, 0.275], [0, 0.3], [0.11, 0.275], [0.22, 0.2], [0.11, 0.245], [0, 0.265], [-0.11, 0.245]], 0.026, "top", 0.03)], "steel"),
     ...paint([limb([-0.215, 0.045, 0.205], [0, 0.05, 0.06], 0.004, 0.004, 3), limb([0.215, 0.045, 0.205], [0, 0.05, 0.06], 0.004, 0.004, 3)], "black"),
     ...paint([box([0.012, 0.05, 0.05], [0, -0.025, 0.0])], "steel"),
+    // At high quality: a stirrup at the front, and brass rivets down the stock.
+    ...fine([
+      ...paint([limb([-0.03, 0.02, 0.31], [-0.035, 0.02, 0.37], 0.007, 0.007, 3), limb([0.03, 0.02, 0.31], [0.035, 0.02, 0.37], 0.007, 0.007, 3), limb([-0.035, 0.02, 0.37], [0.035, 0.02, 0.37], 0.007, 0.007, 3)], "steel"),
+      ...rivets([0, 0.1, 0.2].flatMap((z): V3[] => [[0.022, 0.03, z], [-0.022, 0.03, z]]), "brass", 0.008),
+    ]),
   ], { at, turn }));
 }
 const crossbowmanAimingP = (() => {
@@ -1068,11 +1228,22 @@ const solenneDetailed = (() => {
   const wing = place([
     ...paint([plate(outline, 0.04, "front")], "white"),
     ...paint([plate([[0.06, 0.9], [0.26, 1.12], [0.52, 1.22], [0.5, 1.1], [0.3, 1.0], [0.08, 0.82]], 0.05, "front")], "lace"),
+    // At high quality: the shafts of the long flight feathers, on both faces of the wing.
+    ...fine(paint(([[0.74, 1.18], [0.72, 1.0], [0.74, 0.88], [0.6, 0.8], [0.6, 0.66]] as const).flatMap(([x, y]) =>
+      [0.025, -0.025].map((z) => limb([0.22, 0.84, z], [x * 0.96, y, z], 0.006, 0.004, 3))), "lace")),
   ], { at: [0, 0, -0.1], turn: [0, 14, 0] });
   const halo = gear(body.onHead(paint([limb([0, 0.07, -0.11], [0, 0.07, -0.09], 0.16, 0.16, 10)], "glow")));
   const pennon = gear(paint([plate([[0.12, 1.32], [-0.12, 1.29], [-0.03, 1.235], [-0.14, 1.18], [0.12, 1.15]], 0.014, "side", -0.3)], "gold"));
   const spearP = each(spear([-0.3, 0.16, 0.11], [-0.3, 1.5, 0.14]), ["gold", "steel"]);
-  return figure([...parts, ...face(body, "hairLight"), ...gown, ...armour, ...wing, ...mirror(wing), ...halo, ...spearP, ...pennon], 6);
+  // At high quality: a sun on the breastplate, and bands round the spear.
+  const finery = fine([
+    ...body.onChest([
+      ...paint([ball([0, 0.23, 0.132], [0.032, 0.032, 0.01], 0)], "white"),
+      ...paint([0, 45, 90, 135, 180, 225, 270, 315].flatMap((a) => place([box([0.012, 0.045, 0.008], [0, 0.065, 0])], { at: [0, 0.23, 0.134], turn: [0, 0, a] })), "gold"),
+    ]),
+    ...paint([0.55, 0.62, 0.75].map((t) => limb([-0.3, 0.16 + 1.34 * t, 0.11 + 0.03 * t], [-0.3, 0.19 + 1.34 * t, 0.11 + 0.03 * t], 0.022, 0.022, 6)), "white"),
+  ]);
+  return figure([...parts, ...face(body, "hairLight"), ...gown, ...armour, ...wing, ...mirror(wing), ...halo, ...spearP, ...pennon, ...finery], 6);
 })();
 
 // ---------- Magister Orrin Vael, stage 2 ----------
@@ -1106,7 +1277,20 @@ const orrinDetailed = (() => {
     limb([x + 0.04, y + 0.04, z + 0.34], [x - 0.02, y + 0.14, z + 0.54], 0.016, 0, 4),
     limb([x + 0.04, y + 0.04, z + 0.34], [x + 0.1, y - 0.06, z + 0.46], 0.014, 0, 4),
   ], "glowCyan"));
-  return figure([...parts, ...faceOnly(body), ...scholar, ...openBookP([bx, by + 0.05, bz + 0.02]), ...bolt], 5);
+  // At high quality: spectacles, a gold band down the robe's front, and a pouch and scroll at the belt.
+  const lens = (cx: number): Part[] => {
+    const pts: V3[] = Array.from({ length: 8 }, (_, i) => [cx + Math.cos((i / 8) * Math.PI * 2) * 0.024, 0.016 + Math.sin((i / 8) * Math.PI * 2) * 0.024, 0.097]);
+    return pts.map((p, i) => limb(p, pts[(i + 1) % 8]!, 0.004, 0.004, 3));
+  };
+  const finery = fine([
+    ...body.onHead(paint([...lens(0.032), ...lens(-0.032), limb([0.008, 0.02, 0.097], [-0.008, 0.02, 0.097], 0.004, 0.004, 3)], "gold")),
+    ...place([
+      ...paint([limb([0, 0.12, 0.094], [0, -0.44, 0.198], 0.018, 0.018, 4)], "gold"),
+      ...paint([box([0.06, 0.07, 0.04], [0.13, 0.04, 0.08])], "leather"),
+      ...paint([limb([0.09, 0.09, 0.11], [0.18, 0.13, 0.08], 0.02, 0.02, 6)], "lace"),
+    ], { at: pelvis }),
+  ]);
+  return figure([...parts, ...faceOnly(body), ...scholar, ...openBookP([bx, by + 0.05, bz + 0.02]), ...bolt, ...finery], 5);
 })();
 
 // ---------- Silverlance Knights, stage 2 ----------
@@ -1128,10 +1312,22 @@ const knightKitP = (body: Human, pelvis: V3): Part[] => [
   ]),
   ...place(paint([spine([[0, 0.13, 0.135, 0.1], [0, -0.24, 0.19, 0.15]], { sides: 6 })], "coat"), { at: pelvis }),
   ...belt(pelvis, "leather", 0.11, [0.14, 0.104]),
+  // At high quality: gold rivets on the pauldrons and down the visor, gold trim on the surcoat, and guards over knees and elbows.
+  ...fine([
+    ...body.onChest([
+      ...rivets(([1, -1] as const).flatMap((sx): V3[] => [[sx * 0.205, 0.39, 0.07], [sx * 0.27, 0.37, 0.056], [sx * 0.14, 0.37, 0.066]])),
+      ...trimRect(0.18, 0.28, [0, 0.19, 0.111]),
+      ...trimRect(0.18, 0.28, [0, 0.19, -0.107]),
+    ]),
+    ...body.onHead(rivets([-0.06, -0.03, 0.03, 0.06].map((x): V3 => [x, -0.06, 0.1]), "gold", 0.009)),
+    ...jointGuards(body, "steel", 0.06),
+  ]),
 ];
 function lanceP(butt: V3, tip: V3): Part[] {
   const [a, b] = [lerp(butt, tip, 0.78), lerp(butt, tip, 0.9)];
-  return [...each(spear(butt, tip, 0.018), ["wood", "steel"]), ...gear(paint([limb(b, [a[0] - 0.16, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], 0.045, 0, 4)], "gold"))];
+  // At high quality: a vamplate, the cone that guards the hand on the lance.
+  const vamplate = fine(paint([limb(lerp(butt, tip, 0.2), lerp(butt, tip, 0.25), 0.075, 0.02, 8)], "steel"));
+  return [...each(spear(butt, tip, 0.018), ["wood", "steel"]), ...gear(paint([limb(b, [a[0] - 0.16, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], 0.045, 0, 4)], "gold")), ...gear(vamplate)];
 }
 const knightAtAttentionP = (() => {
   const pelvis: V3 = [0, 0.5, 0];
@@ -1159,6 +1355,15 @@ const acolyteKitP = (body: Human, pelvis: V3): Part[] => [
     ...paint([0.062, -0.062].map((x) => spine([[0.118, 0.3, 0.03, 0.014], [0.128, 0.02, 0.03, 0.014], [0.168, -0.3, 0.033, 0.014]], { sides: 4, x })), "gold"),
   ]),
   ...paint([ball([body.handL[0] + 0.02, body.handL[1] - 0.08, body.handL[2] - 0.07], [0.07, 0.1, 0.09], 0), ball([body.handR[0] - 0.02, body.handR[1] - 0.08, body.handR[2] - 0.07], [0.07, 0.1, 0.09], 0)], "coat"),
+  // At high quality: a sun pendant on a gold chain, and the cord's tassels hanging from the belt.
+  ...fine([
+    ...body.onChest([
+      ...paint([limb([0.07, 0.36, 0.095], [0, 0.26, 0.128], 0.004, 0.004, 3), limb([-0.07, 0.36, 0.095], [0, 0.26, 0.128], 0.004, 0.004, 3)], "gold"),
+      ...paint([ball([0, 0.245, 0.132], [0.03, 0.03, 0.01], 0)], "gold"),
+      ...paint([ball([0, 0.245, 0.139], [0.014, 0.014, 0.006], 0)], "glow"),
+    ]),
+    ...place(paint([0.05, 0.085].flatMap((x) => [limb([x, 0.09, 0.09], [x + 0.01, -0.12, 0.12], 0.008, 0.008, 3), ball([x + 0.01, -0.13, 0.12], 0.016, 0)]), "lace"), { at: pelvis }),
+  ]),
 ];
 const acolyteSingingP = (() => {
   const pelvis: V3 = [0, 0.5, 0];
@@ -1198,6 +1403,12 @@ const sunboundKitP = (body: Human, hips: number): Part[] => [
     ...paint(place([box([0.035, 0.4, 0.014])], { at: [0, 0.2, 0.1], turn: [0, 0, 36] }), "leather"),
   ]),
   ...wardenQuiver(body),
+  // At high quality: a bracer on the bow arm, gold trim on the tabard, and a glowing stone in the circlet.
+  ...fine([
+    ...bracer(body, true, "leather", "gold"),
+    ...body.onChest(trimRect(0.15, 0.24, [0, 0.2, 0.101])),
+    ...body.onHead(paint([ball([0, 0.046, 0.106], 0.014, 0)], "glow")),
+  ]),
 ];
 const sunboundLoosingP = (() => {
   const body = human(loosing(), SUNBOUND);
@@ -1544,7 +1755,19 @@ const rootbackDetailed = (() => {
     ...paint([ball([0.45, 1.62, 0.3], [0.16, 0.08, 0.14], 0), ball([-0.5, 1.6, -0.35], [0.14, 0.07, 0.16], 0)], "leaf"),
     ...paint([ball([-0.2, 1.68, -0.1], [0.1, 0.07, 0.09], 0)], "ironDark"),
   ];
-  return figure([...body, ...shell, ...head, ...tusks, ...legs, ...nails, ...tail, ...saplings, ...growth], 9);
+  // At high quality: ridges of bark across the shell, moss hanging from its rim, mushrooms, and flowers
+  // among the saplings.
+  const SHELL: [number, number, number, number][] = [[-0.5, 1.26, 0.8, 0.68], [0, 1.28, 0.83, 0.72], [0.5, 1.25, 0.76, 0.6]];
+  const finery = fine([
+    ...paint(SHELL.flatMap(([z, y, rx, rn]) => {
+      const pts: V3[] = Array.from({ length: 7 }, (_, i) => { const t = Math.PI * (0.15 + (0.7 * i) / 6); return [Math.cos(t) * rx * 1.01, y + Math.sin(t) * rn * 1.01, z]; });
+      return pts.slice(1).map((p, i) => limb(pts[i]!, p, 0.03, 0.03, 4));
+    }), "bark"),
+    ...paint(SHELL.flatMap(([z, y, rx]) => ([1, -1] as const).map((sx) => limb([sx * rx * 0.98, y + 0.05, z], [sx * rx * 1.0, y - 0.25, z + 0.04], 0.03, 0.01, 4))), "moss"),
+    ...paint([ball([0.55, 1.52, 0.6], [0.08, 0.035, 0.08], 0), ball([0.48, 1.5, 0.72], [0.06, 0.03, 0.06], 0), ball([-0.6, 1.5, -0.6], [0.07, 0.03, 0.07], 0)], "shell"),
+    ...paint(([[0.25, 1.75, 0.35], [-0.1, 1.8, -0.35], [0.4, 1.7, -0.2], [-0.4, 1.72, 0.2], [0.05, 1.85, 0.5]] as V3[]).map((p) => ball(p, 0.05, 0)), "flower"),
+  ]);
+  return figure([...body, ...shell, ...head, ...tusks, ...legs, ...nails, ...tail, ...saplings, ...growth, ...finery], 9);
 })();
 
 // ---------- Briar Sprites and Queen Ilyth, stage 2 ----------
@@ -1557,13 +1780,27 @@ function faeP(hands: { handL: V3; handR: V3; elbowR?: V3 }, build: { shoulders: 
     ...paint([plate([[0.03, 1.02], [0.36, 1.0], [0.52, 0.8], [0.34, 0.68], [0.1, 0.86]], 0.022, "front")], "faeWing"),
     // A vein along each wing.
     ...paint([plate([[0.05, 1.1], [0.5, 1.38], [0.52, 1.35], [0.07, 1.07]], 0.03, "front"), plate([[0.05, 0.99], [0.44, 0.84], [0.44, 0.81], [0.06, 0.96]], 0.03, "front")], "coat"),
+    // At high quality: finer veins branching off, and a dot of colour near each wing's tip.
+    ...fine([
+      ...paint([[0.25, 1.22, 0.36, 1.42], [0.3, 1.25, 0.55, 1.26], [0.22, 0.92, 0.34, 0.7], [0.25, 0.91, 0.48, 0.92]].map(([x1, y1, x2, y2]) => limb([x1!, y1!, 0.016], [x2!, y2!, 0.016], 0.006, 0.004, 3)), "coat"),
+      ...paint([ball([0.5, 1.33, 0.016], [0.035, 0.035, 0.008], 0), ball([0.4, 0.8, 0.016], [0.03, 0.03, 0.008], 0)], "coatDark"),
+    ]),
   ], { at: [0, 0, -0.08], turn: [0, 20, 0] });
   const parts = paintBody(body, { hips: "coat", chest: "coat", sleeve: "skin", hand: "skin", thigh: "skin", shin: "skin", foot: "skin" });
   const petals = place([
     ...paint([spine([[0, 0.1, 0.1, 0.08], [0, -0.15, 0.21, 0.18]], { sides: 6 })], "coat"),
     ...paint([spine([[0, -0.12, 0.2, 0.17], [0, -0.15, 0.215, 0.185]], { sides: 6 })], "leaf"),
   ], { at: pelvis });
-  return { body, parts: [...parts, ...face(body, "hairLight"), ...wardenEars(body), ...wing, ...mirror(wing), ...petals, ...standP([0, 0.7, -0.05])] };
+  // At high quality: antennae tipped with light, a flower in the hair, and a second ring of petals.
+  const finery = fine([
+    ...body.onHead([
+      ...paint(([1, -1] as const).map((sx) => limb([sx * 0.03, 0.08, 0.03], [sx * 0.08, 0.21, 0.09], 0.006, 0.004, 3)), "black"),
+      ...paint(([1, -1] as const).map((sx) => ball([sx * 0.08, 0.215, 0.09], 0.014, 0)), "glowGreen"),
+      ...paint([ball([0.075, 0.05, 0.03], 0.024, 0)], "flower"),
+    ]),
+    ...place(paint([spine([[0, -0.17, 0.23, 0.2], [0, -0.2, 0.24, 0.21]], { sides: 7 })], "leaf"), { at: pelvis }),
+  ]);
+  return { body, parts: [...parts, ...face(body, "hairLight"), ...wardenEars(body), ...wing, ...mirror(wing), ...petals, ...standP([0, 0.7, -0.05]), ...finery] };
 }
 const thornP = (at: V3, turn: V3): Part[] => gear(place(paint([limb([0, -0.03, 0], [0, 0.18, 0], 0.022, 0, 4)], "bark"), { at, turn }));
 const spriteThrowingP = (() => {
@@ -1581,7 +1818,12 @@ const ilythDetailed = (() => {
     ...paint([0, 60, 120, 180, 240, 300].flatMap((turn) => place([limb([0, 0.08, 0.088], [0, 0.17, 0.11], 0.022, 0, 4)], { turn: [0, turn, 0] })), "sash"),
   ]);
   const burst = gear(place(paint(([[0, 0, 0.24], [0.14, 0.11, 0.16], [-0.14, 0.11, 0.16], [0, 0.2, 0.12], [0.12, -0.12, 0.16], [-0.12, -0.12, 0.16]] as V3[]).map((d) => limb([d[0] * 0.3, d[1] * 0.3, d[2] * 0.3], d, 0.02, 0, 4)), "glowGreen"), { at: queen.body.handL }));
-  return figure([...queen.parts, ...crown, ...burst], 4);
+  // At high quality: a glowing jewel on each spike of her crown, and a gold torc at her throat.
+  const finery = fine([
+    ...queen.body.onHead(paint([0, 60, 120, 180, 240, 300].map((turn) => place([ball([0, 0.175, 0.112], 0.016, 0)], { turn: [0, turn, 0] })[0]!), "glowGreen")),
+    ...queen.body.onChest(place(hoopRing(0.07, 0.37, "gold", 0.009, 10), { at: [0, 0, 0] })),
+  ]);
+  return figure([...queen.parts, ...crown, ...burst, ...finery], 4);
 })();
 
 export const DETAILED_MODELS: Readonly<Record<string, UnitModel>> = {

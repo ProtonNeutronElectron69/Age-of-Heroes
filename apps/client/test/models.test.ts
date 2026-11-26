@@ -288,10 +288,14 @@ describe("detailed figure models", () => {
   it("bake into one coloured mesh, plus one for glowing parts, keeping every triangle", () => {
     const context = { scheme: "faction" as const, main: "#2d6136", faction: "Verdant Court" };
     const dragon = DETAILED_MODELS["cinderjaw"]!.figures[0]!;
-    const { solid, glow } = bakedGeometry(dragon, context);
+    // At high quality every triangle is drawn; at low, all but the high-only detail.
+    const { solid, glow } = bakedGeometry(dragon, context, false, true);
     const triangles = measure(dragon, "1").triangles;
     expect(glow).not.toBeNull();
     expect(solid.getAttribute("position").count + glow!.getAttribute("position").count).toBe(triangles * 3);
+    const low = bakedGeometry(dragon, context);
+    const lowTris = dragon.parts.filter((p) => !p.high).reduce((n, p) => n + p.tris.length / 9, 0);
+    expect(low.solid.getAttribute("position").count + (low.glow?.getAttribute("position").count ?? 0)).toBe(lowTris * 3);
     expect(solid.getAttribute("color").count).toBe(solid.getAttribute("position").count);
     // A spent figure is darker (it fades towards a dark grey); a classic model has nothing that glows.
     const bright = { ...context, main: "#e0c040" };
@@ -362,7 +366,7 @@ describe("the ground on a base, at high quality", () => {
     const dressed = withGround(model, card.faction, card.footprint, 1);
     const context = { scheme: "faction" as const, main: "#4a7a3a", faction: card.faction };
     const count = (b: ReturnType<typeof bakedGeometry>) => b.solid.getAttribute("position").count + (b.glow?.getAttribute("position").count ?? 0);
-    const plainTris = model.parts.reduce((n, p) => n + p.tris.length / 9, 0);
+    const plainTris = model.parts.filter((p) => !p.high).reduce((n, p) => n + p.tris.length / 9, 0);
     const allTris = dressed.parts.reduce((n, p) => n + p.tris.length / 9, 0);
     expect(count(bakedGeometry(dressed, context, false, false))).toBe(plainTris * 3);
     expect(count(bakedGeometry(dressed, context, false, true))).toBe(allTris * 3);
