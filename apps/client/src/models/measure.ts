@@ -12,8 +12,11 @@ export const OVERHANG_LIMITS = {
   outside: 0.15,
 } as const;
 
-/** The most triangles a figure may have at this stage. */
-export const TRIANGLE_BUDGET = 1500;
+/**
+ * The most triangles a figure may have, at high quality: its body, gear and high-only details,
+ * and the ground on its base. Doubled from 1,500 for the better graphics; a model need not use it all.
+ */
+export const TRIANGLE_BUDGET = 3000;
 
 /** How far the top of the body may be from the card's Height, in terrain levels. */
 export const HEIGHT_TOLERANCE = 0.05;

@@ -23,6 +23,12 @@ export interface Part {
   readonly tris: readonly number[];
   /** What the part is painted as, on a detailed model (`paint.ts`). Classic models have none: one colour. */
   readonly paint?: Paint;
+  /**
+   * A fine detail drawn only at high graphics quality (the ground on a base, a faction's trim).
+   * Low leaves it out, so Low draws the figures as they always were. It counts towards the
+   * triangle budget, which is for High.
+   */
+  readonly high?: boolean;
 }
 
 /**

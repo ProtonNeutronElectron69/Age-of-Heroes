@@ -23,7 +23,10 @@ import {
   paintedGeometry,
   unitModel,
 } from "../src/models";
+import { baseCentres, outside } from "../src/models/base";
 import { box, figure, squad } from "../src/models/build";
+import { groundParts, seedOf } from "../src/models/ground";
+import { withGround } from "../src/models";
 import type { Part } from "../src/models/types";
 
 function volume(part: Part): number {
@@ -306,5 +309,62 @@ describe("detailed figure models", () => {
     expect(paintLook("gold", { ...context, scheme: "grey" }).color).toBe(MODEL_GREY);
     // A classic model is one mesh, in the model colour.
     expect(paintedGeometry(UNIT_MODELS["marisol-vance"]!.figures[0]!).map((m) => m.paint)).toEqual(["coat"]);
+  });
+});
+
+describe("the ground on a base, at high quality", () => {
+  const FACTIONS = [...new Set(CARDS.map((c) => c.faction))];
+
+  it("dresses every faction's bases", () => {
+    for (const faction of FACTIONS) expect(groundParts(faction, "1", 7).length, faction).toBeGreaterThan(0);
+  });
+
+  it("is the same each time, and differs from one seed to another", () => {
+    expect(groundParts("Verdant Court", "1", 3)).toEqual(groundParts("Verdant Court", "1", 3));
+    expect(groundParts("Verdant Court", "1", 3)).not.toEqual(groundParts("Verdant Court", "1", 4));
+  });
+
+  it("lies low on the base's top, inside its edge and clear of the figure's feet", () => {
+    for (const card of CARDS) {
+      const centres = baseCentres(card.footprint);
+      for (let seed = 0; seed < 3; seed++) {
+        for (const part of groundParts(card.faction, card.footprint, seedOf(card.id) + seed)) {
+          expect(part.high).toBe(true);
+          expect(part.role).toBe("base");
+          for (let i = 0; i < part.tris.length; i += 3) {
+            const [x, y, z] = [part.tris[i]!, part.tris[i + 1]!, part.tris[i + 2]!];
+            expect(outside(x, z, centres), card.id).toBeLessThan(-BASE_BEVEL * 0.4);
+            expect(Math.min(...centres.map((c) => Math.hypot(x - c.x, z - c.z))), card.id).toBeGreaterThan(0.2);
+            expect(y).toBeGreaterThan(BASE_HEIGHT - 0.05);
+            expect(y).toBeLessThan(BASE_HEIGHT + 0.2);
+          }
+        }
+      }
+    }
+  });
+
+  it("keeps every detailed figure within the triangle budget and its fit, ground and all", () => {
+    for (const card of CARDS) {
+      const unit = unitModel(card.id, true)!;
+      unit.figures.forEach((model, pose) => {
+        const plain = measure(model, card.footprint);
+        const dressed = measure(withGround(model, card.faction, card.footprint, seedOf(card.id) + pose), card.footprint);
+        expect(dressed.triangles, card.id).toBeLessThanOrEqual(TRIANGLE_BUDGET);
+        expect(dressed.height).toBeCloseTo(plain.height);
+        expect(dressed.fits).toBe(plain.fits);
+      });
+    }
+  });
+
+  it("is left out at low quality, and kept at high", () => {
+    const card = CARDS.find((c) => c.faction === "Verdant Court")!;
+    const model = unitModel(card.id, true)!.figures[0]!;
+    const dressed = withGround(model, card.faction, card.footprint, 1);
+    const context = { scheme: "faction" as const, main: "#4a7a3a", faction: card.faction };
+    const count = (b: ReturnType<typeof bakedGeometry>) => b.solid.getAttribute("position").count + (b.glow?.getAttribute("position").count ?? 0);
+    const plainTris = model.parts.reduce((n, p) => n + p.tris.length / 9, 0);
+    const allTris = dressed.parts.reduce((n, p) => n + p.tris.length / 9, 0);
+    expect(count(bakedGeometry(dressed, context, false, false))).toBe(plainTris * 3);
+    expect(count(bakedGeometry(dressed, context, false, true))).toBe(allTris * 3);
   });
 });
