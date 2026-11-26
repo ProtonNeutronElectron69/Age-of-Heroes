@@ -687,6 +687,7 @@ function ModelFigure({
   scheme,
   detailed,
   high,
+  glow,
 }: {
   f: FigureView;
   onClick?: Props["onClick"];
@@ -697,6 +698,8 @@ function ModelFigure({
   detailed: boolean;
   /** High graphics quality: in the detailed look, a rounder base, smooth shading, the ground on its base and an edge light. */
   high: boolean;
+  /** The edge light at high quality (**Outline glow in player colours** under Display). */
+  glow: boolean;
 }) {
   const ring = useRef<MeshBasicMaterial>(null);
   const moving = useFigureAnimation(f);
@@ -743,7 +746,7 @@ function ModelFigure({
       <group ref={moving}>
       <group position={[centre.x, ground, centre.z]}>
         <group rotation={[0, turn, 0]}>
-          <PaintedModel model={model} context={context} spent={f.status === "spent"} high={fine} edge={fine ? f.color : undefined} />
+          <PaintedModel model={model} context={context} spent={f.status === "spent"} high={fine} edge={fine && glow ? f.color : undefined} />
           <mesh geometry={meshes.base.top} raycast={() => null}>
             <meshStandardMaterial color={BASE_COLOR} roughness={0.75} />
           </mesh>
@@ -1039,6 +1042,7 @@ export function Figures({ figures, onClick, onHover, labels, style, motions = nu
             scheme={display.scheme}
             detailed={display.tiles === "detailed"}
             high={high}
+            glow={display.outlineGlow}
           />
         ) : (
           <Token key={f.id} f={f} onClick={onClick} onHover={onHover} />
