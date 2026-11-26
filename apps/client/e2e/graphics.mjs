@@ -1,9 +1,9 @@
 // Checks the board at high graphics quality, the one browser test that turns every effect on (the
 // others draw at low in test mode): the key light casts shadows and the figures and scenery throw
 // them, draw calls stay within a budget, a resting board still stops drawing, and the Graphics
-// choice under Display switches the shadows off and on again. Then, with motion allowed (the
-// effects keep still under reduced motion), a figure's move kicks up a particle burst where it
-// lands. It runs only when graphics code changes (scripts/affected.mjs). With E2E_SCREENSHOTS it
+// choice under Display switches the shadows off and on again. Water and lava keep still under
+// reduced motion. Then, with motion allowed, a figure's move kicks up a particle burst where it
+// lands, the water on Twin Fords moves, and **Moving water and lava** under Display stops it. It runs only when graphics code changes (scripts/affected.mjs). With E2E_SCREENSHOTS it
 // saves the board at high and at low.
 // Usage: node e2e/graphics.mjs   (serves the build in apps/client/dist)
 import { chromium } from "playwright";
@@ -127,6 +127,7 @@ try {
   if (high.casters < 20) fail(`Too few meshes cast shadows at high quality: ${high.casters}`);
   const { calls } = await page.evaluate(() => window.__aoh.stats());
   if (calls > HIGH_CALL_BUDGET) fail(`High quality drew ${calls} draw calls in a frame (budget ${HIGH_CALL_BUDGET})`);
+  if (await page.evaluate(() => window.__aoh.graphics().flowing)) fail("Water and lava moved under reduced motion");
   if (!(await boardRests())) fail("The board kept drawing at high quality while nothing moved");
   if (shots) await page.screenshot({ path: `${shots}/graphics-high.png` });
 
@@ -166,8 +167,17 @@ try {
   if (burstCalls > HIGH_CALL_BUDGET) fail(`A burst took the board to ${burstCalls} draw calls (budget ${HIGH_CALL_BUDGET})`);
   if (shots) await page.screenshot({ path: `${shots}/graphics-burst.png` });
 
+  // Twin Fords has water, so it moves (and the board keeps drawing) until the setting is switched off.
+  if (!(await page.evaluate(() => window.__aoh.graphics().flowing))) fail("The water on Twin Fords did not move at high quality");
+  const before2 = await page.evaluate(() => window.__aoh.stats().frames);
+  await page.waitForFunction((n) => window.__aoh.stats().frames > n + 2, before2, { timeout: 15000 });
+  await page.getByRole("button", { name: "Display" }).click();
+  await page.getByLabel("Moving water and lava").uncheck();
+  await page.getByRole("button", { name: "Display" }).click();
+  await page.waitForFunction(() => !window.__aoh.graphics().flowing, null, { timeout: 15000 });
+
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
-  console.log(`Graphics test passed: shadows from ${high.casters} meshes at high quality in ${calls} draw calls, none at low, the board rests, and a move kicks up a burst.`);
+  console.log(`Graphics test passed: shadows from ${high.casters} meshes at high quality in ${calls} draw calls, none at low, the board rests, a move kicks up a burst, and the water moves until switched off.`);
 } catch (err) {
   if (failureShots) await page.screenshot({ path: `${failureShots}/graphics-failure.png` }).catch(() => {});
   throw err;

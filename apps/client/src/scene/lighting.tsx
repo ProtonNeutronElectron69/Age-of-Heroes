@@ -1,6 +1,6 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect } from "react";
-import { PCFSoftShadowMap, type Material, type Mesh, type Object3D } from "three";
+import { PCFShadowMap, type Material, type Mesh, type Object3D } from "three";
 import { useGraphics } from "../settings";
 
 /**
@@ -18,7 +18,8 @@ export function BoardLights({ span }: { span: number }) {
   // Switching quality changes which shaders the materials need: rebuild them once and draw again.
   useEffect(() => {
     gl.shadowMap.enabled = high;
-    gl.shadowMap.type = PCFSoftShadowMap;
+    // Soft-edged in this version of three.js (the separate soft kind was folded into it).
+    gl.shadowMap.type = PCFShadowMap;
     gl.shadowMap.needsUpdate = true;
     scene.traverse((o) => {
       const mesh = o as Mesh;
@@ -34,11 +35,13 @@ export function BoardLights({ span }: { span: number }) {
     if (high) markShadows(scene);
   });
 
+  // Each quality's lights have their own keys, so switching makes new lights. Reused ones would
+  // keep only the props the new quality sets, and lose the rest (the key light's colour among them).
   if (!high) {
     return (
       <>
-        <hemisphereLight args={["#dfe9ff", "#3a3128", 0.9]} />
-        <directionalLight position={[12, 24, 10]} intensity={1.6} />
+        <hemisphereLight key="low-sky" args={["#dfe9ff", "#3a3128", 0.9]} />
+        <directionalLight key="low-sun" position={[12, 24, 10]} intensity={1.6} />
       </>
     );
   }
@@ -47,8 +50,9 @@ export function BoardLights({ span }: { span: number }) {
   const reach = span * 0.78;
   return (
     <>
-      <hemisphereLight args={["#e6edff", "#3b3026", 0.45]} />
+      <hemisphereLight key="high-sky" args={["#e6edff", "#3b3026", 0.45]} />
       <directionalLight
+        key="high-key"
         position={[span * 0.75, span * 0.875, span * 0.5]}
         intensity={2.4}
         color="#fff0db"
@@ -64,7 +68,7 @@ export function BoardLights({ span }: { span: number }) {
         shadow-camera-near={1}
         shadow-camera-far={span * 3}
       />
-      <directionalLight position={[-span * 0.5, span * 0.6, -span * 0.4]} intensity={0.35} color="#b9c8ff" />
+      <directionalLight key="high-fill" position={[-span * 0.5, span * 0.6, -span * 0.4]} intensity={0.35} color="#b9c8ff" />
     </>
   );
 }

@@ -21,6 +21,8 @@ export interface DisplaySettings {
   readonly dice: DiceShow;
   /** Graphics quality: high turns every effect on (shadows, warmer light); low is the plainest and quickest. */
   readonly graphics: GraphicsQuality;
+  /** At high quality, water ripples and lava flows; the board then keeps drawing while either is in sight. */
+  readonly flow: boolean;
   /** The play screen's camera follows the acting figure: moving to it, turning to face the board, and zooming. */
   readonly autoPan: boolean;
   readonly autoRotate: boolean;
@@ -86,6 +88,7 @@ const DEFAULTS: DisplaySettings = {
   tiles: "detailed",
   dice: "scene",
   graphics: "high",
+  flow: true,
   autoPan: true,
   autoRotate: true,
   autoZoom: true,
@@ -106,6 +109,7 @@ function load(): DisplaySettings {
       tiles: saved.tiles === "classic" ? "classic" : "detailed",
       dice: DICE_SHOWS.some((d) => d.id === saved.dice) ? saved.dice! : DEFAULTS.dice,
       graphics: saved.graphics === "low" ? "low" : "high",
+      flow: saved.flow !== false,
       autoPan: saved.autoPan !== false,
       autoRotate: saved.autoRotate !== false,
       autoZoom: saved.autoZoom !== false,
