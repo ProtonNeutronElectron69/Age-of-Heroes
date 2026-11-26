@@ -38,10 +38,11 @@ import {
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
-import { useDisplay } from "../settings";
+import { useReducedMotion } from "../motion";
+import { useDisplay, useGraphics } from "../settings";
 import { TEST_MODE } from "../testMode";
 import { boulderGeometry, sceneryMaterial, worldUV, type SceneryFinish } from "./sceneryArt";
-import { detailedMaterials, tileGeometry } from "./tileMaterials";
+import { FLOWING_TERRAIN, FLOW_TIME, detailedMaterials, tileGeometry } from "./tileMaterials";
 import { HEX_GAP } from "./scale";
 import { useBoardActivity } from "./activity";
 import { useWake } from "./wake";
@@ -800,6 +801,33 @@ interface CellHandlers {
   dragging?: boolean;
 }
 
+/** How often moving water and lava are drawn again, in milliseconds: about 30 times a second is smooth enough for slow ripples. */
+const FLOW_FRAME_MS = 33;
+
+/**
+ * Winds on the clock that moves water and lava (`FLOW_TIME`) while the board shows either at
+ * high quality. The board is drawn only when something changes, so this asks for a frame about
+ * 30 times a second while it runs: the one effect that keeps a board drawing, which is why players
+ * may switch it off (**Moving water and lava** under Display) and it stops under reduced motion.
+ */
+function FlowClock({ active }: { active: boolean }) {
+  const invalidate = useThree((s) => s.invalidate);
+  const activity = useBoardActivity();
+  useEffect(() => {
+    if (!active) return;
+    activity.flowing = true;
+    const timer = window.setInterval(() => invalidate(), FLOW_FRAME_MS);
+    return () => {
+      window.clearInterval(timer);
+      activity.flowing = false;
+    };
+  }, [active, invalidate, activity]);
+  useFrame(() => {
+    if (active) FLOW_TIME.value = performance.now() / 1000;
+  });
+  return null;
+}
+
 /** Hexes of a bridge span are drawn full width, so the span reads as one piece; its outlines stay. */
 const SPAN_SCALE = new Vector3(1 / HEX_GAP, 1, 1 / HEX_GAP);
 const NO_SCALE = new Vector3(1, 1, 1);
@@ -1002,7 +1030,12 @@ export function BoardScene({
   const scenery = useMemo(() => board.scenery(), [board]);
   const geometry = useMemo(() => tileGeometry(), []);
   // The detailed or the classic look of the tiles, as each player chooses under Display.
-  const detailed = useDisplay().tiles === "detailed";
+  const display = useDisplay();
+  const detailed = display.tiles === "detailed";
+  // At high quality the detailed tiles are sharper, their relief catches the light, and water and lava move.
+  const high = useGraphics() === "high";
+  const reduced = useReducedMotion();
+  const flowing = high && detailed && display.flow && !reduced && cellsByTerrain.some(([id]) => FLOWING_TERRAIN.has(id));
   const anisotropy = useThree((s) => s.gl.capabilities.getMaxAnisotropy());
   const markerGeometry = useMemo(() => new CylinderGeometry(HEX_SIZE * 0.82, HEX_SIZE * 0.82, 0.03, 6), []);
   const materials = useMemo(() => {
@@ -1020,6 +1053,7 @@ export function BoardScene({
     <>
       <color attach="background" args={[backdrop]} />
       <BoardLights span={fitted.span} />
+      <FlowClock active={flowing} />
       <group position={[-center.x, 0, -center.z]}>
         {ground && (
           <>
@@ -1047,11 +1081,11 @@ export function BoardScene({
           <TerrainCells
             // A new key when the count or the look changes: an instanced mesh cannot grow, and a
             // new material rebuilds it, so its tiles must be placed again.
-            key={`${terrainId}:${list.length}:${detailed ? "detailed" : "classic"}`}
+            key={`${terrainId}:${list.length}:${detailed ? "detailed" : "classic"}:${high ? "high" : "low"}`}
             board={board}
             cells={list}
             geometry={geometry}
-            material={(detailed && detailedMaterials(terrainId, Math.min(8, anisotropy))) || (materials.get(terrainId) ?? fallback)}
+            material={(detailed && detailedMaterials(terrainId, Math.min(8, anisotropy), high)) || (materials.get(terrainId) ?? fallback)}
             onSurfaceClick={onSurfaceClick}
             onSurfaceHover={onSurfaceHover}
             onCellPointer={onCellPointer}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { BoxGeometry, CylinderGeometry } from "three";
+import { BoxGeometry, CylinderGeometry, ShaderLib } from "three";
 import { boulderGeometry, worldUV } from "../src/scene/sceneryArt";
-import { tileGeometry } from "../src/scene/tileMaterials";
+import { FLOWING_TERRAIN, flowShaders, tileGeometry } from "../src/scene/tileMaterials";
 
 describe("the tile geometry", () => {
   it("draws in two parts, the sides and bottom then the top, with every triangle kept", () => {
@@ -41,5 +41,28 @@ describe("the scenery's shapes", () => {
       expect(d).toBeGreaterThan(0.7 * 0.8);
       expect(d).toBeLessThan(0.7 * 1.21);
     }
+  });
+});
+
+describe("moving water and lava", () => {
+  const { vertexShader, fragmentShader } = ShaderLib.physical;
+
+  it("edits three.js's own shaders: every texture look-up moves and lava's glow breathes", () => {
+    for (const id of FLOWING_TERRAIN) {
+      const edited = flowShaders(id, vertexShader, fragmentShader)!;
+      expect(edited, id).not.toBeNull();
+      expect(edited.vertexShader).toContain("vAohWorld = (modelMatrix * aohAt).xz;");
+      // Each place the edit looks for is still there, so nothing is left unmoved.
+      for (const include of ["map_fragment", "bumpmap_pars_fragment", "normal_fragment_maps", "emissivemap_fragment"]) {
+        expect(edited.fragmentShader, include).not.toContain(`#include <${include}>`);
+      }
+      for (const uv of ["vMapUv", "vNormalMapUv", "vBumpMapUv", "vEmissiveMapUv"]) expect(edited.fragmentShader).toContain(`(${uv} + aohShift)`);
+      expect(edited.fragmentShader).toContain("totalEmissiveRadiance *= aohGlow;");
+      expect(edited.fragmentShader).toContain("float aohT = uAohTime;");
+    }
+  });
+
+  it("leaves other terrains alone", () => {
+    expect(flowShaders("grass", vertexShader, fragmentShader)).toBeNull();
   });
 });

@@ -1,8 +1,13 @@
 /**
  * The detailed look of the board's tiles: a texture for the top and one for the sides of each
  * terrain, painted in code on canvases (a colour map, a height map for the moulded relief and,
- * for lava, a glow map). Nothing is downloaded. Each terrain is painted once, the first time a
- * board with it is drawn in the detailed look, and kept.
+ * for lava, a glow map). Nothing is downloaded. Each terrain is painted once for each sharpness,
+ * the first time a board with it is drawn in the detailed look, and kept.
+ *
+ * The painters draw on a 512-pixel square (`T`). At high graphics quality the same painting is
+ * made at twice the resolution (`SHARP`): the smooth fields are scaled up and every stroke (grass
+ * blades, grains, speckles, cobbles, cracks) is drawn through a doubled transform, so the picture
+ * is the same, only sharper.
  */
 
 export type Noise = (x: number, y: number) => number;
@@ -10,8 +15,10 @@ export type RGB = [number, number, number];
 
 /** A painted surface: its colour, height (relief) and glow canvases. */
 export interface Surface {
+  /** Its size in the painters' units; the canvases are `k` times as many pixels across. */
   readonly w: number;
   readonly h: number;
+  readonly k: number;
   readonly color: HTMLCanvasElement;
   readonly height: HTMLCanvasElement;
   readonly glow: HTMLCanvasElement;
@@ -65,22 +72,43 @@ export const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t
 export const clamp = (v: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
 export const shade = (c: RGB, k: number): RGB => [c[0] * k, c[1] * k, c[2] * k];
 
-export function surface(w: number, h: number): Surface {
-  const mk = () => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
+/** A surface `w` by `h` in the painters' units, drawn `k` times as sharp (1, or `SHARP` at high quality). */
+export function surface(w: number, h: number, k = 1): Surface {
+  const mk = () => { const c = document.createElement("canvas"); c.width = w * k; c.height = h * k; return c; };
   const color = mk(), height = mk(), glow = mk();
-  return { w, h, color, height, glow, cx: color.getContext("2d")!, hx: height.getContext("2d")!, gx: glow.getContext("2d")!, glowing: false };
+  const ctx = (c: HTMLCanvasElement) => { const g = c.getContext("2d")!; g.setTransform(k, 0, 0, k, 0, 0); return g; };
+  return { w, h, k, color, height, glow, cx: ctx(color), hx: ctx(height), gx: ctx(glow), glowing: false };
 }
-/** Fill every pixel: fn returns [r,g,b, height 0..1, glow rgb or null]. */
+/**
+ * Fill every pixel: fn returns [r,g,b, height 0..1, glow rgb or null] for a point in the painters' units.
+ * The fields painted this way are smooth (noise, cells, ripples), so on a sharper surface they are
+ * worked out at the painters' size and scaled up; only the strokes drawn after them gain detail.
+ * That keeps a sharp painting about as quick as a plain one.
+ */
 export function pixels(s: Surface, fn: (x: number, y: number) => readonly [number, number, number, number, (RGB | null)?]): void {
-  const c = s.cx.createImageData(s.w, s.h), h = s.hx.createImageData(s.w, s.h), g = s.gx.createImageData(s.w, s.h);
-  for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
-    const [r, gg, b, ht, glow] = fn(x, y), i = (y * s.w + x) * 4;
+  const W = s.w, H = s.h;
+  const c = new ImageData(W, H), h = new ImageData(W, H), g = new ImageData(W, H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const [r, gg, b, ht, glow] = fn(x, y), i = (y * W + x) * 4;
     c.data[i] = r; c.data[i + 1] = gg; c.data[i + 2] = b; c.data[i + 3] = 255;
     const hv = clamp(ht) * 255; h.data[i] = h.data[i + 1] = h.data[i + 2] = hv; h.data[i + 3] = 255;
     if (glow) { s.glowing = true; g.data[i] = glow[0]; g.data[i + 1] = glow[1]; g.data[i + 2] = glow[2]; }
     g.data[i + 3] = 255;
   }
-  s.cx.putImageData(c, 0, 0); s.hx.putImageData(h, 0, 0); s.gx.putImageData(g, 0, 0);
+  const put = (ctx: CanvasRenderingContext2D, data: ImageData) => {
+    if (s.k === 1) return ctx.putImageData(data, 0, 0);
+    const small = document.createElement("canvas");
+    small.width = W;
+    small.height = H;
+    small.getContext("2d")!.putImageData(data, 0, 0);
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    // The context's transform scales the painters' units up to the sharper canvas.
+    ctx.drawImage(small, 0, 0, W, H);
+    ctx.restore();
+  };
+  put(s.cx, c); put(s.hx, h); put(s.gx, g);
 }
 /** Voronoi cells: nearest and second-nearest distances and the nearest cell's index. */
 export function cells(seed: number, count: number, size: number): (x: number, y: number) => { d1: number; d2: number; edge: number; v: number } {
@@ -281,8 +309,8 @@ const TOPS: Record<string, (s: Surface) => void> = {
 
 // ---------- The sides: a lip of the top material over layered earth or stone ----------
 const SW = 512, SH = 128;
-function side(seed: number, lip: string, layers: readonly string[], opts: SideOptions = {}): Surface {
-  const s = surface(SW, SH), n = noise2(seed), m = noise2(seed + 1);
+function side(k: number, seed: number, lip: string, layers: readonly string[], opts: SideOptions = {}): Surface {
+  const s = surface(SW, SH, k), n = noise2(seed), m = noise2(seed + 1);
   const lipC = hex(lip), lay = layers.map(hex), lipH = opts.lip ?? 0.16;
   pixels(s, (x, y) => {
     const t = y / SH, edge = lipH + (fbm(n, x / 26, 0.5) - 0.5) * 0.1;
@@ -300,17 +328,17 @@ function side(seed: number, lip: string, layers: readonly string[], opts: SideOp
   });
   return s;
 }
-const SIDES: Record<string, () => Surface> = {
-  grass: () => side(201, "#5e9b43", ["#6b4a2f", "#7d5a3a", "#5e4029", "#73513a"]),
-  sand: () => side(211, "#e0c88a", ["#c9a462", "#b48c4e", "#d4b373", "#bd9655"], { lip: 0.16 }),
-  rock: () => side(221, "#a19c93", ["#8c877f", "#7b766f", "#97928a", "#85807a"], { lip: 0.1, bands: 4 }),
-  snow: () => side(231, "#f2f6fa", ["#8a8f96", "#9aa0a8", "#7d838b"], { lip: 0.3 }),
-  forest: () => side(241, "#2f5e34", ["#5a3f27", "#6b4a2f", "#4e3622", "#62452c"]),
-  water: () => side(251, "#5d9fdc", ["#2b6aab", "#3a7cbf", "#2f71b3"], { lip: 0.14, bands: 3 }),
-  swamp: () => side(261, "#6e6a3a", ["#3f3a26", "#4b452c", "#38331f", "#453f28"]),
-  lava: () => side(271, "#ff7a1c", ["#2f201b", "#3a2620", "#2a1b17"], { lip: 0.12, glowLip: true, vein: "#ff6a14" }),
-  road: () => side(281, "#6b5440", ["#6a4b30", "#5c4029", "#71523a", "#62462e"], { lip: 0.14 }),
-  ice: () => side(291, "#e4f6fc", ["#8ccae0", "#a6d8ea", "#7fbdd5"], { lip: 0.2, bands: 3 }),
+const SIDES: Record<string, (k: number) => Surface> = {
+  grass: (k) => side(k, 201, "#5e9b43", ["#6b4a2f", "#7d5a3a", "#5e4029", "#73513a"]),
+  sand: (k) => side(k, 211, "#e0c88a", ["#c9a462", "#b48c4e", "#d4b373", "#bd9655"], { lip: 0.16 }),
+  rock: (k) => side(k, 221, "#a19c93", ["#8c877f", "#7b766f", "#97928a", "#85807a"], { lip: 0.1, bands: 4 }),
+  snow: (k) => side(k, 231, "#f2f6fa", ["#8a8f96", "#9aa0a8", "#7d838b"], { lip: 0.3 }),
+  forest: (k) => side(k, 241, "#2f5e34", ["#5a3f27", "#6b4a2f", "#4e3622", "#62452c"]),
+  water: (k) => side(k, 251, "#5d9fdc", ["#2b6aab", "#3a7cbf", "#2f71b3"], { lip: 0.14, bands: 3 }),
+  swamp: (k) => side(k, 261, "#6e6a3a", ["#3f3a26", "#4b452c", "#38331f", "#453f28"]),
+  lava: (k) => side(k, 271, "#ff7a1c", ["#2f201b", "#3a2620", "#2a1b17"], { lip: 0.12, glowLip: true, vein: "#ff6a14" }),
+  road: (k) => side(k, 281, "#6b5440", ["#6a4b30", "#5c4029", "#71523a", "#62462e"], { lip: 0.14 }),
+  ice: (k) => side(k, 291, "#e4f6fc", ["#8ccae0", "#a6d8ea", "#7fbdd5"], { lip: 0.2, bands: 3 }),
 };
 
 
@@ -341,17 +369,23 @@ export interface TileArt {
   readonly finish: TileFinish;
 }
 
+/** How much sharper the textures are painted at high graphics quality: 1024 pixels across instead of 512. */
+export const SHARP = 2;
+
 const painted = new Map<string, TileArt>();
 
-/** The painted top and sides of a terrain, or null for a terrain with no art (it keeps its flat colour). */
-export function tileArt(terrainId: string): TileArt | null {
-  const done = painted.get(terrainId);
+/**
+ * The painted top and sides of a terrain, `k` times as sharp (1, or `SHARP` at high quality), or
+ * null for a terrain with no art (it keeps its flat colour).
+ */
+export function tileArt(terrainId: string, k = 1): TileArt | null {
+  const done = painted.get(`${terrainId}@${k}`);
   if (done) return done;
   const paintTop = TOPS[terrainId], paintSide = SIDES[terrainId], finish = TILE_FINISH[terrainId];
   if (!paintTop || !paintSide || !finish) return null;
-  const top = surface(T, T);
+  const top = surface(T, T, k);
   paintTop(top);
-  const art = { top, side: paintSide(), finish };
-  painted.set(terrainId, art);
+  const art = { top, side: paintSide(k), finish };
+  painted.set(`${terrainId}@${k}`, art);
   return art;
 }

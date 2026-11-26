@@ -31,7 +31,11 @@ export function DisplayMenu() {
               </button>
             ))}
           </div>
-          <p className="muted small">High turns every effect on: soft shadows and warmer light. Low is plainer and quicker on slow computers.</p>
+          <p className="muted small">High turns every effect on: soft shadows, sharper tiles and effects in fights. Low is plainer and quicker on slow computers.</p>
+          <label className="check">
+            <input type="checkbox" checked={display.flow} disabled={display.graphics !== "high"} onChange={(e) => setDisplay({ flow: e.target.checked })} />
+            Moving water and lava
+          </label>
           <h2>Figures</h2>
           <div className="segmented" role="radiogroup" aria-label="Figures">
             {(["models", "tokens"] as const).map((v) => (

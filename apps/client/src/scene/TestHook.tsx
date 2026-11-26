@@ -20,9 +20,10 @@ declare global {
       cameraBusy: () => boolean;
       /**
        * What the board draws with, for the graphics test: whether shadows are on, how many meshes
-       * cast one, and how many particle bursts and figure reactions it has played.
+       * cast one, how many particle bursts and figure reactions it has played, and whether water
+       * and lava are moving.
        */
-      graphics: () => { shadows: boolean; casters: number; bursts: number; reactions: number };
+      graphics: () => { shadows: boolean; casters: number; bursts: number; reactions: number; flowing: boolean };
       /** How many wound numbers have floated up from figures on this board. */
       woundsShown: () => number;
       /**
@@ -82,7 +83,7 @@ export function TestHook({ offset }: { offset: { x: number; z: number } }) {
         scene.traverse((o) => {
           if ((o as { isMesh?: boolean }).isMesh && o.castShadow) casters++;
         });
-        return { shadows: gl.shadowMap.enabled, casters, bursts: activity.bursts, reactions: activity.reactions };
+        return { shadows: gl.shadowMap.enabled, casters, bursts: activity.bursts, reactions: activity.reactions, flowing: activity.flowing };
       },
       woundsShown: () => activity.woundsShown,
       canvas: gl.domElement,
