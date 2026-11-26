@@ -103,6 +103,13 @@ function bracer(b: Human, left: boolean, paintAs: Paint, band: Paint): Part[] {
   const e = centroid(b.parts[elbow]!), h = centroid(b.parts[hand]!);
   return [...paint([limb(lerp(e, h, 0.3), lerp(e, h, 0.72), 0.05, 0.046, 6)], paintAs), ...paint([limb(lerp(e, h, 0.5), lerp(e, h, 0.55), 0.053, 0.053, 6)], band)];
 }
+/** A rim and a ring of studs for a round shield of `radius` at `at`, turned as the shield is (`roundShield`). */
+function studdedRim(at: V3, radius: number, turn: V3, rim: Paint, studs: Paint, n = 8): Part[] {
+  return gear(place([
+    ...place(hoopRing(radius * 0.98, 0, rim, radius * 0.055, 14), { turn: [90, 0, 0] }),
+    ...rivets(Array.from({ length: n }, (_, i): V3 => [Math.cos((i / n) * Math.PI * 2) * radius * 0.76, Math.sin((i / n) * Math.PI * 2) * radius * 0.76, 0.026]), studs, radius * 0.065),
+  ], { at, turn }));
+}
 /** A small leaf, flat, pointing along `dir` from `at`. */
 function leafAt(at: V3, dir: V3, size = 0.05, paintAs: Paint = "leaf"): Part[] {
   const turn = pointing([0, 0, 0], dir);
@@ -484,6 +491,11 @@ function carbineP(at: V3, turn: V3): Part[] {
     ...paint([limb([0, 0.045, 0.32], [0, 0.045, 0.52], 0.018, 0.018, 5)], "steel"),
     ...paint([box([0.065, 0.065, 0.09], [0, -0.035, 0.2])], "coat"),
     ...paint([box([0.016, 0.016, 0.16], [0, 0.084, 0.1])], "glowCyan"),
+    // At high quality: a scope with a glowing lens, and charge cells on the side.
+    ...fine([
+      ...paint([limb([0, 0.1, -0.02], [0, 0.1, 0.13], 0.018, 0.018, 6)], "steel"),
+      ...paint([ball([0, 0.1, 0.135], [0.014, 0.014, 0.006], 0), box([0.008, 0.03, 0.03], [0.031, 0.02, -0.05]), box([0.008, 0.03, 0.03], [0.031, 0.02, -0.1])], "glowCyan"),
+    ]),
   ], { at, turn }));
 }
 const RECLAIMER = { bulk: 1.05 };
@@ -499,6 +511,17 @@ const reclaimerKitP = (body: Human): Part[] => [
     ...paint([box([0.22, 0.27, 0.11], [0, 0.22, -0.155])], "machine"),
     ...paint([box([0.14, 0.04, 0.02], [0, 0.27, -0.212])], "glowCyan"),
     ...paint([limb([0.07, 0.34, -0.17], [0.09, 0.5, -0.19], 0.022, 0.022, 4)], "steel"),
+  ]),
+  // At high quality: panel lines and bolts on the chest plate, a light on the antenna, a cable to the
+  // helmet, and bolts beside the visor.
+  ...fine([
+    ...body.onChest([
+      ...paint([box([0.18, 0.006, 0.004], [0, 0.22, 0.117]), box([0.006, 0.11, 0.004], [0.05, 0.24, 0.117]), box([0.006, 0.11, 0.004], [-0.05, 0.24, 0.117])], "black"),
+      ...rivets([[0.09, 0.295, 0.117], [-0.09, 0.295, 0.117], [0.09, 0.185, 0.117], [-0.09, 0.185, 0.117]], "steel", 0.009),
+      ...paint([ball([0.09, 0.51, -0.19], 0.018, 0)], "glowCyan"),
+      ...paint([limb([-0.06, 0.3, -0.2], [-0.05, 0.42, -0.07], 0.01, 0.01, 4)], "black"),
+    ]),
+    ...body.onHead(rivets([[0.085, 0.012, 0.075], [-0.085, 0.012, 0.075]], "steel", 0.012)),
   ]),
 ];
 const reclaimerAimingP = (() => {
@@ -542,7 +565,16 @@ const atlasDetailed = (() => {
   const exhausts = each(both([limb([0.42, 2.45, -0.95], [0.48, 2.95, -1.12], 0.11, 0.1, 6)]), ["machine"]);
   const glowingVents = gear(paint(both([ball([0.48, 2.96, -1.12], [0.08, 0.02, 0.08], 0)]), "glow"));
   const antenna = gear(paint([limb([-0.35, 2.6, -0.7], [-0.4, 3.15, -0.8], 0.02, 0.01, 4)], "steel"));
-  return figure([...legs, ...hull, ...mortar, ...gunPods, ...exhausts, ...glowingVents, ...antenna], 10);
+  // At high quality: a row of rivets across the hull's front, pistons on the legs, searchlights on the
+  // gun pods, a dish on the antenna, and seams on the mortar.
+  const finery = fine([
+    ...rivets([-0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6].flatMap((x): V3[] => [[x, 1.7, 0.51], [x, 1.34, 0.51]]), "steel", 0.03),
+    ...paint(([1, -1] as const).map((sx) => limb([sx * 0.95, 1.28, 0.3], [sx * 1.0, 0.6, 0.36], 0.045, 0.045, 6)), "steel"),
+    ...paint(([1, -1] as const).map((sx) => ball([sx * 1.1, 2.36, 0.76], 0.07, 0)), "glowCyan"),
+    ...paint([limb([-0.4, 3.12, -0.8], [-0.42, 3.18, -0.86], 0.14, 0.02, 8)], "steel"),
+    ...paint([2.62, 2.7].map((y) => limb([0, y, -0.2], [0, y + 0.012, -0.2], 0.545, 0.54, 8)), "black"),
+  ]);
+  return figure([...legs, ...hull, ...mortar, ...gunPods, ...exhausts, ...glowingVents, ...antenna, ...finery], 10);
 })();
 
 // ---------- Barrow Legion, stage 2 ----------
@@ -559,16 +591,24 @@ const legionKitP = (body: Human, pelvis: V3): Part[] => [
   // A rotted kilt and a rusted belt.
   ...place(paint([spine([[0, 0.02, 0.1, 0.075], [0, -0.13, 0.135, 0.105]], { sides: 6 })], "coatDark"), { at: pelvis }),
   ...belt(pelvis, "ironDark", 0.035, [0.105, 0.08]),
+  // At high quality: tarnished rivets round the helm, rags hanging from the kilt, and wisps of green fire trailing from the eyes.
+  ...fine([
+    ...body.onHead([
+      ...rivets(Array.from({ length: 6 }, (_, i): V3 => [Math.sin((i / 6) * Math.PI * 2) * 0.095, 0.03, Math.cos((i / 6) * Math.PI * 2) * 0.095]), "brass", 0.009),
+      ...paint([ball([0.035, 0.015, -0.11], 0.014, 0), ball([-0.035, 0.015, -0.12], 0.012, 0), ball([0.03, 0.03, -0.17], 0.009, 0)], "glowGreen"),
+    ]),
+    ...place(paint([-0.08, -0.03, 0.03, 0.08].map((x) => plate([[x - 0.025, -0.12], [x + 0.025, -0.12], [x + 0.018, -0.21], [x, -0.18], [x - 0.02, -0.23]], 0.006, "front", 0.1)), "coatDark"), { at: pelvis }),
+  ]),
 ];
 const legionGuardingP = (() => {
   const pelvis: V3 = [0, 0.5, 0];
   const body = human({ handR: [-0.27, 0.66, 0.1], handL: [0.2, 0.62, 0.2], footL: [0.09, 0, 0.04], footR: [-0.09, 0, -0.02] }, SKELETON);
-  return [...skeletonBody(body), ...legionKitP(body, pelvis), ...each(spear([-0.27, 0, 0.1], [-0.27, 1.5, 0.1]), ["wood", "ironDark"]), ...each(roundShield([0.22, 0.6, 0.27], 0.2, [0, 20, 0]), ["coat", "ironDark"])];
+  return [...skeletonBody(body), ...legionKitP(body, pelvis), ...each(spear([-0.27, 0, 0.1], [-0.27, 1.5, 0.1]), ["wood", "ironDark"]), ...each(roundShield([0.22, 0.6, 0.27], 0.2, [0, 20, 0]), ["coat", "ironDark"]), ...fine(studdedRim([0.22, 0.6, 0.27], 0.2, [0, 20, 0], "ironDark", "brass", 6))];
 })();
 const legionLungingP = (() => {
   const pelvis: V3 = [0, 0.4, 0.04];
   const body = human({ pelvis, lean: 22, twist: -25, look: 20, handR: [-0.14, 0.6, 0.26], handL: [0.2, 0.56, 0.34], footL: [0.08, 0, 0.3], footR: [-0.08, 0, -0.26] }, SKELETON);
-  return [...skeletonBody(body), ...legionKitP(body, pelvis), ...each(spear([-0.17, 0.5, -0.4], [-0.1, 0.7, 0.74]), ["wood", "ironDark"]), ...each(roundShield([0.22, 0.55, 0.4], 0.2, [0, 15, 0]), ["coat", "ironDark"])];
+  return [...skeletonBody(body), ...legionKitP(body, pelvis), ...each(spear([-0.17, 0.5, -0.4], [-0.1, 0.7, 0.74]), ["wood", "ironDark"]), ...each(roundShield([0.22, 0.55, 0.4], 0.2, [0, 15, 0]), ["coat", "ironDark"]), ...fine(studdedRim([0.22, 0.55, 0.4], 0.2, [0, 15, 0], "ironDark", "brass", 6))];
 })();
 
 // ---------- Vorhal, stage 2 ----------
@@ -595,7 +635,17 @@ const vorhalDetailed = (() => {
     ...paint([limb([0, 0.69, 0.21], [0, 0.86, 0.21], 0.02, 0.02, 5)], "leather"),
     ...paint([ball([0, 0.885, 0.21], 0.034, 0)], "gold"),
   ]);
-  return figure([...parts, ...ghostEyes(body), ...crown, ...armour, ...greatsword], 6);
+  // At high quality: a glowing jewel on each spike of his crown, spikes on the pauldrons, runes burning
+  // down the blade, and the cloak's hem in tatters.
+  const finery = fine([
+    ...body.onHead(paint([0, 72, 144, 216, 288].map((turn) => place([ball([0, 0.19, 0.1], 0.016, 0)], { turn: [0, turn, 0] })[0]!), "glowGreen")),
+    ...body.onChest([
+      ...paint(([1, -1] as const).map((sx) => limb([sx * 0.22, 0.39, 0], [sx * 0.29, 0.52, -0.03], 0.03, 0, 4)), "bone"),
+      ...paint([-0.33, -0.21, -0.09, 0.03, 0.15].map((x) => plate([[x - 0.035, -0.43], [x + 0.035, -0.43], [x + 0.02, -0.56], [x, -0.5], [x - 0.025, -0.58]], 0.008, "front", -0.235)), "coatDark"),
+    ]),
+    ...paint([0.18, 0.28, 0.38, 0.48, 0.58].map((y, i) => box([0.012 + (i % 2) * 0.01, 0.04, 0.004], [((i % 3) - 1) * 0.008, y, 0.2225])), "glowGreen"),
+  ]);
+  return figure([...parts, ...ghostEyes(body), ...crown, ...armour, ...greatsword, ...finery], 6);
 })();
 
 // ---------- Dame Rowena Ashgrove, stage 2 ----------
@@ -1149,7 +1199,21 @@ const sentinelDetailed = (() => {
     ...paint([0.04, 0.14].map((zz) => limb([0, 0, zz], [0, 0, zz + 0.03], 0.098, 0.096, 8)), "glowCyan"),
   ], { at: body.handR });
   const deflector = gear(place(paint([limb([0, 0, -0.012], [0, 0, 0.012], 0.25, 0.25, 6)], "glowCyan"), { at: [body.handL[0] + 0.1, body.handL[1] + 0.02, body.handL[2] + 0.08], turn: [0, 24, 0] }));
-  return figure([...parts, ...plating, ...cannon, ...deflector], 7);
+  // At high quality: bolts and seams round the chest's core, cooling fins on the power unit, a muzzle
+  // brake on the cannon, and armour over the knees and elbows.
+  const finery = fine([
+    ...body.onChest([
+      ...rivets([[0.18, 0.33, 0.162], [-0.18, 0.33, 0.162], [0.18, 0.11, 0.162], [-0.18, 0.11, 0.162]], "steel", 0.014),
+      ...paint([box([0.006, 0.26, 0.004], [0.09, 0.22, 0.163]), box([0.006, 0.26, 0.004], [-0.09, 0.22, 0.163])], "black"),
+      ...paint([-0.1, -0.05, 0, 0.05, 0.1].map((x) => box([0.012, 0.18, 0.05], [x, 0.24, -0.285])), "steel"),
+    ]),
+    ...place([
+      ...paint([limb([0, 0, 0.31], [0, 0, 0.37], 0.075, 0.075, 8)], "steel"),
+      ...paint([0, 90, 180, 270].map((a) => place([box([0.02, 0.05, 0.03], [0, 0.07, 0.34])], { turn: [0, 0, a] })[0]!), "black"),
+    ], { at: body.handR }),
+    ...jointGuards(body, "coat", 0.085),
+  ]);
+  return figure([...parts, ...plating, ...cannon, ...deflector, ...finery], 7);
 })();
 
 // ---------- Nexus Breachers, stage 2 ----------
@@ -1158,6 +1222,11 @@ const gauntletP = (at: V3): Part[] => [
   ...paint([box([0.12, 0.12, 0.15], at)], "coat"),
   ...paint([box([0.14, 0.05, 0.05], [at[0], at[1] + 0.02, at[2] + 0.08])], "steel"),
   ...paint([box([0.05, 0.012, 0.1], [at[0], at[1] + 0.054, at[2] - 0.01])], "glowCyan"),
+  // At high quality: studs across the knuckles, and glowing lines down the sides.
+  ...fine([
+    ...rivets([-0.045, 0, 0.045].map((dx): V3 => [at[0] + dx, at[1] + 0.02, at[2] + 0.108]), "steel", 0.014),
+    ...paint([box([0.006, 0.06, 0.1], [at[0] + 0.062, at[1], at[2]]), box([0.006, 0.06, 0.1], [at[0] - 0.062, at[1], at[2]])], "glowCyan"),
+  ]),
 ];
 const breacherClosingP = (() => {
   const body = human({ pelvis: [0, 0.47, 0], lean: 12, twist: -18, look: 14, handL: [0.12, 0.84, 0.32], handR: [-0.15, 0.78, 0.22], elbowL: [1, -1, 0], elbowR: [-1, -1, 0], footL: [0.1, 0, 0.2], footR: [-0.11, 0, -0.16] }, BREACHER);
@@ -1185,6 +1254,12 @@ const bonebowKitP = (body: Human): Part[] => [
     ...paint([limb([-0.07, 0.1, -0.1], [0.06, 0.4, -0.115], 0.036, 0.04, 6)], "leather"),
     ...gear(paint([-0.015, 0.015].map((dx) => limb([0.065 + dx, 0.39, -0.115], [0.075 + dx, 0.45, -0.115], 0.011, 0.006, 3)), "coatDark")),
   ]),
+  // At high quality: more arrows in the quiver, and bone charms hanging on cords at the chest.
+  ...fine(body.onChest([
+    ...paint([-0.03, 0.03].map((dx) => limb([0.06 + dx, 0.38, -0.11], [0.07 + dx, 0.47, -0.11], 0.006, 0.006, 3)), "wood"),
+    ...paint([0.05, -0.05].map((x) => limb([x, 0.34, 0.082], [x * 1.1, 0.25, 0.095], 0.004, 0.004, 3)), "leather"),
+    ...paint([ball([0.055, 0.24, 0.096], [0.016, 0.022, 0.012], 0), ball([-0.055, 0.24, 0.096], [0.014, 0.02, 0.012], 0)], "bone"),
+  ])),
 ];
 const bonebowArrow = (from: V3, to: V3) => each(arrow(from, to), ["wood", "glowGreen"]);
 const bonebowLoosingP = (() => {
@@ -1680,6 +1755,12 @@ function droneP(bank: number, lift: number): Part[] {
     ...paint([ball([0, -0.02, 0.2], 0.09, 0)], "glowCyan"),
     ...each(both([limb([0.15, 0.12, 0], [0.36, 0.22, 0], 0.045, 0.03, 5), limb([0.36, 0.235, 0], [0.36, 0.26, 0], 0.2, 0.2, 8)]), ["machine", "steel"]),
     ...paint([...both([limb([0.1, -0.16, 0.1], [0.17, -0.3, 0.2], 0.035, 0, 4)]), limb([0, -0.16, -0.12], [0, -0.3, -0.24], 0.035, 0, 4)], "machine"),
+    // At high quality: rotor blades, a collar round the eye, and two whip antennae.
+    ...fine([
+      ...paint(([1, -1] as const).flatMap((sx) => [0, 90].map((a) => place([box([0.36, 0.008, 0.03])], { at: [sx * 0.36, 0.27, 0], turn: [0, a + 20, 0] })[0]!)), "steel"),
+      ...paint([limb([0, -0.02, 0.15], [0, -0.02, 0.2], 0.1, 0.1, 8)], "machine"),
+      ...paint([limb([0.06, 0.2, -0.05], [0.1, 0.38, -0.12], 0.008, 0.004, 3), limb([-0.06, 0.2, -0.05], [-0.1, 0.38, -0.12], 0.008, 0.004, 3)], "black"),
+    ]),
   ];
   const height = 0.5 + lift;
   return [...standP([0, height, 0]), ...place(machine, { at: [0, height, 0], turn: [bank * 0.5, bank, bank] })];
@@ -1690,6 +1771,12 @@ const jetPackP = (body: Human): Part[] => body.onChest([
   ...paint(both([limb([0.1, 0.12, -0.2], [0.11, -0.02, -0.23], 0.05, 0.07, 6), limb([0.17, 0.34, -0.15], [0.21, 0.47, -0.18], 0.05, 0.035, 6)]), "machine"),
   // Jet flames under the pack.
   ...gear(paint(both([limb([0.11, -0.025, -0.23], [0.115, -0.12, -0.24], 0.055, 0, 5)]), "glow")),
+  // At high quality: a hot blue core in each flame, fins on the pack, and harness straps over the shoulders.
+  ...fine([
+    ...paint(both([limb([0.11, -0.03, -0.23], [0.113, -0.08, -0.235], 0.025, 0, 5)]), "glowCyan"),
+    ...paint(both([box([0.01, 0.1, 0.07], [0.165, 0.06, -0.25])]), "steel"),
+    ...paint(both([box([0.035, 0.32, 0.012], [0.08, 0.24, 0.108])]), "leather"),
+  ]),
 ]);
 const sidearmP = (at: V3, turn: V3): Part[] => gear(place([
   ...paint([box([0.04, 0.055, 0.18], [0, 0.03, 0.07]), box([0.038, 0.08, 0.045], [0, -0.03, -0.005])], "machine"),
@@ -1723,7 +1810,15 @@ const proximaDetailed = (() => {
     ...paint([limb([0, 0.03, 0], [0, 0.045, 0], 0.045, 0.045, 6)], "machine"),
     ...paint([limb([0, 0.045, 0], [0, 0.34, 0], 0.03, 0.022, 4), limb([0, 0.34, 0], [0, 0.7, 0], 0.022, 0, 4)], "glowCyan"),
   ], { at: body.handL, turn: [84, 0, 0] }));
-  return figure([...parts, ...shell, ...blade], 5);
+  // At high quality: glowing bands round her forearms and shins, and cables trailing from her head.
+  const finery = fine([
+    ...paint(([[6, 8], [11, 13], [15, 17], [19, 21]] as const).map(([a, b]) => { const e = centroid(body.parts[a]!), h = centroid(body.parts[b]!); return limb(lerp(e, h, 0.45), lerp(e, h, 0.52), 0.045, 0.045, 6); }), "glowCyan"),
+    ...body.onHead([
+      ...paint([limb([0.02, 0.02, -0.08], [0.04, -0.12, -0.17], 0.012, 0.008, 4), limb([-0.02, 0.03, -0.08], [-0.03, -0.1, -0.19], 0.012, 0.008, 4)], "black"),
+      ...paint([ball([0.04, -0.125, -0.17], 0.014, 0), ball([-0.03, -0.105, -0.19], 0.014, 0)], "glowCyan"),
+    ]),
+  ]);
+  return figure([...parts, ...shell, ...blade, ...finery], 5);
 })();
 
 // ---------- Hollowsteel Hunters, stage 2 ----------
@@ -1735,7 +1830,11 @@ function hunterBody(b: Human): Part[] {
   for (let s = 0; s < 2; s++) order.push("machine", "machine", "coat", "machine");
   return b.parts.map((p, i) => ({ ...p, paint: order[i] ?? "machine" }));
 }
-const forearmBladeP = (at: V3, turn: V3): Part[] => gear(place(paint([plate([[-0.16, 0.05], [0.1, 0.07], [0.56, 0], [0.1, -0.04], [-0.16, -0.03]], 0.034)], "steel"), { at, turn }));
+const forearmBladeP = (at: V3, turn: V3): Part[] => gear(place([
+  ...paint([plate([[-0.16, 0.05], [0.1, 0.07], [0.56, 0], [0.1, -0.04], [-0.16, -0.03]], 0.034)], "steel"),
+  // At high quality: a glowing edge along the blade.
+  ...fine(paint([limb([0, 0.072, 0.1], [0, 0.003, 0.56], 0.009, 0.004, 3)], "glowCyan")),
+], { at, turn }));
 function hunterP(raise: number, crouch: number): Part[] {
   const body = human({ pelvis: [0, 0.46 - crouch, 0], lean: 14 + crouch * 120, twist: -18, look: 14, handL: [0.1, 0.7 - crouch + raise, 0.32], elbowL: [1, -0.6, -0.2], handR: [-0.26, 0.54 - crouch * 0.5, 0.12 + crouch * 2], elbowR: [-1, -0.2, -1], footL: [0.1, 0, 0.24], footR: [-0.11, 0, -0.22] }, HUNTER);
   const shell = [
@@ -1748,7 +1847,9 @@ function hunterP(raise: number, crouch: number): Part[] {
       ...paint([ball([0.19, 0.33, 0], [0.08, 0.055, 0.085], 0), ball([-0.19, 0.33, 0], [0.08, 0.055, 0.085], 0)], "coat"),
     ]),
   ];
-  return [...hunterBody(body), ...shell, ...forearmBladeP(body.handL, [-18 - raise * 110, -8, 0]), ...forearmBladeP(body.handR, [12 - crouch * 120, 10, 0])];
+  // At high quality: pistons inside the open chest.
+  const pistons = fine(body.onChest(paint([limb([0.06, 0.1, 0.02], [0.06, 0.3, 0.02], 0.012, 0.012, 5), limb([-0.06, 0.1, 0.02], [-0.06, 0.3, 0.02], 0.012, 0.012, 5)], "steel")));
+  return [...hunterBody(body), ...shell, ...forearmBladeP(body.handL, [-18 - raise * 110, -8, 0]), ...forearmBladeP(body.handR, [12 - crouch * 120, 10, 0]), ...pistons];
 }
 
 // ---------- Marrowcoil, stage 2 ----------
@@ -1769,7 +1870,11 @@ const marrowcoilDetailed = (() => {
     parts.push(...paint([ball([x, y, z], [r * 1.15, r * 1.15, r * 0.8], 0)], "bone"), ...paint([limb([x, y + r * 0.8, z], [x, y + r * 2.2, z - r * 0.7], r * 0.42, 0, 4)], "coat"));
     if (i >= 6 && i <= along + 2) {
       for (const side of [1, -1]) parts.push(...paint([limb([x + side * r * 0.7, y + r * 0.2, z], [x + side * r * 1.8, y - r * 0.75, z + r * 0.3], r * 0.34, 0, 4)], "bone"));
+      // At high quality: green fire smouldering between the ribs.
+      if (i % 2 === 0) parts.push(...fine(paint([ball([x, y - r * 0.55, z + r * 0.4], r * 0.28, 0)], "glowGreen")));
     }
+    // At high quality: barbs along the tail.
+    if (i <= 4) parts.push(...fine(paint(([1, -1] as const).map((side) => limb([x + side * r * 0.6, y, z], [x + side * r * 1.6, y + r * 0.3, z - r * 0.6], r * 0.25, 0, 4)), "bone")));
   });
   const skull = place([
     ...paint([spine([[-0.24, 0.02, 0.19, 0.17], [0.05, 0.06, 0.24, 0.2], [0.36, -0.02, 0.16, 0.12], [0.6, -0.07, 0.09, 0.06]], { sides: 6 })], "bone"),
@@ -1794,6 +1899,14 @@ const ghoulKitP = (body: Human, pelvis: V3): Part[] => [
   ...body.onChest(paint([limb([0, 0.3, -0.07], [0, 0.34, -0.14], 0.04, 0, 4), limb([0, 0.2, -0.08], [0, 0.23, -0.15], 0.04, 0, 4), limb([0, 0.1, -0.075], [0, 0.12, -0.14], 0.035, 0, 4)], "bone")),
   // A rag round the hips.
   ...place(paint([spine([[0, 0.03, 0.1, 0.075], [0, -0.1, 0.12, 0.09]], { sides: 6 })], "coatDark"), { at: pelvis }),
+  // At high quality: ribs showing through the skin, a necklace of finger bones, and strips torn from the rag.
+  ...fine([
+    ...body.onChest([
+      ...paint([0.17, 0.22, 0.27].flatMap((y) => ([1, -1] as const).map((sx) => limb([sx * 0.02, y, 0.088], [sx * 0.09, y - 0.03, 0.07], 0.008, 0.006, 3))), "bone"),
+      ...paint([-0.06, -0.03, 0, 0.03, 0.06].map((x) => limb([x, 0.35, 0.075], [x * 1.1, 0.31, 0.085], 0.006, 0.004, 3)), "bone"),
+    ]),
+    ...place(paint([-0.06, 0.02, 0.07].map((x) => plate([[x - 0.02, -0.09], [x + 0.02, -0.09], [x + 0.01, -0.17], [x - 0.015, -0.19]], 0.006, "front", 0.09)), "coatDark"), { at: pelvis }),
+  ]),
 ];
 const clawsP = (at: V3, turn: V3): Part[] => place(paint([limb([0.03, 0.01, 0.02], [0.06, 0, 0.15], 0.022, 0, 4), limb([-0.03, 0.01, 0.02], [-0.06, 0, 0.15], 0.022, 0, 4), limb([0, -0.02, 0.02], [0, -0.05, 0.15], 0.022, 0, 4)], "black"), { at, turn });
 const ghoulLopingP = (() => {
@@ -1833,7 +1946,13 @@ const grubnakDetailed = (() => {
   ];
   const hex = gear(place(paint(([[0, 0.24, 0], [0.16, 0.14, 0.04], [-0.16, 0.14, 0.04], [0, 0.12, 0.18], [0, 0.12, -0.16]] as V3[]).map((d) => limb([d[0] * 0.3, d[1] * 0.3, d[2] * 0.3], d, 0.022, 0, 4)), "glowGreen"), { at: body.handR }));
   const drumstick = gear(paint([limb([body.handL[0], body.handL[1] + 0.04, body.handL[2]], [body.handL[0] + 0.02, body.handL[1] - 0.12, body.handL[2] - 0.06], 0.016, 0.024, 5)], "bone"));
-  return figure([...parts, ...headdress, ...hides, ...hex, ...drumstick], 6);
+  // At high quality: feathers in the headdress, a necklace of teeth, and bone studs round the drum.
+  const finery = fine([
+    ...body.onHead(paint([-0.05, 0, 0.05].map((x) => plate([[x - 0.015, 0.08], [x + 0.015, 0.08], [x + 0.01, 0.24], [x - 0.01, 0.24]], 0.008, "side", 0)).map((p, i) => place([p], { at: [((i - 1) * 0.04), 0, -0.07], turn: [-35, 0, (i - 1) * 15] })[0]!), "sash")),
+    ...body.onChest(paint(Array.from({ length: 7 }, (_, i) => { const a = ((i - 3) / 3) * 0.9; return limb([Math.sin(a) * 0.1, 0.36 - Math.cos(a) * 0.04, 0.09 + Math.cos(a) * 0.02], [Math.sin(a) * 0.1, 0.32 - Math.cos(a) * 0.04, 0.1 + Math.cos(a) * 0.02], 0.009, 0, 3); }), "horn")),
+    ...rivets(Array.from({ length: 6 }, (_, i): V3 => { const a = (i / 6) * Math.PI * 2; return [0.275, 0.47 + Math.sin(a) * 0.138, 0.14 + Math.cos(a) * 0.138]; }), "bone", 0.018),
+  ]);
+  return figure([...parts, ...headdress, ...hides, ...hex, ...drumstick, ...finery], 6);
 })();
 const RAIDER = { shoulders: 0.215, bulk: 1.25 };
 function hatchetP(at: V3, turn: V3): Part[] {
@@ -1858,6 +1977,14 @@ const raiderKitP = (body: Human, pelvis: V3): Part[] => [
     ...hatchetP([-0.2, 0.1, -0.06], [165, 0, 0]),
   ], { at: pelvis }),
   ...belt(pelvis, "leather", 0.1, [0.155, 0.116]),
+  // At high quality: horn spikes on the shoulder pelt, a necklace of teeth, and iron bands on the forearms.
+  ...fine([
+    ...body.onChest([
+      ...paint([limb([0.24, 0.4, 0.02], [0.29, 0.5, 0], 0.025, 0, 4), limb([0.2, 0.41, -0.05], [0.23, 0.51, -0.08], 0.022, 0, 4)], "horn"),
+      ...paint(Array.from({ length: 5 }, (_, i) => { const a = ((i - 2) / 2) * 0.8; return limb([Math.sin(a) * 0.1, 0.36 - Math.cos(a) * 0.04, 0.095 + Math.cos(a) * 0.02], [Math.sin(a) * 0.1, 0.32 - Math.cos(a) * 0.04, 0.105 + Math.cos(a) * 0.02], 0.009, 0, 3); }), "horn"),
+    ]),
+    ...cuffs(body, "ironDark", 0.065),
+  ]),
 ];
 const raiderHurlingP = (() => {
   const pelvis: V3 = [0, 0.47, 0];
@@ -1895,7 +2022,18 @@ const morvaneDetailed = (() => {
   ]);
   const [x, y, z] = body.handL;
   const light = gear(paint([ball([x, y + 0.1, z], 0.055, 0), limb([x, y + 0.11, z], [x + 0.02, y + 0.3, z], 0.045, 0, 5)], "glowGreen"));
-  return figure([...parts, ...hoodP, ...robes, ...staff, ...light], 5);
+  // At high quality: small skulls hung from the belt, runes glowing round the robe's hem, and a skull
+  // drifting by the staff.
+  const finery = fine([
+    ...place([
+      ...paint([ball([0.1, 0.06, 0.09], [0.028, 0.03, 0.028], 0), ball([-0.11, 0.05, 0.07], [0.026, 0.028, 0.026], 0)], "bone"),
+      ...paint([box([0.008, 0.008, 0.004], [0.09, 0.066, 0.117]), box([0.008, 0.008, 0.004], [0.11, 0.066, 0.117]), box([0.008, 0.008, 0.004], [-0.12, 0.056, 0.095]), box([0.008, 0.008, 0.004], [-0.1, 0.056, 0.095])], "glowGreen"),
+      ...paint([0, 40, 80, 120, 160, 200, 240, 280, 320].map((t) => place([box([0.02, 0.03, 0.004], [0, -0.38, 0.205])], { turn: [0, t, 0] })[0]!), "glowGreen"),
+    ], { at: pelvis }),
+    ...paint([ball([-0.12, 1.2, 0.35], [0.04, 0.045, 0.045], 0)], "bone"),
+    ...paint([box([0.01, 0.01, 0.006], [-0.135, 1.205, 0.39]), box([0.01, 0.01, 0.006], [-0.105, 1.205, 0.39])], "glowGreen"),
+  ]);
+  return figure([...parts, ...hoodP, ...robes, ...staff, ...light, ...finery], 5);
 })();
 
 // ---------- Old Rootback, stage 2 ----------
