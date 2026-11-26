@@ -44,7 +44,10 @@ import { Canvas } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Names } from "../describe";
 import { BoardScene, boardCenter, type CameraFocusRequest, type Marker } from "../scene/BoardScene";
-import { FigureLabels, Figures, SHAKE_SECONDS, type FigureCarry, type FigureJump, type FigureMotions, type FigurePreview, type FigureShake, type FigureView } from "../scene/Figures";
+import { FigureLabels, Figures, SHAKE_SECONDS, type FigureCarry, type FigureJump, type FigureMotions, type FigurePreview, type FigureReactions, type FigureShake, type FigureView } from "../scene/Figures";
+import { Bursts, Particles } from "../scene/Particles";
+import { landingBurst } from "../scene/particles";
+import { useReducedMotion } from "../motion";
 import { ATTACK_RED, FightIntro, WoundNumbers, anchorOf, type FigureAnchor, type WoundNumber } from "../scene/FightFx";
 import { attackRollsIn, fallenSpots, fightIn, woundMarksIn, type WoundMark } from "../fight";
 import { GamingTable, TableCards, tableRoom } from "../scene/Table";
@@ -57,7 +60,7 @@ import { DisplayMenu } from "../ui/DisplayMenu";
 import { useBattleMusic } from "../music";
 import { playSound } from "../sfx";
 import { landingSound } from "../soundEffects";
-import { toggleFigures, toggleTiles, useDisplay } from "../settings";
+import { toggleFigures, toggleTiles, useDisplay, useGraphics } from "../settings";
 import { GameMenu } from "../ui/GameMenu";
 import { HexTip, useHexTip, zoneOwners } from "../ui/HexTip";
 import { OnlineBar } from "../ui/OnlineBar";
@@ -154,6 +157,15 @@ interface Ghost {
 interface Batch {
   readonly stamp: number;
   readonly marks: readonly WoundMark[];
+  readonly events: readonly GameEvent[];
+}
+
+/** A direction across the board for a figure with nobody to fall away from (a fall into lava): any, but always the same. */
+function anyWay(id: string): { x: number; z: number } {
+  let h = 0;
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const angle = (h % 360) * (Math.PI / 180);
+  return { x: Math.sin(angle), z: Math.cos(angle) };
 }
 
 export function PlayScreen({ session }: { session: Session }) {
@@ -463,7 +475,26 @@ export function PlayScreen({ session }: { session: Session }) {
     }
   }, [session.lastEvents]);
 
-  // ---- Wounds: numbers float up, then destroyed figures shake and leave the board ----
+  // ---- Effects at high graphics quality: particle bursts and the figures' reactions in a fight ----
+  const reducedMotion = useReducedMotion();
+  const fx = useGraphics() === "high" && !reducedMotion;
+  const bursts = useMemo(() => new Bursts(), []);
+  const [reactions, setReactions] = useState<FigureReactions | null>(null);
+  const react = (list: FigureReactions["list"]) => {
+    if (fx && list.length > 0) setReactions((r) => ({ key: (r?.key ?? 0) + 1, list }));
+  };
+  /** Which way each destroyed figure fell, so its burst rises where it lies. */
+  const toppled = useRef(new Map<string, { x: number; z: number }>());
+  /** The figure that attacked this one in a command, if any. */
+  const attackerOf = (events: readonly GameEvent[], figureId: string) => attackRollsIn(events).find((r) => r.targetId === figureId)?.attackerId ?? null;
+  /** Away from the figure's attacker, across the board. */
+  const awayFrom = (events: readonly GameEvent[], figureId: string, at: FigureAnchor) => {
+    const by = attackerOf(events, figureId);
+    const from = by && by !== figureId ? anchorFor(by) : null;
+    return from && Math.hypot(at.x - from.x, at.z - from.z) > 1e-3 ? { x: at.x - from.x, z: at.z - from.z } : null;
+  };
+
+  // ---- Wounds: numbers float up, then destroyed figures shake (or topple) and leave the board ----
   // The state before the last command, to find where destroyed figures fell.
   const seen = useRef({ events: session.lastEvents, state, before: state });
   if (seen.current.events !== session.lastEvents) seen.current = { events: session.lastEvents, state, before: seen.current.state };
@@ -487,18 +518,63 @@ export function PlayScreen({ session }: { session: Session }) {
   const release = (stamp: number, events: readonly GameEvent[]) => {
     const marks = woundMarksIn(events);
     if (marks.some((m) => (m.wounds ?? 0) > 0)) playSound("wounds");
-    if (marks.length > 0) setBatches((list) => [...list.filter((b) => b.stamp !== stamp), { stamp, marks }]);
+    if (marks.length > 0) setBatches((list) => [...list.filter((b) => b.stamp !== stamp), { stamp, marks, events }]);
+    // A figure healed, or back from the dead, glows as green motes rise round it.
+    if (!fx) return;
+    for (const e of events) {
+      if (e.type !== "figureHealed" && e.type !== "figureRevived") continue;
+      const a = anchorFor(e.figureId);
+      if (a) bursts.spawn("heal", { x: a.x, y: a.base, z: a.z }, { scale: a.radius / 0.62 });
+    }
+  };
+  /** As the wound numbers rise: sparks fly from each wound (a glint off a blocked blow) and the wounded reel back. */
+  const batchStarted = (b: Batch) => {
+    if (!fx) return;
+    const recoils: FigureReactions["list"][number][] = [];
+    for (const m of b.marks) {
+      const a = m.wounds === null ? null : anchorFor(m.figureId);
+      if (!a) continue;
+      const dir = awayFrom(b.events, m.figureId, a);
+      const at = { x: a.x, y: a.base + (a.top - a.base) * 0.55, z: a.z };
+      if ((m.wounds ?? 0) > 0) {
+        bursts.spawn("sparks", at, { scale: Math.min(2, 0.75 + m.wounds! * 0.25), ...(dir ? { toward: dir } : {}) });
+        if (dir) recoils.push({ id: m.figureId, kind: "recoil", dir });
+      } else bursts.spawn("glint", at, dir ? { toward: { x: -dir.x, z: -dir.z } } : {});
+    }
+    react(recoils);
   };
   const destroyedIn = (b: Batch) => b.marks.filter((m) => m.destroyed).map((m) => m.figureId);
   const batchFloated = (b: Batch) => {
     const ids = destroyedIn(b);
-    if (ids.length > 0) playSound("destroyed");
-    if (ids.length > 0) setShake((x) => ({ key: (x?.key ?? 0) + 1, ids }));
+    if (ids.length === 0) return;
+    playSound("destroyed");
+    if (!fx) return setShake((x) => ({ key: (x?.key ?? 0) + 1, ids }));
+    // At high quality a destroyed figure topples away from its attacker instead of shaking.
+    const falls = ids.map((id) => {
+      const a = anchorFor(id);
+      const dir = (a && awayFrom(b.events, id, a)) || anyWay(id);
+      toppled.current.set(id, dir);
+      return { id, kind: "topple" as const, dir };
+    });
+    react(falls);
   };
   const batchDone = (b: Batch) => {
     setBatches((list) => list.filter((x) => x.stamp !== b.stamp));
     if (followAfter.current?.stamp === b.stamp) followFigure(followAfter.current.id);
     followAfter.current = null;
+    // At high quality a toppled figure goes in a burst of dust and chips where it lies.
+    for (const id of fx ? destroyedIn(b) : []) {
+      const a = anchorFor(id);
+      if (!a) continue;
+      const dir = toppled.current.get(id) ?? { x: 0, z: 0 };
+      const length = Math.hypot(dir.x, dir.z) || 1;
+      const lie = (a.top - a.base) * 0.45;
+      const color = figures.find((f) => f.id === id)?.color;
+      const at = { x: a.x + (dir.x / length) * lie, y: a.base, z: a.z + (dir.z / length) * lie };
+      bursts.spawn("shatter", at, { scale: a.radius / 0.62, ...(color ? { tint: color } : {}) });
+      bursts.spawn("dust", at, { scale: 1.6 * (a.radius / 0.62) });
+      toppled.current.delete(id);
+    }
     const gone = destroyedIn(b).map((id) => ghostKey({ stamp: b.stamp, id }));
     if (gone.length === 0) return;
     setRetired((r) => new Set([...r, ...gone]));
@@ -612,7 +688,12 @@ export function PlayScreen({ session }: { session: Session }) {
     if (rolls.length > 0) {
       // Every attack opens with its intro, whatever Dice rolls says, and the camera frames the fight.
       const next: Beat = { stamp, events, part: "intro", skipped: false };
-      playSound(fightIn(events, seen.current.before, ctx)?.pairs[0]?.ranged ? "ranged" : "melee");
+      const pair = fightIn(events, seen.current.before, ctx)?.pairs[0];
+      playSound(pair?.ranged ? "ranged" : "melee");
+      // At high quality the attacker lunges at its target (or kicks back as it shoots) as the arrow flies.
+      const from = pair ? anchorFor(pair.attackerId) : null;
+      const to = pair ? anchorFor(pair.targetId) : null;
+      if (pair && from && to) react([{ id: pair.attackerId, kind: pair.ranged ? "kick" : "lunge", dir: { x: to.x - from.x, z: to.z - from.z } }]);
       beatRef.current = next;
       setBeat(next);
       setFollow((f) => ({ id: rolls[0]!.attackerId, with: rolls[0]!.targetId, key: (f?.key ?? 0) + 1 }));
@@ -1261,7 +1342,18 @@ export function PlayScreen({ session }: { session: Session }) {
     [session.lastEvents],
   );
   /** A hop's sound depends on what the figure lands on: water and swamp splash, lava flares. */
-  const land = useCallback((_id: string, step: Step) => playSound(landingSound(ctx.board.surfaceAt(step.hex, step.elevation)?.terrain)), [ctx]);
+  const land = useCallback(
+    (_id: string, step: Step) => {
+      const terrain = ctx.board.surfaceAt(step.hex, step.elevation)?.terrain;
+      playSound(landingSound(terrain));
+      // At high quality it also kicks up dust, splashes or embers.
+      if (!fx) return;
+      const { x, z } = hexToWorld(step.hex);
+      const { kind, colors } = landingBurst(terrain);
+      bursts.spawn(kind, { x, y: step.elevation * LEVEL_HEIGHT, z }, colors ? { colors } : {});
+    },
+    [ctx, fx, bursts],
+  );
   // A figure dragged to its hex makes its landing sound when the move is made, as it does not hop.
   useEffect(() => {
     for (const e of session.lastEvents) {
@@ -1444,10 +1536,12 @@ export function PlayScreen({ session }: { session: Session }) {
               numbers={numbersOf(b)}
               center={center}
               then={destroyedIn(b).length > 0 ? SHAKE_SECONDS : 0}
+              onStart={() => batchStarted(b)}
               onFloated={() => batchFloated(b)}
               onDone={() => batchDone(b)}
             />
           ))}
+          {fx && <Particles bursts={bursts} />}
           <GamingTable layout={table} style={display.table} />
           <TableCards
             layout={table}
@@ -1466,6 +1560,7 @@ export function PlayScreen({ session }: { session: Session }) {
             motions={motions}
             jump={jump}
             shake={shake}
+            reactions={fx ? reactions : null}
             carry={carry}
             canDrag={canDrag}
             onDragStart={onDragStart}

@@ -18,8 +18,11 @@ declare global {
       stats: () => { calls: number; triangles: number; lines: number; frames: number };
       /** The camera has a glide to make (perhaps waiting for a hop to land first), or is making one. */
       cameraBusy: () => boolean;
-      /** What the board draws with: whether shadows are on, and how many meshes cast one (the graphics test). */
-      graphics: () => { shadows: boolean; casters: number };
+      /**
+       * What the board draws with, for the graphics test: whether shadows are on, how many meshes
+       * cast one, and how many particle bursts and figure reactions it has played.
+       */
+      graphics: () => { shadows: boolean; casters: number; bursts: number; reactions: number };
       /** How many wound numbers have floated up from figures on this board. */
       woundsShown: () => number;
       /**
@@ -79,7 +82,7 @@ export function TestHook({ offset }: { offset: { x: number; z: number } }) {
         scene.traverse((o) => {
           if ((o as { isMesh?: boolean }).isMesh && o.castShadow) casters++;
         });
-        return { shadows: gl.shadowMap.enabled, casters };
+        return { shadows: gl.shadowMap.enabled, casters, bursts: activity.bursts, reactions: activity.reactions };
       },
       woundsShown: () => activity.woundsShown,
       canvas: gl.domElement,

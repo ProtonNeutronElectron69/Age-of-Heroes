@@ -20,7 +20,7 @@ Checks run only for the parts of the game a change can affect. The browser tests
 | `editor` | Building a map (with a large tree, refused first where it would overlap, and a low wall), exporting and importing it, and playing on it |
 | `models` | Every figure model on the model page |
 | `gallery` | The unit gallery: filters, sorts, sizes and the model viewer; then the map gallery: another map previewed and chosen for play |
-| `graphics` | The one test at high graphics quality (the others draw at low): in the test game, the key light casts shadows and figures, scenery and tiles throw them, draw calls stay within 600 with the shadow pass, the board still rests, and **Graphics** under Display turns the shadows off at Low and on again at High |
+| `graphics` | The one test at high graphics quality (the others draw at low): in the test game, the key light casts shadows and figures, scenery and tiles throw them, draw calls stay within 600 with the shadow pass, the board still rests, and **Graphics** under Display turns the shadows off at Low and on again at High; then, in a second page with motion allowed (the effects keep still under reduced motion), tokens are placed and a figure's move kicks up a particle burst where it lands (`window.__aoh.graphics().bursts`), within the same draw call budget |
 | `menu` | The main menu in all four styles at three window sizes, with nothing scrolling, the version and last update in the corner, the music and sound controls and credits on every style, the menu music playing and being turned off, and menu hover and click sounds (silent with Sounds off); the Test game choice starting a game with every glyph down |
 
 ## What a change runs
@@ -45,7 +45,7 @@ The first matching row decides for each file; a change runs everything its files
 | The unit gallery (`UnitGalleryScreen`, `unit-gallery.css`) | yes | none | gallery |
 | The map gallery (`MapGalleryScreen`, `map-gallery.css`) | yes | none | gallery |
 | The test game (`testGame.ts`) | yes | none | menu |
-| Graphics: how the board, table and figures are drawn and lit (`scene/BoardScene`, `Figures`, `Table`, `lighting`, `tileArt`, `tileMaterials`, `sceneryArt`, `Glyphs`, the figure models in `models/`, and `settings.ts`) | yes | client | all |
+| Graphics: how the board, table and figures are drawn, lit and animated in a fight (`scene/BoardScene`, `Figures`, `Table`, `lighting`, `tileArt`, `tileMaterials`, `sceneryArt`, `Glyphs`, `FightFx`, `Particles`, `particles`, `reactions`, the figure models in `models/`, and `settings.ts`) | yes | client | all |
 | Any other client file | yes | client | all but graphics |
 | A browser test script | yes | none | that script |
 | Shared setup: `package.json`, the lockfile, `tsconfig.base.json`, `vitest.config.ts`, `ci.yml`, `scripts/` | yes | all | all |

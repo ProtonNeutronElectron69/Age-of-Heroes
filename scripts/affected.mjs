@@ -95,10 +95,10 @@ export const RULES = [
   { area: "map editor", match: /^apps\/client\/src\/screens\/EditorScreen\.tsx$/, check: true, unit: [], e2e: ["editor"] },
   { area: "online play", match: /^apps\/client\/src\/(online\.ts|screens\/LobbyScreen\.tsx|ui\/OnlineBar\.tsx)$/, check: true, unit: [], e2e: ["online"] },
   { area: "saves", match: /^apps\/client\/src\/(saves\.ts|ui\/SaveDialog\.tsx)$/, check: true, unit: [], e2e: ["saves", "online"] },
-  // Graphics: how the board, the table and the figures are drawn and lit. Every browser test, the graphics test too.
+  // Graphics: how the board, the table and the figures are drawn, lit and animated in a fight. Every browser test, the graphics test too.
   {
     area: "graphics",
-    match: /^apps\/client\/src\/(scene\/(BoardScene|Figures|Table|lighting|tileArt|tileMaterials|sceneryArt|Glyphs)\.tsx?|models\/|settings\.ts$)/,
+    match: /^apps\/client\/src\/(scene\/(BoardScene|Figures|Table|lighting|tileArt|tileMaterials|sceneryArt|Glyphs|FightFx|Particles|particles|reactions)\.tsx?|models\/|settings\.ts$)/,
     check: true,
     unit: [UNIT.client],
     e2e: ALL,
