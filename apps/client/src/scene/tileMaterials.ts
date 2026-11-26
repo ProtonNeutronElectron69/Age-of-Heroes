@@ -55,13 +55,17 @@ export const FLOWING_TERRAIN: ReadonlySet<string> = new Set(["water", "lava"]);
 const FLOWS: Record<string, string> = {
   // Ripples: a slow swell with a quicker shimmer on top.
   water: `
-    aohShift = 0.012 * vec2(sin(aohW.x * 1.7 + aohW.y * 0.6 + aohT * 1.1), cos(aohW.y * 1.9 - aohW.x * 0.5 + aohT * 0.9))
-             + 0.005 * vec2(sin(aohW.y * 4.3 + aohT * 2.1), cos(aohW.x * 3.7 + aohT * 1.7));
+    aohShift = 0.018 * vec2(sin(aohW.x * 1.7 + aohW.y * 0.6 + aohT * 1.3), cos(aohW.y * 1.9 - aohW.x * 0.5 + aohT * 1.1))
+             + 0.008 * vec2(sin(aohW.y * 4.3 + aohT * 2.4), cos(aohW.x * 3.7 + aohT * 2.0));
     aohGlow = 1.0;`,
-  // Lava creeps slowly and its cracks brighten and dim in waves across the pool.
+  // Lava heaves and churns: the crust slides one way and back, its cracks boil, and waves of heat roll
+  // across the pool, so the glow swells to half again as bright and sinks to half.
   lava: `
-    aohShift = 0.01 * vec2(sin(aohW.x * 0.9 + aohT * 0.35), cos(aohW.y * 0.8 + aohT * 0.3));
-    aohGlow = 0.8 + 0.35 * (0.5 + 0.5 * sin(aohT * 1.3 + aohW.x * 1.1 + aohW.y * 0.7));`,
+    aohShift = 0.03 * vec2(sin(aohW.x * 0.7 + aohT * 0.6), cos(aohW.y * 0.6 + aohT * 0.5))
+             + 0.01 * vec2(sin(aohW.y * 3.1 + aohT * 2.2), cos(aohW.x * 2.7 + aohT * 1.9));
+    float aohWave = 0.5 + 0.5 * sin(aohT * 1.8 - aohW.x * 0.9 - aohW.y * 0.5);
+    float aohFlicker = 0.5 + 0.5 * sin(aohT * 5.3 + aohW.x * 4.1 + aohW.y * 3.3);
+    aohGlow = 0.5 + 1.0 * aohWave + 0.2 * aohFlicker;`,
 };
 
 /**
