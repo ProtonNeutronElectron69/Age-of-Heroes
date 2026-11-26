@@ -7,7 +7,7 @@ import { moveCostOf, type TerrainRules } from "../terrain";
 import { abilityOf, canTrample, combatant, hasAbility, isPinned, moveBonus, param, trampleRoll } from "./abilities";
 import { spotsEngaged } from "./engagement";
 import { fail } from "./errors";
-import { baseFacing, faceAfterMove, shiftsForward, snapFacing } from "./facing";
+import { baseFacing, faceAfterMove, shiftsForward } from "./facing";
 import { figureSpots, placementKey, placementSpots, standingElevation, tuningOf, type Placement } from "./placement";
 import { glyphBonus, pickUpGlyphs } from "./glyphs";
 import { cardOf, findFigure, occupancy, statsOf, stepKey, type EffectiveStats, type Occupant } from "./queries";
@@ -656,7 +656,7 @@ export function moveFigure(
   if (mover.flying) {
     flyTo(state, mover, toPlacement(path[0]!, from, "1"), rng, enemies, after, traversed, lavaRolls, ctx);
     // Wings of Refuge: the carried friend is set down beside where the flyer lands.
-    if (carried && carry && !figure.destroyed) setDown(state, mover, carried, carry.to, rng, after, ctx);
+    if (carried && carry && !figure.destroyed) setDown(mover, carried, carry.to, rng, after, ctx);
     faceMoved(state, mover, traversed);
     if (state.config.glyphPickup !== "turnEnd") pickUpGlyphs(state, unit, figure, after, ctx);
     state.rng = rng.state;
@@ -1004,7 +1004,7 @@ function carryProblemOrFriend(state: GameState, mover: Mover, landing: Placement
   return { unit: found.unit, figure: found.figure };
 }
 
-function setDown(state: GameState, mover: Mover, carried: { unit: UnitState; figure: FigureState }, to: Step, rng: Rng, after: GameEvent[], ctx: RulesContext): void {
+function setDown(mover: Mover, carried: { unit: UnitState; figure: FigureState }, to: Step, rng: Rng, after: GameEvent[], ctx: RulesContext): void {
   const ability = abilityOf(mover.card, "wings-of-refuge")!;
   const from = carried.figure.position!;
   carried.figure.position = { hex: to.hex, elevation: to.elevation, rotation: 0 };

@@ -334,7 +334,7 @@ function leaperPose(spring: number, detail: boolean): Part[] {
     // At high quality: a throat sac, webbing between the hind toes, and dark spots over the back.
     ...fine(detail, [
       ...paint([ball([0, 0.4 + lift, 0.36], [0.05, 0.035, 0.05], 0)], "belly"),
-      ...paint(([1, -1] as const).map((side) => plate([[0, 0], [0.04, 0.03], [-0.04, 0.03]], 0.006, "top", 0.004)).map((p, i) => place([p], { at: [(i ? -1 : 1) * 0.13, lift * 0.2, -0.24 - 0.0], turn: [0, 180, 0] })[0]!), "coatDark"),
+      ...paint(([1, -1] as const).map(() => plate([[0, 0], [0.04, 0.03], [-0.04, 0.03]], 0.006, "top", 0.004)).map((p, i) => place([p], { at: [(i ? -1 : 1) * 0.13, lift * 0.2, -0.24 - 0.0], turn: [0, 180, 0] })[0]!), "coatDark"),
       ...paint([[0.06, -0.1], [-0.05, 0.02], [0.05, 0.12], [-0.06, -0.2]].map(([x, z]) => ball([x!, 0.47 + lift, z!], [0.025, 0.008, 0.025], 0)), "coatDark"),
     ]),
   ];
