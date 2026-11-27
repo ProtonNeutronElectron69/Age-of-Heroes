@@ -370,7 +370,7 @@
   flex: 1;
 }
 
-/* Seven premade maps in two columns of compact cards, so the panel still fits the stage. */
+/* The premade maps in two columns of compact cards, so the panel still fits the stage. */
 .mp-maps {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1363,8 +1363,8 @@
 }
 
 .ms-banner-hall .mp-mhex {
-  width: 18px;
-  height: 21px;
+  width: 16px;
+  height: 18px;
 }
 
 .ms-banner-hall .mp-desc {
