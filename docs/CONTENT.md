@@ -87,7 +87,7 @@ Scenery kinds are data in `packages/content/src/scenery.ts`: a name, a Height an
 2. Copy it into `packages/content/src/maps/`.
 3. Add it to `MAPS` in `maps/index.ts`.
 4. Update the map list expected in `content.test.ts`.
-5. Give it a small picture on the main menu: a `.m-<map id>` rule in `apps/client/src/screens/menu/menu.css`, next to the others. Check that the menu still fits in every style (`node e2e/menu.mjs` after a build); the map cards are kept compact so the panel fits the 1280 by 720 stage.
+5. Give it a small picture on the main menu: a `.m-<map id>` rule in `apps/client/src/screens/menu/menu.css`, next to the others. It shows in the map picker's button and list. Check that the menu still works in every style (`node e2e/menu.mjs` after a build).
 
 A map can also be laid out in code, as Riverbend was: a throwaway Vitest file in `packages/content/test` decides each hex's terrain and height, writes one `single` piece per level (`layer` 0 upward), adds scenery and start zones, checks the result with `buildBoard` (no `issues`, and every start zone at least 12 hexes from the other), and writes the JSON into `src/maps/`. Delete the script once the map is saved, then follow steps 3 to 5.
 

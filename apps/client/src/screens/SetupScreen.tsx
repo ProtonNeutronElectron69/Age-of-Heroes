@@ -18,6 +18,7 @@ import {
 import { SEAT_COLORS, SEAT_COLOR_NAMES } from "../scene/scale";
 import { deleteSave, describeSummary, downloadGameFile, formatSavedAt, listSaves, type SaveSlot } from "../saves";
 import { loadGame, resumeSavedGame, savedGame, startGame } from "../session";
+import { MapPicker, type MapChoice } from "./menu/MapPicker";
 import { MenuFrame, type MenuCommand } from "./menu/MenuFrame";
 import { startTestGame } from "../testGame";
 
@@ -79,6 +80,13 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenUnits, onOpenMap
   const saved = savedGame();
   const seat = savedSeat();
   const isCustom = mine.some((m) => m.id === map.id);
+  const mapChoices = useMemo<MapChoice[]>(
+    () => [
+      ...MAPS.map((m) => ({ id: m.id, name: m.name, description: m.description, counts: PREMADE_COUNTS.get(m.id) ?? [], mine: false })),
+      ...mine.map((m) => ({ id: m.id, name: m.name, description: m.description, counts: buildBoard(m).board.playerCounts(), mine: true })),
+    ],
+    [mine],
+  );
   const nameOk = myName.trim().length > 0;
   const codeOk = /^[A-Za-z]{4,8}$/.test(code.trim());
   const budgetOk = noLimit || (budget >= MIN_POINTS && budget <= MAX_BUDGET);
@@ -292,31 +300,8 @@ export function SetupScreen({ onOpenEditor, initialMapId, onOpenUnits, onOpenMap
   const battlefield = (
     <section className="mp-sec mp-map">
       <h3 className="mp-label">Battlefield</h3>
-      <div className="mp-maps" role="radiogroup" aria-label="Map">
-        {MAPS.map((m) => {
-          const n = PREMADE_COUNTS.get(m.id) ?? [];
-          return (
-            <button key={m.id} type="button" role="radio" aria-label={m.name} aria-checked={map.id === m.id} className={`mp-mapbtn${map.id === m.id ? " on" : ""}`} onClick={() => setMapId(m.id)}>
-              <span className={`mp-mhex m-${m.id}`} aria-hidden="true" />
-              <span className="mp-mapname">
-                <b>{m.name}</b>
-                <small>{n.length > 1 ? `${n[0]} to ${n[n.length - 1]} players` : `${n[0] ?? 0} players`}</small>
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <MapPicker choices={mapChoices} value={map.id} onChange={setMapId} players={where === "online" ? null : count} />
       <div className="mp-row">
-        {mine.length > 0 && (
-          <select className="mp-input mp-mine" aria-label="My maps" value={isCustom ? map.id : ""} onChange={(e) => e.target.value && setMapId(e.target.value)}>
-            <option value="">My maps…</option>
-            {mine.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-        )}
         <button type="button" className="mp-btn" onClick={() => onOpenMaps(map.id)}>
           Preview maps
         </button>
