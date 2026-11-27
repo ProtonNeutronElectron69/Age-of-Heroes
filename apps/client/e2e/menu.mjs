@@ -1,7 +1,8 @@
 // Checks the main menu in each of its four styles: every choice is there, nothing scrolls on a
 // landscape window, the War Table board is drawn, the chosen style is kept after a reload, and the
 // menu music plays and can be turned off; the sound controls and credits are on every style, and the
-// menu buttons make their hover and click sounds unless sounds are off.
+// menu buttons make their hover and click sounds unless sounds are off. The map picker's list stays inside the
+// menu in every style, dims maps that cannot host the chosen number of players, and works from the keyboard.
 // Usage: node e2e/menu.mjs   (serves the build in apps/client/dist)
 import { chromium } from "playwright";
 import { preview } from "vite";
@@ -68,6 +69,40 @@ async function fits(page, what) {
   if (r.panel) fail(`${what}: the settings panel overflows`);
 }
 
+/** The map picker opens a list of every map inside the stage, dims maps that cannot host six players, and closes on Escape. */
+async function mapListWorks(page, what, keys) {
+  const picker = page.getByRole("combobox", { name: "Map", exact: true });
+  await picker.click();
+  const list = page.getByRole("listbox", { name: "Maps" });
+  await list.waitFor();
+  const r = await list.evaluate((el) => {
+    const b = el.getBoundingClientRect();
+    const s = el.closest(".menu-stage").getBoundingClientRect();
+    const inside = b.top >= s.top - 1 && b.bottom <= s.bottom + 1 && b.left >= s.left - 1 && b.right <= s.right + 1 && b.bottom <= innerHeight + 1;
+    return { inside, options: el.querySelectorAll("[role=option]").length, dim: el.querySelectorAll("[role=option].dim").length };
+  });
+  if (!r.inside) fail(`${what}: the map list goes outside the menu`);
+  if (r.options < 8) fail(`${what}: the map list shows ${r.options} maps`);
+  if (r.dim === 0) fail(`${what}: with six players chosen, no map is dimmed`);
+  await fits(page, `${what} with the map list open`);
+  await page.keyboard.press("Escape");
+  await list.waitFor({ state: "detached" });
+  if (!keys) return;
+  // The keyboard: the arrows open the list and move through it, Enter chooses, and Home goes back to the first map.
+  const before = await picker.innerText();
+  await picker.focus();
+  await page.keyboard.press("ArrowDown");
+  await list.waitFor();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await list.waitFor({ state: "detached" });
+  if ((await picker.innerText()) === before) fail(`${what}: choosing a map with the keyboard did not change it`);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Home");
+  await page.keyboard.press("Enter");
+  if ((await picker.innerText()) !== before) fail(`${what}: Home and Enter did not go back to the first map`);
+}
+
 try {
   for (const viewport of [{ width: 1280, height: 720 }, { width: 1920, height: 1080 }, { width: 1024, height: 768 }]) {
     const page = await open(viewport);
@@ -108,6 +143,7 @@ try {
       await page.getByRole("radio", { name: "Play on this device" }).click();
       await page.getByRole("radio", { name: "6", exact: true }).click();
       await fits(page, `${style} with six players at ${size}`);
+      await mapListWorks(page, `${style} at ${size}`, size === "1280x720");
       if (shots && size === "1280x720") await page.screenshot({ path: `${shots}/menu-${id}.png` });
       await page.getByRole("radio", { name: "2", exact: true }).click();
     }

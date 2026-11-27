@@ -211,8 +211,8 @@ try {
   // Save and play: back on the setup screen with the new map chosen, then start a game on it.
   await page.getByRole("button", { name: "Save and play" }).click();
   await page.getByRole("button", { name: "Start draft" }).waitFor();
-  const chosen = await page.getByRole("combobox", { name: "Map" }).evaluate((s) => s.selectedOptions[0].textContent);
-  if (chosen !== "Test Bridge") fail(`Setup did not select the new map: ${chosen}`);
+  const chosen = await page.getByRole("combobox", { name: "Map", exact: true }).innerText();
+  if (!chosen.includes("Test Bridge")) fail(`Setup did not select the new map: ${chosen}`);
   // A game with no points limit.
   await page.getByRole("checkbox", { name: "No limit" }).check();
   await page.getByRole("button", { name: "Start draft" }).click();

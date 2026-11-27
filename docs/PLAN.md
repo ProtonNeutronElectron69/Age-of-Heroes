@@ -16,6 +16,7 @@ Planned, in no set order; each starts when the owner asks:
 On hold (Phase 6): a computer opponent, and a tutorial.
 
 Done lately, newest first (each has its section below):
+- Map picker: the menu's Battlefield choice is a styled drop-down list of every map, with maps that cannot host the chosen number of players dimmed.
 - Shattered Crown: a large near-hexagonal map for 4 to 6 players (2 to 6 in all), not symmetric, with start zones at least 10 hexes apart, six regions that each favour different tactics, heights to 10, three bridges, an arch, an ice tunnel and two overhangs.
 - Balance pass (#92), done for now: most squads have 2 Life, heroes with 5 or more Life lose 1, four more units reach Range 7, and costs follow the balance model.
 - Hit zones (#90, and the card picture after it): line of sight sees each figure's body and gear as boxes made from its model; an attack needs a fifth of the target's body in sight, and shields hide their bearers.
@@ -399,3 +400,12 @@ The owner asked for a map close to hexagonal, for 4 to 6 players, not symmetric,
 - [x] Three bridges (Crown to Frostfang, over the gorge, and the arch), all held at both ends; every start zone and the summits can be reached on foot climbing 2 levels at a time
 - [x] Laid out in code like Riverbend, checked with `buildBoard`, with a menu picture (`.m-shattered-crown`). Solid stacks are merged into 2, 3, 4 and 7-hex pieces, so the file stays near the size of the other large maps
 - [x] The Banner Hall menu style's map icons are a little smaller, so eight maps fit its one column at 1280 by 720
+
+### Map picker
+The owner asked for a better way to list maps as more are added: eight maps had filled the menu's two-column grid, and Banner Hall's one column had no room left.
+- [x] The Battlefield choice is one button showing the chosen map, its picture and its players, that opens a list of every map on the menu's stage: premade maps first, then **My maps**, which replaces the separate "My maps" box. Each row has the map's picture, name, players and the start of its description
+- [x] Styled by each menu style; it opens under the button, or above it when there is more room, and never past the stage
+- [x] In hot-seat setup, maps that cannot host the number of players chosen are faded and say "not 6" (for example), but can still be chosen
+- [x] Keyboard and screen readers: the select-only combobox pattern (arrows, Home, End, Page Up and Down, Enter, Space, Escape, type to jump)
+- [x] `menu` opens the list in every style and size and checks it stays inside the stage, dims maps for six players, closes on Escape and chooses from the keyboard; `gallery` and `editor` read the chosen map from the picker
+

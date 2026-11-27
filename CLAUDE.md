@@ -49,7 +49,7 @@ What each client feature does, and the code that holds it, is in "Client feature
 - **The right panel** keeps its Save, Quit and Display buttons on screen at any window height (`full-game` checks).
 
 ### Menu, music and sounds
-- **Main menu:** a new choice or setting goes in all four styles and fits the 1280 by 720 stage without scrolling (`e2e/menu.mjs` checks).
+- **Main menu:** a new choice or setting goes in all four styles and fits the 1280 by 720 stage without scrolling (`e2e/menu.mjs` checks). Maps are chosen in the map picker (`screens/menu/MapPicker.tsx`), whose list opens on the stage, so new maps need no room in the panel.
 - **Music and sound effects:** CC0 or CC-BY only, never share-alike or non-commercial. A new track or sound goes in `musicTracks.ts` or `soundEffects.ts`, [docs/CREDITS.md](docs/CREDITS.md) and the test that matches the list to the files. Keep `jukebox.ts` free of timers and the DOM.
 - **Version:** change `version` in `apps/client/package.json` only when the owner asks.
 

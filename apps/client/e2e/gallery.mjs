@@ -139,8 +139,9 @@ try {
   if (!/2 players?|2 to/.test(await page.getByRole("complementary", { name: "About this map" }).innerText())) fail("The map gallery does not say how many players Riverbend hosts");
   if (shots) await page.screenshot({ path: `${shots}/gallery-maps.png`, timeout: 120000 });
   await page.getByRole("button", { name: "Play on this map" }).click();
-  await page.getByRole("radiogroup", { name: "Map" }).waitFor();
-  if ((await page.getByRole("radio", { name: "Riverbend" }).getAttribute("aria-checked")) !== "true") fail("Play on this map did not choose Riverbend in the menu");
+  const picker = page.getByRole("combobox", { name: "Map", exact: true });
+  await picker.waitFor();
+  if (!(await picker.innerText()).includes("Riverbend")) fail("Play on this map did not choose Riverbend in the menu");
 
   if (errors.length > 0) fail(`Console errors:\n${errors.join("\n")}`);
   console.log(`Gallery test passed: ${total} cards filtered, sorted and resized, figure models viewed, and the map gallery looked round.`);
