@@ -12,12 +12,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 5,
     "range": 5,
     "attack": 2,
     "defense": 2,
-    "points": 90,
+    "points": 125,
     "abilities": [
       {
         "id": "spawn-pool",
@@ -43,12 +43,12 @@
     "size": "medium",
     "height": 6,
     "footprint": "1",
-    "life": 5,
+    "life": 4,
     "move": 5,
     "range": 1,
     "attack": 3,
     "defense": 4,
-    "points": 165,
+    "points": 150,
     "abilities": [
       {
         "id": "lantern-gaze",
@@ -118,12 +118,12 @@
     "size": "large",
     "height": 6,
     "footprint": "1",
-    "life": 7,
+    "life": 6,
     "move": 4,
     "range": 1,
     "attack": 4,
     "defense": 3,
-    "points": 115,
+    "points": 105,
     "abilities": [
       {
         "id": "grapple-line",
@@ -157,12 +157,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 5,
     "range": 1,
     "attack": 3,
     "defense": 2,
-    "points": 80,
+    "points": 115,
     "abilities": [
       {
         "id": "lurk",
@@ -184,12 +184,12 @@
     "size": "medium",
     "height": 4,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 4,
     "range": 4,
     "attack": 2,
     "defense": 2,
-    "points": 60,
+    "points": 85,
     "abilities": [
       {
         "id": "caustic-spores",
@@ -250,12 +250,12 @@
     "size": "small",
     "height": 3,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 6,
     "range": 1,
     "attack": 2,
     "defense": 2,
-    "points": 75,
+    "points": 105,
     "abilities": [
       {
         "id": "pack-hunt",

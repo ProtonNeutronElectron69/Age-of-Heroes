@@ -20,9 +20,9 @@
 - Unit content must be original: no names, characters, card text or stat lines copied from existing games.
 - Every squad has 1 special ability and every hero 2; Flying does not count.
 - No ability is on more than two units (Flying aside), and few are on two. Prefer abilities that change how a unit plays over plain extra dice.
-- Heroes have 2 to 8 Life. Most squads have 1; squads of 2 or 3 figures may have up to 3.
+- Heroes have 2 to 8 Life. Squads have 1 to 3: most have 2, the most fragile 1, and only squads of 2 or 3 figures may have 3.
 - Squads have at most 4 figures.
-- Point costs come from the balance model (`BALANCE_REPORT=1 pnpm test balance`).
+- Point costs come from the balance model (`BALANCE_REPORT=1 pnpm test balance --silent=false`).
 - The roster keeps heroes and squads, and ranged and melee, within about 60/40 of each other (a guideline, not a hard rule), and every faction has each kind.
 - Tests in `packages/content/test` enforce all of this; update their expected counts when the roster grows, and the card counts in `apps/client/e2e/models.mjs` and `gallery.mjs`.
 
