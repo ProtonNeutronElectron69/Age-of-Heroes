@@ -8,9 +8,6 @@ The core game is complete and playable, online too: the game server runs on Rend
 
 ### Next
 Planned, in no set order; each starts when the owner asks:
-1. **A balance pass on unit stats.** The first step, base Life and Range compared with a classic hex-tactics game, is done (see "Balance pass: base stats" below). Next, use real playtests to adjust each card's Life, Move, Range, Attack and Defense, and then its cost, faction by faction. Glyph numbers (`TUNING.glyphs`) and the newer rule numbers (the swamp d20, the strike from behind, the share of a body an attack must see) are part of it.
-
-Also open:
 - **More premade maps.** Riverbend shows a quick way: lay the map out in code, check it with `buildBoard`, and save the JSON (see [CONTENT.md](CONTENT.md), Maps).
 - **Further content drops:** units, factions and abilities.
 - **Hit zones, further:** a few weapons are built into a model's body, so they count as body (the Siege Walker Atlas's gun pods); giving them the gear role in the model and writing the shapes again would fix that (see [CONTENT.md](CONTENT.md)). The unit card still draws the old hit band in its hit zone window.
@@ -19,7 +16,7 @@ Also open:
 On hold (Phase 6): a computer opponent, and a tutorial.
 
 Done lately, newest first (each has its section below):
-- Balance pass, base stats: most squads have 2 Life, heroes with 5 or more Life lose 1, four more units reach Range 7, and costs follow the balance model.
+- Balance pass (#92), done for now: most squads have 2 Life, heroes with 5 or more Life lose 1, four more units reach Range 7, and costs follow the balance model.
 - Hit zones (#90): line of sight sees each figure's body and gear as boxes made from its model; an attack needs a fifth of the target's body in sight, and shields hide their bearers.
 - Better graphics (#82 to #89): Low and High; shadows, effects in fights, sharper and moving terrain, more detailed figures, and an outline glow that can be switched off.
 - More varied abilities: 25 new ones, every ability on two units at most, and the `power` command.
@@ -382,11 +379,12 @@ The owner chose boxes made from each unit's model, a fifth of the body to be see
 - [x] New games set `hitZones: "models"`: the attacker must see at least 20% of the target's body (`sightShare` in the tuning), counted along lines to points spread through it, past terrain, scenery, every other figure's boxes and the target's own gear (`game/sight.ts`, `shareInSight` in `los.ts`). Aiming at a hex sees past the figures' boxes too. Older saves keep the token and its hit band
 - [x] The token view (T) draws the boxes in new games, body in the player's colour and gear grey, and hovering an enemy says how much of its body the chosen figure sees
 
-### Balance pass: base stats
+### Balance pass (done for now, #92)
 The owner compared the roster's stats with the first set of a classic hex-tactics game (its 16 cards and its whole line of 473), only as a yardstick. Our defense die blocks on 3 faces in 6 where its die blocks on 2, so one of our Defense dice is worth about 1.5 of its. Our heroes took about 11 average attacks (3 dice) to destroy against its 7; our squads were close to its. Our roster also has far more units at Range 3 and 4, which the owner chose to keep.
 - [x] Squads have 2 Life, except the most fragile, which keep 1 (Kagero Teppo Gunners, Swarmling Drones, Ghoul Pack, Briar Sprites); the squads that already had 2 or 3 keep them. The content test now asks for most squads to have 2 or more
 - [x] Heroes with 5 or more Life lose 1 (15 heroes); heroes with 4 keep it, so support heroes do not fall below a tough squad figure. A hero now takes about 8.5 average attacks to destroy, and a squad figure about 2.8
 - [x] Four more units reach Range 7 (Covenant Crossbowmen, Kagero Teppo Gunners, Bonebow Archers and Siege Walker Atlas): 8 of the 56 now shoot 7 or more
 - [x] Each changed unit's cost is scaled by how much its modelled value changed, rounded to 5, so earlier tuning stays: squads going to 2 Life cost about 40% more, the trimmed heroes about 10% less. Every unit is within 0.94 to 1.05 of the model. The points budgets are unchanged, so armies field fewer, tougher squads
 - [x] The random-game test now skips powers when it picks a special action (they use the `power` command) and sends Blink moves as Blink
-
+- [x] The owner closed the balance pass here for now. The balance model's ability multipliers were reviewed after the move to 2 Life squads and left as they are: the changes would have moved a few units by 5 to 15 points
+- [ ] Later, if playtests call for it: tune single units faction by faction (Life, Move, Range, Attack, Defense, then cost), the glyph numbers (`TUNING.glyphs`) and the newer rule numbers (the swamp d20, the strike from behind, the share of a body an attack must see)
