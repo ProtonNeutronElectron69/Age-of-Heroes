@@ -1,4 +1,4 @@
-import { type AimStance, arm, belt, disc, head, KNEELING_AIM, leg, limb, line, type P, part, pts, solo, squad, STANDING_AIM, torso } from "../build";
+import { type AimStance, arm, belt, disc, head, held, KNEELING_AIM, leg, limb, line, type P, part, pts, solo, squad, STANDING_AIM, torso } from "../build";
 import type { Drawing, Figure } from "../types";
 
 /** Captain Marisol Vance: bicorne and long coat, pistol levelled, sabre raised. */
@@ -12,13 +12,11 @@ const marisolVance: Figure = (() => {
   return {
     top: 34,
     bottom: 244,
-    gear: ["blade", "hilt", "crest", "cape"],
     tint: { hair: "#6e2f1b", cloth: "#e9e3d3" },
     parts: [
       part("cape", pts([82, 138], [119, 138], [134, 210], [106, 202], [100, 152], [95, 202], [66, 210]), line([88, 150], [78, 204]) + line([113, 150], [124, 204])),
       ...arm(shR, [137, 99], swordHand, "armor", { hand: "leather" }),
-      part("blade", "M144.5,73 Q160,46 167,10 L170.5,12 Q165,48 149.5,76 Z", "M147,73 Q162,46 168.5,12"),
-      part("hilt", limb([139, 71], [153, 80], 4.4)),
+      ...held(part("blade", "M144.5,73 Q160,46 167,10 L170.5,12 Q165,48 149.5,76 Z", "M147,73 Q162,46 168.5,12"), part("hilt", limb([139, 71], [153, 80], 4.4))),
       ...leg(hipL, [81, 194], [73, 238], "cloth", "boot", { toe: -1 }),
       ...leg(hipR, [120, 194], [128, 238], "cloth", "boot", { toe: 1 }),
       torso(shL, shR, hipL, hipR, "armor", `${line([92, 84], [100, 112], [109, 84])} ${line([100, 112], [100, 138])} M95,120 h0.1 M95,130 h0.1 M105,120 h0.1 M105,130 h0.1`),
@@ -27,7 +25,7 @@ const marisolVance: Figure = (() => {
       part("crest", pts([77, 81], [93, 80], [93, 88], [75, 91])),
       part("crest", pts([108, 80], [124, 81], [126, 91], [108, 88])),
       ...arm(shL, [65, 95], pistolHand, "armor", { hand: "leather" }),
-      part("metal", pts([18, 85], [47, 85], [47, 90], [43, 90], [42, 98], [37, 98], [38, 90], [18, 89])),
+      ...held(part("metal", pts([18, 85], [47, 85], [47, 90], [43, 90], [42, 98], [37, 98], [38, 90], [18, 89]))),
       part("hair", pts([106, 50], [119, 54], [125, 78], [114, 72])),
       head([100, 58], -1),
       part("helmet", "M74,51 Q100,20 126,51 Q100,41 74,51 Z", "M82,47 Q100,36 118,47"),
@@ -41,7 +39,7 @@ const shako = (x: number, y: number, look: number) => [
   part("helmet", pts([x - 11, y - 24], [x + 12, y - 24], [x + 12, y - 6], [x - 12, y - 6]), line([x - 12, y - 11], [x + 12, y - 11])),
   part("boot", look < 0 ? pts([x - 20, y - 6], [x + 12, y - 6], [x + 12, y - 2.5], [x - 18, y - 2.5]) : pts([x - 14, y - 6], [x + 14, y - 6], [x + 16, y - 2], [x - 16, y - 2])),
   part("jewel", disc([x, y - 15], 3.2)),
-  part("crest", disc([x, y - 28], 4.2)),
+  ...held(part("crest", disc([x, y - 28], 4.2))),
 ];
 
 /** A Rifleman taking aim to the left. */
@@ -53,7 +51,6 @@ const riflemanAiming: Figure = (() => {
   return {
     top: 34,
     bottom: 244,
-    gear: ["blade", "wood", "leather"],
     tint: { cloth: "#d9d5c8" },
     parts: [
       part("leather", pts([112, 88], [129, 86], [133, 119], [116, 121]), line([114, 98], [131, 96])),
@@ -64,9 +61,7 @@ const riflemanAiming: Figure = (() => {
       part("bone", limb([117, 85], [93, 142], 4.2)),
       belt(hipL, hipR, "leather"),
       ...arm(shR, [129, 105], [106, 87], "armor"),
-      part("wood", limb([128, 84], [72, 80], 6, 4.2)),
-      part("metal", limb([98, 79.5], [30, 75.5], 2.8)),
-      part("blade", pts([30, 74], [9, 74.5], [30, 77.5])),
+      ...held(part("wood", limb([128, 84], [72, 80], 6, 4.2)), part("metal", limb([98, 79.5], [30, 75.5], 2.8)), part("blade", pts([30, 74], [9, 74.5], [30, 77.5]))),
       ...arm(shL, [78, 100], [64, 82], "armor"),
       head([106, 62], -1),
       ...shako(107, 60, -1),
@@ -83,7 +78,6 @@ const riflemanReady: Figure = (() => {
   return {
     top: 32,
     bottom: 244,
-    gear: ["blade", "wood", "leather"],
     tint: { cloth: "#d9d5c8", skin: "#c99a72" },
     parts: [
       ...leg(hipL, [86, 194], [84, 238], "cloth", "boot", { toe: -1 }),
@@ -92,9 +86,7 @@ const riflemanReady: Figure = (() => {
       part("bone", limb([84, 86], [110, 142], 4.2)),
       part("bone", limb([116, 86], [90, 142], 4.2)),
       belt(hipL, hipR, "leather"),
-      part("wood", limb([73, 153], [122, 71], 6, 4.4)),
-      part("metal", limb([104, 100], [142, 37], 2.8)),
-      part("blade", pts([140.5, 38], [151, 16], [144.5, 40])),
+      ...held(part("wood", limb([73, 153], [122, 71], 6, 4.4)), part("metal", limb([104, 100], [142, 37], 2.8)), part("blade", pts([140.5, 38], [151, 16], [144.5, 40]))),
       ...arm(shL, [72, 111], [90, 125], "armor"),
       ...arm(shR, [132, 105], [115, 84], "armor"),
       head([100, 58]),
@@ -112,7 +104,6 @@ const sisterMaren: Figure = (() => {
   return {
     top: 36,
     bottom: 244,
-    gear: ["leather", "blade", "wood"],
     parts: [
       part("bone", "M84,64 Q82,38 100,36 Q118,38 116,64 L123,96 H77 Z"),
       part("boot", pts([84, 222], [98, 222], [98, 244], [76, 244])),
@@ -124,11 +115,13 @@ const sisterMaren: Figure = (() => {
       part("leather", pts([112, 146], [132, 144], [136, 172], [116, 174]), line([114, 154], [134, 152])),
       part("jewel", disc([125, 161], 3.4)),
       ...arm(shR, [132, 110], [142, 132], "armor"),
-      part("metal", pts([138, 130], [146, 128], [158, 152], [153, 155], [146, 140], [142, 141])),
+      ...held(part("metal", pts([138, 130], [146, 128], [158, 152], [153, 155], [146, 140], [142, 141]))),
       ...arm(shL, [66, 100], [58, 76], "armor"),
-      part("metal", pts([52, 50], [64, 50], [66, 56], [50, 56])),
-      part("glow", pts([51, 56], [65, 56], [66, 74], [50, 74]), line([58, 57], [58, 73])),
-      part("metal", pts([49, 74], [67, 74], [66, 78], [50, 78])),
+      ...held(
+        part("metal", pts([52, 50], [64, 50], [66, 56], [50, 56])),
+        part("glow", pts([51, 56], [65, 56], [66, 74], [50, 74]), line([58, 57], [58, 73])),
+        part("metal", pts([49, 74], [67, 74], [66, 78], [50, 78])),
+      ),
       head([100, 60]),
       part("bone", "M87,58 Q86,42 100,40 Q114,42 113,58 Q106,50 100,50 Q94,50 87,58 Z"),
     ],
@@ -148,17 +141,15 @@ const pikemanStanding: Figure = (() => {
   return {
     top: 32,
     bottom: 244,
-    gear: ["blade", "wood", "hilt"],
     tint: { cloth: "#d9d5c8" },
     parts: [
-      part("hilt", limb([88, 142], [58, 182], 4.4)),
+      ...held(part("hilt", limb([88, 142], [58, 182], 4.4))),
       ...leg(hipL, [86, 194], [84, 238], "cloth", "boot", { toe: -1 }),
       ...leg(hipR, [114, 194], [116, 238], "cloth", "boot", { toe: 1 }),
       torso(shL, shR, hipL, hipR, "armor"),
       breastplate(shL, shR),
       belt(hipL, hipR, "leather"),
-      part("wood", limb([131, 241], [131, 2], 3.6)),
-      part("blade", pts([131, -22], [136.5, 3], [125.5, 3])),
+      ...held(part("wood", limb([131, 241], [131, 2], 3.6)), part("blade", pts([131, -22], [136.5, 3], [125.5, 3]))),
       ...arm(shR, [132, 108], [131, 126], "armor"),
       ...arm(shL, [70, 110], [82, 136], "armor"),
       head([100, 58]),
@@ -176,7 +167,6 @@ const pikemanBraced: Figure = (() => {
   return {
     top: 52,
     bottom: 244,
-    gear: ["blade", "wood"],
     tint: { cloth: "#d9d5c8", skin: "#c99a72" },
     parts: [
       ...leg(hipR, [130, 204], [140, 238], "cloth", "boot", { toe: 1 }),
@@ -185,8 +175,7 @@ const pikemanBraced: Figure = (() => {
       breastplate(shL, shR),
       belt(hipL, hipR, "leather"),
       ...arm(shR, [126, 144], [106, 181], "armor"),
-      part("wood", limb([148, 241], [8, 54], 3.6)),
-      part("blade", pts([-8, 32], [11.5, 51], [4.5, 57])),
+      ...held(part("wood", limb([148, 241], [8, 54], 3.6)), part("blade", pts([-8, 32], [11.5, 51], [4.5, 57]))),
       ...arm(shL, [74, 120], [70, 137], "armor"),
       head([106, 78], -1),
       ...shako(107, 76, -1),
@@ -203,14 +192,15 @@ const brannock: Figure = (() => {
   return {
     top: 38,
     bottom: 244,
-    gear: ["leather", "wood", "blade", "glow"],
     tint: { hair: "#5a3a1e", cloth: "#8b8f98" },
     parts: [
       ...arm(shR, [140, 80], [148, 58], "armor", { w: 11 }),
-      part("leather", pts([138, 32], [161, 35], [159, 59], [136, 56]), `${line([138, 44], [160, 47])} ${line([150, 34], [158, 22], [163, 27])}`),
-      part("glow", disc([164, 26], 3.4)),
-      part("wood", limb([120, 142], [136, 186], 3.8)),
-      part("blade", pts([129, 177], [148, 172], [147, 191], [133, 190])),
+      ...held(
+        part("leather", pts([138, 32], [161, 35], [159, 59], [136, 56]), `${line([138, 44], [160, 47])} ${line([150, 34], [158, 22], [163, 27])}`),
+        part("glow", disc([164, 26], 3.4)),
+        part("wood", limb([120, 142], [136, 186], 3.8)),
+        part("blade", pts([129, 177], [148, 172], [147, 191], [133, 190])),
+      ),
       ...leg(hipL, [82, 194], [76, 238], "cloth", "boot", { toe: -1, w: 15 }),
       ...leg(hipR, [120, 194], [126, 238], "cloth", "boot", { toe: 1, w: 15 }),
       torso(shL, shR, hipL, hipR, "armor"),
@@ -233,7 +223,7 @@ const mitreCap = (x: number, y: number) => [
 ];
 
 /** A grenade with its fuse burning. */
-const grenade = (c: P) => [part("boot", disc(c, 7), line([c[0] + 3, c[1] - 6], [c[0] + 6, c[1] - 11])), part("glow", disc([c[0] + 6.6, c[1] - 12.4], 2.6))];
+const grenade = (c: P) => held(part("boot", disc(c, 7), line([c[0] + 3, c[1] - 6], [c[0] + 6, c[1] - 11])), part("glow", disc([c[0] + 6.6, c[1] - 12.4], 2.6)));
 
 /** A Grenadier lobbing a grenade to the left. */
 const grenadierLobbing: Figure = (() => {
@@ -244,7 +234,6 @@ const grenadierLobbing: Figure = (() => {
   return {
     top: 25,
     bottom: 244,
-    gear: ["boot", "glow", "leather"],
     tint: { cloth: "#d9d5c8" },
     parts: [
       ...arm(shR, [135, 72], [140, 48], "armor"),
@@ -272,7 +261,6 @@ const grenadierLighting: Figure = (() => {
   return {
     top: 20,
     bottom: 244,
-    gear: ["boot", "glow", "leather", "wood"],
     tint: { cloth: "#d9d5c8", skin: "#c99a72" },
     parts: [
       ...leg(hipL, [86, 194], [84, 238], "cloth", "boot", { toe: -1 }),
@@ -284,7 +272,7 @@ const grenadierLighting: Figure = (() => {
       ...arm(shL, [72, 112], [88, 122], "armor"),
       ...grenade([90, 113]),
       ...arm(shR, [130, 110], [112, 108], "armor"),
-      part("wood", limb([113, 108], [100, 100], 2.2)),
+      ...held(part("wood", limb([113, 108], [100, 100], 2.2))),
       head([100, 58]),
       ...mitreCap(100, 56),
     ],
@@ -301,7 +289,6 @@ const cockedHat = (x: number, y: number) => [
 const fusilier = (j: AimStance, skin?: string): Figure => ({
   top: j.head[1] - 26,
   bottom: 244,
-  gear: ["blade", "wood", "leather", "jewel"],
   tint: { cloth: "#d9d5c8", ...(skin ? { skin } : {}) },
   parts: [
     part("leather", pts([j.shR[0] - 6, j.shR[1] + 3], [j.shR[0] + 11, j.shR[1] + 1], [j.shR[0] + 15, j.shR[1] + 34], [j.shR[0] - 2, j.shR[1] + 36])),
@@ -312,10 +299,12 @@ const fusilier = (j: AimStance, skin?: string): Figure => ({
     part("bone", limb([j.shR[0] - 1, j.shR[1]], [j.hipL[0] + 1, j.hipL[1] - 4], 4.2)),
     belt(j.hipL, j.hipR, "leather"),
     ...arm(j.shR, j.elbowR, j.handR, "armor"),
-    part("wood", limb(j.stock, j.grip, 6, 4.2)),
-    part("metal", limb(j.breech, j.muzzle, 2.8)),
-    part("blade", pts([j.muzzle[0], j.muzzle[1] - 1.5], [j.muzzle[0] - 20, j.muzzle[1] - 1], [j.muzzle[0], j.muzzle[1] + 2])),
-    part("jewel", `M${j.muzzle[0] - 4},${j.muzzle[1] - 8} q-10,-8 -18,-2 q-10,0 -8,8 q-4,8 6,10 q8,6 16,-2 q8,-4 4,-14 Z`),
+    ...held(
+      part("wood", limb(j.stock, j.grip, 6, 4.2)),
+      part("metal", limb(j.breech, j.muzzle, 2.8)),
+      part("blade", pts([j.muzzle[0], j.muzzle[1] - 1.5], [j.muzzle[0] - 20, j.muzzle[1] - 1], [j.muzzle[0], j.muzzle[1] + 2])),
+      part("jewel", `M${j.muzzle[0] - 4},${j.muzzle[1] - 8} q-10,-8 -18,-2 q-10,0 -8,8 q-4,8 6,10 q8,6 16,-2 q8,-4 4,-14 Z`),
+    ),
     ...arm(j.shL, j.elbowL, j.handL, "armor"),
     head(j.head, -1),
     ...cockedHat(j.head[0] + 1, j.head[1] - 3),
@@ -326,7 +315,6 @@ const fusilier = (j: AimStance, skin?: string): Figure => ({
 const hussar = (hide: string, skin?: string): Figure => ({
   top: 14,
   bottom: 244,
-  gear: ["blade", "hilt", "crest"],
   tint: { leather: hide, cloth: "#d9d5c8", ...(skin ? { skin } : {}) },
   parts: [
     // The horse.
@@ -346,18 +334,17 @@ const hussar = (hide: string, skin?: string): Figure => ({
     part("cape", pts([94, 130], [138, 130], [142, 162], [92, 162]), line([96, 156], [140, 156])),
     // The rider.
     ...arm([126, 84], [142, 74], [148, 54], "armor"),
-    part("blade", "M146,52 Q124,28 94,18 L95.5,14 Q128,24 150,49 Z", "M147,50 Q126,27 95,16"),
-    part("hilt", limb([142, 50], [154, 56], 4.2)),
+    ...held(part("blade", "M146,52 Q124,28 94,18 L95.5,14 Q128,24 150,49 Z", "M147,50 Q126,27 95,16"), part("hilt", limb([142, 50], [154, 56], 4.2))),
     part("armor", pts([101, 82], [129, 80], [128, 132], [104, 134]), `${line([108, 90], [122, 89])} ${line([108, 98], [122, 97])} ${line([108, 106], [122, 105])} ${line([115, 84], [115, 112])}`),
     part("sash", pts([103, 124], [129, 122], [129, 131], [103, 133])),
     part("cloth", limb([114, 130], [100, 156], 12, 10)),
     part("boot", `${limb([100, 154], [102, 184], 9, 8)} ${pts([97, 182], [107, 182], [108, 190], [90, 190])}`),
     ...arm([104, 84], [92, 104], [90, 120], "armor"),
-    part("hair", line([90, 120], [60, 104])),
+    ...held(part("hair", line([90, 120], [60, 104]))),
     head([114, 62], -1),
     part("hair", pts([103, 38], [126, 38], [127, 56], [102, 56])),
     part("crest", pts([102, 52], [127, 52], [127, 56.5], [102, 56.5])),
-    part("crest", "M114,38 Q118,22 131,19 Q125,30 121,40 Z"),
+    ...held(part("crest", "M114,38 Q118,22 131,19 Q125,30 121,40 Z")),
   ],
 });
 

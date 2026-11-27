@@ -31,6 +31,9 @@ export const along = (a: P, b: P, t: number): P => [a[0] + (b[0] - a[0]) * t, a[
 
 export const part = (role: Role, d: string, lines?: string): Part => (lines ? { role, d, lines } : { role, d });
 
+/** Marks parts as gear, as the figure's model does: what it holds, and the few small pieces the model counts as gear. */
+export const held = (...parts: (Part | readonly Part[])[]): Part[] => parts.flat().map((p) => ({ ...p, gear: true }));
+
 /** An arm: upper arm, forearm and hand. */
 export function arm(shoulder: P, elbow: P, hand: P, sleeve: Role, opts: { fore?: Role; hand?: Role; w?: number } = {}): Part[] {
   const w = opts.w ?? 9;

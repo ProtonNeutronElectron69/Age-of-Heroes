@@ -1,11 +1,10 @@
-import { arm, belt, disc, head, limb, line, type P, part, pts, solo, squad } from "../build";
+import { arm, belt, disc, head, held, limb, line, type P, part, pts, solo, squad } from "../build";
 import type { Drawing, Figure } from "../types";
 
 /** A Glade Warden loosing an arrow to the left: hood down, cloak streaming behind. */
 const wardenLoosing: Figure = {
   top: 52,
   bottom: 244,
-  gear: ["wood", "blade", "hilt", "cape"],
   parts: [
     { role: "cape", d: "M112,82 C140,96 156,140 160,198 L134,188 C132,150 126,116 112,96 Z", lines: "M124,100 C138,130 144,160 147,192" },
     { role: "wood", d: "M115,62 L120,60 L125,79 L120,80 Z M123,59 L128,57 L131,76 L127,77 Z" },
@@ -19,9 +18,9 @@ const wardenLoosing: Figure = {
     { role: "helmet", d: "M103,80 L122,77 L129,93 L105,91 Z" },
     { role: "cloth", d: "M112,86 L152,90 L152,101 L114,98 Z" },
     { role: "cloth", d: "M152,90 L153,101 L125,110 L121,101 Z" },
-    { role: "wood", d: "M58,52 Q26,108 58,166 L61,164 Q36,108 61,54 Z", lines: "M59,53 L121,104 L59,165" },
-    { role: "wood", d: "M34,106.4 L121,103 L121,105.4 L34,108.2 Z" },
-    { role: "blade", d: "M23,107.5 L37,102.5 L37,112 Z" },
+    { role: "wood", gear: true, d: "M58,52 Q26,108 58,166 L61,164 Q36,108 61,54 Z", lines: "M59,53 L121,104 L59,165" },
+    { role: "wood", gear: true, d: "M34,106.4 L121,103 L121,105.4 L34,108.2 Z" },
+    { role: "blade", gear: true, d: "M23,107.5 L37,102.5 L37,112 Z" },
     { role: "cloth", d: "M108,88 L107,100 L60,112 L57,103 Z" },
     { role: "skin", d: "M51.5,107 a4.8,4.8 0 1 0 9.6,0 a4.8,4.8 0 1 0 -9.6,0 Z" },
     { role: "skin", d: "M117,104.5 a4.8,4.8 0 1 0 9.6,0 a4.8,4.8 0 1 0 -9.6,0 Z" },
@@ -35,7 +34,6 @@ const wardenLoosing: Figure = {
 const wardenWatching: Figure = {
   top: 38,
   bottom: 244,
-  gear: ["wood", "blade", "hilt", "cape"],
   parts: [
     { role: "cape", d: "M82,82 L118,82 L140,208 L60,208 Z", lines: "M70,150 L64,204 M130,150 L136,204" },
     { role: "cloth", d: "M83,146 L99,146 L98,198 L84,198 Z" },
@@ -44,11 +42,11 @@ const wardenWatching: Figure = {
     { role: "boot", d: "M102,197 L116,197 L118,239 L103,239 Z M103,238 L118,238 Q126,240 128,244 L103,244 Z" },
     { role: "armor", d: "M84,86 L116,86 L120,148 L80,148 Z", lines: "M100,96 V138 M83,106 H117 M81,122 H119" },
     { role: "sash", d: "M80,138 L120,138 L121,148 L79,148 Z" },
-    { role: "wood", d: "M82.5,138 L85,138 L79,197 L76.5,197 Z" },
-    { role: "blade", d: "M77.5,208 L73,195 L82.5,195 Z" },
+    { role: "wood", gear: true, d: "M82.5,138 L85,138 L79,197 L76.5,197 Z" },
+    { role: "blade", gear: true, d: "M77.5,208 L73,195 L82.5,195 Z" },
     { role: "cloth", d: "M86,88 L74,92 L68,128 L80,141 L88,134 L80,124 L88,104 Z" },
     { role: "skin", d: "M79.5,138 a4.8,4.8 0 1 0 9.6,0 a4.8,4.8 0 1 0 -9.6,0 Z" },
-    { role: "wood", d: "M150,46 Q178,146 150,241 L147,239 Q170,146 147,48 Z", lines: "M148.5,48 V240" },
+    { role: "wood", gear: true, d: "M150,46 Q178,146 150,241 L147,239 Q170,146 147,48 Z", lines: "M148.5,48 V240" },
     { role: "cloth", d: "M114,88 L126,92 L159,140 L150,149 L120,112 Z" },
     { role: "skin", d: "M150,145 a5,5 0 1 0 10,0 a5,5 0 1 0 -10,0 Z" },
     { role: "helmet", d: "M83,76 Q81,42 100,38 Q119,42 117,76 L112,89 H88 Z", lines: "M100,38 V52" },
@@ -66,7 +64,6 @@ const sylvanne: Figure = (() => {
   return {
     top: 20,
     bottom: 244,
-    gear: ["wood", "bone", "cape", "glow"],
     tint: { hair: "#d8c58a" },
     parts: [
       part("cape", pts([78, 84], [122, 84], [142, 238], [58, 238]), line([68, 150], [62, 234]) + line([132, 150], [138, 234])),
@@ -76,19 +73,21 @@ const sylvanne: Figure = (() => {
       part("armor", pts([81, 85], [119, 85], [129, 238], [71, 238]), `${line([100, 150], [100, 236])} ${line([88, 150], [82, 236])} ${line([112, 150], [118, 236])} ${line([92, 86], [100, 106], [108, 86])}`),
       belt([88, 146], [112, 146]),
       part("sash", pts([98, 148], [104, 148], [106, 190], [96, 190])),
-      part("wood", limb([139, 241], [131, 34], 4.2)),
-      part("wood", "M128.5,36 Q112,5 139,5 Q160,10 149,31 Q142,40 135,31 L137.5,28 Q142,32 145.5,28 Q153,13 139,9.5 Q119,9 132.5,34 Z"),
+      ...held(part("wood", limb([139, 241], [131, 34], 4.2))),
+      ...held(part("wood", "M128.5,36 Q112,5 139,5 Q160,10 149,31 Q142,40 135,31 L137.5,28 Q142,32 145.5,28 Q153,13 139,9.5 Q119,9 132.5,34 Z")),
       part("plate", "M150,16 q9,-9 15,-2 q-7,8 -15,2 Z M122,14 q-9,-8 -14,-1 q7,8 14,1 Z"),
       ...arm(shR, [131, 110], [135, 128], "armor"),
       ...arm(shL, [66, 104], [57, 82], "armor"),
-      part("glow", disc([52, 68], 7.5)),
-      part("glow", `${disc([40, 52], 2.6)} ${disc([62, 50], 2)} ${disc([46, 84], 1.8)}`),
+      ...held(part("glow", disc([52, 68], 7.5)), part("glow", `${disc([40, 52], 2.6)} ${disc([62, 50], 2)} ${disc([46, 84], 1.8)}`)),
       part("skin", pts([90, 56], [77, 44], [89, 65])),
       part("skin", pts([110, 56], [123, 44], [111, 65])),
       head([100, 60]),
       part("hair", "M88,58 Q88,46 100,46 Q112,46 112,58 Q106,52 100,54 Q94,52 88,58 Z"),
-      part("bone", `${limb([92, 48], [82, 22], 3.2)} ${limb([86, 33], [74, 28], 2.6)} ${limb([89, 41], [80, 42], 2.4)}`),
-      part("bone", `${limb([108, 48], [118, 22], 3.2)} ${limb([114, 33], [126, 28], 2.6)} ${limb([111, 41], [120, 42], 2.4)}`),
+      // The model counts the antlers as gear.
+      ...held(
+        part("bone", `${limb([92, 48], [82, 22], 3.2)} ${limb([86, 33], [74, 28], 2.6)} ${limb([89, 41], [80, 42], 2.4)}`),
+        part("bone", `${limb([108, 48], [118, 22], 3.2)} ${limb([114, 33], [126, 28], 2.6)} ${limb([111, 41], [120, 42], 2.4)}`),
+      ),
       part("jewel", disc([100, 50], 2.8)),
     ],
   };
@@ -117,13 +116,12 @@ const spriteThrowing: Figure = (() => {
     top: 104,
     bottom: 201,
     hover: 43,
-    gear: ["jewel", "wood"],
     tint: SPRITE_TINT,
     parts: [
       ...spriteBody(h),
       ...arm([93, 133], [80, 142], [74, 130], "skin", { w: 5.5 }),
       ...arm([107, 133], [122, 126], [128, 110], "skin", { w: 5.5 }),
-      part("wood", pts([125, 112], [136, 86], [131, 113])),
+      ...held(part("wood", pts([125, 112], [136, 86], [131, 113]))),
       head(h, -1, 9.5),
       part("hair", `M${h[0] - 10},${h[1] - 2} Q${h[0] - 12},${h[1] - 16} ${h[0]},${h[1] - 15} Q${h[0] + 14},${h[1] - 15} ${h[0] + 11},${h[1] + 4} Q${h[0] + 6},${h[1] - 7} ${h[0] - 3},${h[1] - 7} Z`),
       part("skin", pts([h[0] + 7, h[1] - 2], [h[0] + 19, h[1] - 10], [h[0] + 9, h[1] + 4])),
@@ -138,14 +136,13 @@ const spriteHovering: Figure = (() => {
     top: 102,
     bottom: 199,
     hover: 45,
-    gear: ["jewel", "wood"],
     tint: { ...SPRITE_TINT, hair: "#7d5a26", cape: "#c9861a" },
     parts: [
       ...spriteBody(h),
       ...arm([93, 131], [80, 140], [72, 150], "skin", { w: 5.5 }),
-      part("wood", pts([70, 147], [60, 170], [75, 151])),
+      ...held(part("wood", pts([70, 147], [60, 170], [75, 151]))),
       ...arm([107, 131], [120, 140], [128, 150], "skin", { w: 5.5 }),
-      part("wood", pts([130, 147], [140, 170], [125, 151])),
+      ...held(part("wood", pts([130, 147], [140, 170], [125, 151]))),
       head(h, 0, 9.5),
       part("hair", `M${h[0] - 11},${h[1] + 2} Q${h[0] - 13},${h[1] - 15} ${h[0]},${h[1] - 15} Q${h[0] + 13},${h[1] - 15} ${h[0] + 11},${h[1] + 2} Q${h[0] + 6},${h[1] - 7} ${h[0]},${h[1] - 6} Q${h[0] - 6},${h[1] - 7} ${h[0] - 11},${h[1] + 2} Z`),
       part("skin", pts([h[0] - 8, h[1] - 2], [h[0] - 20, h[1] - 10], [h[0] - 9, h[1] + 4])),
@@ -161,7 +158,6 @@ const queenIlyth: Figure = (() => {
     top: 70,
     bottom: 218,
     hover: 26,
-    gear: ["jewel", "wood", "glow", "crest"],
     tint: { skin: "#d3e4b4", hair: "#2f5f2c", cape: "#8a2756", wood: "#6b4a2e" },
     parts: [
       part("jewel", "M100,112 Q40,40 26,84 Q30,122 100,124 Z", "M94,112 Q56,70 32,84"),
@@ -171,13 +167,15 @@ const queenIlyth: Figure = (() => {
       part("hair", pts([90, 90], [110, 90], [118, 136], [82, 136])),
       part("cape", pts([90, 108], [110, 108], [124, 196], [114, 188], [107, 212], [100, 196], [93, 218], [86, 190], [76, 198]), `${line([100, 130], [100, 192])} ${line([94, 130], [88, 186])} ${line([106, 130], [112, 184])}`),
       part("sash", pts([89, 132], [111, 132], [112, 139], [88, 139])),
-      part("wood", limb([70, 176], [64, 96], 3)),
-      part("crest", pts([64, 78], [70, 94], [58, 94])),
-      part("crest", `${pts([60, 104], [50, 100], [61, 110])} ${pts([68, 118], [78, 114], [67, 124])}`),
+      ...held(
+        part("wood", limb([70, 176], [64, 96], 3)),
+        part("crest", pts([64, 78], [70, 94], [58, 94])),
+        part("crest", `${pts([60, 104], [50, 100], [61, 110])} ${pts([68, 118], [78, 114], [67, 124])}`),
+      ),
       ...arm([92, 110], [76, 124], [68, 138], "skin", { w: 6 }),
       ...arm([108, 110], [128, 104], [140, 88], "skin", { w: 6 }),
-      part("glow", disc([146, 76], 8)),
-      part("crest", `${pts([146, 62], [143, 52], [150, 53])} ${pts([158, 70], [168, 65], [166, 73])} ${pts([156, 86], [164, 93], [157, 95])} ${pts([134, 68], [126, 62], [133, 60])}`),
+      ...held(part("glow", disc([146, 76], 8))),
+      ...held(part("crest", `${pts([146, 62], [143, 52], [150, 53])} ${pts([158, 70], [168, 65], [166, 73])} ${pts([156, 86], [164, 93], [157, 95])} ${pts([134, 68], [126, 62], [133, 60])}`)),
       head(h, 0, 10.5),
       part("hair", "M88,98 Q86,82 100,81 Q114,82 112,98 Q107,89 100,90 Q93,89 88,98 Z"),
       part("skin", pts([91, 94], [78, 85], [90, 101])),
@@ -193,7 +191,6 @@ const BARK = "#7a5a3c";
 const treefolk = (reach: number): Figure => ({
   top: 22,
   bottom: 244,
-  gear: [],
   tint: { wood: BARK, glow: "#f2c14e" },
   parts: [
     part("wood", `${limb([118, 110], [150, 96 - reach], 15, 11)} ${limb([150, 96 - reach], [170, 66 - reach * 1.6], 11, 6)}`),
@@ -225,7 +222,6 @@ const prowler = (drop: number, lift: number): Figure => {
   return {
     top: 122 + Math.min(drop, 0),
     bottom: 244,
-    gear: [],
     tint: FUR,
     parts: [
       part("armor", `M156,164 Q182,${154 - lift} 190,${130 - lift * 2} Q190,${154 - lift} 168,176 Z`),
@@ -252,7 +248,6 @@ const cinderjaw: Figure = {
   top: 22,
   bottom: 204,
   hover: 40,
-  gear: ["glow"],
   tint: { glow: "#f28c28" },
   parts: [
     part("cape", "M100,124 Q96,74 62,32 Q70,62 52,72 Q70,80 66,98 Q82,96 92,122 Z", `${line([98, 120], [66, 40])} ${line([96, 120], [58, 74])}`),
@@ -269,7 +264,8 @@ const cinderjaw: Figure = {
     part("bone", `${pts([76, 80], [94, 58], [84, 84])} ${pts([66, 78], [78, 54], [74, 80])}`),
     part("armor", "M86,96 Q80,74 58,74 L26,84 L24,91 L52,95 L30,100 L32,107 L60,108 Q76,110 86,96 Z"),
     part("glow", disc([64, 84], 2.8)),
-    part("glow", `${disc([14, 97], 5.5)} ${disc([4, 106], 3)} ${disc([6, 88], 2.4)}`),
+    // Embers at the jaws, not part of the body.
+    ...held(part("glow", `${disc([14, 97], 5.5)} ${disc([4, 106], 3)} ${disc([6, 88], 2.4)}`)),
     part("cape", "M104,126 Q110,70 152,22 Q150,54 172,62 Q156,74 166,92 Q146,92 142,112 Q124,108 112,130 Z", `${line([106, 124], [150, 28])} ${line([108, 126], [168, 64])} ${line([110, 128], [162, 90])}`),
   ],
 };
@@ -278,7 +274,6 @@ const cinderjaw: Figure = {
 const oldRootback: Figure = {
   top: 24,
   bottom: 244,
-  gear: ["wood"],
   tint: { leather: "#6f5d49", cloth: "#4f4234", wood: BARK, glow: "#f2c14e" },
   parts: [
     part("cloth", `${limb([86, 200], [84, 238], 22, 18)} ${limb([134, 200], [138, 238], 22, 18)}`),
