@@ -1,4 +1,5 @@
 import {
+  POWER_COMMAND_KINDS,
   Rng,
   applyCommand,
   attackTargets,
@@ -102,7 +103,8 @@ function randomCommand(state: GameState, rng: Rng, c: RulesContext): Command {
             const gap = (o: (typeof options)[number]) => Math.min(...enemies.map((e) => hexDistance(e, o.to.hex)));
             const toward = enemies.length > 0 && rng.float() < 0.75;
             const choice = toward ? options.reduce((best, o) => (gap(o) < gap(best) ? o : best)) : pick(rng, options);
-            return { type: "move", player: active.player, figureId: f.id, path: choice.path };
+            // A Blink option must say so, or the move is checked as a walk.
+            return { type: "move", player: active.player, figureId: f.id, path: choice.path, ...(choice.ability ? { ability: choice.ability } : {}) };
           }
         }
         // Sometimes turn a figure that has just moved (games with facing).
@@ -110,8 +112,8 @@ function randomCommand(state: GameState, rng: Rng, c: RulesContext): Command {
           return { type: "face", player: active.player, figureId: f.id, facing: Math.floor(rng.float() * 8) * 45 };
         }
         if (!active.attacked.includes(f.id)) {
-          // Sometimes use a special action (area attack or mind control) instead.
-          const specials = specialActions(c.cards.get(unit.cardId)!);
+          // Sometimes use a special action (area attack or mind control) instead. Powers such as Hurl use the `power` command, not `attack`.
+          const specials = specialActions(c.cards.get(unit.cardId)!).filter((s) => !POWER_COMMAND_KINDS.includes(s.kind));
           if (specials.length > 0 && rng.float() < 0.5) {
             const ability = pick(rng, specials).id;
             const targets = attackTargets(state, f.id, c, ability);
@@ -128,7 +130,8 @@ function randomCommand(state: GameState, rng: Rng, c: RulesContext): Command {
         if (active.bonusMoves[f.id]) {
           const options = [...moveOptions(state, f.id, c).values()];
           if (options.length > 0) {
-            return { type: "move", player: active.player, figureId: f.id, path: pick(rng, options).path };
+            const choice = pick(rng, options);
+            return { type: "move", player: active.player, figureId: f.id, path: choice.path, ...(choice.ability ? { ability: choice.ability } : {}) };
           }
         }
       }

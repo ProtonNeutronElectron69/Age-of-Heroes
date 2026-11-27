@@ -31,7 +31,7 @@ Left panel (identity and synergy tags):
 - **Footprint**: the hexes the figure occupies: 1 hex, 2x1, 3x1 or 2x2.
 
 Right panel (stats):
-- **Life**: wounds the figure can take; it is destroyed when its wounds reach its Life. Heroes have 2 to 8 Life. Most squad figures have 1; a few tough squads of only 2 or 3 figures have up to 3 Life per figure.
+- **Life**: wounds the figure can take; it is destroyed when its wounds reach its Life. Heroes have 2 to 8 Life. Most squad figures have 2; the most fragile squads have 1, and a few tough squads of only 2 or 3 figures have 3 Life per figure.
 - **Move**: hexes the figure can travel per turn.
 - **Range**: how many hexes away it can attack. Range 1 means melee only.
 - **Attack**: attack dice rolled.

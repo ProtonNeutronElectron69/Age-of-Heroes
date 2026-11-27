@@ -12,12 +12,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "life": 5,
+    "life": 4,
     "move": 5,
     "range": 4,
     "attack": 3,
     "defense": 3,
-    "points": 120,
+    "points": 105,
     "abilities": [
       {
         "id": "rally-the-line",
@@ -51,12 +51,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 5,
     "range": 6,
     "attack": 2,
     "defense": 2,
-    "points": 80,
+    "points": 115,
     "abilities": [
       {
         "id": "massed-volley",
@@ -82,12 +82,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "life": 6,
+    "life": 5,
     "move": 5,
     "range": 1,
     "attack": 4,
     "defense": 4,
-    "points": 145,
+    "points": 130,
     "abilities": [
       {
         "id": "answering-blade",
@@ -117,12 +117,12 @@
     "size": "small",
     "height": 4,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 6,
     "range": 3,
     "attack": 2,
     "defense": 3,
-    "points": 70,
+    "points": 100,
     "abilities": [
       {
         "id": "smoke-step",
@@ -147,12 +147,12 @@
     "size": "large",
     "height": 7,
     "footprint": "1",
-    "life": 6,
+    "life": 5,
     "move": 6,
     "range": 1,
     "attack": 4,
     "defense": 3,
-    "points": 160,
+    "points": 145,
     "abilities": [
       {
         "id": "flying",
@@ -192,12 +192,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 5,
     "range": 8,
     "attack": 2,
     "defense": 2,
-    "points": 65,
+    "points": 90,
     "abilities": [
       {
         "id": "hidden-in-the-leaves",
@@ -223,12 +223,12 @@
     "size": "large",
     "height": 7,
     "footprint": "1",
-    "life": 5,
+    "life": 4,
     "move": 4,
     "range": 5,
     "attack": 3,
     "defense": 5,
-    "points": 165,
+    "points": 150,
     "abilities": [
       {
         "id": "deflector-field",
@@ -262,12 +262,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 5,
     "range": 5,
     "attack": 3,
     "defense": 2,
-    "points": 90,
+    "points": 125,
     "abilities": [
       {
         "id": "salvage-protocol",
@@ -289,12 +289,12 @@
     "size": "huge",
     "height": 9,
     "footprint": "2x1",
-    "life": 8,
+    "life": 7,
     "move": 4,
     "range": 1,
     "attack": 5,
     "defense": 4,
-    "points": 170,
+    "points": 160,
     "abilities": [
       {
         "id": "moss-armor",
@@ -328,12 +328,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 4,
     "range": 1,
     "attack": 3,
     "defense": 3,
-    "points": 90,
+    "points": 125,
     "abilities": [
       {
         "id": "shieldbearers",
@@ -432,12 +432,12 @@
     "size": "large",
     "height": 7,
     "footprint": "1",
-    "life": 5,
+    "life": 4,
     "move": 5,
     "range": 1,
     "attack": 5,
     "defense": 3,
-    "points": 125,
+    "points": 110,
     "abilities": [
       {
         "id": "hurl",
@@ -510,12 +510,12 @@
     "size": "huge",
     "height": 10,
     "footprint": "2x2",
-    "life": 8,
+    "life": 7,
     "move": 3,
-    "range": 6,
+    "range": 7,
     "attack": 4,
     "defense": 5,
-    "points": 220,
+    "points": 210,
     "abilities": [
       {
         "id": "mortar-barrage",
@@ -553,12 +553,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 6,
     "range": 4,
     "attack": 2,
     "defense": 2,
-    "points": 75,
+    "points": 105,
     "abilities": [
       {
         "id": "flying",

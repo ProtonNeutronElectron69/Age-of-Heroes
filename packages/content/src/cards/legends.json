@@ -12,12 +12,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 5,
     "range": 7,
     "attack": 2,
     "defense": 2,
-    "points": 65,
+    "points": 90,
     "abilities": [
       {
         "id": "steady-aim",
@@ -42,12 +42,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 5,
     "range": 1,
     "attack": 3,
     "defense": 3,
-    "points": 95,
+    "points": 135,
     "abilities": [
       {
         "id": "duelist",
@@ -129,12 +129,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 4,
     "range": 1,
     "attack": 2,
     "defense": 2,
-    "points": 70,
+    "points": 100,
     "abilities": [
       {
         "id": "reassemble",
@@ -159,12 +159,12 @@
     "size": "medium",
     "height": 6,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 5,
     "range": 3,
     "attack": 3,
     "defense": 2,
-    "points": 85,
+    "points": 120,
     "abilities": [
       {
         "id": "blood-surge",
@@ -230,12 +230,12 @@
     "size": "medium",
     "height": 6,
     "footprint": "1",
-    "life": 6,
+    "life": 5,
     "move": 4,
     "range": 1,
     "attack": 4,
     "defense": 4,
-    "points": 135,
+    "points": 125,
     "abilities": [
       {
         "id": "soul-reap",
@@ -268,12 +268,12 @@
     "size": "huge",
     "height": 6,
     "footprint": "3x1",
-    "life": 7,
+    "life": 6,
     "move": 5,
     "range": 1,
     "attack": 4,
     "defense": 3,
-    "points": 125,
+    "points": 115,
     "abilities": [
       {
         "id": "constrict",
@@ -336,12 +336,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 5,
     "range": 1,
     "attack": 3,
     "defense": 2,
-    "points": 105,
+    "points": 150,
     "abilities": [
       {
         "id": "shield-wall",
@@ -366,12 +366,12 @@
     "size": "medium",
     "height": 5,
     "footprint": "1",
-    "life": 1,
+    "life": 2,
     "move": 5,
     "range": 7,
     "attack": 2,
     "defense": 2,
-    "points": 65,
+    "points": 90,
     "abilities": [
       {
         "id": "spotters-call",
@@ -397,12 +397,12 @@
     "size": "medium",
     "height": 6,
     "footprint": "1",
-    "life": 5,
+    "life": 4,
     "move": 6,
     "range": 1,
     "attack": 4,
     "defense": 3,
-    "points": 140,
+    "points": 125,
     "abilities": [
       {
         "id": "flying",
