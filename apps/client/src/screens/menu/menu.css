@@ -370,7 +370,7 @@
   flex: 1;
 }
 
-/* Seven premade maps in two columns of compact cards, so the panel still fits the stage. */
+/* The premade maps in two columns of compact cards, so the panel still fits the stage. */
 .mp-maps {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -433,6 +433,10 @@
 
 .m-riverbend {
   background: linear-gradient(135deg, #eef3f6 0 16%, #9b968e 16% 34%, #6aa84f 34% 46%, #3d80c8 46% 60%, #6aa84f 60% 78%, #2f6e3a 78%);
+}
+
+.m-shattered-crown {
+  background: conic-gradient(from 30deg at 50% 50%, #e4561e 0 60deg, #6b6b3a 60deg 120deg, #2f6e3a 120deg 180deg, #eef3f6 180deg 240deg, #6aa84f 240deg 300deg, #3d80c8 300deg 360deg);
 }
 
 .mp-mine {
@@ -1359,8 +1363,8 @@
 }
 
 .ms-banner-hall .mp-mhex {
-  width: 18px;
-  height: 21px;
+  width: 16px;
+  height: 18px;
 }
 
 .ms-banner-hall .mp-desc {

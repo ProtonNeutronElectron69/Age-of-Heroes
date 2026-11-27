@@ -17,7 +17,7 @@ A turn-based 3D tactics game for 2 to 6 players in the browser. Heroes and squad
 - **Turns driven by secret tokens:** each player hides numbered activation tokens (one for every two cards in their army, rounded up) and a bluff on their units, rolls for initiative, then takes a turn for each token. The tokens stand on the cards round the table: yours show their numbers, the others' only once revealed.
 - **Facing:** every figure looks one way. An attack needs its target in front of the attacker, a melee unit attacking from behind rolls 2 more dice, and R turns a figure before or after it moves. A figure's move can be made in pieces, until it attacks.
 - **Graphics, High or Low** (Display): High adds soft shadows, sparks and dust in fights, sharper terrain with rippling water and flowing lava, and more detailed figures with an outline glow in their player's colour; Low is plain and quick.
-- **3D battlefields** with ten terrain types, bridges, overhangs and scenery, a figure's-eye camera, and seven premade maps. Tiles, scenery and figures come in a detailed look, textured and painted like plastic pieces, with bold outlines to count stack heights, or the classic flat colours (Display, or the B key).
+- **3D battlefields** with ten terrain types, bridges, overhangs and scenery, a figure's-eye camera, and eight premade maps. Tiles, scenery and figures come in a detailed look, textured and painted like plastic pieces, with bold outlines to count stack heights, or the classic flat colours (Display, or the B key).
 - **Map editor:** build, save, export and import your own maps, and play on them. It finds and removes problem pieces, erases with a dragged box, joins pieces side by side into bridges (Shift+click) and can scatter terrain and scenery at random.
 - **Hot-seat play** on one device, with a pass-the-device screen for the secret tokens.
 - **Online play:** room codes, each device sees only what its player may see, reconnecting, spectators, and an authoritative server. Online games have an open draft (everyone picks at once, each unit once), initiative that waits for every player's roll, and pings: press P to point at a spot for everyone.
@@ -75,7 +75,7 @@ Before pushing, run `pnpm check:affected`. CI runs the checks a pull request's c
 | Path | What it is |
 |---|---|
 | `packages/rules` | The rules engine: hex math, the stacked map model, dice, line of sight, draft, movement, combat and abilities. Pure, deterministic TypeScript, so it runs the same in the browser and on the server. |
-| `packages/content` | Game data: the 56 units and their hit shapes, seven premade maps, terrain, scenery, tunable rule numbers, and the balance model for point costs. |
+| `packages/content` | Game data: the 56 units and their hit shapes, eight premade maps, terrain, scenery, tunable rule numbers, and the balance model for point costs. |
 | `packages/protocol` | The online message format (checked with schemas) and the game record format used for saves. |
 | `apps/client` | The browser game: main menu, unit gallery, draft, battle, map editor, online lobby and saved games, built with React and Three.js. Figure models are built in code in `src/models`. Browser tests live in `apps/client/e2e`. |
 | `apps/server` | The online game server: rooms, room codes, seats and reconnecting, spectators, and saving and resuming games. It runs the rules engine and sends each player only their own view. |

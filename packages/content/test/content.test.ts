@@ -50,8 +50,8 @@ describe("terrain", () => {
 });
 
 describe("maps", () => {
-  it("has a library of seven premade maps", () => {
-    expect(MAPS.map((m) => m.id)).toEqual(["proving-grounds", "twin-fords", "the-mesa", "glacier-pass", "frostspine-peaks", "mirewood-fen", "riverbend"]);
+  it("has a library of eight premade maps", () => {
+    expect(MAPS.map((m) => m.id)).toEqual(["proving-grounds", "twin-fords", "the-mesa", "glacier-pass", "frostspine-peaks", "mirewood-fen", "riverbend", "shattered-crown"]);
   });
 
   it("every bundled map builds without issues and hosts at least 2 players", () => {

@@ -4,7 +4,7 @@ A browser-based, turn-based 3D tactics game for 2 to 6 players. See [RULES.md](R
 
 ## Status
 
-The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 56-unit roster in 7 factions, a map editor with seven premade maps, hot-seat and online play, and saved games. 825 unit and simulation tests and 8 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 5 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
+The core game is complete and playable, online too: the game server runs on Render and the published site uses it ([HOSTING.md](HOSTING.md)). It has one full set of rules, a 56-unit roster in 7 factions, a map editor with eight premade maps, hot-seat and online play, and saved games. 825 unit and simulation tests and 8 browser tests run in CI, each pull request running only the ones its changes affect, and a full run takes about 5 minutes, most of it `full-game` ([TESTING.md](TESTING.md)); every merge to `main` publishes the game to GitHub Pages.
 
 ### Next
 Planned, in no set order; each starts when the owner asks:
@@ -16,6 +16,7 @@ Planned, in no set order; each starts when the owner asks:
 On hold (Phase 6): a computer opponent, and a tutorial.
 
 Done lately, newest first (each has its section below):
+- Shattered Crown: a large near-hexagonal map for 4 to 6 players (2 to 6 in all), not symmetric, with start zones at least 10 hexes apart, six regions that each favour different tactics, heights to 10, three bridges, an arch, an ice tunnel and two overhangs.
 - Balance pass (#92), done for now: most squads have 2 Life, heroes with 5 or more Life lose 1, four more units reach Range 7, and costs follow the balance model.
 - Hit zones (#90, and the card picture after it): line of sight sees each figure's body and gear as boxes made from its model; an attack needs a fifth of the target's body in sight, and shields hide their bearers.
 - Better graphics (#82 to #89): Low and High; shadows, effects in fights, sharper and moving terrain, more detailed figures, and an outline glow that can be switched off.
@@ -389,3 +390,12 @@ The owner compared the roster's stats with the first set of a classic hex-tactic
 - [x] The random-game test now skips powers when it picks a special action (they use the `power` command) and sends Blink moves as Blink
 - [x] The owner closed the balance pass here for now. The balance model's ability multipliers were reviewed after the move to 2 Life squads and left as they are: the changes would have moved a few units by 5 to 15 points
 - [ ] Later, if playtests call for it: tune single units faction by faction (Life, Move, Range, Attack, Defense, then cost), the glyph numbers (`TUNING.glyphs`) and the newer rule numbers (the swamp d20, the strike from behind, the share of a body an attack must see)
+
+### Shattered Crown
+The owner asked for a map close to hexagonal, for 4 to 6 players, not symmetric, with terrain zones that encourage different tactics, plenty of height (6 and more), bridges, sheer cliffs and overhangs.
+- [x] 822 hexes in a rough hexagon of radius 16, its edge nudged in and out so no two sides match. A start zone of 16 hexes near each of the six edges, placed so any two are at least 10 hexes apart (two turns of manoeuvre before ranged units reach a zone) and the two-player zones 28 apart; layouts for 2 to 6 players
+- [x] Six regions round a central plateau: the Crown (rock at 6, sheer sides, two ramps, an overhanging rim and cover walls on top); Ember Reach (an ash basin with lava runs, basalt spires and a stone arch); the Sunken Fen (water, swamp, forest islands and a raised road); the Thornwood (forested hills); Frostfang (a snow mountain to 10 with a sheer north face, an overhanging snow ledge, and an ice tunnel through it); the Kingsroad (open grass, low hills, a rocky outcrop, a pond, a road and a ruined keep); and the Gorge (a plateau at 6 with tall rock spires, split by a river gorge under a high bridge)
+- [x] About 40 small mounds of 1 to 3 hexes, 1 or 2 levels high, scattered over the low ground, with trees, ruined walls and a few boulders through every region
+- [x] Three bridges (Crown to Frostfang, over the gorge, and the arch), all held at both ends; every start zone and the summits can be reached on foot climbing 2 levels at a time
+- [x] Laid out in code like Riverbend, checked with `buildBoard`, with a menu picture (`.m-shattered-crown`). Solid stacks are merged into 2, 3, 4 and 7-hex pieces, so the file stays near the size of the other large maps
+- [x] The Banner Hall menu style's map icons are a little smaller, so eight maps fit its one column at 1280 by 720
