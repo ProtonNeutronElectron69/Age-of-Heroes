@@ -1,4 +1,4 @@
-import { KNEELING_AIM, STANDING_AIM, type AimStance, arm, disc, leg, limb, line, type P, part, pts, solo, squad, torso } from "../build";
+import { KNEELING_AIM, STANDING_AIM, type AimStance, arm, disc, held, leg, limb, line, type P, part, pts, solo, squad, torso } from "../build";
 import type { Drawing, Figure, Part } from "../types";
 
 /** Slick grey-green hide, acid green eyes and a dark harness. */
@@ -41,7 +41,6 @@ const ridge = (a: P, b: P, n: number, height: number): Part =>
 const spawn = (j: AimStance, skin?: string): Figure => ({
   top: j.head[1] - 30,
   bottom: 244,
-  gear: ["bone", "glow", "jewel"],
   tint: { ...LOOK, ...(skin ? { skin } : {}) },
   parts: [
     ...leg(j.hipR, j.kneeR, j.footR, "skin", "plate", { toe: 1, boot: "cloth" }),
@@ -50,9 +49,9 @@ const spawn = (j: AimStance, skin?: string): Figure => ({
     ridge([j.shR[0] + 2, j.shR[1] + 2], [j.hipR[0] + 4, j.hipR[1] - 8], 3, 9),
     part("leather", limb([j.shL[0], j.shL[1]], [j.hipR[0], j.hipR[1] - 4], 4.6)),
     ...arm(j.shR, j.elbowR, j.handR, "skin"),
-    part("bone", `M${j.stock[0]},${j.stock[1] - 6} Q${j.breech[0]},${j.breech[1] - 9} ${j.muzzle[0] + 6},${j.muzzle[1] - 3} L${j.muzzle[0]},${j.muzzle[1] + 1} L${j.muzzle[0] + 6},${j.muzzle[1] + 4} Q${j.breech[0]},${j.breech[1] + 7} ${j.stock[0]},${j.stock[1] + 6} Z`, `${line([j.breech[0] - 12, j.breech[1] - 4], [j.breech[0] - 12, j.breech[1] + 4])} ${line([j.breech[0] - 24, j.breech[1] - 3], [j.breech[0] - 24, j.breech[1] + 3])}`),
-    part("glow", `M${j.breech[0] - 6},${j.breech[1] - 4} q4,-14 16,-12 q8,4 2,14 Z`),
-    part("jewel", disc([j.muzzle[0] - 2, j.muzzle[1]], 3)),
+    ...held(part("bone", `M${j.stock[0]},${j.stock[1] - 6} Q${j.breech[0]},${j.breech[1] - 9} ${j.muzzle[0] + 6},${j.muzzle[1] - 3} L${j.muzzle[0]},${j.muzzle[1] + 1} L${j.muzzle[0] + 6},${j.muzzle[1] + 4} Q${j.breech[0]},${j.breech[1] + 7} ${j.stock[0]},${j.stock[1] + 6} Z`, `${line([j.breech[0] - 12, j.breech[1] - 4], [j.breech[0] - 12, j.breech[1] + 4])} ${line([j.breech[0] - 24, j.breech[1] - 3], [j.breech[0] - 24, j.breech[1] + 3])}`)),
+    ...held(part("glow", `M${j.breech[0] - 6},${j.breech[1] - 4} q4,-14 16,-12 q8,4 2,14 Z`)),
+    ...held(part("jewel", disc([j.muzzle[0] - 2, j.muzzle[1]], 3))),
     ...arm(j.shL, j.elbowL, j.handL, "skin"),
     ...alienHead(j.head[0], j.head[1], -1),
   ],
@@ -65,7 +64,6 @@ const vothrek: Figure = (() => {
   return {
     top: 6,
     bottom: 244,
-    gear: ["glow", "jewel"],
     tint: { ...LOOK, skin: "#b4a9c6", jewel: "#d8ff6b" },
     parts: [
       part("cape", "M74,96 Q100,90 126,96 L146,236 L128,226 L116,240 L100,228 L84,240 L72,226 L54,236 Z", `${line([88, 120], [78, 228])} ${line([112, 120], [122, 228])} ${line([100, 130], [100, 226])}`),
@@ -73,8 +71,8 @@ const vothrek: Figure = (() => {
       part("sash", pts([84, 150], [116, 150], [117, 160], [83, 160])),
       ...arm(shL, [66, 128], [84, 120], "cape", { w: 10 }),
       ...arm(shR, [134, 128], [116, 120], "cape", { w: 10 }),
-      part("glow", disc([100, 116], 9), `${line([92, 108], [108, 124])} ${line([108, 108], [92, 124])}`),
-      part("glow", `${disc([86, 98], 2.4)} ${disc([116, 96], 2)} ${disc([100, 100], 1.6)}`),
+      ...held(part("glow", disc([100, 116], 9), `${line([92, 108], [108, 124])} ${line([108, 108], [92, 124])}`)),
+      ...held(part("glow", `${disc([86, 98], 2.4)} ${disc([116, 96], 2)} ${disc([100, 100], 1.6)}`)),
       part("plate", pts([72, 90], [128, 90], [124, 104], [76, 104])),
       // The swollen skull, its folds, and the feeding tendrils.
       part("skin", "M86,84 Q62,60 70,30 Q84,4 100,6 Q118,4 130,30 Q138,60 114,84 Q100,94 86,84 Z", `${line([100, 10], [100, 46])} ${line([80, 22], [90, 40], [84, 56])} ${line([120, 22], [110, 40], [116, 56])} ${line([74, 44], [86, 52])} ${line([126, 44], [114, 52])}`),
@@ -92,7 +90,6 @@ const ixaru: Figure = (() => {
   return {
     top: 8,
     bottom: 244,
-    gear: ["bone", "glow"],
     tint: { ...LOOK, leather: "#6b5a3a", plate: "#c7b98a" },
     parts: [
       // The strider: four stilt legs, a fat body, and a long neck reaching forward and down.
@@ -111,9 +108,9 @@ const ixaru: Figure = (() => {
       part("cloth", `${limb([96, 130], [100, 150], 8, 7)} ${pts([94, 148], [106, 148], [106, 156], [88, 156])}`),
       torso(shL, shR, [96, 112], [112, 112], "armor", line([96, 84], [112, 84])),
       ...arm(shR, [128, 74], [118, 60], "skin"),
-      part("bone", "M70,26 Q50,62 70,102 L74,100 Q56,62 74,28 Z", "M72,27 L118,60 L72,101"),
-      part("bone", limb([118, 60], [56, 62], 2)),
-      part("glow", pts([44, 62], [58, 57], [58, 67])),
+      ...held(part("bone", "M70,26 Q50,62 70,102 L74,100 Q56,62 74,28 Z", "M72,27 L118,60 L72,101")),
+      ...held(part("bone", limb([118, 60], [56, 62], 2))),
+      ...held(part("glow", pts([44, 62], [58, 57], [58, 67]))),
       ...arm(shL, [80, 66], [64, 62], "skin"),
       ...alienHead(104, 44, -1, 0.9),
     ],
@@ -124,7 +121,6 @@ const ixaru: Figure = (() => {
 const gulpmaw: Figure = {
   top: 74,
   bottom: 244,
-  gear: ["sash"],
   tint: { ...LOOK, skin: "#7f9a6c", plate: "#4e6a3e", sash: "#d86a8a", bone: "#e7e0c2" },
   parts: [
     part("skin", `${limb([150, 180], [176, 208], 22, 14)} ${limb([176, 208], [168, 240], 13, 10)}`),
@@ -136,7 +132,7 @@ const gulpmaw: Figure = {
     // The gaping mouth, its teeth, and the tongue.
     part("cloth", "M30,132 Q60,124 88,144 Q60,176 26,170 Q36,152 30,132 Z"),
     part("bone", `${pts([34, 136], [40, 146], [44, 134])} ${pts([50, 132], [55, 143], [60, 132])} ${pts([66, 134], [70, 144], [76, 138])} ${pts([34, 166], [40, 158], [46, 168])} ${pts([52, 166], [58, 158], [62, 168])}`),
-    part("sash", "M70,152 Q40,150 22,140 Q8,132 4,142 Q8,150 16,148 Q34,160 70,160 Z", line([12, 142], [60, 155])),
+    ...held(part("sash", "M70,152 Q40,150 22,140 Q8,132 4,142 Q8,150 16,148 Q34,160 70,160 Z", line([12, 142], [60, 155]))),
     part("glow", `${disc([86, 114], 6.5)} ${disc([112, 104], 5.5)}`),
     part("cloth", `${pts([82, 110], [90, 114], [82, 118])} ${pts([109, 100], [116, 104], [109, 108])}`),
     part("skin", `${limb([70, 190], [52, 214], 18, 12)} ${limb([52, 214], [58, 240], 12, 9)}`),
@@ -152,12 +148,11 @@ const stalker = (lunge: number): Figure => {
   const hipR: P = [114, 158];
   const blade = (shoulder: P, elbow: P, hand: P, to: P): Part[] => [
     ...arm(shoulder, elbow, hand, "skin", { w: 8 }),
-    part("bone", `M${hand[0]},${hand[1] - 3} Q${(hand[0] + to[0]) / 2},${(hand[1] + to[1]) / 2 - 12} ${to[0]},${to[1]} Q${(hand[0] + to[0]) / 2 + 4},${(hand[1] + to[1]) / 2 - 2} ${hand[0]},${hand[1] + 4} Z`),
+    ...held(part("bone", `M${hand[0]},${hand[1] - 3} Q${(hand[0] + to[0]) / 2},${(hand[1] + to[1]) / 2 - 12} ${to[0]},${to[1]} Q${(hand[0] + to[0]) / 2 + 4},${(hand[1] + to[1]) / 2 - 2} ${hand[0]},${hand[1] + 4} Z`)),
   ];
   return {
     top: 52 + lunge,
     bottom: 244,
-    gear: ["bone"],
     tint: { ...LOOK, skin: "#8aa79a" },
     parts: [
       ...leg(hipR, [136, 196], [128, 238], "skin", "plate", { toe: 1, w: 11, boot: "cloth" }),
@@ -176,7 +171,6 @@ const stalker = (lunge: number): Figure => {
 const lobber = (j: AimStance, loaded: boolean): Figure => ({
   top: j.head[1] - 30,
   bottom: 244,
-  gear: ["wood", "glow", "jewel"],
   tint: { ...LOOK, skin: "#a3b39a", wood: "#6a6040", jewel: "#cfe86a" },
   parts: [
     part("plate", `M${j.shR[0] - 2},${j.shR[1] - 6} Q${j.shR[0] + 34},${j.shR[1] - 18} ${j.shR[0] + 30},${j.shR[1] + 30} Q${j.shR[0] + 22},${j.shR[1] + 52} ${j.shR[0] - 2},${j.shR[1] + 40} Z`, `${line([j.shR[0] + 10, j.shR[1] - 6], [j.shR[0] + 12, j.shR[1] + 40])} ${line([j.shR[0] + 22, j.shR[1] - 4], [j.shR[0] + 22, j.shR[1] + 36])}`),
@@ -185,8 +179,8 @@ const lobber = (j: AimStance, loaded: boolean): Figure => ({
     ...leg(j.hipL, j.kneeL, j.footL, "skin", "plate", { toe: -1, boot: "cloth" }),
     torso(j.shL, j.shR, j.hipL, j.hipR, "armor", line([j.shL[0] + 2, j.shL[1] + 16], [j.shR[0] - 2, j.shR[1] + 16])),
     ...arm(j.shR, j.elbowR, j.handR, "skin"),
-    part("wood", limb([j.stock[0] + 10, j.stock[1] + 6], [j.muzzle[0] + 30, j.muzzle[1] - 18], 9, 11), line([j.breech[0], j.breech[1] - 10], [j.breech[0] + 2, j.breech[1] + 2])),
-    ...(loaded ? [part("jewel", disc([j.muzzle[0] + 26, j.muzzle[1] - 20], 7), line([j.muzzle[0] + 22, j.muzzle[1] - 24], [j.muzzle[0] + 30, j.muzzle[1] - 16]))] : []),
+    ...held(part("wood", limb([j.stock[0] + 10, j.stock[1] + 6], [j.muzzle[0] + 30, j.muzzle[1] - 18], 9, 11), line([j.breech[0], j.breech[1] - 10], [j.breech[0] + 2, j.breech[1] + 2]))),
+    ...(loaded ? held(part("jewel", disc([j.muzzle[0] + 26, j.muzzle[1] - 20], 7), line([j.muzzle[0] + 22, j.muzzle[1] - 24], [j.muzzle[0] + 30, j.muzzle[1] - 16]))) : []),
     ...arm(j.shL, j.elbowL, j.handL, "skin"),
     ...alienHead(j.head[0], j.head[1], -1),
   ],
@@ -199,7 +193,6 @@ const ulshae: Figure = (() => {
   return {
     top: 36,
     bottom: 244,
-    gear: ["wood", "glow", "jewel"],
     tint: { ...LOOK, skin: "#a7b8b0", wood: "#5d5236", jewel: "#d8ff6b" },
     parts: [
       part("plate", "M112,92 Q150,70 158,110 Q166,146 132,152 Q116,150 112,128 Z", `${line([132, 84], [138, 148])} ${line([148, 92], [150, 140])}`),
@@ -207,13 +200,13 @@ const ulshae: Figure = (() => {
       part("cloth", "M80,100 Q100,94 122,100 L136,238 L118,230 L104,240 L92,230 L76,240 L64,232 Z", `${line([100, 130], [98, 228])} ${line([86, 130], [78, 228])}`),
       part("armor", pts([84, 98], [118, 96], [116, 150], [88, 150]), `${line([88, 112], [116, 110])} ${line([88, 126], [116, 124])}`),
       part("leather", pts([86, 146], [118, 144], [119, 154], [85, 156])),
-      part("wood", limb([60, 242], [66, 46], 4)),
-      part("jewel", disc([66, 38], 10), line([60, 32], [72, 44])),
-      part("glow", `${disc([52, 26], 2.4)} ${disc([80, 24], 2)}`),
+      ...held(part("wood", limb([60, 242], [66, 46], 4))),
+      ...held(part("jewel", disc([66, 38], 10), line([60, 32], [72, 44]))),
+      ...held(part("glow", `${disc([52, 26], 2.4)} ${disc([80, 24], 2)}`)),
       ...arm(shL, [66, 120], [66, 132], "skin"),
       ...arm(shR, [136, 128], [124, 150], "skin"),
-      part("glow", "M116,150 Q124,140 134,150 Q138,164 126,176 Q118,168 116,150 Z"),
-      part("glow", `${disc([128, 186], 2.6)} ${disc([122, 196], 1.8)}`),
+      ...held(part("glow", "M116,150 Q124,140 134,150 Q138,164 126,176 Q118,168 116,150 Z")),
+      ...held(part("glow", `${disc([128, 186], 2.6)} ${disc([122, 196], 1.8)}`)),
       ...alienHead(100, 76, 0, 0.95),
     ],
   };
@@ -225,7 +218,6 @@ const leaper = (lift: number): Figure => {
   return {
     top: y - 46,
     bottom: 244,
-    gear: [],
     tint: { ...LOOK, skin: "#8eaa8a", plate: "#5a7448" },
     parts: [
       part("skin", `${limb([138, y + 8], [170, y + 30], 16, 9)} ${limb([170, y + 30], [150, Math.min(240, y + 64)], 9, 6)}`),

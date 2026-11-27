@@ -31,15 +31,19 @@ export interface Part {
   d: string;
   /** Lines drawn inside the shape: lacing, plate edges, folds. */
   lines?: string;
+  /**
+   * Gear, not body: what the figure's model counts as gear in its hit shape (anything it holds, such
+   * as weapons, shields and staffs, and a few small pieces such as plumes). The hit zone picture
+   * leaves gear grey.
+   */
+  gear?: boolean;
 }
 
 export interface Figure {
   parts: readonly Part[];
-  /** Top of the head and soles of the feet. The hit band is measured between them. */
+  /** Top of the head and soles of the feet. */
   top: number;
   bottom: number;
-  /** Roles that are gear, not body: never part of the hit zone. */
-  gear: readonly Role[];
   /** How far a flying figure hovers above the ground. */
   hover?: number;
   /** Colours for this figure in place of the palette's: a hair colour, a skin tone, a painted shield. */

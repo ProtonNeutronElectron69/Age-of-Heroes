@@ -165,50 +165,31 @@ const RED: Palette = {
 };
 
 /**
- * The hit zone picture: each figure in greys, with the part an attacker must be
- * able to see in red. `bandFrom` is where the hit band starts, as a share of
- * the figure's height from the ground; gear such as weapons is never red.
+ * The hit zone picture: each figure's body in red, the part of it an attack can hit, and its gear
+ * (what the model counts as gear, such as weapons and shields) in greys, as in games with hit zones.
  */
-export function HitZoneArt({ cast, bandFrom, id }: { cast: readonly Placed[]; bandFrom: number; id: (name: string) => string }): ReactNode {
-  const outline = { stroke: "#24262a", strokeWidth: 1.6, strokeLinejoin: "round" as const };
+export function HitZoneArt({ cast }: { cast: readonly Placed[] }): ReactNode {
   return (
     <Cast
       cast={cast}
-      paint={(figure, n) => {
-        const bandBottom = figure.bottom - (figure.bottom - figure.top) * bandFrom;
-        return (
-          <>
-            <clipPath id={id(`band-${n}`)}>
-              <rect x={-50} y={-50} width={300} height={bandBottom + 50} />
-            </clipPath>
-            <Shapes
-              parts={figure.parts}
-              paint={(part, i) => (
-                <g key={i}>
-                  <path d={part.d} fill={GREY[part.role]} {...outline} />
-                  {part.lines && <path d={part.lines} fill="none" stroke="#24262a" strokeOpacity={0.55} strokeWidth={1} strokeLinecap="round" />}
-                </g>
-              )}
-            />
-            <g clipPath={url(id(`band-${n}`))}>
-              <Shapes
-                parts={figure.parts}
-                paint={(part, i) =>
-                  figure.gear.includes(part.role) ? (
-                    // Gear in front of the body keeps its grey.
-                    <path key={i} d={part.d} fill={GREY[part.role]} {...outline} />
-                  ) : (
-                    <g key={i}>
-                      <path d={part.d} fill={RED[part.role]} stroke="#4a070d" strokeWidth={1.6} strokeLinejoin="round" />
-                      {part.lines && <path d={part.lines} fill="none" stroke="#4a070d" strokeOpacity={0.6} strokeWidth={1} strokeLinecap="round" />}
-                    </g>
-                  )
-                }
-              />
-            </g>
-          </>
-        );
-      }}
+      paint={(figure) => (
+        <Shapes
+          parts={figure.parts}
+          paint={(part, i) =>
+            part.gear ? (
+              <g key={i}>
+                <path d={part.d} fill={GREY[part.role]} stroke="#24262a" strokeWidth={1.6} strokeLinejoin="round" />
+                {part.lines && <path d={part.lines} fill="none" stroke="#24262a" strokeOpacity={0.55} strokeWidth={1} strokeLinecap="round" />}
+              </g>
+            ) : (
+              <g key={i}>
+                <path d={part.d} fill={RED[part.role]} stroke="#4a070d" strokeWidth={1.6} strokeLinejoin="round" />
+                {part.lines && <path d={part.lines} fill="none" stroke="#4a070d" strokeOpacity={0.6} strokeWidth={1} strokeLinecap="round" />}
+              </g>
+            )
+          }
+        />
+      )}
     />
   );
 }

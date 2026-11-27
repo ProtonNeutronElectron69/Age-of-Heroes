@@ -5,6 +5,7 @@ import { HIT_BOX_NUMBERS, bodySamples, decodeHitShape } from "@aoh/rules";
 import { describe, expect, it } from "vitest";
 import { unitModel } from "../src/models";
 import { encodeModel, modelBoxes } from "../src/models/hitShape";
+import { DRAWINGS } from "../src/ui/art/drawings";
 
 /**
  * The hit shapes the rules use (`hitShapes.json` in `@aoh/content`) are made from the detailed
@@ -80,6 +81,21 @@ describe("hit shapes", () => {
           expect(b.centre.y, id).toBeGreaterThan(-0.05);
         }
       }
+    }
+  });
+});
+
+describe("the card's hit zone picture", () => {
+  it("greys gear wherever the unit's model has gear", () => {
+    // The picture is the unit drawing, body red and gear grey; gear is marked part by part to match
+    // the model (see docs/CONTENT.md). A unit whose every pose holds gear draws every figure with some.
+    // Flying units are left out: a flight stand is gear, but the drawings show them hovering without one.
+    for (const card of CARDS) {
+      const poses = HIT_SHAPES.get(card.id);
+      const drawing = DRAWINGS[card.id];
+      if (!poses || !drawing || card.abilities.some((a) => a.id === "flying")) continue;
+      if (!poses.every((shape) => shape.some((b) => b.kind === "gear"))) continue;
+      for (const { figure } of drawing.tall) expect(figure.parts.some((p) => p.gear), `${card.id}: a figure draws no gear`).toBe(true);
     }
   });
 });

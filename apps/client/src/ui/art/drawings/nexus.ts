@@ -1,4 +1,4 @@
-import { arm, belt, disc, leg, limb, line, type P, part, pts, solo, squad, torso } from "../build";
+import { arm, belt, disc, held, leg, limb, line, type P, part, pts, solo, squad, torso } from "../build";
 import type { Drawing, Figure } from "../types";
 
 /** A flat-topped hexagon, for energy shields. */
@@ -9,7 +9,6 @@ const hexagon = (c: P, r: number) =>
 const sentinelK7: Figure = {
   top: 28,
   bottom: 244,
-  gear: ["jewel"],
   parts: [
     ...leg([84, 152], [80, 196], [76, 236], "metal", "armor", { toe: -1, w: 19 }),
     ...leg([116, 152], [120, 196], [124, 236], "metal", "armor", { toe: 1, w: 19 }),
@@ -25,7 +24,7 @@ const sentinelK7: Figure = {
     part("plate", pts([52, 64], [84, 64], [84, 96], [56, 96]), line([54, 78], [84, 78])),
     part("plate", pts([116, 64], [148, 64], [144, 96], [116, 96]), line([116, 78], [146, 78])),
     part("metal", disc([50, 132], 8.5)),
-    part("jewel", hexagon([36, 128], 33), hexagon([36, 128], 23)),
+    ...held(part("jewel", hexagon([36, 128], 33), hexagon([36, 128], 23))),
     part("metal", limb([110, 46], [115, 28], 2.4)),
     part("glow", disc([115.4, 27], 2.8)),
     part("helmet", pts([85, 44], [115, 44], [118, 68], [82, 68])),
@@ -55,7 +54,6 @@ const breacherCharging: Figure = (() => {
   return {
     top: 47,
     bottom: 244,
-    gear: [],
     parts: [
       part("metal", pts([114, 84], [133, 82], [136, 121], [117, 123]), line([118, 96], [134, 94])),
       part("glow", pts([126, 100], [131, 99.5], [132, 114], [127, 114.5])),
@@ -82,7 +80,6 @@ const breacherReady: Figure = (() => {
   return {
     top: 45,
     bottom: 244,
-    gear: [],
     parts: [
       ...leg(hipL, [85, 194], [82, 238], "cloth", "plate", { toe: -1, w: 13 }),
       ...leg(hipR, [115, 194], [118, 238], "cloth", "plate", { toe: 1, w: 13 }),
@@ -109,7 +106,6 @@ const proxima: Figure = (() => {
   return {
     top: 49,
     bottom: 244,
-    gear: ["glow", "sash", "blade"],
     parts: [
       part("sash", "M112,82 Q140,78 168,96 Q150,92 134,96 Q150,104 160,120 Q140,104 114,94 Z"),
       ...arm(shR, [137, 82], [147, 62], "metal", { hand: "metal", w: 8 }),
@@ -121,8 +117,7 @@ const proxima: Figure = (() => {
       part("plate", pts([108, 80], [126, 82], [126, 98], [110, 96])),
       ...arm(shL, [73, 96], [54, 98], "metal", { hand: "metal", w: 8 }),
       part("plate", pts([84, 84], [102, 82], [100, 98], [82, 100])),
-      part("metal", disc([52, 98], 6.5)),
-      part("glow", limb([48, 97.4], [2, 90], 4, 1.2)),
+      ...held(part("metal", disc([52, 98], 6.5)), part("glow", limb([48, 97.4], [2, 90], 4, 1.2))),
       part("helmet", "M90,62 Q90,48 104,48 Q118,49 117,64 Q116,76 103,76 Q91,75 90,62 Z"),
       part("glow", pts([90, 59], [106, 59], [106, 64.5], [90.5, 64.5])),
       part("plate", "M110,50 Q124,40 134,44 Q124,48 116,58 Z"),
@@ -142,7 +137,6 @@ const drone = (eye: number): Figure => {
     top: 118,
     bottom: 188,
     hover: 56,
-    gear: ["jewel"],
     parts: [
       ...rotor(66),
       ...rotor(134),
@@ -159,10 +153,11 @@ const drone = (eye: number): Figure => {
 };
 
 /** A Reclaimer's carbine from stock to muzzle, with its lit cell. */
-const carbine = (stock: P, muzzle: P) => [
-  part("metal", limb(stock, muzzle, 6.4, 4.4)),
-  part("glow", limb([stock[0] + (muzzle[0] - stock[0]) * 0.38, stock[1] + (muzzle[1] - stock[1]) * 0.38], [stock[0] + (muzzle[0] - stock[0]) * 0.62, stock[1] + (muzzle[1] - stock[1]) * 0.62], 2.6)),
-];
+const carbine = (stock: P, muzzle: P) =>
+  held(
+    part("metal", limb(stock, muzzle, 6.4, 4.4)),
+    part("glow", limb([stock[0] + (muzzle[0] - stock[0]) * 0.38, stock[1] + (muzzle[1] - stock[1]) * 0.38], [stock[0] + (muzzle[0] - stock[0]) * 0.62, stock[1] + (muzzle[1] - stock[1]) * 0.62], 2.6)),
+  );
 
 /** A Reclaimer taking aim to the left. */
 const reclaimerAiming: Figure = (() => {
@@ -173,7 +168,6 @@ const reclaimerAiming: Figure = (() => {
   return {
     top: 47,
     bottom: 244,
-    gear: ["blade"],
     parts: [
       part("metal", pts([114, 86], [131, 84], [134, 120], [117, 122]), line([117, 98], [132, 96])),
       ...leg(hipL, [84, 194], [76, 238], "cloth", "plate", { toe: -1, w: 13 }),
@@ -198,7 +192,6 @@ const reclaimerAdvancing: Figure = (() => {
   return {
     top: 45,
     bottom: 244,
-    gear: ["blade"],
     parts: [
       ...leg(hipL, [84, 194], [78, 238], "cloth", "plate", { toe: -1, w: 13 }),
       ...leg(hipR, [116, 194], [122, 238], "cloth", "plate", { toe: 1, w: 13 }),
@@ -216,10 +209,10 @@ const reclaimerAdvancing: Figure = (() => {
 })();
 
 /** A sidearm pointing left from a hand. */
-const sidearm = (hand: P) => part("metal", pts([hand[0] - 26, hand[1] - 5], [hand[0] + 2, hand[1] - 5], [hand[0] + 2, hand[1] + 1], [hand[0] - 3, hand[1] + 1], [hand[0] - 4, hand[1] + 9], [hand[0] - 9, hand[1] + 9], [hand[0] - 8, hand[1] + 1], [hand[0] - 26, hand[1]]));
+const sidearm = (hand: P) => ({ ...part("metal", pts([hand[0] - 26, hand[1] - 5], [hand[0] + 2, hand[1] - 5], [hand[0] + 2, hand[1] + 1], [hand[0] - 3, hand[1] + 1], [hand[0] - 4, hand[1] + 9], [hand[0] - 9, hand[1] + 9], [hand[0] - 8, hand[1] + 1], [hand[0] - 26, hand[1]])), gear: true });
 
 /** A jet's flame under a nozzle. */
-const jetFlame = (x: number, y: number) => part("glow", pts([x - 7, y], [x + 7, y], [x + 4, y + 16], [x + 1, y + 9], [x - 1, y + 26], [x - 4, y + 12], [x - 6, y + 18]));
+const jetFlame = (x: number, y: number) => ({ ...part("glow", pts([x - 7, y], [x + 7, y], [x + 4, y + 16], [x + 1, y + 9], [x - 1, y + 26], [x - 4, y + 12], [x - 6, y + 18])), gear: true });
 
 /** A Skyhook Raider swooping, sidearm levelled. */
 const raiderSwooping: Figure = (() => {
@@ -231,7 +224,6 @@ const raiderSwooping: Figure = (() => {
     top: 49,
     bottom: 220,
     hover: 24,
-    gear: ["glow"],
     parts: [
       part("metal", pts([112, 82], [136, 80], [140, 130], [116, 132]), `${line([116, 96], [137, 94])} ${line([117, 116], [139, 114])}`),
       jetFlame(128, 132),
@@ -258,7 +250,6 @@ const raiderHovering: Figure = (() => {
     top: 47,
     bottom: 232,
     hover: 12,
-    gear: ["glow"],
     parts: [
       part("metal", pts([62, 68], [80, 68], [80, 110], [64, 110]), line([63, 82], [80, 82])),
       part("metal", pts([120, 68], [138, 68], [136, 110], [120, 110]), line([120, 82], [137, 82])),
@@ -287,10 +278,9 @@ const hunter = (raise: number): Figure => {
   return {
     top: 62,
     bottom: 244,
-    gear: ["blade"],
     parts: [
       part("metal", `${limb(shR, [142, 114], 7, 6)} ${limb([142, 114], handR, 6, 5)}`),
-      part("blade", pts([130, 134], [138, 136], [124, 176])),
+      ...held(part("blade", pts([130, 134], [138, 136], [124, 176]))),
       part("metal", `${limb([120, 152], [136, 188], 9, 7)} ${limb([136, 188], [124, 216], 7, 6)} ${limb([124, 216], [140, 240], 6, 5)}`),
       part("armor", pts([132, 238], [150, 238], [154, 244], [128, 244])),
       part("metal", `${limb([104, 152], [88, 186], 9, 7)} ${limb([88, 186], [100, 214], 7, 6)} ${limb([100, 214], [84, 240], 6, 5)}`),
@@ -300,7 +290,7 @@ const hunter = (raise: number): Figure => {
       part("glow", disc([109, 109], 5)),
       part("plate", pts([110, 84], [130, 86], [130, 102], [112, 100])),
       part("metal", `${limb(shL, [76, 118 - raise * 0.4], 7, 6)} ${limb([76, 118 - raise * 0.4], handL, 6, 5)}`),
-      part("blade", pts([58, 104 - raise], [54, 112 - raise], [18, 92 - raise * 1.8])),
+      ...held(part("blade", pts([58, 104 - raise], [54, 112 - raise], [18, 92 - raise * 1.8]))),
       part("plate", pts([84, 90], [104, 88], [102, 104], [82, 106])),
       part("metal", limb([104, 90], [98, 82], 5)),
       part("helmet", "M80,74 Q84,60 100,62 Q112,66 110,78 Q106,88 92,86 Q82,84 80,74 Z"),
@@ -314,10 +304,9 @@ const hunter = (raise: number): Figure => {
 const atlas: Figure = {
   top: 4,
   bottom: 244,
-  gear: ["jewel"],
   parts: [
     part("metal", `${limb([62, 56], [58, 32], 9)} ${limb([82, 56], [80, 38], 8)}`),
-    part("jewel", "M52,30 q-8,-10 2,-16 q4,-10 16,-4 q10,-2 10,8 q6,8 -4,14 q-12,6 -24,-2 Z"),
+    ...held(part("jewel", "M52,30 q-8,-10 2,-16 q4,-10 16,-4 q10,-2 10,8 q6,8 -4,14 q-12,6 -24,-2 Z")),
     part("metal", `${limb([70, 150], [52, 190], 24, 19)}`),
     part("armor", `${limb([52, 190], [60, 230], 19, 24)}`),
     part("metal", pts([38, 228], [82, 228], [88, 244], [32, 244]), line([48, 236], [78, 236])),

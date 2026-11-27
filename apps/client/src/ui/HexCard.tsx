@@ -1,4 +1,4 @@
-import { HIT_BAND_FROM, type UnitCard } from "@aoh/rules";
+import type { UnitCard } from "@aoh/rules";
 import { type CSSProperties, type ReactNode, type RefObject, useId, useLayoutEffect, useRef } from "react";
 import { factionTheme, type FactionTheme } from "./factionThemes";
 import { castBounds, DRAWINGS } from "./art/drawings";
@@ -362,7 +362,7 @@ export function HexCard({ card, ownerColor, wounds = 0 }: Props) {
                 {figure && hitBox && (
                   <g clipPath={url("hit")}>
                     <g transform={`translate(${HIT_ZONE.cx - (hitBox.x + hitBox.width / 2) * hitScale},${HIT_ZONE.cy - (hitBox.y + hitBox.height / 2) * hitScale}) scale(${hitScale})`}>
-                      <HitZoneArt cast={figure.tall} bandFrom={HIT_BAND_FROM} id={id} />
+                      <HitZoneArt cast={figure.tall} />
                     </g>
                   </g>
                 )}

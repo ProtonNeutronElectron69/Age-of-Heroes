@@ -1,11 +1,10 @@
-import { type AimStance, arm, belt, disc, head, KNEELING_AIM, leg, limb, line, type P, part, pts, solo, squad, STANDING_AIM, torso } from "../build";
+import { type AimStance, arm, belt, disc, head, held, KNEELING_AIM, leg, limb, line, type P, part, pts, solo, squad, STANDING_AIM, torso } from "../build";
 import type { Drawing, Figure } from "../types";
 
 /** Lady Asagiri the Unbowed: a samurai in full armour, sword raised at her shoulder. */
 const ladyAsagiri: Figure = {
   top: 25,
   bottom: 244,
-  gear: ["blade", "hilt", "crest", "jewel", "hair"],
   parts: [
     { role: "hair", d: "M110,44 C134,44 152,62 158,96 C147,80 132,72 113,68 Z", lines: "M118,54 C134,58 146,70 152,84" },
     // Legs: wide stance.
@@ -26,9 +25,9 @@ const ladyAsagiri: Figure = {
     // The far arm, then the sword in front of it.
     { role: "cloth", d: "M131,88 L144,95 L135,113 L123,108 Z" },
     { role: "plate", d: "M114,60 L140,62 L145,97 L116,93 Z", lines: "M115,71 L142,73 M116,82 L144,85" },
-    { role: "blade", d: "M126.5,92.5 Q146,56 167,6 L171,9 Q152,60 132.5,96 Z", lines: "M130,93 Q149,57 169,8" },
-    { role: "hilt", d: "M120.5,90 L138.5,97 L137,101 L119,94 Z" },
-    { role: "hilt", d: "M115,121 L122,123.5 L132,99 L125.5,96.5 Z", lines: "M118,114 L124,117 M121,107 L127,110" },
+    { role: "blade", gear: true, d: "M126.5,92.5 Q146,56 167,6 L171,9 Q152,60 132.5,96 Z", lines: "M130,93 Q149,57 169,8" },
+    { role: "hilt", gear: true, d: "M120.5,90 L138.5,97 L137,101 L119,94 Z" },
+    { role: "hilt", gear: true, d: "M115,121 L122,123.5 L132,99 L125.5,96.5 Z", lines: "M118,114 L124,117 M121,107 L127,110" },
     // The near arm across the chest.
     { role: "cloth", d: "M65,93 L77,88 L121,98 L120,112 L70,110 Z", lines: "M84,91 L82,110 M98,94 L97,111" },
     { role: "skin", d: "M117,103 a5.5,5.5 0 1 0 11,0 a5.5,5.5 0 1 0 -11,0 Z" },
@@ -54,7 +53,6 @@ const ladySuzume: Figure = (() => {
   return {
     top: 47,
     bottom: 244,
-    gear: ["wood", "blade", "leather", "sash"],
     tint: { cloth: "#27304f" },
     parts: [
       part("hair", "M110,54 C134,58 150,84 152,124 C142,104 130,92 114,84 Z", "M118,64 C132,74 142,92 146,108"),
@@ -66,9 +64,11 @@ const ladySuzume: Figure = (() => {
       part("plate", pts([90, 90], [106, 92], [104, 122], [88, 118]), line([89, 104], [105, 107])),
       belt(hipL, hipR),
       ...arm(shR, [146, 86], [125, 93], "armor"),
-      part("wood", "M63,20 Q30,104 61,198 L64,196.5 Q38,104 66,22 Z", "M64.5,21 L125,93 L62.5,197"),
-      part("wood", limb([125, 92.4], [38, 98.6], 2.2)),
-      part("blade", pts([25, 99.6], [39, 94.6], [39, 102.6])),
+      ...held(
+        part("wood", "M63,20 Q30,104 61,198 L64,196.5 Q38,104 66,22 Z", "M64.5,21 L125,93 L62.5,197"),
+        part("wood", limb([125, 92.4], [38, 98.6], 2.2)),
+        part("blade", pts([25, 99.6], [39, 94.6], [39, 102.6])),
+      ),
       ...arm(shL, [76, 96], [57, 99], "armor"),
       head([104, 62], -1),
       part("hair", "M94,56 Q98,46 108,48 Q117,51 115,64 Q110,56 102,56 Z"),
@@ -101,18 +101,16 @@ const lotusGuardWatching: Figure = (() => {
   return {
     top: 39,
     bottom: 244,
-    gear: ["wood", "blade", "hilt"],
     parts: [
-      part("hilt", limb([86, 142], [50, 178], 4.6)),
+      ...held(part("hilt", limb([86, 142], [50, 178], 4.6))),
       ...leg(hipL, [86, 194], [83, 238], "cloth", "plate", { toe: -1, boot: "boot" }),
       ...leg(hipR, [114, 194], [117, 238], "cloth", "plate", { toe: 1, boot: "boot" }),
       torso(shL, shR, hipL, hipR, "armor", `${line([92, 88], [91, 138])} ${line([100, 88], [100, 138])} ${line([108, 88], [109, 138])} ${line([81, 104], [119, 104])} ${line([80, 120], [120, 120])}`),
       belt(hipL, hipR),
-      part("wood", limb([133, 240], [118, 26], 3.6)),
-      part("blade", pts([117, 4], [123.5, 27], [112.5, 27.8])),
+      ...held(part("wood", limb([133, 240], [118, 26], 3.6)), part("blade", pts([117, 4], [123.5, 27], [112.5, 27.8]))),
       ...arm(shR, [132, 108], [126, 128], "cloth"),
       ...arm(shL, [70, 112], [84, 138], "cloth"),
-      part("hilt", limb([92, 136], [78, 150], 4.2)),
+      ...held(part("hilt", limb([92, 136], [78, 150], 4.2))),
       ...guardPlates(shL, shR, hipL, hipR),
       head([100, 60]),
       ...warHat(100, 58),
@@ -129,7 +127,6 @@ const lotusGuardStriking: Figure = (() => {
   return {
     top: 41,
     bottom: 244,
-    gear: ["blade", "hilt"],
     tint: { skin: "#d9a97f" },
     parts: [
       ...arm(shR, [128, 60], [112, 38], "cloth"),
@@ -140,8 +137,7 @@ const lotusGuardStriking: Figure = (() => {
       ...guardPlates(shL, shR, hipL, hipR),
       head([103, 63], -1),
       ...warHat(103, 61),
-      part("blade", "M108,34 Q134,14 164,6 L165,10 Q136,19 111,38 Z", "M110,35 Q136,16 164,8"),
-      part("hilt", limb([104, 30], [114, 42], 4.2)),
+      ...held(part("blade", "M108,34 Q134,14 164,6 L165,10 Q136,19 111,38 Z", "M110,35 Q136,16 164,8"), part("hilt", limb([104, 30], [114, 42], 4.2))),
       ...arm(shL, [82, 62], [106, 38], "cloth"),
     ],
   };
@@ -159,7 +155,6 @@ const kenzo: Figure = (() => {
   return {
     top: 37,
     bottom: 244,
-    gear: ["wood", "glow", "boot"],
     tint: { wood: STRAW, skin: "#d9a97f" },
     parts: [
       part("leather", pts([84, 236], [98, 236], [98, 244], [78, 244])),
@@ -167,11 +162,13 @@ const kenzo: Figure = (() => {
       part("armor", pts([81, 85], [119, 85], [128, 238], [72, 238]), `${line([100, 150], [100, 236])} ${line([88, 150], [83, 236])} ${line([112, 150], [117, 236])}`),
       part("cloth", pts([80, 86], [96, 85], [124, 150], [121, 164], [106, 150], [76, 100])),
       belt([88, 146], [112, 146], "cloth"),
-      part("hilt", limb([135, 241], [130, 26], 3.8)),
-      part("hilt", limb([130, 28], [153, 30], 2.6)),
-      part("boot", pts([144, 32], [160, 32], [158, 37], [146, 37])),
-      part("glow", pts([144, 37], [160, 37], [163, 62], [141, 62]), `${line([143.5, 45], [160.5, 45])} ${line([142.5, 54], [161.5, 54])}`),
-      part("boot", pts([145, 62], [159, 62], [157, 67], [147, 67])),
+      ...held(
+        part("hilt", limb([135, 241], [130, 26], 3.8)),
+        part("hilt", limb([130, 28], [153, 30], 2.6)),
+        part("boot", pts([144, 32], [160, 32], [158, 37], [146, 37])),
+        part("glow", pts([144, 37], [160, 37], [163, 62], [141, 62]), `${line([143.5, 45], [160.5, 45])} ${line([142.5, 54], [161.5, 54])}`),
+        part("boot", pts([145, 62], [159, 62], [157, 67], [147, 67])),
+      ),
       ...arm(shR, [131, 110], [134, 128], "armor"),
       ...arm(shL, [72, 110], [96, 108], "armor"),
       part("skin", pts([93, 92], [99, 92], [99, 110], [93, 110])),
@@ -193,17 +190,15 @@ const roninDrawing: Figure = (() => {
   return {
     top: 46,
     bottom: 244,
-    gear: ["wood", "blade", "hilt"],
     tint: RONIN_TINT,
     parts: [
-      part("hilt", limb([100, 144], [146, 166], 4.6)),
+      ...held(part("hilt", limb([100, 144], [146, 166], 4.6))),
       ...leg(hipR, [128, 198], [140, 238], "cloth", "cloth", { toe: 1, w: 17, boot: "leather" }),
       ...leg(hipL, [80, 196], [68, 238], "cloth", "cloth", { toe: -1, w: 17, boot: "leather" }),
       torso(shL, shR, hipL, hipR, "armor", `${line([98, 96], [108, 124], [114, 94])} ${line([108, 124], [108, 146])}`),
       belt(hipL, hipR),
       ...arm(shL, [86, 122], [104, 146], "armor"),
-      part("hilt", limb([100, 144], [76, 132], 4)),
-      part("crest", limb([97, 139], [101, 149], 3.4)),
+      ...held(part("hilt", limb([100, 144], [76, 132], 4)), part("crest", limb([97, 139], [101, 149], 3.4))),
       ...arm(shR, [114, 124], [84, 136], "armor"),
       head([104, 72], -1),
       strawHat(104, 69),
@@ -220,17 +215,15 @@ const roninWaiting: Figure = (() => {
   return {
     top: 36,
     bottom: 244,
-    gear: ["wood", "blade", "hilt"],
     tint: { ...RONIN_TINT, skin: "#d9a97f", armor: "#4a3f3a" },
     parts: [
-      part("hilt", limb([88, 144], [56, 176], 4.6)),
+      ...held(part("hilt", limb([88, 144], [56, 176], 4.6))),
       ...leg(hipL, [85, 194], [82, 238], "cloth", "cloth", { toe: -1, w: 17, boot: "leather" }),
       ...leg(hipR, [115, 194], [118, 238], "cloth", "cloth", { toe: 1, w: 17, boot: "leather" }),
       torso(shL, shR, hipL, hipR, "armor", `${line([90, 86], [102, 118], [110, 86])} ${line([102, 118], [101, 138])}`),
       belt(hipL, hipR),
       ...arm(shL, [72, 112], [84, 136], "armor"),
-      part("blade", "M127,141 L131.5,139 Q150,176 163,216 L158.5,216 Q146,178 127,141 Z", "M129.5,141 Q148,177 161,215"),
-      part("crest", limb([124, 138], [134, 143], 3.4)),
+      ...held(part("blade", "M127,141 L131.5,139 Q150,176 163,216 L158.5,216 Q146,178 127,141 Z", "M129.5,141 Q148,177 161,215"), part("crest", limb([124, 138], [134, 143], 3.4))),
       ...arm(shR, [130, 112], [128, 134], "armor"),
       head([100, 60]),
       strawHat(100, 57),
@@ -242,7 +235,6 @@ const roninWaiting: Figure = (() => {
 const teppoGunner = (j: AimStance, skin?: string): Figure => ({
   top: j.head[1] - 23,
   bottom: 244,
-  gear: ["wood", "glow", "leather"],
   tint: skin ? { skin } : {},
   parts: [
     part("leather", pts([j.hipR[0] - 2, j.hipR[1] - 8], [j.hipR[0] + 12, j.hipR[1] - 10], [j.hipR[0] + 18, j.hipR[1] + 18], [j.hipR[0] + 4, j.hipR[1] + 20])),
@@ -258,9 +250,7 @@ const teppoGunner = (j: AimStance, skin?: string): Figure => ({
     ),
     belt(j.hipL, j.hipR),
     ...arm(j.shR, j.elbowR, j.handR, "cloth"),
-    part("wood", limb(j.stock, j.grip, 6.6, 4.8)),
-    part("metal", limb(j.breech, j.muzzle, 3.4)),
-    part("glow", disc([j.breech[0] + 6, j.breech[1] - 5], 2.6)),
+    ...held(part("wood", limb(j.stock, j.grip, 6.6, 4.8)), part("metal", limb(j.breech, j.muzzle, 3.4)), part("glow", disc([j.breech[0] + 6, j.breech[1] - 5], 2.6))),
     ...arm(j.shL, j.elbowL, j.handL, "cloth"),
     head(j.head, -1),
     ...warHat(j.head[0] + 1, j.head[1] - 2),
@@ -278,13 +268,11 @@ const ashfangOni: Figure = (() => {
   return {
     top: 30,
     bottom: 244,
-    gear: ["hilt", "jewel"],
     tint: { skin: ONI_RED, cape: "#d9a441" },
     parts: [
       part("hair", pts([84, 50], [116, 50], [126, 92], [74, 92])),
       ...arm(shR, [150, 96], [152, 66], "skin", { w: 16 }),
-      part("hilt", limb([150, 74], [166, 2], 9, 17)),
-      part("jewel", `${disc([160, 40], 2.4)} ${disc([166, 22], 2.4)} ${disc([158, 20], 2.4)} ${disc([153, 54], 2.2)}`),
+      ...held(part("hilt", limb([150, 74], [166, 2], 9, 17)), part("jewel", `${disc([160, 40], 2.4)} ${disc([166, 22], 2.4)} ${disc([158, 20], 2.4)} ${disc([153, 54], 2.2)}`)),
       ...leg(hipL, [78, 198], [72, 238], "skin", "skin", { toe: -1, w: 19 }),
       ...leg(hipR, [122, 198], [128, 238], "skin", "skin", { toe: 1, w: 19 }),
       part("skin", pts([68, 88], [132, 88], [122, 152], [78, 152]), `${line([100, 98], [100, 142])} ${line([82, 114], [100, 122], [118, 114])}`),
@@ -311,7 +299,7 @@ const wrappedHead = (x: number, y: number, look: number) => [
 ];
 
 /** A throwing star. */
-const star = (c: P, r: number) => part("blade", pts([c[0], c[1] - r], [c[0] + r * 0.3, c[1] - r * 0.3], [c[0] + r, c[1]], [c[0] + r * 0.3, c[1] + r * 0.3], [c[0], c[1] + r], [c[0] - r * 0.3, c[1] + r * 0.3], [c[0] - r, c[1]], [c[0] - r * 0.3, c[1] - r * 0.3]));
+const star = (c: P, r: number) => ({ ...part("blade", pts([c[0], c[1] - r], [c[0] + r * 0.3, c[1] - r * 0.3], [c[0] + r, c[1]], [c[0] + r * 0.3, c[1] + r * 0.3], [c[0], c[1] + r], [c[0] - r * 0.3, c[1] + r * 0.3], [c[0] - r, c[1]], [c[0] - r * 0.3, c[1] - r * 0.3])), gear: true });
 
 /** A Shinobi crouched low, a star just loosed and a knife held back. */
 const shinobiThrowing: Figure = (() => {
@@ -322,11 +310,10 @@ const shinobiThrowing: Figure = (() => {
   return {
     top: 94,
     bottom: 244,
-    gear: ["blade", "sash"],
     tint: SHINOBI,
     parts: [
       ...arm(shR, [136, 138], [150, 124], "armor", { hand: "cloth" }),
-      part("blade", pts([148, 122], [164, 104], [153, 126])),
+      ...held(part("blade", pts([148, 122], [164, 104], [153, 126]))),
       ...leg(hipR, [134, 204], [146, 238], "cloth", "cloth", { toe: 1, w: 12, boot: "boot" }),
       ...leg(hipL, [80, 200], [72, 238], "cloth", "cloth", { toe: -1, w: 12, boot: "boot" }),
       torso(shL, shR, hipL, hipR, "armor", line([100, 130], [110, 150], [112, 128])),
@@ -347,17 +334,16 @@ const shinobiBlowpipe: Figure = (() => {
   return {
     top: 72,
     bottom: 244,
-    gear: ["wood", "sash", "blade"],
     tint: { ...SHINOBI, skin: "#d9a97f" },
     parts: [
       ...leg(hipR, [118, 202], [122, 238], "cloth", "cloth", { toe: 1, w: 12, boot: "boot" }),
       ...leg(hipL, [88, 202], [84, 238], "cloth", "cloth", { toe: -1, w: 12, boot: "boot" }),
       torso(shL, shR, hipL, hipR, "armor", line([98, 108], [106, 130], [112, 106])),
       belt(hipL, hipR),
-      part("hilt", limb([112, 160], [136, 186], 4)),
+      ...held(part("hilt", limb([112, 160], [136, 186], 4))),
       ...arm(shR, [118, 96], [98, 84], "armor", { hand: "cloth" }),
       ...wrappedHead(104, 84, -1),
-      part("wood", limb([98, 85], [30, 66], 3.2)),
+      ...held(part("wood", limb([98, 85], [30, 66], 3.2))),
       ...arm(shL, [80, 96], [78, 80], "armor", { hand: "cloth" }),
     ],
   };
