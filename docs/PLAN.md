@@ -397,4 +397,3 @@ The owner asked for a map close to hexagonal, for 4 to 6 players, not symmetric,
 - [x] Six regions round a central plateau: the Crown (rock at 6, sheer sides, a ramp, an overhanging rim and cover walls on top); Ember Reach (an ash basin with lava runs, basalt spires and a stone arch); the Sunken Fen (water, swamp, forest islands and a raised road); the Thornwood (forested hills); Frostfang (a snow mountain to 10 with a sheer north face, an overhanging snow ledge, and an ice tunnel through it); the Kingsroad (open grass, a road and a ruined keep); and the Gorge (a plateau at 6 split by a river gorge under a high bridge)
 - [x] Three bridges (Crown to Frostfang, over the gorge, and the arch), all held at both ends; every start zone and the summits can be reached on foot climbing 2 levels at a time
 - [x] Laid out in code like Riverbend, checked with `buildBoard`, with a menu picture (`.m-shattered-crown`)
-
