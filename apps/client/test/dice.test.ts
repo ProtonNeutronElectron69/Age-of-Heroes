@@ -177,16 +177,35 @@ describe("the d20", () => {
     }
   });
 
-  it("is thrown around the dice already lying in the tray, which do not move", () => {
+  it("is thrown in among the dice already lying in the tray, which it can push but never turn over", () => {
     const tray = trayFor(6);
-    for (let seed = 1; seed <= 8; seed++) {
+    let pushed = 0;
+    for (let seed = 1; seed <= 20; seed++) {
       const first = throwD20s([{ value: 12, from: -1 }, { value: 5, from: 1 }], tray, seed);
       const lying = first.dice.map(restingOf);
-      const second = throwD20s([{ value: 20, from: -1 }], tray, seed + 100, lying);
-      const die = second.dice[0]!;
-      const rest = at(die, second.frameCount - 1);
-      expect(shownBy(rest.q.clone().multiply(die.remap)).value).toBe(20);
-      for (const l of lying) expect(rest.x.distanceTo(l.at)).toBeGreaterThan(D20_RADIUS * 1.5);
+      const second = throwD20s([{ value: 20, from: -1 }, { value: 9, from: 1 }], tray, seed + 100, lying);
+      expect(second.lying).toHaveLength(2);
+      const end = second.frameCount - 1;
+      const thrown = second.dice.map((d) => at(d, end));
+      second.dice.forEach((d, i) => expect(shownBy(thrown[i]!.q.clone().multiply(d.remap)).value).toBe([20, 9][i]));
+      second.lying.forEach((frames, i) => {
+        const was = first.dice[i]!;
+        const moved: PlayedDie = { frames, thrown: 0, landed: 0, remap: was.remap };
+        expect(frames.length / 7).toBe(second.frameCount);
+        // It starts where it lay, and whatever knocks it, its number stays on top, flat and in the tray.
+        expect(at(moved, 0).x.distanceTo(lying[i]!.at)).toBeLessThan(1e-3);
+        const rest = at(moved, end);
+        const shown = shownBy(rest.q.clone().multiply(was.remap));
+        expect(shown.value).toBe(was.value);
+        expect(shown.flat).toBeGreaterThan(0.98);
+        expect(Math.abs(rest.x.x)).toBeLessThan(tray.halfX);
+        expect(Math.abs(rest.x.z)).toBeLessThan(tray.halfZ);
+        if (rest.x.distanceTo(lying[i]!.at) > 0.05) pushed++;
+        // Every die ends apart from the others.
+        for (const t of thrown) expect(rest.x.distanceTo(t.x)).toBeGreaterThan(D20_RADIUS * 1.5);
+      });
     }
+    // Some of the dice lying there were pushed about.
+    expect(pushed).toBeGreaterThan(2);
   });
 });

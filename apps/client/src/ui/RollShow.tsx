@@ -7,7 +7,7 @@ import { useReducedMotion } from "../motion";
 import { playSound } from "../sfx";
 import { CardFigure } from "../scene/Figures";
 import { CastShadows, CubeDie, D20Die, FELT_HEIGHT, FrameView, ThrownDice, TraySet, WALL_THICK } from "../scene/DiceTray";
-import { restingOf, throwD20s, throwDice, trayFor, type D20Throw } from "../scene/diceRoll";
+import { restingOf, throwD20s, throwDice, trayFor, type PlayedDie } from "../scene/diceRoll";
 import type { DiceShow } from "../settings";
 import { HexCard } from "./HexCard";
 
@@ -205,11 +205,19 @@ function rollSeed(roll: AttackRoll, index: number): number {
   return h >>> 0;
 }
 
-/** One throw of initiative d20s: which players' dice, at which of their rolls, and how they fall. */
+/**
+ * One throw of initiative d20s: the dice thrown, at which of their players' rolls, and the dice
+ * already lying in the tray, which the throw may push about. A throw draws every die in it until a
+ * later throw takes that die over.
+ */
 interface D20Toss {
-  readonly players: readonly number[];
+  /** The player of each die: first the `thrown` dice, then those that were lying in the tray. */
+  readonly owners: readonly number[];
+  readonly thrown: number;
+  /** Which of its player's rolls each thrown die shows. */
   readonly stages: readonly number[];
-  readonly roll: D20Throw;
+  readonly dice: readonly PlayedDie[];
+  readonly frameCount: number;
   /** Shown at its end at once (a skip). */
   readonly still: boolean;
 }
@@ -220,8 +228,8 @@ interface D20Toss {
  * land on the values the rules rolled; a tie throws the tied dice again.
  *
  * One throw is in the tray at a time: a die rolled while others are still tumbling waits for them
- * to settle, then is thrown around the dice already lying there. A skip throws every die again at
- * once, shown already landed.
+ * to settle, then is thrown in among the dice already lying there, which it can knock about
+ * without turning any onto another number. A skip throws every die again at once, shown already landed.
  *
  * Where players roll for themselves (online games, `onRoll`), the rules make no
  * roll until every player has clicked: until then `event` is null and the dice
@@ -268,15 +276,16 @@ export function InitiativeShow({
   const finished = (i: number) => stage[i] === rolls[i]!.values.length - 1 && landed(i);
   const allDone = event !== null && rolls.every((_, i) => finished(i));
   const latest = tosses.at(-1);
-  const flying = latest !== undefined && latest.players.some((p, k) => landedStage[p]! < latest.stages[k]!);
+  const flying = latest !== undefined && latest.stages.some((stage, k) => landedStage[latest.owners[k]!]! < stage);
 
-  /** The next throw of these players' dice, around the dice lying in the tray from earlier throws. */
+  /** The next throw of these players' dice, in among the dice lying in the tray from earlier throws. */
   const toss = (earlier: readonly D20Toss[], who: readonly number[], stages: readonly number[], still: boolean): D20Toss => {
-    const lying = rolls.flatMap((_, i) => {
+    // Each other player's die as the latest throw left it.
+    const lying = rolls.flatMap((_, i): { player: number; die: PlayedDie }[] => {
       if (who.includes(i)) return [];
       for (let t = earlier.length - 1; t >= 0; t--) {
-        const k = earlier[t]!.players.indexOf(i);
-        if (k >= 0) return [restingOf(earlier[t]!.roll.dice[k]!)];
+        const k = earlier[t]!.owners.indexOf(i);
+        if (k >= 0) return [{ player: i, die: earlier[t]!.dice[k]! }];
       }
       return [];
     });
@@ -284,7 +293,16 @@ export function InitiativeShow({
     // Seeded from the rolls, so every player online sees the same throws.
     let seed = 2166136261 + earlier.length;
     for (const n of [...who, ...stages, ...dice.map((d) => d.value)]) seed = Math.imul(seed ^ n, 16777619);
-    return { players: who, stages, roll: throwD20s(dice, tray, seed >>> 0, lying), still };
+    const roll = throwD20s(dice, tray, seed >>> 0, lying.map((l) => restingOf(l.die)));
+    return {
+      owners: [...who, ...lying.map((l) => l.player)],
+      thrown: who.length,
+      stages,
+      // A lying die keeps the drawing's turn from the throw that threw it, so it shows the same number.
+      dice: [...roll.dice, ...lying.map((l, n) => ({ frames: roll.lying[n]!, thrown: 0, landed: 0, remap: l.die.remap }))],
+      frameCount: roll.frameCount,
+      still,
+    };
   };
 
   // Hot-seat: the rules have rolled already, and other devices' players (if any) roll by themselves.
@@ -302,8 +320,8 @@ export function InitiativeShow({
     if (flying || skipped || !event) return;
     const thrownStage = (i: number) => {
       for (let t = tosses.length - 1; t >= 0; t--) {
-        const k = tosses[t]!.players.indexOf(i);
-        if (k >= 0) return tosses[t]!.stages[k]!;
+        const k = tosses[t]!.owners.indexOf(i);
+        if (k >= 0 && k < tosses[t]!.thrown) return tosses[t]!.stages[k]!;
       }
       return -1;
     };
@@ -331,9 +349,12 @@ export function InitiativeShow({
     setLandedStage(last);
     setTosses((t) => [...t, toss([], rolls.map((_, i) => i), last, true)]);
   };
-  const land = (t: D20Toss, k: number) => setLandedStage((l) => l.map((x, j) => (j === t.players[k] ? Math.max(x, t.stages[k]!) : x)));
+  // Only thrown dice land; dice that were lying in the tray had landed already.
+  const land = (t: D20Toss, k: number) => {
+    if (k < t.thrown) setLandedStage((l) => l.map((x, j) => (j === t.owners[k] ? Math.max(x, t.stages[k]!) : x)));
+  };
   /** The throw that last threw each player's die: only that one draws it. */
-  const lastToss = rolls.map((_, i) => tosses.findLastIndex((t) => t.players.includes(i)));
+  const lastToss = rolls.map((_, i) => tosses.findLastIndex((t) => t.owners.includes(i)));
   return (
     <div className="roll-show initiative-show" role="dialog" aria-label="Initiative" data-done={allDone ? "true" : undefined} onClick={allDone ? onClose : undefined}>
       <div className="panel initiative-panel" onClick={(e) => e.stopPropagation()}>
@@ -344,14 +365,14 @@ export function InitiativeShow({
             <TraySet halfX={tray.halfX} halfZ={tray.halfZ} />
             <FrameView halfWidth={tray.halfX + WALL_THICK} halfDepth={tray.halfZ + WALL_THICK} height={0.5} pitch={1.0} />
             {tosses.map((t, n) =>
-              t.players.some((i) => lastToss[i] === n) ? (
+              t.owners.some((i) => lastToss[i] === n) ? (
                 <ThrownDice
                   key={n}
-                  dice={t.roll.dice}
-                  frameCount={t.roll.frameCount}
-                  draw={(k) => <D20Die color={names.playerColor(rolls[t.players[k]!]!.player)} />}
+                  dice={t.dice}
+                  frameCount={t.frameCount}
+                  draw={(k) => <D20Die color={names.playerColor(rolls[t.owners[k]!]!.player)} />}
                   still={reduced || t.still}
-                  hidden={t.players.map((i) => lastToss[i] !== n)}
+                  hidden={t.owners.map((i) => lastToss[i] !== n)}
                   onLanded={(k) => land(t, k)}
                 />
               ) : null,

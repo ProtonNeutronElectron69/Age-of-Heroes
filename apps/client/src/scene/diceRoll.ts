@@ -18,8 +18,11 @@ import { IcosahedronGeometry, Matrix4, Quaternion, Vector3 } from "three";
  * A die that has landed can still be knocked: a die that hits it wakes it, and it slides, spins
  * and rocks until it settles again. Its result was shown as it first landed, so it must keep the
  * same face on top: a throw in which a knock turns any die onto another face is thrown again
- * with the next seed (`settledThrow`). That is rare (about 1 big throw in 100), and if a few tries
- * all fail the dice already down are held still instead, as they once always were.
+ * with the next seed (`settledThrow`). For cubes that is rare (about 1 big throw in 100). If a few
+ * seeds all fail, the dice that turned over are pinned (once landed, nothing moves them) and the
+ * throw is worked out again, until no die turns over; every other die is still knocked about.
+ * Dice left lying in the tray from an earlier throw (initiative) follow the same rule; d20s roll
+ * more easily than cubes, so they need it more often.
  *
  * Pure and repeatable: the same seed gives the same throw. No DOM.
  */
@@ -205,8 +208,10 @@ interface Body {
   /** Still passing over its wall: that wall does not stop it yet. */
   entering: boolean;
   asleep: boolean;
-  /** Held still for good: dice already lying in the tray from an earlier throw (and dice of an earlier wave, in the fallback). */
+  /** Held still for good: a pinned die lying in the tray from an earlier throw. */
   fixed: boolean;
+  /** Once landed, it is never woken: it turned over in an earlier try of this throw. */
+  readonly pinned: boolean;
   quiet: number;
   nudges: number;
   /** The step it first came to rest on, and the face it had on top then (-1 before). */
@@ -374,26 +379,35 @@ interface Simulated {
   readonly paths: { frames: Float32Array; thrown: number; landed: number; rest: Quaternion }[][];
   /** The frame each wave is thrown on. */
   readonly waveThrown: number[];
+  /** The frames of each die that was lying in the tray already: pushed about, or still. */
+  readonly lying: Float32Array[];
   readonly frameCount: number;
-  /** Every die ended with the face on top it first landed with. */
-  readonly kept: boolean;
+  /** The dice (numbered as made: those lying first, then each wave's) that ended on another face than they first landed on. */
+  readonly flipped: number[];
 }
 
 /**
  * Throws the waves of dice one after another into the tray, around any dice already lying in it.
- * `loose`: dice that have landed can be knocked about; otherwise a landed die is never moved again,
- * and each wave is held still once it has settled.
+ * Landed dice can be knocked about, except those `pinned` (by number, as in `flipped`).
  */
-function simulate(tray: Tray, waves: readonly (readonly Toss[])[], r: () => number, lying: readonly { solid: Solid; at: Resting }[], loose: boolean): Simulated {
+function simulate(tray: Tray, waves: readonly (readonly Toss[])[], r: () => number, lying: readonly { solid: Solid; at: Resting }[], pinned: ReadonlySet<number>): Simulated {
   const bodies: Body[] = [];
   let frames = 0;
   const pose = (b: Body) => b.frames.push(b.x.x, b.x.y, b.x.z, b.q.x, b.q.y, b.q.z, b.q.w);
   const body = (solid: Solid, from: -1 | 1, x: Vector3, q: Quaternion, start: number): Body => {
-    const b: Body = { solid, from, x, q, v: new Vector3(), w: new Vector3(), start, entering: false, asleep: false, fixed: false, quiet: 0, nudges: 0, landedStep: -1, top: -1, frames: [] };
+    const b: Body = { solid, from, x, q, v: new Vector3(), w: new Vector3(), start, entering: false, asleep: false, fixed: false, pinned: pinned.has(bodies.length), quiet: 0, nudges: 0, landedStep: -1, top: -1, frames: [] };
     bodies.push(b);
     return b;
   };
-  for (const l of lying) body(l.solid, -1, l.at.at.clone(), l.at.turn.clone(), 0).fixed = true;
+  const lyingBodies = lying.map((l) => {
+    const b = body(l.solid, -1, l.at.at.clone(), l.at.turn.clone(), 0);
+    // Asleep until something hits it, and holding the face it landed with in its own throw.
+    b.asleep = true;
+    b.landedStep = 0;
+    b.top = topFace(b);
+    b.fixed = b.pinned;
+    return b;
+  });
   const waveBodies: Body[][] = waves.map(() => []);
   const waveStep: number[] = waves.map(() => 0);
   const launch = (w: number, startStep: number) => {
@@ -474,7 +488,6 @@ function simulate(tray: Tray, waves: readonly (readonly Toss[])[], r: () => numb
     // A wave is done once every die is still, those it knocked included.
     if (bodies.every((b) => b.asleep || b.fixed) || step >= waveStep[wave]! + limit) {
       for (const b of bodies) if (!b.asleep && !b.fixed) placeFlat(b);
-      if (!loose) for (const b of bodies) b.fixed = true;
       const at = step + Math.round(WAVE_PAUSE * STEPS);
       wave = nextWave(wave, at);
       if (wave < waves.length) launch(wave, at);
@@ -501,12 +514,10 @@ function simulate(tray: Tray, waves: readonly (readonly Toss[])[], r: () => numb
       }
     }
     // A die that runs into one lying still wakes it, so it is pushed instead of acting as a wall.
-    if (loose) {
-      for (const c of contacts) {
-        if (c.b && c.b.asleep && !c.b.fixed && velocityAt(c.a, c.p).dot(c.n) < -0.05) {
-          c.b.asleep = false;
-          c.b.quiet = 0;
-        }
+    for (const c of contacts) {
+      if (c.b && c.b.asleep && !c.b.fixed && !c.b.pinned && velocityAt(c.a, c.p).dot(c.n) < -0.05) {
+        c.b.asleep = false;
+        c.b.quiet = 0;
       }
     }
     for (let it = 0; it < 8; it++) for (const c of contacts) solve(c, it === 0);
@@ -564,26 +575,40 @@ function simulate(tray: Tray, waves: readonly (readonly Toss[])[], r: () => numb
       };
     }),
   );
-  const kept = bodies.every((b) => b.landedStep < 0 || topFace(b) === b.top);
-  return { paths, waveThrown: waveStep.map((s) => Math.floor(s / PER_FRAME)), frameCount, kept };
+  const flipped = bodies.flatMap((b, i) => (b.landedStep >= 0 && topFace(b) !== b.top ? [i] : []));
+  return { paths, waveThrown: waveStep.map((s) => Math.floor(s / PER_FRAME)), lying: lyingBodies.map((b) => new Float32Array(b.frames)), frameCount, flipped };
 }
 
-/** How many seeds to try for a throw in which no knock turns a landed die onto another face. */
-const TRIES = 6;
+/** How many seeds to try for a throw in which no knock turns a landed die onto another face, before pinning. */
+const TRIES = 4;
+const NONE: ReadonlySet<number> = new Set();
 
 /**
  * Simulates a throw with landed dice free to be knocked about, trying the next seed while a knock
- * turns one onto another face; after `TRIES` it holds landed dice still instead. Returns the throw
- * and its random source, which goes on to choose the dice's remaps.
+ * turns one onto another face. After `TRIES` seeds it goes back to the first and pins the dice
+ * that turned over, again and again, until none does: a pinned die never moves once landed, so
+ * each try pins at least one more and it ends (with every die pinned, at worst). Returns the throw and its random source, which goes
+ * on to choose the dice's remaps.
  */
-function settledThrow(seed: number, run: (r: () => number, loose: boolean) => Simulated): { sim: Simulated; r: () => number } {
+function settledThrow(seed: number, run: (r: () => number, pinned: ReadonlySet<number>) => Simulated): { sim: Simulated; r: () => number } {
   for (let t = 0; t < TRIES; t++) {
     const r = random(seed + t * 7919);
-    const sim = run(r, true);
-    if (sim.kept) return { sim, r };
+    const sim = run(r, NONE);
+    if (!sim.flipped.length) return { sim, r };
   }
+  const pinned = new Set<number>();
+  for (;;) {
+    const r = random(seed);
+    const sim = run(r, pinned);
+    if (!sim.flipped.length) return { sim, r };
+    const more = sim.flipped.filter((i) => !pinned.has(i));
+    if (!more.length) break;
+    for (const i of more) pinned.add(i);
+  }
+  // Never reached while a pinned die cannot move: pin every die, as dice once always were.
+  const all = new Set(Array.from({ length: 1000 }, (_, i) => i));
   const r = random(seed);
-  return { sim: run(r, false), r };
+  return { sim: run(r, all), r };
 }
 
 // ---- Attack and defense dice ---------------------------------------------------------
@@ -612,7 +637,7 @@ export function remapFor(kind: DieKind, face: DieFace, rest: Quaternion, r: () =
 export function throwDice(attack: readonly DieFace[], defense: readonly DieFace[], seed: number): Throw {
   const tray = trayFor(attack.length + defense.length);
   const waves = [attack.map(() => ({ solid: CUBE, from: -1 as const })), defense.map(() => ({ solid: CUBE, from: 1 as const }))];
-  const { sim, r } = settledThrow(seed, (r, loose) => simulate(tray, waves, r, [], loose));
+  const { sim, r } = settledThrow(seed, (r, pinned) => simulate(tray, waves, r, [], pinned));
   const sides: [DieKind, readonly DieFace[]][] = [["attack", attack], ["defense", defense]];
   const dice = sides.flatMap(([kind, faces], w) =>
     sim.paths[w]!.map((p, i): DiePath => ({ kind, face: faces[i]!, frames: p.frames, thrown: p.thrown, landed: p.landed, remap: remapFor(kind, faces[i]!, p.rest, r) })),
@@ -661,6 +686,8 @@ export interface D20Path extends PlayedDie {
 
 export interface D20Throw {
   readonly dice: readonly D20Path[];
+  /** The frames of each die that was lying in the tray, in the order given: the throw may push them about. */
+  readonly lying: readonly Float32Array[];
   readonly frameCount: number;
 }
 
@@ -672,15 +699,16 @@ export function restingOf(die: PlayedDie): Resting {
 }
 
 /**
- * Throws d20s together into the tray, each from its own end (-1 the left, 1 the right), around
- * d20s already lying there (which do not move), to land showing their values.
+ * Throws d20s together into the tray, each from its own end (-1 the left, 1 the right), to land
+ * showing their values. D20s already lying there can be knocked about, but keep their numbers on top.
  */
 export function throwD20s(dice: readonly { value: number; from: -1 | 1 }[], tray: Tray, seed: number, lying: readonly Resting[] = []): D20Throw {
   const { solid } = d20Parts();
   const waves = [dice.map((d) => ({ solid, from: d.from }))];
-  const { sim } = settledThrow(seed, (r, loose) => simulate(tray, waves, r, lying.map((at) => ({ solid, at })), loose));
+  const { sim } = settledThrow(seed, (r, pinned) => simulate(tray, waves, r, lying.map((at) => ({ solid, at })), pinned));
   return {
     dice: (sim.paths[0] ?? []).map((p, i) => ({ value: dice[i]!.value, frames: p.frames, thrown: p.thrown, landed: p.landed, remap: d20RemapFor(dice[i]!.value, p.rest) })),
+    lying: sim.lying,
     frameCount: sim.frameCount,
   };
 }
