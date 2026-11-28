@@ -65,7 +65,7 @@ pnpm check:affected  # run just those checks
 ```
 
 ```bash
-BALANCE_REPORT=1 pnpm test balance   # unit point costs against the balance model
+BALANCE_REPORT=1 pnpm test balance --silent=false   # unit point costs against the balance model
 ```
 
 Before pushing, run `pnpm check:affected`. CI runs the checks a pull request's changes affect, and every check on each push to `main`; see [docs/TESTING.md](docs/TESTING.md). The browser tests use Playwright's headless Chromium; locally, run `pnpm --filter @aoh/client exec playwright install --only-shell chromium` once if it is missing.

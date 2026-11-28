@@ -51,7 +51,7 @@ The first matching row decides for each file; a change runs everything its files
 | Shared setup: `package.json`, the lockfile, `tsconfig.base.json`, `vitest.config.ts`, `ci.yml`, `scripts/` | yes | all | all |
 | Anything else | yes | all | all |
 
-Unit tests follow the package graph: `rules` is used by everything, `content` by the protocol, the server and the client, and the protocol by the server. The client's own tests (`apps/client/test`) cover the figure models (each one must be as tall as its card's Height, fit its base and stay within its triangle budget), the hit shapes made from them (`hitShapes.json` must match the models), the gaming table's layout (every card on the table, clear of the board and of the other cards), and the 3D dice (each lands showing the result it was given).
+Unit tests follow the package graph: `rules` is used by everything, `content` by the protocol, the server and the client, and the protocol by the server. The client's own tests (`apps/client/test`) cover the figure models (each one must be as tall as its card's Height, fit its base and stay within its triangle budget), the hit shapes made from them (`hitShapes.json` must match the models, and each card drawing marks gear wherever its model has some), the gaming table's layout (every card on the table, clear of the board and of the other cards), and the 3D dice (each lands showing the result it was given).
 
 Figure models (`apps/client/src/models`) are drawn on the game board too, so a model change runs every browser test, like the rest of the client.
 
