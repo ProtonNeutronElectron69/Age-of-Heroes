@@ -11,10 +11,15 @@ import { IcosahedronGeometry, Matrix4, Quaternion, Vector3 } from "three";
  * `d20RemapFor`) so that the face on top is the rolled one. The turn is fixed for the whole throw,
  * so the tumble still looks like the real thing and the result never changes.
  *
- * Dice are thrown in waves: each wave is thrown once the one before has settled, and by then the
- * dice already down no longer move, so nothing knocks them onto another face. The attack dice
+ * Dice are thrown in waves: each wave is thrown once the one before has settled. The attack dice
  * come in over the attacker's wall (-x, the left of the screen) and the defense dice over the
  * defender's (+x, the right). The walls keep every die in the tray, away from the figures.
+ *
+ * A die that has landed can still be knocked: a die that hits it wakes it, and it slides, spins
+ * and rocks until it settles again. Its result was shown as it first landed, so it must keep the
+ * same face on top: a throw in which a knock turns any die onto another face is thrown again
+ * with the next seed (`settledThrow`). That is rare (about 1 big throw in 100), and if a few tries
+ * all fail the dice already down are held still instead, as they once always were.
  *
  * Pure and repeatable: the same seed gives the same throw. No DOM.
  */
@@ -200,16 +205,32 @@ interface Body {
   /** Still passing over its wall: that wall does not stop it yet. */
   entering: boolean;
   asleep: boolean;
-  /** Held still for good: dice of an earlier wave, and dice already in the tray. */
+  /** Held still for good: dice already lying in the tray from an earlier throw (and dice of an earlier wave, in the fallback). */
   fixed: boolean;
   quiet: number;
   nudges: number;
+  /** The step it first came to rest on, and the face it had on top then (-1 before). */
   landedStep: number;
+  top: number;
   frames: number[];
 }
 
 const UP = new Vector3(0, 1, 0);
 const INV_MASS = 1;
+
+/** Which of a die's faces points most nearly up. */
+function topFace(b: Body): number {
+  let best = 0;
+  let bestUp = -Infinity;
+  b.solid.normals.forEach((n, i) => {
+    const up = n.clone().applyQuaternion(b.q).y;
+    if (up > bestUp) {
+      bestUp = up;
+      best = i;
+    }
+  });
+  return best;
+}
 
 /** How flat a die lies: 1 when a face points straight up. */
 function flatness(b: Body): number {
@@ -354,15 +375,21 @@ interface Simulated {
   /** The frame each wave is thrown on. */
   readonly waveThrown: number[];
   readonly frameCount: number;
+  /** Every die ended with the face on top it first landed with. */
+  readonly kept: boolean;
 }
 
-/** Throws the waves of dice one after another into the tray, around any dice already lying in it. */
-function simulate(tray: Tray, waves: readonly (readonly Toss[])[], r: () => number, lying: readonly { solid: Solid; at: Resting }[] = []): Simulated {
+/**
+ * Throws the waves of dice one after another into the tray, around any dice already lying in it.
+ * `loose`: dice that have landed can be knocked about; otherwise a landed die is never moved again,
+ * and each wave is held still once it has settled.
+ */
+function simulate(tray: Tray, waves: readonly (readonly Toss[])[], r: () => number, lying: readonly { solid: Solid; at: Resting }[], loose: boolean): Simulated {
   const bodies: Body[] = [];
   let frames = 0;
   const pose = (b: Body) => b.frames.push(b.x.x, b.x.y, b.x.z, b.q.x, b.q.y, b.q.z, b.q.w);
   const body = (solid: Solid, from: -1 | 1, x: Vector3, q: Quaternion, start: number): Body => {
-    const b: Body = { solid, from, x, q, v: new Vector3(), w: new Vector3(), start, entering: false, asleep: false, fixed: false, quiet: 0, nudges: 0, landedStep: -1, frames: [] };
+    const b: Body = { solid, from, x, q, v: new Vector3(), w: new Vector3(), start, entering: false, asleep: false, fixed: false, quiet: 0, nudges: 0, landedStep: -1, top: -1, frames: [] };
     bodies.push(b);
     return b;
   };
@@ -393,6 +420,14 @@ function simulate(tray: Tray, waves: readonly (readonly Toss[])[], r: () => numb
   const dt = 1 / STEPS;
   const limit = Math.round(SETTLE_LIMIT * STEPS);
   let step = 0;
+  /** Puts a die to sleep where it is, noting its first landing. */
+  const rest = (b: Body) => {
+    b.asleep = true;
+    if (b.landedStep < 0) {
+      b.landedStep = step;
+      b.top = topFace(b);
+    }
+  };
   /**
    * Lays a die flat on the felt and stops it, moving it to the nearest free spot if it would
    * overlap another die there. Only a die that has not come to rest by itself needs this: one still
@@ -421,8 +456,7 @@ function simulate(tray: Tray, waves: readonly (readonly Toss[])[], r: () => numb
         }
       }
     }
-    b.asleep = true;
-    b.landedStep = step;
+    rest(b);
   };
   /** The next wave with dice in it after `w`, marking the empty ones on the way as thrown at `at`. */
   const nextWave = (w: number, at: number) => {
@@ -437,10 +471,10 @@ function simulate(tray: Tray, waves: readonly (readonly Toss[])[], r: () => numb
       for (const b of bodies) pose(b);
       frames++;
     }
-    const current = waveBodies[wave]!;
-    if (current.every((b) => b.asleep || b.fixed) || step >= waveStep[wave]! + limit) {
-      for (const b of current) if (!b.asleep) placeFlat(b);
-      for (const b of bodies) b.fixed = true;
+    // A wave is done once every die is still, those it knocked included.
+    if (bodies.every((b) => b.asleep || b.fixed) || step >= waveStep[wave]! + limit) {
+      for (const b of bodies) if (!b.asleep && !b.fixed) placeFlat(b);
+      if (!loose) for (const b of bodies) b.fixed = true;
       const at = step + Math.round(WAVE_PAUSE * STEPS);
       wave = nextWave(wave, at);
       if (wave < waves.length) launch(wave, at);
@@ -464,6 +498,15 @@ function simulate(tray: Tray, waves: readonly (readonly Toss[])[], r: () => numb
         if (b === a || step < b.start) continue;
         if (live.includes(b) && bodies.indexOf(b) < bodies.indexOf(a)) continue;
         diceContact(a, b, contacts);
+      }
+    }
+    // A die that runs into one lying still wakes it, so it is pushed instead of acting as a wall.
+    if (loose) {
+      for (const c of contacts) {
+        if (c.b && c.b.asleep && !c.b.fixed && velocityAt(c.a, c.p).dot(c.n) < -0.05) {
+          c.b.asleep = false;
+          c.b.quiet = 0;
+        }
       }
     }
     for (let it = 0; it < 8; it++) for (const c of contacts) solve(c, it === 0);
@@ -503,8 +546,7 @@ function simulate(tray: Tray, waves: readonly (readonly Toss[])[], r: () => numb
           b.x.y = b.solid.rest;
           b.v.set(0, 0, 0);
           b.w.set(0, 0, 0);
-          b.asleep = true;
-          b.landedStep = step;
+          rest(b);
         }
       }
     }
@@ -516,13 +558,32 @@ function simulate(tray: Tray, waves: readonly (readonly Toss[])[], r: () => numb
       return {
         frames: new Float32Array(b.frames),
         thrown: Math.floor(b.start / PER_FRAME),
-        // The first frame recorded after it came to rest.
+        // The first frame recorded after it first came to rest.
         landed: Math.min(last, Math.ceil((b.landedStep + 1) / PER_FRAME)),
         rest: new Quaternion(b.frames[last * 7 + 3], b.frames[last * 7 + 4], b.frames[last * 7 + 5], b.frames[last * 7 + 6]),
       };
     }),
   );
-  return { paths, waveThrown: waveStep.map((s) => Math.floor(s / PER_FRAME)), frameCount };
+  const kept = bodies.every((b) => b.landedStep < 0 || topFace(b) === b.top);
+  return { paths, waveThrown: waveStep.map((s) => Math.floor(s / PER_FRAME)), frameCount, kept };
+}
+
+/** How many seeds to try for a throw in which no knock turns a landed die onto another face. */
+const TRIES = 6;
+
+/**
+ * Simulates a throw with landed dice free to be knocked about, trying the next seed while a knock
+ * turns one onto another face; after `TRIES` it holds landed dice still instead. Returns the throw
+ * and its random source, which goes on to choose the dice's remaps.
+ */
+function settledThrow(seed: number, run: (r: () => number, loose: boolean) => Simulated): { sim: Simulated; r: () => number } {
+  for (let t = 0; t < TRIES; t++) {
+    const r = random(seed + t * 7919);
+    const sim = run(r, true);
+    if (sim.kept) return { sim, r };
+  }
+  const r = random(seed);
+  return { sim: run(r, false), r };
 }
 
 // ---- Attack and defense dice ---------------------------------------------------------
@@ -550,8 +611,8 @@ export function remapFor(kind: DieKind, face: DieFace, rest: Quaternion, r: () =
 /** Throw the attack dice in from the left, then the defense dice in from the right, into a tray sized for them. */
 export function throwDice(attack: readonly DieFace[], defense: readonly DieFace[], seed: number): Throw {
   const tray = trayFor(attack.length + defense.length);
-  const r = random(seed);
-  const sim = simulate(tray, [attack.map(() => ({ solid: CUBE, from: -1 as const })), defense.map(() => ({ solid: CUBE, from: 1 as const }))], r);
+  const waves = [attack.map(() => ({ solid: CUBE, from: -1 as const })), defense.map(() => ({ solid: CUBE, from: 1 as const }))];
+  const { sim, r } = settledThrow(seed, (r, loose) => simulate(tray, waves, r, [], loose));
   const sides: [DieKind, readonly DieFace[]][] = [["attack", attack], ["defense", defense]];
   const dice = sides.flatMap(([kind, faces], w) =>
     sim.paths[w]!.map((p, i): DiePath => ({ kind, face: faces[i]!, frames: p.frames, thrown: p.thrown, landed: p.landed, remap: remapFor(kind, faces[i]!, p.rest, r) })),
@@ -616,7 +677,8 @@ export function restingOf(die: PlayedDie): Resting {
  */
 export function throwD20s(dice: readonly { value: number; from: -1 | 1 }[], tray: Tray, seed: number, lying: readonly Resting[] = []): D20Throw {
   const { solid } = d20Parts();
-  const sim = simulate(tray, [dice.map((d) => ({ solid, from: d.from }))], random(seed), lying.map((at) => ({ solid, at })));
+  const waves = [dice.map((d) => ({ solid, from: d.from }))];
+  const { sim } = settledThrow(seed, (r, loose) => simulate(tray, waves, r, lying.map((at) => ({ solid, at })), loose));
   return {
     dice: (sim.paths[0] ?? []).map((p, i) => ({ value: dice[i]!.value, frames: p.frames, thrown: p.thrown, landed: p.landed, remap: d20RemapFor(dice[i]!.value, p.rest) })),
     frameCount: sim.frameCount,

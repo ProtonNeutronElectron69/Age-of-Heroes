@@ -63,6 +63,9 @@ describe("a throw of the dice", () => {
   const faces = (n: number, seed: number, marks: DieFace): DieFace[] => Array.from({ length: n }, (_, i) => ((i * 7 + seed) % 3 === 0 ? "blank" : marks));
   const cases: [number, number][] = [[1, 0], [0, 2], [3, 2], [4, 4], [6, 5], [8, 8], [10, 7], [12, 10]];
 
+  /** Attack dice the defense dice pushed after they had landed, over every case. */
+  let knocked = 0;
+
   it.each(cases)("%i attack and %i defense dice land on the rolled faces, flat, apart and inside the tray", (a, d) => {
     for (let seed = 1; seed <= 12; seed++) {
       const t = throwDice(faces(a, seed, "skull"), faces(d, seed + 1, "shield"), seed * 101 + a);
@@ -86,8 +89,10 @@ describe("a throw of the dice", () => {
         // Thrown before it lands, and attack dice land before the defense dice are thrown.
         expect(die.landed).toBeGreaterThanOrEqual(die.thrown);
         if (die.kind === "attack" && d > 0) expect(die.landed).toBeLessThanOrEqual(t.defenseThrown);
-        // Once landed it stays put.
-        expect(at(die, die.landed).x.distanceTo(rest.x)).toBeLessThan(1e-3);
+        // Once landed it may be knocked about, but it keeps the rolled face on top.
+        const first = at(die, die.landed);
+        expect(cubeTopFace(die.kind, first.q.clone().multiply(die.remap))).toBe(die.face);
+        if (die.kind === "attack" && first.x.distanceTo(rest.x) > 0.05) knocked++;
       }
       // No two dice overlap: cubes that do not overlap have their middles at least an edge apart.
       for (let i = 0; i < t.dice.length; i++) {
@@ -96,6 +101,10 @@ describe("a throw of the dice", () => {
       // A throw settles within a few seconds.
       expect(t.frameCount / FRAME_RATE).toBeLessThan(12);
     }
+  });
+
+  it("lets the defense dice knock the attack dice about", () => {
+    expect(knocked).toBeGreaterThan(20);
   });
 
   it("is repeatable", () => {
@@ -147,7 +156,8 @@ describe("the d20", () => {
         expect(Math.abs(rest.x.x)).toBeLessThan(tray.halfX);
         expect(Math.abs(rest.x.z)).toBeLessThan(tray.halfZ);
         expectClearsWall(die, D20_CORNERS, D20_RADIUS * 0.88, tray, dice[i]!.from);
-        expect(at(die, die.landed).x.distanceTo(rest.x)).toBeLessThan(1e-3);
+        // Knocked about or not, it keeps its value on top from the moment it lands.
+        expect(shownBy(at(die, die.landed).q.clone().multiply(die.remap)).value).toBe(dice[i]!.value);
       });
       for (let i = 0; i < t.dice.length; i++) {
         for (let j = i + 1; j < t.dice.length; j++) expect(at(t.dice[i]!, end).x.distanceTo(at(t.dice[j]!, end).x)).toBeGreaterThan(D20_RADIUS * 1.5);
@@ -167,7 +177,7 @@ describe("the d20", () => {
     }
   });
 
-  it("is thrown around the dice already in the tray, which do not move", () => {
+  it("is thrown around the dice already lying in the tray, which do not move", () => {
     const tray = trayFor(6);
     for (let seed = 1; seed <= 8; seed++) {
       const first = throwD20s([{ value: 12, from: -1 }, { value: 5, from: 1 }], tray, seed);

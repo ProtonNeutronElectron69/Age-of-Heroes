@@ -16,7 +16,7 @@ Planned, in no set order; each starts when the owner asks:
 On hold (Phase 6): a computer opponent, and a tutorial.
 
 Done lately, newest first (each has its section below):
-- Initiative in the dice tray: the d20s are thrown into the same tray as an attack's dice, by the same physics, in each player's colour; the tray is bigger, the dice bouncier and slower to settle, and attack dice come in over the left wall, defense dice over the right.
+- Initiative in the dice tray: the d20s are thrown into the same tray as an attack's dice, by the same physics, in each player's colour; the tray is bigger, the dice bouncier and slower to settle, attack dice come in over the left wall and defense dice over the right, and the defense dice can knock the attack dice about.
 - Map picker (#96): the menu's Battlefield choice is a styled drop-down list of every map, with maps that cannot host the chosen number of players dimmed.
 - Shattered Crown (#95): a large near-hexagonal map for 4 to 6 players (2 to 6 in all), not symmetric, with start zones at least 10 hexes apart, six regions that each favour different tactics, heights to 10, three bridges, an arch, an ice tunnel and two overhangs.
 - Balance pass (#92), done for now: most squads have 2 Life, heroes with 5 or more Life lose 1, four more units reach Range 7, and costs follow the balance model.
@@ -405,6 +405,7 @@ The owner asked for the initiative d20 to be thrown by physics like the attack d
 - [x] One throw is in the tray at a time: a die rolled while others still tumble waits for them, then is thrown around the dice already lying there, which do not move. Tied dice are thrown again together. Skip throws every die once more, shown already landed. Online, every die is still thrown at once, from a seed made from the rolls, so everyone sees the same throw
 - [x] The tray is about a fifth bigger. Dice bounce more off the felt, the walls and each other, and roll for longer: an attack's throw takes about a third longer to settle
 - [x] Attack dice come in over the left wall (the attacker's end) and defense dice over the right, high enough to clear it; `dice.test.ts` checks that every die clears its wall and moves inwards
+- [x] Landed dice are no longer held rigid: a die that hits one wakes it, so the defense dice push and spin the attack dice, and dice of one throw knock each other. A landed die must keep the face it first showed, so a throw where a knock turns one over is simulated again with the next seed; that happens in about 1 big throw in 100, and after six tries the landed dice are held still as before. d20s lying from an earlier initiative throw are still held still
 - [x] `?dice` can also roll initiative for 2 to 6 players
 
 ### Map picker (done, #96)
