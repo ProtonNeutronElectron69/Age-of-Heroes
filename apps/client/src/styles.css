@@ -1460,12 +1460,13 @@ p.bad {
 }
 
 .initiative-stage {
-  max-width: 100%;
+  width: min(600px, calc(100vw - 80px));
 }
 
 .initiative-stage .scene-canvas {
   width: 100% !important;
-  height: 200px !important;
+  height: 300px !important;
+  border-radius: 8px;
 }
 
 .initiative-players {

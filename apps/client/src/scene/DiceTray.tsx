@@ -13,19 +13,18 @@ import {
   type SpotLight,
 } from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
-import { cubeMaterialsFor } from "./dice3d";
-import { DIE_SIZE, FRAME_RATE, type DieKind, type Throw } from "./diceRoll";
+import { cubeMaterialsFor, d20Geometry, d20MaterialFor } from "./dice3d";
+import { DIE_SIZE, FRAME_RATE, WALL_HEIGHT, type DieKind, type PlayedDie } from "./diceRoll";
 import { useWake } from "./wake";
 
 /**
- * The attack scene's dice tray: a felt-lined wooden tray on a wooden table under a warm lamp, with
- * the dice of a throw (`diceRoll.ts`) played back in it. The figures stand on the table at the
- * tray's two ends (`TrayFigure`), outside its walls, so no die can reach them.
+ * The dice tray of the attack scene and the initiative roll: a felt-lined wooden tray on a wooden
+ * table under a warm lamp, with the dice of a throw (`diceRoll.ts`) played back in it. In an attack
+ * the figures stand on the table at the tray's two ends, outside its walls, so no die can reach them.
  */
 
-/** How thick the tray's walls are, how far they stand above the felt, and how high the felt is off the table. */
+/** How thick the tray's walls are, and how high the felt is off the table (the walls' height is `WALL_HEIGHT`). */
 export const WALL_THICK = 0.45;
-const WALL_HEIGHT = 0.9;
 export const FELT_HEIGHT = 0.22;
 
 // ---- Textures, painted in code ---------------------------------------------------
@@ -181,54 +180,69 @@ export function TraySet({ halfX, halfZ }: { halfX: number; halfZ: number }) {
 
 // ---- The dice ------------------------------------------------------------------------
 
-function RolledDie({ kind }: { kind: DieKind }) {
+/** An attack or defense die. */
+export function CubeDie({ kind }: { kind: DieKind }) {
   dieGeometry ??= new RoundedBoxGeometry(DIE_SIZE, DIE_SIZE, DIE_SIZE, 3, DIE_SIZE * 0.1);
   return <mesh geometry={dieGeometry} material={cubeMaterialsFor(kind)} castShadow receiveShadow raycast={() => null} />;
 }
 
+/** An initiative d20 in its player's colour. */
+export function D20Die({ color }: { color: string }) {
+  return <mesh geometry={d20Geometry()} material={d20MaterialFor(color)} castShadow receiveShadow raycast={() => null} />;
+}
+
 /**
  * Plays back a throw: every die follows its recorded path, and each one is reported as it comes
- * to rest. `still` shows the end at once (reduced motion).
+ * to rest. `still` shows the end at once (reduced motion). `draw` gives each die's drawing;
+ * `hidden` dice are left out (a d20 picked up to be thrown again).
  */
 export function ThrownDice({
-  roll,
+  dice,
+  frameCount,
+  draw,
   still,
+  hidden,
   onLanded,
-  onDefenseThrown,
+  cueAt,
+  onCue,
 }: {
-  roll: Throw;
+  dice: readonly PlayedDie[];
+  frameCount: number;
+  draw: (n: number) => ReactNode;
   still: boolean;
+  hidden?: readonly boolean[];
   /** A die has come to rest. */
-  onLanded: (kind: DieKind) => void;
-  /** The defense dice leave the hand (for their sound). */
-  onDefenseThrown?: () => void;
+  onLanded?: (n: number) => void;
+  /** A frame to be told of as it plays (the defense dice leaving the hand, for their sound). */
+  cueAt?: number;
+  onCue?: () => void;
 }) {
   const groups = useRef<(Group | null)[]>([]);
   const started = useRef<number | null>(null);
   const reported = useRef<boolean[]>([]);
-  const defenseHeard = useRef(false);
+  const cued = useRef(false);
   const finished = useRef(false);
   const invalidate = useThree((s) => s.invalidate);
   const wake = useWake();
-  const report = useRef({ onLanded, onDefenseThrown });
-  report.current = { onLanded, onDefenseThrown };
+  const report = useRef({ onLanded, onCue });
+  report.current = { onLanded, onCue };
   const work = useMemo(() => ({ a: new Vector3(), b: new Vector3(), qa: new Quaternion(), qb: new Quaternion() }), []);
   useEffect(() => {
     started.current = null;
-    reported.current = roll.dice.map(() => false);
-    defenseHeard.current = false;
+    reported.current = dice.map(() => false);
+    cued.current = false;
     finished.current = false;
     wake();
-  }, [roll, wake]);
+  }, [dice, wake]);
   useFrame(({ clock }) => {
     if (finished.current) return;
     started.current ??= clock.elapsedTime;
-    const last = roll.frameCount - 1;
+    const last = frameCount - 1;
     const f = still ? last : Math.min(last, (clock.elapsedTime - started.current) * FRAME_RATE);
     const i0 = Math.floor(f);
     const i1 = Math.min(last, i0 + 1);
     const t = f - i0;
-    roll.dice.forEach((die, n) => {
+    dice.forEach((die, n) => {
       const g = groups.current[n];
       if (!g) return;
       g.visible = f >= die.thrown;
@@ -241,21 +255,21 @@ export function ThrownDice({
       g.quaternion.slerpQuaternions(work.qa, work.qb, t).multiply(die.remap);
       if (!reported.current[n] && f >= die.landed) {
         reported.current[n] = true;
-        report.current.onLanded(die.kind);
+        report.current.onLanded?.(n);
       }
     });
-    if (!defenseHeard.current && roll.dice.some((d) => d.kind === "defense") && f >= roll.defenseThrown && !still) {
-      defenseHeard.current = true;
-      report.current.onDefenseThrown?.();
+    if (!cued.current && cueAt !== undefined && f >= cueAt && !still) {
+      cued.current = true;
+      report.current.onCue?.();
     }
     if (f >= last) finished.current = true;
     invalidate();
   });
   return (
     <>
-      {roll.dice.map((die, n) => (
+      {dice.map((_, n) => (
         <group key={n} ref={(g) => void (groups.current[n] = g)} visible={false}>
-          <RolledDie kind={die.kind} />
+          {!hidden?.[n] && draw(n)}
         </group>
       ))}
     </>
