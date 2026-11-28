@@ -1,18 +1,20 @@
 import type { DieFace } from "@aoh/rules";
-import { Quaternion, Vector3 } from "three";
+import { IcosahedronGeometry, Matrix4, Quaternion, Vector3 } from "three";
 
 /**
- * A throw of the attack and defense dice into a tray, worked out in advance with a small
- * rigid-body simulation and then played back frame by frame (`DiceTray` in `scene/dice3d.tsx`).
+ * Throws of dice into a tray, worked out in advance with a small rigid-body simulation and then
+ * played back frame by frame (`ThrownDice` in `scene/DiceTray.tsx`): an attack's cubes, and the
+ * initiative d20s.
  *
- * The rules have already rolled every face. The simulation throws plain cubes; once a cube has
- * come to rest, its drawing is turned by one of the cube's own symmetries (`remap`) so that the
- * face on top is the rolled one. The turn is fixed for the whole throw, so the tumble still looks
- * like the real thing and the result never changes.
+ * The rules have already rolled every face. The simulation throws plain dice; once a die has
+ * come to rest, its drawing is turned by one of the die's own symmetries (`remapFor`,
+ * `d20RemapFor`) so that the face on top is the rolled one. The turn is fixed for the whole throw,
+ * so the tumble still looks like the real thing and the result never changes.
  *
- * The attack dice are thrown from the attacker's end (-x), the defense dice from the defender's
- * (+x) once the attack dice have settled; by then the attack dice no longer move, so nothing
- * knocks them onto another face. The walls keep every die in the tray, away from the figures.
+ * Dice are thrown in waves: each wave is thrown once the one before has settled, and by then the
+ * dice already down no longer move, so nothing knocks them onto another face. The attack dice
+ * come in over the attacker's wall (-x, the left of the screen) and the defense dice over the
+ * defender's (+x, the right). The walls keep every die in the tray, away from the figures.
  *
  * Pure and repeatable: the same seed gives the same throw. No DOM.
  */
@@ -37,24 +39,32 @@ export const CUBE_NORMALS: readonly Vector3[] = [
   new Vector3(0, 0, -1),
 ];
 
-/** Edge length of a die. */
+/** Edge length of a cube die. */
 export const DIE_SIZE = 1;
-const H = DIE_SIZE / 2;
+/** How far a d20's corners reach from its middle: a little bigger than a cube, as real d20s are. */
+export const D20_RADIUS = 0.8;
+/** How high the tray's walls stand above the felt; a thrown die passes over them. */
+export const WALL_HEIGHT = 0.9;
 const GRAVITY = 34;
 /** Simulation steps per second, and how many make one recorded frame (60 a second). */
 const STEPS = 240;
 const PER_FRAME = 4;
 export const FRAME_RATE = STEPS / PER_FRAME;
-/** Pause after the attack dice settle before the defense dice are thrown, seconds. */
-const DEFENSE_PAUSE = 0.35;
-/** A group of dice is stopped where it is after this long, seconds; real throws settle well before. */
-const SETTLE_LIMIT = 4;
+/** Pause after one wave of dice settles before the next is thrown, seconds. */
+const WAVE_PAUSE = 0.35;
+/** A wave of dice is stopped where it is after this long, seconds; real throws settle well before. */
+const SETTLE_LIMIT = 6;
 /** Seconds between one die leaving the hand and the next. */
-const STAGGER = 0.05;
+const STAGGER = 0.06;
 
-const FLOOR = { friction: 0.36, bounce: 0.42 };
-const WALL = { friction: 0.2, bounce: 0.58 };
-const DIE = { friction: 0.08, bounce: 0.4 };
+const FLOOR = { friction: 0.32, bounce: 0.52 };
+const WALL = { friction: 0.18, bounce: 0.66 };
+const DIE = { friction: 0.08, bounce: 0.5 };
+/** A knock slower than this does not bounce, so resting dice do not jitter. */
+const BOUNCE_FROM = 0.8;
+/** How quickly the felt slows a rolling die, its spin and its slide, per second. */
+const FELT_SPIN_DRAG = 1.9;
+const FELT_SLIDE_DRAG = 0.65;
 
 export interface DieSpec {
   readonly kind: DieKind;
@@ -67,23 +77,27 @@ export interface Tray {
   readonly halfZ: number;
 }
 
-/** A tray big enough for this many dice to land without piling up. */
+/** A tray big enough for this many dice to land and roll about without piling up. */
 export function trayFor(dice: number): Tray {
-  const halfX = Math.min(5.2, Math.max(3.3, 3.0 + 0.15 * dice));
-  const halfZ = Math.min(4, Math.max(2.4, 2.1 + 0.12 * dice));
+  const halfX = Math.min(6.2, Math.max(4, 3.6 + 0.18 * dice));
+  const halfZ = Math.min(4.8, Math.max(2.9, 2.5 + 0.14 * dice));
   return { halfX, halfZ };
 }
 
-export interface DiePath {
-  readonly kind: DieKind;
-  readonly face: DieFace;
-  /** Position (x, y, z) and turn (x, y, z, w) of the cube for each frame: 7 numbers a frame. */
+/** A die's recorded path through a throw. */
+export interface PlayedDie {
+  /** Position (x, y, z) and turn (x, y, z, w) of the die for each frame: 7 numbers a frame. */
   readonly frames: Float32Array;
   /** The frame it is thrown on (hidden before), and the frame it comes to rest on. */
   readonly thrown: number;
   readonly landed: number;
-  /** Turns the cube's drawing so that the rolled face ends on top. */
+  /** Turns the die's drawing so that the rolled face ends on top. */
   readonly remap: Quaternion;
+}
+
+export interface DiePath extends PlayedDie {
+  readonly kind: DieKind;
+  readonly face: DieFace;
 }
 
 export interface Throw {
@@ -103,17 +117,90 @@ function random(seed: number): () => number {
   };
 }
 
+// ---- The dice's shapes ------------------------------------------------------------
+
+/** What the simulation needs of a die's shape. */
+interface Solid {
+  /** The corners that touch the felt and the walls, in the die's own space. */
+  readonly corners: readonly Vector3[];
+  /** The faces' outward normals; every face has one opposite it, so a die resting on a face shows one on top. */
+  readonly normals: readonly Vector3[];
+  /** How high its middle stands when it lies on a face. */
+  readonly rest: number;
+  /**
+   * Dice meet each other as balls a little wider than the die, like the rounded corners of real
+   * dice: a die can never sink into another, and one landing on another rolls off instead of
+   * balancing there. Against the felt and the walls a die keeps its true shape, so it still
+   * tumbles and comes to rest on a face.
+   */
+  readonly reach: number;
+  readonly invInertia: number;
+}
+
+const H = DIE_SIZE / 2;
+const CUBE_CORNERS: Vector3[] = [];
+for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) CUBE_CORNERS.push(new Vector3(sx * H, sy * H, sz * H));
+
+/** A solid cube of mass 1 turns alike about every axis: I = m s² / 6. */
+const CUBE: Solid = { corners: CUBE_CORNERS, normals: CUBE_NORMALS, rest: H, reach: DIE_SIZE * 0.6, invInertia: 6 / (DIE_SIZE * DIE_SIZE) };
+
+export interface D20Face {
+  /** Outward normal and the direction the number's top points, in the die's own space. */
+  readonly normal: Vector3;
+  readonly up: Vector3;
+}
+
+let d20: { faces: D20Face[]; solid: Solid } | null = null;
+
+/**
+ * The d20's faces, in the order of Three.js's icosahedron (face i shows i + 1), and its shape for
+ * the simulation, `D20_RADIUS` from middle to corner. A number's top points at its face's first corner.
+ */
+function d20Parts() {
+  if (d20) return d20;
+  const position = new IcosahedronGeometry(D20_RADIUS, 0).getAttribute("position");
+  const faces: D20Face[] = [];
+  const corners: Vector3[] = [];
+  const a = new Vector3();
+  const b = new Vector3();
+  const c = new Vector3();
+  for (let f = 0; f < position.count / 3; f++) {
+    a.fromBufferAttribute(position, f * 3);
+    b.fromBufferAttribute(position, f * 3 + 1);
+    c.fromBufferAttribute(position, f * 3 + 2);
+    const normal = new Vector3().subVectors(b, a).cross(new Vector3().subVectors(c, a)).normalize();
+    const up = a.clone().sub(b.clone().add(c).multiplyScalar(0.5)).normalize();
+    faces.push({ normal, up });
+    for (const p of [a, b, c]) if (!corners.some((q) => q.distanceTo(p) < 1e-4)) corners.push(p.clone());
+  }
+  const rest = a.dot(faces[faces.length - 1]!.normal);
+  // A solid icosahedron of mass 1: I = 0.2894 m R², a little less than a ball as wide.
+  const solid: Solid = { corners, normals: faces.map((f) => f.normal), rest, reach: D20_RADIUS * 0.88, invInertia: 1 / (0.2894 * D20_RADIUS * D20_RADIUS) };
+  d20 = { faces, solid };
+  return d20;
+}
+
+/** The d20's faces (face i shows i + 1). */
+export function d20Faces(): readonly D20Face[] {
+  return d20Parts().faces;
+}
+
+// ---- The simulation ----------------------------------------------------------------
+
 interface Body {
-  readonly spec: DieSpec;
-  readonly group: 0 | 1;
+  readonly solid: Solid;
+  /** The end it is thrown from: -1 the attacker's (-x), 1 the defender's (+x). */
+  readonly from: -1 | 1;
   x: Vector3;
   q: Quaternion;
   v: Vector3;
   w: Vector3;
   /** The step it is thrown on. */
   start: number;
+  /** Still passing over its wall: that wall does not stop it yet. */
+  entering: boolean;
   asleep: boolean;
-  /** Held still for good: the attack dice once the defense dice are thrown. */
+  /** Held still for good: dice of an earlier wave, and dice already in the tray. */
   fixed: boolean;
   quiet: number;
   nudges: number;
@@ -121,25 +208,21 @@ interface Body {
   frames: number[];
 }
 
-const CORNERS: Vector3[] = [];
-for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) CORNERS.push(new Vector3(sx * H, sy * H, sz * H));
 const UP = new Vector3(0, 1, 0);
 const INV_MASS = 1;
-/** A solid cube of mass 1 turns alike about every axis: I = m s² / 6. */
-const INV_INERTIA = 6 / (DIE_SIZE * DIE_SIZE);
 
 /** How flat a die lies: 1 when a face points straight up. */
-function flatness(q: Quaternion): number {
+function flatness(b: Body): number {
   let best = 0;
-  for (const n of CUBE_NORMALS) best = Math.max(best, n.clone().applyQuaternion(q).y);
+  for (const n of b.solid.normals) best = Math.max(best, n.clone().applyQuaternion(b.q).y);
   return best;
 }
 
 /** The turn that lays a die flat on its nearest face, keeping its heading. */
-function laidFlat(q: Quaternion): Quaternion {
-  let best = CUBE_NORMALS[0]!;
+function laidFlat(q: Quaternion, normals: readonly Vector3[]): Quaternion {
+  let best = normals[0]!;
   let bestUp = -Infinity;
-  for (const n of CUBE_NORMALS) {
+  for (const n of normals) {
     const up = n.clone().applyQuaternion(q).y;
     if (up > bestUp) {
       bestUp = up;
@@ -169,34 +252,29 @@ function velocityAt(b: Body, p: Vector3): Vector3 {
 
 function applyImpulse(b: Body, p: Vector3, j: Vector3) {
   b.v.addScaledVector(j, INV_MASS);
-  b.w.addScaledVector(p.clone().sub(b.x).cross(j), INV_INERTIA);
+  b.w.addScaledVector(p.clone().sub(b.x).cross(j), b.solid.invInertia);
 }
 
-/** Corners of `a` pressing into the tray's floor and walls. */
+/** Corners of `a` pressing into the tray's floor and walls. A die coming in passes over its own wall. */
 function trayContacts(a: Body, tray: Tray, out: Contact[]) {
-  for (const c of CORNERS) {
+  const left = !(a.entering && a.from === -1);
+  const right = !(a.entering && a.from === 1);
+  for (const c of a.solid.corners) {
     const p = c.clone().applyQuaternion(a.q).add(a.x);
     if (p.y < 0) out.push({ a, b: null, n: new Vector3(0, 1, 0), p, depth: -p.y, ...FLOOR });
-    if (p.x < -tray.halfX) out.push({ a, b: null, n: new Vector3(1, 0, 0), p, depth: -tray.halfX - p.x, ...WALL });
-    if (p.x > tray.halfX) out.push({ a, b: null, n: new Vector3(-1, 0, 0), p, depth: p.x - tray.halfX, ...WALL });
+    if (left && p.x < -tray.halfX) out.push({ a, b: null, n: new Vector3(1, 0, 0), p, depth: -tray.halfX - p.x, ...WALL });
+    if (right && p.x > tray.halfX) out.push({ a, b: null, n: new Vector3(-1, 0, 0), p, depth: p.x - tray.halfX, ...WALL });
     if (p.z < -tray.halfZ) out.push({ a, b: null, n: new Vector3(0, 0, 1), p, depth: -tray.halfZ - p.z, ...WALL });
     if (p.z > tray.halfZ) out.push({ a, b: null, n: new Vector3(0, 0, -1), p, depth: p.z - tray.halfZ, ...WALL });
   }
 }
 
-/**
- * Dice meet each other as balls a little wider than the cube, like the rounded corners of real
- * dice: a die can never sink into another, and one landing on another rolls off instead of
- * balancing there. Against the felt and the walls a die is a true cube, so it still tumbles and
- * comes to rest on a face.
- */
-const DIE_REACH = DIE_SIZE * 0.6;
-
 function diceContact(a: Body, b: Body, out: Contact[]) {
   const d = a.x.distanceTo(b.x);
-  if (d >= DIE_REACH * 2 || d < 1e-6) return;
+  const reach = a.solid.reach + b.solid.reach;
+  if (d >= reach || d < 1e-6) return;
   const n = a.x.clone().sub(b.x).divideScalar(d);
-  out.push({ a, b, n, p: b.x.clone().addScaledVector(n, d / 2), depth: DIE_REACH * 2 - d, ...DIE });
+  out.push({ a, b, n, p: b.x.clone().addScaledVector(n, b.solid.reach - (reach - d) / 2), depth: reach - d, ...DIE });
 }
 
 function solve(c: Contact, first: boolean) {
@@ -206,11 +284,11 @@ function solve(c: Contact, first: boolean) {
   const vn = rel.dot(n);
   if (vn >= 0) return;
   const ra = p.clone().sub(a.x).cross(n);
-  let k = INV_MASS + INV_INERTIA * ra.lengthSq();
+  let k = INV_MASS + a.solid.invInertia * ra.lengthSq();
   const bMoves = moving(b);
-  if (bMoves) k += INV_MASS + INV_INERTIA * p.clone().sub(b!.x).cross(n).lengthSq();
+  if (bMoves) k += INV_MASS + b!.solid.invInertia * p.clone().sub(b!.x).cross(n).lengthSq();
   // Bounce only off a real knock, so resting dice do not jitter.
-  const e = first && vn < -1.2 ? c.bounce : 0;
+  const e = first && vn < -BOUNCE_FROM ? c.bounce : 0;
   const jn = (-(1 + e) * vn) / k;
   const tangent = rel.clone().addScaledVector(n, -vn);
   const slide = tangent.length();
@@ -218,8 +296,8 @@ function solve(c: Contact, first: boolean) {
   if (slide > 1e-6) {
     tangent.divideScalar(slide);
     const rt = p.clone().sub(a.x).cross(tangent);
-    let kt = INV_MASS + INV_INERTIA * rt.lengthSq();
-    if (bMoves) kt += INV_MASS + INV_INERTIA * p.clone().sub(b!.x).cross(tangent).lengthSq();
+    let kt = INV_MASS + a.solid.invInertia * rt.lengthSq();
+    if (bMoves) kt += INV_MASS + b!.solid.invInertia * p.clone().sub(b!.x).cross(tangent).lengthSq();
     const jt = Math.min(slide / kt, c.friction * jn);
     impulse.addScaledVector(tangent, -jt);
   }
@@ -236,15 +314,18 @@ function separate(c: Contact) {
   } else c.a.x.addScaledVector(c.n, push);
 }
 
-/** Positions to throw `count` dice from, at the -x end (mirrored for the +x end): rows across the tray. */
+/**
+ * Where to throw `count` dice from, at the -x end (mirrored for the +x end): just over the wall,
+ * high enough to clear it, in rows across the tray, each row a little higher than the last.
+ */
 function launchSpots(count: number, tray: Tray, r: () => number): Vector3[] {
-  const across = Math.max(1, Math.floor((tray.halfZ * 2 - 0.6) / 1.25));
+  const across = Math.max(1, Math.floor((tray.halfZ * 2 - 0.6) / 1.3));
   return Array.from({ length: count }, (_, i) => {
     const row = Math.floor(i / across);
     const inRow = Math.min(across, count - row * across);
     const col = i % across;
-    const z = (col - (inRow - 1) / 2) * 1.25 + (r() - 0.5) * 0.25;
-    return new Vector3(-tray.halfX + 1.0 + row * 1.3, 2.4 + r() * 0.9 + row * 0.4, z);
+    const z = (col - (inRow - 1) / 2) * 1.3 + (r() - 0.5) * 0.25;
+    return new Vector3(-tray.halfX - 0.2 - r() * 0.3, 3.3 + r() * 0.7 + row * 0.9, z);
   });
 }
 
@@ -255,81 +336,86 @@ function randomTurn(r: () => number): Quaternion {
   return new Quaternion(a * Math.sin(u2), a * Math.cos(u2), b * Math.sin(u3), b * Math.cos(u3));
 }
 
-/**
- * The turn of a cube's drawing, applied before its body's turn, that shows `face` on top when the
- * body rests with turn `rest`: one of the cube's 24 symmetries, chosen with `r` among the sides
- * that carry the face.
- */
-export function remapFor(kind: DieKind, face: DieFace, rest: Quaternion, r: () => number): Quaternion {
-  const sides = CUBE_FACES[kind].map((f, i) => (f === face ? i : -1)).filter((i) => i >= 0);
-  const side = sides[Math.floor(r() * sides.length) % sides.length]!;
-  // Which of the body's own axes points up at rest.
-  const inv = rest.clone().invert();
-  const up = UP.clone().applyQuaternion(inv);
-  let top = CUBE_NORMALS[0]!;
-  for (const n of CUBE_NORMALS) if (n.dot(up) > top.dot(up)) top = n;
-  const want = CUBE_NORMALS[side]!;
-  const turn = new Quaternion().setFromUnitVectors(want, top);
-  // A quarter turn about the top at random, so a face's picture is not always the same way round.
-  const spin = new Quaternion().setFromAxisAngle(top, (Math.floor(r() * 4) * Math.PI) / 2);
-  return spin.multiply(turn);
+/** One die of a wave: its shape and the end it is thrown from. */
+interface Toss {
+  readonly solid: Solid;
+  readonly from: -1 | 1;
 }
 
-/** Throw the attack dice, then the defense dice, into a tray sized for them. */
-export function throwDice(attack: readonly DieFace[], defense: readonly DieFace[], seed: number): Throw {
-  const tray = trayFor(attack.length + defense.length);
-  const r = random(seed);
+/** A die already lying in the tray: where it is and how it is turned. */
+export interface Resting {
+  readonly at: Vector3;
+  readonly turn: Quaternion;
+}
+
+interface Simulated {
+  /** For each wave, each die's frames, the frames it was thrown and landed on, and how it lies at the end. */
+  readonly paths: { frames: Float32Array; thrown: number; landed: number; rest: Quaternion }[][];
+  /** The frame each wave is thrown on. */
+  readonly waveThrown: number[];
+  readonly frameCount: number;
+}
+
+/** Throws the waves of dice one after another into the tray, around any dice already lying in it. */
+function simulate(tray: Tray, waves: readonly (readonly Toss[])[], r: () => number, lying: readonly { solid: Solid; at: Resting }[] = []): Simulated {
   const bodies: Body[] = [];
-  const launch = (faces: readonly DieFace[], kind: DieKind, group: 0 | 1, startStep: number) => {
-    const side = group === 0 ? 1 : -1;
-    launchSpots(faces.length, tray, r).forEach((spot, i) => {
-      // Thrown gently enough to come to rest in the thrower's half, clear of the other side's dice.
-      const speed = (2.6 + r() * 3.8) * (tray.halfX / 4.5);
-      const spinAxis = new Vector3(r() - 0.5, r() - 0.5, r() - 0.5).normalize();
-      bodies.push({
-        spec: { kind, face: faces[i]! },
-        group,
-        x: new Vector3(spot.x * side, spot.y, spot.z),
-        q: randomTurn(r),
-        v: new Vector3(side * speed, -0.5 + r() * 1.5, (r() - 0.5) * 2 + spot.z * 0.3),
-        w: spinAxis.multiplyScalar(12 + r() * 12),
-        start: startStep + Math.round(i * STAGGER * STEPS),
-        asleep: false,
-        fixed: false,
-        quiet: 0,
-        nudges: 0,
-        landedStep: -1,
-        frames: [],
-      });
-    });
+  let frames = 0;
+  const pose = (b: Body) => b.frames.push(b.x.x, b.x.y, b.x.z, b.q.x, b.q.y, b.q.z, b.q.w);
+  const body = (solid: Solid, from: -1 | 1, x: Vector3, q: Quaternion, start: number): Body => {
+    const b: Body = { solid, from, x, q, v: new Vector3(), w: new Vector3(), start, entering: false, asleep: false, fixed: false, quiet: 0, nudges: 0, landedStep: -1, frames: [] };
+    bodies.push(b);
+    return b;
   };
-  launch(attack, "attack", 0, 0);
+  for (const l of lying) body(l.solid, -1, l.at.at.clone(), l.at.turn.clone(), 0).fixed = true;
+  const waveBodies: Body[][] = waves.map(() => []);
+  const waveStep: number[] = waves.map(() => 0);
+  const launch = (w: number, startStep: number) => {
+    waveStep[w] = startStep;
+    const tosses = waves[w]!;
+    const thrown: Body[] = [];
+    for (const from of [-1, 1] as const) {
+      const mine = tosses.map((t, n) => (t.from === from ? n : -1)).filter((n) => n >= 0);
+      launchSpots(mine.length, tray, r).forEach((spot, i) => {
+        // Thrown hard enough to clear the wall, and to roll about well into the tray.
+        const speed = (4.4 + r() * 2.2) * (tray.halfX / 5);
+        const spinAxis = new Vector3(r() - 0.5, r() - 0.5, r() - 0.5).normalize();
+        const b = body(tosses[mine[i]!]!.solid, from, new Vector3(spot.x * -from, spot.y, spot.z), randomTurn(r), startStep + Math.round(i * STAGGER * STEPS));
+        b.v.set(-from * speed, 0.4 + r() * 1.4, (r() - 0.5) * 2 + spot.z * 0.25);
+        b.w.copy(spinAxis.multiplyScalar(12 + r() * 12));
+        b.entering = true;
+        // Hidden until it is thrown: its frames so far hold it where it starts.
+        for (let f = 0; f < frames; f++) pose(b);
+        thrown[mine[i]!] = b;
+      });
+    }
+    waveBodies[w] = thrown;
+  };
   const dt = 1 / STEPS;
   const limit = Math.round(SETTLE_LIMIT * STEPS);
-  let defenseStep = attack.length === 0 ? 0 : -1;
   let step = 0;
-  const groupDone = (g: 0 | 1) => bodies.filter((b) => b.group === g).every((b) => b.asleep || b.fixed);
   /**
    * Lays a die flat on the felt and stops it, moving it to the nearest free spot if it would
    * overlap another die there. Only a die that has not come to rest by itself needs this: one still
    * rolling at the time limit, or one that keeps landing on another die.
    */
   const placeFlat = (b: Body) => {
-    b.q.copy(laidFlat(b.q));
-    b.x.y = H;
+    b.q.copy(laidFlat(b.q, b.solid.normals));
+    b.x.y = b.solid.rest;
     b.v.set(0, 0, 0);
     b.w.set(0, 0, 0);
+    b.entering = false;
     const others = bodies.filter((o) => o !== b && step >= o.start && (o.asleep || o.fixed || o.landedStep >= 0));
+    const edge = b.solid.reach * 1.25;
     const free = (x: number, z: number) =>
-      Math.abs(x) <= tray.halfX - H * 1.45 && Math.abs(z) <= tray.halfZ - H * 1.45 && others.every((o) => Math.hypot(o.x.x - x, o.x.z - z) >= DIE_REACH * 2);
+      Math.abs(x) <= tray.halfX - edge && Math.abs(z) <= tray.halfZ - edge && others.every((o) => Math.hypot(o.x.x - x, o.x.z - z) >= b.solid.reach + o.solid.reach);
     if (!free(b.x.x, b.x.z)) {
-      search: for (let radius = 0.25; radius < 12; radius += 0.25) {
+      search: for (let radius = 0.25; radius < 14; radius += 0.25) {
         for (let k = 0; k < 24; k++) {
           const a = (k / 24) * Math.PI * 2;
           const x = b.x.x + Math.cos(a) * radius;
           const z = b.x.z + Math.sin(a) * radius;
           if (free(x, z)) {
-            b.x.set(x, H, z);
+            b.x.set(x, b.solid.rest, z);
             break search;
           }
         }
@@ -338,38 +424,37 @@ export function throwDice(attack: readonly DieFace[], defense: readonly DieFace[
     b.asleep = true;
     b.landedStep = step;
   };
-  /** Stops every die of a group (only after the time limit). */
-  const settle = (g: 0 | 1) => {
-    for (const b of bodies) if (b.group === g && !b.asleep) placeFlat(b);
+  /** The next wave with dice in it after `w`, marking the empty ones on the way as thrown at `at`. */
+  const nextWave = (w: number, at: number) => {
+    let n = w + 1;
+    while (n < waves.length && waves[n]!.length === 0) waveStep[n++] = at;
+    return n;
   };
-  if (defenseStep === 0) launch(defense, "defense", 1, 0);
-  for (; ; step++) {
-    // Record a frame for every die.
+  let wave = nextWave(-1, 0);
+  if (wave < waves.length) launch(wave, 0);
+  for (; wave < waves.length; step++) {
     if (step % PER_FRAME === 0) {
-      for (const b of bodies) b.frames.push(b.x.x, b.x.y, b.x.z, b.q.x, b.q.y, b.q.z, b.q.w);
+      for (const b of bodies) pose(b);
+      frames++;
     }
-    if (defenseStep < 0) {
-      if (groupDone(0) || step >= limit) {
-        settle(0);
-        for (const b of bodies) b.fixed = true;
-        defenseStep = step + Math.round(DEFENSE_PAUSE * STEPS);
-        // The defense dice wait for their turn: their frames start now, hidden until thrown.
-        const before = bodies.length;
-        launch(defense, "defense", 1, defenseStep);
-        for (const b of bodies.slice(before)) {
-          const frames = Math.floor(step / PER_FRAME) + 1;
-          for (let f = 0; f < frames; f++) b.frames.push(b.x.x, b.x.y, b.x.z, b.q.x, b.q.y, b.q.z, b.q.w);
-        }
+    const current = waveBodies[wave]!;
+    if (current.every((b) => b.asleep || b.fixed) || step >= waveStep[wave]! + limit) {
+      for (const b of current) if (!b.asleep) placeFlat(b);
+      for (const b of bodies) b.fixed = true;
+      const at = step + Math.round(WAVE_PAUSE * STEPS);
+      wave = nextWave(wave, at);
+      if (wave < waves.length) launch(wave, at);
+      else {
+        // A last frame, so the playback ends exactly at rest.
+        for (const b of bodies) pose(b);
+        frames++;
+        break;
       }
-    } else if (groupDone(1) || step >= defenseStep + limit) {
-      settle(1);
-      // A last frame, so the playback ends exactly at rest.
-      for (const b of bodies) b.frames.push(b.x.x, b.x.y, b.x.z, b.q.x, b.q.y, b.q.z, b.q.w);
-      break;
     }
     const live = bodies.filter((b) => step >= b.start && !b.asleep && !b.fixed);
     for (const b of live) {
       b.v.y -= GRAVITY * dt;
+      if (b.entering && Math.abs(b.x.x) < tray.halfX - b.solid.reach) b.entering = false;
     }
     // Contacts: the tray, then other dice (live dice against any die already in the tray).
     const contacts: Contact[] = [];
@@ -391,30 +476,31 @@ export function throwDice(attack: readonly DieFace[], defense: readonly DieFace[
       // Felt drags at a rolling die.
       const touching = contacts.some((c) => c.a === b);
       if (touching) {
-        b.w.multiplyScalar(1 - 2.2 * dt);
-        b.v.x *= 1 - 0.8 * dt;
-        b.v.z *= 1 - 0.8 * dt;
+        b.w.multiplyScalar(1 - FELT_SPIN_DRAG * dt);
+        b.v.x *= 1 - FELT_SLIDE_DRAG * dt;
+        b.v.z *= 1 - FELT_SLIDE_DRAG * dt;
       }
       // Coming to rest.
       const still = touching && b.v.length() < 0.12 && b.w.length() < 0.25;
       b.quiet = still ? b.quiet + 1 : 0;
       if (b.quiet > STEPS * 0.15) {
-        const perched = b.x.y > H + 0.1;
-        if ((flatness(b.q) < 0.996 || perched) && b.nudges < 8) {
+        const perched = b.x.y > b.solid.rest + 0.1;
+        const leaning = flatness(b) < 0.996;
+        if ((leaning || perched) && b.nudges < 8) {
           // Leaning on a wall or lying on another die: a small knock to let it fall flat on the felt,
           // away from the die under it and towards the middle of the tray.
           b.nudges++;
           const away = new Vector3(-b.x.x, 0, -b.x.z).normalize().multiplyScalar(1.2);
-          const under = bodies.find((o) => o !== b && step >= o.start && o.x.distanceTo(b.x) < DIE_SIZE * 1.5 && o.x.y < b.x.y - 0.3);
+          const under = bodies.find((o) => o !== b && step >= o.start && o.x.distanceTo(b.x) < (o.solid.reach + b.solid.reach) * 1.25 && o.x.y < b.x.y - 0.3);
           if (under) away.add(new Vector3(b.x.x - under.x.x, 0, b.x.z - under.x.z).normalize().multiplyScalar(2.2));
           b.v.set(away.x + (r() - 0.5), 2.2, away.z + (r() - 0.5));
           b.w.set((r() - 0.5) * 6, (r() - 0.5) * 6, (r() - 0.5) * 6);
           b.quiet = 0;
-        } else if (perched || flatness(b.q) < 0.996) {
+        } else if (perched || leaning) {
           placeFlat(b);
         } else {
-          b.q.copy(laidFlat(b.q));
-          b.x.y = H;
+          b.q.copy(laidFlat(b.q, b.solid.normals));
+          b.x.y = b.solid.rest;
           b.v.set(0, 0, 0);
           b.w.set(0, 0, 0);
           b.asleep = true;
@@ -423,19 +509,116 @@ export function throwDice(attack: readonly DieFace[], defense: readonly DieFace[
       }
     }
   }
-  const frameCount = bodies[0] ? bodies[0].frames.length / 7 : 1;
-  const dice = bodies.map((b): DiePath => {
-    const last = b.frames.length / 7 - 1;
-    const rest = new Quaternion(b.frames[last * 7 + 3], b.frames[last * 7 + 4], b.frames[last * 7 + 5], b.frames[last * 7 + 6]);
-    return {
-      kind: b.spec.kind,
-      face: b.spec.face,
-      frames: new Float32Array(b.frames),
-      thrown: Math.floor(b.start / PER_FRAME),
-      // The first frame recorded after it came to rest.
-      landed: Math.min(last, Math.ceil((b.landedStep + 1) / PER_FRAME)),
-      remap: remapFor(b.spec.kind, b.spec.face, rest, r),
-    };
-  });
-  return { tray, dice, defenseThrown: Math.floor(Math.max(0, defenseStep) / PER_FRAME), frameCount };
+  const frameCount = Math.max(1, frames);
+  const paths = waveBodies.map((list) =>
+    list.map((b) => {
+      const last = b.frames.length / 7 - 1;
+      return {
+        frames: new Float32Array(b.frames),
+        thrown: Math.floor(b.start / PER_FRAME),
+        // The first frame recorded after it came to rest.
+        landed: Math.min(last, Math.ceil((b.landedStep + 1) / PER_FRAME)),
+        rest: new Quaternion(b.frames[last * 7 + 3], b.frames[last * 7 + 4], b.frames[last * 7 + 5], b.frames[last * 7 + 6]),
+      };
+    }),
+  );
+  return { paths, waveThrown: waveStep.map((s) => Math.floor(s / PER_FRAME)), frameCount };
+}
+
+// ---- Attack and defense dice ---------------------------------------------------------
+
+/**
+ * The turn of a cube's drawing, applied before its body's turn, that shows `face` on top when the
+ * body rests with turn `rest`: one of the cube's 24 symmetries, chosen with `r` among the sides
+ * that carry the face.
+ */
+export function remapFor(kind: DieKind, face: DieFace, rest: Quaternion, r: () => number): Quaternion {
+  const sides = CUBE_FACES[kind].map((f, i) => (f === face ? i : -1)).filter((i) => i >= 0);
+  const side = sides[Math.floor(r() * sides.length) % sides.length]!;
+  // Which of the body's own axes points up at rest.
+  const inv = rest.clone().invert();
+  const up = UP.clone().applyQuaternion(inv);
+  let top = CUBE_NORMALS[0]!;
+  for (const n of CUBE_NORMALS) if (n.dot(up) > top.dot(up)) top = n;
+  const want = CUBE_NORMALS[side]!;
+  const turn = new Quaternion().setFromUnitVectors(want, top);
+  // A quarter turn about the top at random, so a face's picture is not always the same way round.
+  const spin = new Quaternion().setFromAxisAngle(top, (Math.floor(r() * 4) * Math.PI) / 2);
+  return spin.multiply(turn);
+}
+
+/** Throw the attack dice in from the left, then the defense dice in from the right, into a tray sized for them. */
+export function throwDice(attack: readonly DieFace[], defense: readonly DieFace[], seed: number): Throw {
+  const tray = trayFor(attack.length + defense.length);
+  const r = random(seed);
+  const sim = simulate(tray, [attack.map(() => ({ solid: CUBE, from: -1 as const })), defense.map(() => ({ solid: CUBE, from: 1 as const }))], r);
+  const sides: [DieKind, readonly DieFace[]][] = [["attack", attack], ["defense", defense]];
+  const dice = sides.flatMap(([kind, faces], w) =>
+    sim.paths[w]!.map((p, i): DiePath => ({ kind, face: faces[i]!, frames: p.frames, thrown: p.thrown, landed: p.landed, remap: remapFor(kind, faces[i]!, p.rest, r) })),
+  );
+  return { tray, dice, defenseThrown: sim.waveThrown[1]!, frameCount: sim.frameCount };
+}
+
+// ---- Initiative d20s -------------------------------------------------------------------
+
+/** The rotation that takes the frame (normal n1, up u1) to (n2, u2). */
+function frameTurn(n1: Vector3, u1: Vector3, n2: Vector3, u2: Vector3): Quaternion {
+  const from = new Matrix4().makeBasis(n1, u1, n1.clone().cross(u1));
+  const to = new Matrix4().makeBasis(n2, u2, n2.clone().cross(u2));
+  return new Quaternion().setFromRotationMatrix(to.multiply(from.transpose()));
+}
+
+/**
+ * The turn of a d20's drawing, applied before its body's turn, that shows `value` on top when the
+ * body rests with turn `rest`: one of the icosahedron's 60 symmetries. Of the three that put the
+ * value on top, it takes the one whose number reads most nearly upright to a camera in front of
+ * the tray (on the +z side, looking down).
+ */
+export function d20RemapFor(value: number, rest: Quaternion): Quaternion {
+  const faces = d20Faces();
+  const want = faces[Math.min(19, Math.max(0, value - 1))]!;
+  const up = UP.clone().applyQuaternion(rest.clone().invert());
+  let top = faces[0]!;
+  for (const f of faces) if (f.normal.dot(up) > top.normal.dot(up)) top = f;
+  let best = new Quaternion();
+  let bestScore = -Infinity;
+  for (let k = 0; k < 3; k++) {
+    // Each of the top face's corners in turn as the number's top.
+    const corner = top.up.clone().applyAxisAngle(top.normal, (k * Math.PI * 2) / 3);
+    const score = -corner.clone().applyQuaternion(rest).z;
+    if (score > bestScore) {
+      bestScore = score;
+      best = frameTurn(want.normal, want.up, top.normal, corner);
+    }
+  }
+  return best;
+}
+
+export interface D20Path extends PlayedDie {
+  readonly value: number;
+}
+
+export interface D20Throw {
+  readonly dice: readonly D20Path[];
+  readonly frameCount: number;
+}
+
+/** Where a thrown die lies at the end of its throw. */
+export function restingOf(die: PlayedDie): Resting {
+  const f = die.frames.length - 7;
+  const p = die.frames;
+  return { at: new Vector3(p[f], p[f + 1], p[f + 2]), turn: new Quaternion(p[f + 3], p[f + 4], p[f + 5], p[f + 6]) };
+}
+
+/**
+ * Throws d20s together into the tray, each from its own end (-1 the left, 1 the right), around
+ * d20s already lying there (which do not move), to land showing their values.
+ */
+export function throwD20s(dice: readonly { value: number; from: -1 | 1 }[], tray: Tray, seed: number, lying: readonly Resting[] = []): D20Throw {
+  const { solid } = d20Parts();
+  const sim = simulate(tray, [dice.map((d) => ({ solid, from: d.from }))], random(seed), lying.map((at) => ({ solid, at })));
+  return {
+    dice: (sim.paths[0] ?? []).map((p, i) => ({ value: dice[i]!.value, frames: p.frames, thrown: p.thrown, landed: p.landed, remap: d20RemapFor(dice[i]!.value, p.rest) })),
+    frameCount: sim.frameCount,
+  };
 }

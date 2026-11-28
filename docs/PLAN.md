@@ -11,11 +11,12 @@ Planned, in no set order; each starts when the owner asks:
 - **More premade maps.** Riverbend and Shattered Crown show the quick way: lay the map out in code, check it with `buildBoard`, and save the JSON (see [CONTENT.md](CONTENT.md), Maps). The map picker lists any number of maps, so a new one needs only its menu picture.
 - **Further content drops:** units, factions and abilities.
 - **Hit zones, further:** a few weapons are built into a model's body, so they count as body (the Siege Walker Atlas's gun pods); giving them the gear role in the model and writing the shapes again would fix that (see [CONTENT.md](CONTENT.md)).
-- **The dice show, further:** the initiative d20 still follows a scripted tumble; it could be thrown into the tray too. Very large attack rolls (17 or more dice) now and then leave a die that will not settle in time, which is then set on the nearest free spot, a small jump (`placeFlat` in `scene/diceRoll.ts`).
+- **The dice show, further:** very large attack rolls (17 or more dice) now and then leave a die that will not settle in time, which is then set on the nearest free spot, a small jump (`placeFlat` in `scene/diceRoll.ts`).
 
 On hold (Phase 6): a computer opponent, and a tutorial.
 
 Done lately, newest first (each has its section below):
+- Initiative in the dice tray: the d20s are thrown into the same tray as an attack's dice, by the same physics, in each player's colour; the tray is bigger, the dice bouncier and slower to settle, and attack dice come in over the left wall, defense dice over the right.
 - Map picker (#96): the menu's Battlefield choice is a styled drop-down list of every map, with maps that cannot host the chosen number of players dimmed.
 - Shattered Crown (#95): a large near-hexagonal map for 4 to 6 players (2 to 6 in all), not symmetric, with start zones at least 10 hexes apart, six regions that each favour different tactics, heights to 10, three bridges, an arch, an ice tunnel and two overhangs.
 - Balance pass (#92), done for now: most squads have 2 Life, heroes with 5 or more Life lose 1, four more units reach Range 7, and costs follow the balance model.
@@ -397,6 +398,14 @@ The owner asked for a map close to hexagonal, for 4 to 6 players, not symmetric,
 - [x] Three bridges (Crown to Frostfang, over the gorge, and the arch), all held at both ends; every start zone and the summits can be reached on foot climbing 2 levels at a time
 - [x] Laid out in code like Riverbend, checked with `buildBoard`, with a menu picture (`.m-shattered-crown`). Solid stacks are merged into 2, 3, 4 and 7-hex pieces, so the file stays near the size of the other large maps
 - [x] The Banner Hall menu style's map icons were made a little smaller so eight maps fit its one column; the map picker (#96) replaced that list
+
+### Initiative in the dice tray
+The owner asked for the initiative d20 to be thrown by physics like the attack dice, for a bigger tray, bouncier dice that take longer to settle, and attack dice thrown in from the left and defense dice from the right.
+- [x] The initiative show throws each player's d20 into the dice tray (`throwD20s` in `scene/diceRoll.ts`), from the left and the right in turn by seat. Each d20 is in its player's colour, with a darker rim round each face and dark or light numbers, whichever reads better (`d20MaterialFor` in `scene/dice3d.tsx`). Once it rests, its drawing is turned by one of the d20's own symmetries (`d20RemapFor`) so the rolled number is on top, the way round that reads most nearly upright
+- [x] One throw is in the tray at a time: a die rolled while others still tumble waits for them, then is thrown around the dice already lying there, which do not move. Tied dice are thrown again together. Skip throws every die once more, shown already landed. Online, every die is still thrown at once, from a seed made from the rolls, so everyone sees the same throw
+- [x] The tray is about a fifth bigger. Dice bounce more off the felt, the walls and each other, and roll for longer: an attack's throw takes about a third longer to settle
+- [x] Attack dice come in over the left wall (the attacker's end) and defense dice over the right, high enough to clear it; `dice.test.ts` checks that every die clears its wall and moves inwards
+- [x] `?dice` can also roll initiative for 2 to 6 players
 
 ### Map picker (done, #96)
 The owner asked for a better way to list maps as more are added: eight maps had filled the menu's two-column grid, and Banner Hall's one column had no room left.

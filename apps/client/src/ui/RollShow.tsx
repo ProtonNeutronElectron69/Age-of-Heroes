@@ -6,9 +6,8 @@ import type { AttackRoll } from "../fight";
 import { useReducedMotion } from "../motion";
 import { playSound } from "../sfx";
 import { CardFigure } from "../scene/Figures";
-import { CastShadows, FELT_HEIGHT, FrameView, ThrownDice, TraySet, WALL_THICK } from "../scene/DiceTray";
-import { D20Die, TrayLights } from "../scene/dice3d";
-import { throwDice, type DieKind } from "../scene/diceRoll";
+import { CastShadows, CubeDie, D20Die, FELT_HEIGHT, FrameView, ThrownDice, TraySet, WALL_THICK } from "../scene/DiceTray";
+import { restingOf, throwD20s, throwDice, trayFor, type D20Throw } from "../scene/diceRoll";
 import type { DiceShow } from "../settings";
 import { HexCard } from "./HexCard";
 
@@ -16,7 +15,7 @@ import { HexCard } from "./HexCard";
  * The dice show: an attack zooms in on the fight with both units' cards, and
  * their models standing at the two ends of a dice tray into which the 3D dice
  * are thrown ("scene"), or just throws the dice into the tray ("dice");
- * initiative rolls a d20 for each player. The rules have already
+ * initiative throws a d20 for each player into the same tray. The rules have already
  * rolled everything; this only shows it, and a click skips it (online, an attack's
  * skip waits for every player: the play screen decides). An attack's dice follow
  * its intro on the board (`scene/FightFx.tsx`). Afterwards the dice panel keeps
@@ -144,7 +143,10 @@ export function AttackShow({
   useEffect(() => {
     if (roll.attack.length > 0 || (roll.defense.length > 0 && reduced)) playSound("dice");
   }, [index]);
-  const land = (kind: DieKind) => setLanded((n) => ({ ...n, [kind]: n[kind] + 1 }));
+  const land = (n: number) => {
+    const kind = thrown.dice[n]!.kind;
+    setLanded((count) => ({ ...count, [kind]: count[kind] + 1 }));
+  };
   const full = mode === "scene";
   const title = attackTitle(roll, names);
   const { halfX, halfZ } = thrown.tray;
@@ -171,7 +173,15 @@ export function AttackShow({
           <FrameView halfWidth={halfWidth} halfDepth={halfZ + WALL_THICK} height={full ? tallest : 0.5} pitch={full ? 0.6 : 1.0} aim={[0, full ? tallest * 0.3 : 0, full ? 0.1 : 0]} />
           {full && <SceneModel figureId={roll.attackerId} state={state} ctx={ctx} names={names} x={attackerX} yaw={Math.PI / 2 - 0.5} />}
           {full && <SceneModel figureId={roll.targetId} state={state} ctx={ctx} names={names} x={defenderX} yaw={-Math.PI / 2 + 0.5} />}
-          <ThrownDice roll={thrown} still={reduced} onLanded={land} onDefenseThrown={() => playSound("dice")} />
+          <ThrownDice
+            dice={thrown.dice}
+            frameCount={thrown.frameCount}
+            draw={(n) => <CubeDie kind={thrown.dice[n]!.kind} />}
+            still={reduced}
+            onLanded={land}
+            cueAt={roll.defense.length > 0 ? thrown.defenseThrown : undefined}
+            onCue={() => playSound("dice")}
+          />
         </Canvas>
         <div className="scene-faces">
           {/* Each side's faces show once its dice have landed, so the text does not give the roll away. */}
@@ -195,16 +205,28 @@ function rollSeed(roll: AttackRoll, index: number): number {
   return h >>> 0;
 }
 
-const D20_GAP = 2.6;
+/** One throw of initiative d20s: which players' dice, at which of their rolls, and how they fall. */
+interface D20Toss {
+  readonly players: readonly number[];
+  readonly stages: readonly number[];
+  readonly roll: D20Throw;
+  /** Shown at its end at once (a skip). */
+  readonly still: boolean;
+}
 
 /**
- * Initiative: a d20 for each player, who clicks it to roll. It tumbles and lands
- * on the value the rules rolled; a tie rolls again.
+ * Initiative: a d20 for each player, who clicks to roll it. The dice are thrown into the same tray
+ * as an attack's, each in its player's colour, from the left and the right in turn by seat, and
+ * land on the values the rules rolled; a tie throws the tied dice again.
+ *
+ * One throw is in the tray at a time: a die rolled while others are still tumbling waits for them
+ * to settle, then is thrown around the dice already lying there. A skip throws every die again at
+ * once, shown already landed.
  *
  * Where players roll for themselves (online games, `onRoll`), the rules make no
  * roll until every player has clicked: until then `event` is null and the dice
  * wait, each player's row saying whether they have rolled. When the roll comes,
- * every die tumbles at once, so nobody sees a result before they have rolled.
+ * every die is thrown at once, so nobody sees a result before they have rolled.
  */
 export function InitiativeShow({
   event,
@@ -234,14 +256,36 @@ export function InitiativeShow({
   const together = onRoll !== undefined;
   const rolls: readonly { player: PlayerId; values: readonly number[]; bonus?: number }[] =
     event?.rolls ?? players.map((player) => ({ player, values: [] as number[] }));
-  /** For each player, which of their values the die is showing (-1 before it is rolled), and whether it has landed. */
+  const tray = useMemo(() => trayFor(rolls.length * 2), [rolls.length]);
+  /** For each player, which of their values their die is to show (-1 before it is rolled), and which has landed. */
   const [stage, setStage] = useState<number[]>(() => rolls.map(() => -1));
-  const [landed, setLanded] = useState<boolean[]>(() => rolls.map(() => false));
+  const [landedStage, setLandedStage] = useState<number[]>(() => rolls.map(() => -1));
+  const [tosses, setTosses] = useState<D20Toss[]>([]);
   /** Skipped: every die shows its last value at once. */
   const [skipped, setSkipped] = useState(false);
   const roll = (i: number) => setStage((s) => (s[i] !== -1 ? s : s.map((x, j) => (j === i ? 0 : x))));
-  const finished = (i: number) => stage[i] === rolls[i]!.values.length - 1 && landed[i];
+  const landed = (i: number) => stage[i]! >= 0 && landedStage[i]! >= stage[i]!;
+  const finished = (i: number) => stage[i] === rolls[i]!.values.length - 1 && landed(i);
   const allDone = event !== null && rolls.every((_, i) => finished(i));
+  const latest = tosses.at(-1);
+  const flying = latest !== undefined && latest.players.some((p, k) => landedStage[p]! < latest.stages[k]!);
+
+  /** The next throw of these players' dice, around the dice lying in the tray from earlier throws. */
+  const toss = (earlier: readonly D20Toss[], who: readonly number[], stages: readonly number[], still: boolean): D20Toss => {
+    const lying = rolls.flatMap((_, i) => {
+      if (who.includes(i)) return [];
+      for (let t = earlier.length - 1; t >= 0; t--) {
+        const k = earlier[t]!.players.indexOf(i);
+        if (k >= 0) return [restingOf(earlier[t]!.roll.dice[k]!)];
+      }
+      return [];
+    });
+    const dice = who.map((i, k) => ({ value: rolls[i]!.values[stages[k]!]!, from: (i % 2 === 0 ? -1 : 1) as -1 | 1 }));
+    // Seeded from the rolls, so every player online sees the same throws.
+    let seed = 2166136261 + earlier.length;
+    for (const n of [...who, ...stages, ...dice.map((d) => d.value)]) seed = Math.imul(seed ^ n, 16777619);
+    return { players: who, stages, roll: throwD20s(dice, tray, seed >>> 0, lying), still };
+  };
 
   // Hot-seat: the rules have rolled already, and other devices' players (if any) roll by themselves.
   useEffect(() => {
@@ -249,70 +293,75 @@ export function InitiativeShow({
     const timers = rolls.flatMap((r, i) => (mayRoll(r.player) ? [] : [window.setTimeout(() => roll(i), 700 + i * 400)]));
     return () => timers.forEach((t) => window.clearTimeout(t));
   }, []);
-  // Everyone has rolled and the result is in: every die tumbles at once.
+  // Everyone has rolled and the result is in: every die is thrown at once.
   useEffect(() => {
     if (together && event) setStage(event.rolls.map(() => 0));
   }, [together, event]);
-  // A tie rolls again a moment after the die lands.
+  // Dice rolled and not yet thrown are thrown together once the tray is still.
   useEffect(() => {
-    const timers = rolls.flatMap((r, i) =>
-      stage[i]! >= 0 && landed[i] && stage[i]! < r.values.length - 1
-        ? [
-            window.setTimeout(() => {
-              setLanded((l) => l.map((x, j) => (j === i ? false : x)));
-              setStage((s) => s.map((x, j) => (j === i ? x + 1 : x)));
-            }, 900),
-          ]
-        : [],
-    );
-    return () => timers.forEach((t) => window.clearTimeout(t));
-  }, [stage, landed]);
+    if (flying || skipped || !event) return;
+    const thrownStage = (i: number) => {
+      for (let t = tosses.length - 1; t >= 0; t--) {
+        const k = tosses[t]!.players.indexOf(i);
+        if (k >= 0) return tosses[t]!.stages[k]!;
+      }
+      return -1;
+    };
+    const due = rolls.map((_, i) => i).filter((i) => stage[i]! >= 0 && thrownStage(i) < stage[i]!);
+    if (due.length) setTosses((t) => [...t, toss(t, due, due.map((i) => stage[i]!), false)]);
+  }, [stage, flying, skipped, event]);
+  // A tie throws the tied dice again a moment after the tray comes to rest.
+  useEffect(() => {
+    if (flying || skipped) return;
+    const tied = rolls.map((_, i) => i).filter((i) => landed(i) && stage[i]! < rolls[i]!.values.length - 1);
+    if (!tied.length) return;
+    const timer = window.setTimeout(() => setStage((s) => s.map((x, j) => (tied.includes(j) ? x + 1 : x))), 900);
+    return () => window.clearTimeout(timer);
+  }, [stage, landedStage, flying, skipped]);
 
-  // Each throw of a d20 is heard (a skip shows every result without a sound).
-  const thrown = stage.reduce((n, s) => n + (s >= 0 ? s + 1 : 0), 0);
+  // Each throw of the d20s is heard (a skip shows every result without a sound).
   useEffect(() => {
-    if (thrown > 0 && !skipped) playSound("dice");
-  }, [thrown]);
+    if (tosses.length > 0 && !tosses.at(-1)!.still) playSound("dice");
+  }, [tosses.length]);
 
   const skip = () => {
+    const last = rolls.map((r) => r.values.length - 1);
     setSkipped(true);
-    setStage(rolls.map((r) => r.values.length - 1));
-    setLanded(rolls.map(() => true));
+    setStage(last);
+    setLandedStage(last);
+    setTosses((t) => [...t, toss([], rolls.map((_, i) => i), last, true)]);
   };
-  // Pull the camera back for more players, so every die fits.
-  const camera = [0, 1.2, Math.max(7, rolls.length * 2.6)] as const;
+  const land = (t: D20Toss, k: number) => setLandedStage((l) => l.map((x, j) => (j === t.players[k] ? Math.max(x, t.stages[k]!) : x)));
+  /** The throw that last threw each player's die: only that one draws it. */
+  const lastToss = rolls.map((_, i) => tosses.findLastIndex((t) => t.players.includes(i)));
   return (
     <div className="roll-show initiative-show" role="dialog" aria-label="Initiative" data-done={allDone ? "true" : undefined} onClick={allDone ? onClose : undefined}>
       <div className="panel initiative-panel" onClick={(e) => e.stopPropagation()}>
         <h2>Initiative</h2>
         <p className="muted small">Each player rolls a d20; the highest goes first.</p>
-        <div className="initiative-stage" style={{ width: `${Math.min(760, rolls.length * 150)}px` }}>
-          <Canvas className="scene-canvas" frameloop="demand" camera={{ position: [...camera], fov: 30 }} dpr={[1, 2]}>
-            <TrayLights />
-            {rolls.map((r, i) => {
-              const x = (i - (rolls.length - 1) / 2) * D20_GAP;
-              const s = stage[i]!;
-              const toward = [camera[0] - x, camera[1], camera[2]] as const;
-              return (
-                <D20Die
-                  key={r.player}
-                  value={s < 0 ? 20 : r.values[s]!}
-                  toward={toward}
-                  at={[x, 0, 0]}
-                  seed={i * 13 + s * 5 + 3}
-                  throwKey={s}
-                  still={reduced || skipped || s < 0}
-                  duration={1.2}
-                  onLanded={() => s >= 0 && setLanded((l) => l.map((x2, j) => (j === i ? true : x2)))}
+        <div className="initiative-stage">
+          <Canvas className="scene-canvas" frameloop="demand" shadows camera={{ position: [0, 9, 10], fov: 34 }} dpr={[1, 2]}>
+            <TraySet halfX={tray.halfX} halfZ={tray.halfZ} />
+            <FrameView halfWidth={tray.halfX + WALL_THICK} halfDepth={tray.halfZ + WALL_THICK} height={0.5} pitch={1.0} />
+            {tosses.map((t, n) =>
+              t.players.some((i) => lastToss[i] === n) ? (
+                <ThrownDice
+                  key={n}
+                  dice={t.roll.dice}
+                  frameCount={t.roll.frameCount}
+                  draw={(k) => <D20Die color={names.playerColor(rolls[t.players[k]!]!.player)} />}
+                  still={reduced || t.still}
+                  hidden={t.players.map((i) => lastToss[i] !== n)}
+                  onLanded={(k) => land(t, k)}
                 />
-              );
-            })}
+              ) : null,
+            )}
           </Canvas>
         </div>
         <div className="initiative-players">
           {rolls.map((r, i) => {
             const s = stage[i]!;
-            const value = s >= 0 && landed[i] ? r.values[s] : null;
+            const value = landed(i) ? r.values[s] : null;
             return (
               <div key={r.player} className="initiative-player" data-player={r.player}>
                 <span className="swatch" style={{ background: names.playerColor(r.player) }} /> {names.player(r.player)}
